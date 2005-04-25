@@ -30,13 +30,13 @@ use Net::DRI::Protocol::RRP::Connection;
 use Net::DRI::Util;
 use Net::DRI::Data::Raw;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d"."%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Transport::Socket - TCP/TLS Socket connection to registry
+Net::DRI::Transport::Socket - TCP/TLS Socket connection for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -228,8 +228,8 @@ sub send_login
  while(my $l=$sock->getline())
  {
   push @j,$l;
-  last if $pc->is_login_successfull(\@j); ## is_login_successfull
-  die() if ($pc->is_server_close(\@j)); ## is_server_close
+  last if $pc->is_login_successfull(\@j);
+  die() if ($pc->is_server_close(\@j));
  }
 }
 
@@ -240,7 +240,7 @@ sub send_logout
  my $sock=$self->sock();
  my $pc=$t->{pc};
 
- my $logout=$pc->logout(); ## logout message
+ my $logout=$pc->logout();
  eval
  {
   local $SIG{ALRM}=sub { die "timeout" };
@@ -251,7 +251,7 @@ sub send_logout
   while(my $l=$sock->getline())
   {
    push @j,$l;
-   last if ($pc->is_server_close(\@j)); ## is_server_close
+   last if ($pc->is_server_close(\@j));
   }
 
   alarm(0);

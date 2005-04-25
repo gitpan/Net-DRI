@@ -31,13 +31,13 @@ use DateTime;
 use DateTime::TimeZone;
 use DateTime::Format::Strptime;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d"."%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Protocol::RRP
+Net::DRI::Protocol::RRP - RRP 1.1/2.0 Protocol for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -124,8 +124,6 @@ sub new
  return $self;
 }
 
-## Ex:
-## 'domain' => { 'create' => [[method1,parse1],[method2,parse2],[method3,parse3]] }
 sub _load
 {
  my ($self,$extrah)=@_;

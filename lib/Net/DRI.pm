@@ -25,16 +25,14 @@ use Net::DRI::Util;
 use strict;
 
 our $AUTOLOAD;
-
-our $CVS_VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d"."%02d" x $#r, @r); };
-
-our $VERSION="0.10";
+our $VERSION="0.11";
+our $CVS_REVISION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI
+Net::DRI - Interface to Domain Name Registries/Registrars/Resellers
 
 =head1 DESCRIPTION
 
@@ -88,6 +86,8 @@ sub new
             time_created     => time(),
             trid_factory     => \&Net::DRI::Util::create_trid_1,
           };
+
+## handle trace/debug level ?
 
  bless($self,$class); 
  return $self;
@@ -192,7 +192,6 @@ sub target
  $self->{current_registry}=$driver;
  return $self;
 }
-
 
 #####################################################################################################################
 ## The meat of everything

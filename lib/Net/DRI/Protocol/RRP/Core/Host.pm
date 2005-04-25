@@ -21,13 +21,13 @@ use strict;
 use Net::DRI::Protocol::RRP;
 use Net::DRI::Data::Hosts;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d"."%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Protocol::RRP::Core::Host
+Net::DRI::Protocol::RRP::Core::Host - RRP Host commands for Net::DRI
 
 =head1 DESCRIPTION
 

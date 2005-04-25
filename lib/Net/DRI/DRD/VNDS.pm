@@ -24,13 +24,13 @@ use Net::DRI::DRD::ICANN;
 use DateTime::Duration;
 use DateTime;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d"."%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::DRD::VNDS
+Net::DRI::DRD::VNDS - Verisign .COM/.NET Registry driver for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -132,5 +132,5 @@ sub domain_operation_needs_is_mine
  return undef;
 }
 
-#######################################################################################
+######################################################################################
 1;

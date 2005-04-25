@@ -22,13 +22,13 @@ use strict;
 use Time::HiRes ();
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d"."%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Util
+Net::DRI::Util - Various useful functions for Net::DRI operations
 
 =head1 DESCRIPTION
 
@@ -110,6 +110,7 @@ sub microtime
  return $t.sprintf("%06d",$v);
 }
 
+## From EPP, trID=token from 3 to 64 characters
 sub create_trid_1
 {
  my ($name)=@_;

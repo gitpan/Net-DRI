@@ -19,13 +19,13 @@ package Net::DRI::DRD::ICANN;
 
 use strict;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d"."%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::DRD::ICANN
+Net::DRI::DRD::ICANN - ICANN policies for Net::DRI
 
 =head1 DESCRIPTION
 

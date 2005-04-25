@@ -22,13 +22,13 @@ use strict;
 
 use Net::DRI::Data::Raw;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d"."%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Transport::Dummy
+Net::DRI::Transport::Dummy - Net::DRI dummy transport for tests & debug
 
 =head1 DESCRIPTION
 

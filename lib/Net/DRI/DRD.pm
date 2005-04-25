@@ -26,13 +26,13 @@ use Net::DRI::Data::Changes;
 use Net::DRI::Data::Hosts;
 use Net::DRI::Data::StatusList;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d"."%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::DRD
+Net::DRI::DRD - Superclass of all Net::DRI Domain Registry Drivers
 
 =head1 DESCRIPTION
 
@@ -690,7 +690,7 @@ sub host_update
                                                                                        ! $ndr->protocol_capable('host_update',$w,'set'));
   Net::DRI::Exception->new(0,'DRD',6,"Change host_update/${w} with simultaneous set and add or del not supported") if (defined($set) && (defined($add) || defined($del)));
  }
- 
+
  my $rc=$ndr->process('host','update',[$dh,$tochange]);
  return $rc;
 }

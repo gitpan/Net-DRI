@@ -21,7 +21,7 @@ use strict;
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d"."%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -192,6 +192,8 @@ sub has_not
  }
  return 1;
 }
+
+#sub has_all useful ?
 
 ###########################################################################################################
 ## Methods that must be defined in subclasses

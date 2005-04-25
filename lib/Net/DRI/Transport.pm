@@ -19,18 +19,18 @@ package Net::DRI::Transport;
 
 use strict;
 
-use base qw(Class::Accessor::Fast);
+use base qw(Class::Accessor::Chained::Fast);
 __PACKAGE__->mk_accessors(qw/name version retry pause trace timeout defer current_state has_state is_sync/);
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d"."%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Transport
+Net::DRI::Transport - Supercall of all Net::DRI Transports
 
 =head1 DESCRIPTION
 
@@ -77,6 +77,7 @@ sub new
  	   is_sync   => exists($opts{is_sync})? $opts{is_sync} : 1, ## do we need to wait for reply as soon as command sent ?
            retry     => exists($opts{retry})?   $opts{retry}   : 1,  ## by default, we will try once only
            pause     => exists($opts{pause})?   $opts{pause}   : 10, ## time in seconds to wait between two retries
+#           trace     => exists($opts{trace})?   $opts{trace}   : 0, ## NOT IMPL
            timeout   => exists($opts{timeout})? $opts{timeout} : 0,
            defer     => exists($opts{defer})?   $opts{defer}   : 0, ## defer opening connection as long as possible (irrelevant if stateless)
            current_state => undef, ## for stateless transport, otherwise 0=close, 1=open

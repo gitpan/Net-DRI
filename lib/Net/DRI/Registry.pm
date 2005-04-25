@@ -27,13 +27,13 @@ use Net::DRI::Util;
 
 our $AUTOLOAD;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d"."%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Registry
+Net::DRI::Registry - Specific instance of driver inside Net::DRI
 
 =head1 DESCRIPTION
 
@@ -285,7 +285,7 @@ sub process
  my $trid=$self->trid->($self->name());
 
  eval {
-  my $tosend=$po->action($otype,$oaction,@$pa);
+  my $tosend=$po->action($otype,$oaction,@$pa); ## something with a as_string() method
   $self->{ops}->{$trid}=[0,$tosend]; ## 0 = todo, not sent
 
   $to->send($tosend,@$ta);

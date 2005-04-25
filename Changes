@@ -1,0 +1,10 @@
+0.11 2005-04-25
+
++ POD NAME section for each file with a short description
+- BUGFIX for VERSION (. missing)
++ New files: Changes, TODO
+= No changes in code
+
+0.10 2005-04-24
+
+= First version on CPAN

@@ -1,8 +1,10 @@
+Changes
 LICENSE
 MANIFEST
 Makefile.PL
 README
 SUPPORT
+TODO
 eg/vnds_rrp.pl
 lib/Net/DRI.pm
 lib/Net/DRI/Cache.pm
