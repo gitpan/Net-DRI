@@ -2,7 +2,7 @@
 
 use Net::DRI::Data::Hosts;
 
-use Test::More tests => 10;
+use Test::More tests => 11;
 
 my $d=Net::DRI::Data::Hosts->new();
 isa_ok($d,'Net::DRI::Data::Hosts');
@@ -29,9 +29,9 @@ is_deeply(\@c,['ns.example.foo','ns2.example.foo'],'get_names(2) after add');
 is_deeply(\@c,['ns.example.foo'],'get_names(1) after add');
 
 
-warn("TODO: add() with other params");
-warn("TODO: new_set()");
-warn("TODO: is_empty");
-
+TODO: {
+        local $TODO="tests on add() with other params, new_set(), is_empty()";
+        ok(0);
+}
 
 exit 0;

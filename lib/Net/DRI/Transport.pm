@@ -20,17 +20,17 @@ package Net::DRI::Transport;
 use strict;
 
 use base qw(Class::Accessor::Chained::Fast);
-__PACKAGE__->mk_accessors(qw/name version retry pause trace timeout defer current_state has_state is_sync/);
+__PACKAGE__->mk_accessors(qw/name version retry pause trace timeout defer current_state has_state is_sync time_open/);
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Transport - Supercall of all Net::DRI Transports
+Net::DRI::Transport - Superclass of all Net::DRI Transports
 
 =head1 DESCRIPTION
 
@@ -79,7 +79,7 @@ sub new
            pause     => exists($opts{pause})?   $opts{pause}   : 10, ## time in seconds to wait between two retries
 #           trace     => exists($opts{trace})?   $opts{trace}   : 0, ## NOT IMPL
            timeout   => exists($opts{timeout})? $opts{timeout} : 0,
-           defer     => exists($opts{defer})?   $opts{defer}   : 0, ## defer opening connection as long as possible (irrelevant if stateless)
+           defer     => exists($opts{defer})?   $opts{defer}   : 0, ## defer opening connection as long as possible (irrelevant if stateless) ## XX maybe not here, too low
            current_state => undef, ## for stateless transport, otherwise 0=close, 1=open
            has_state     => undef, ## do we need to open a session before sending commands ?
            transport     => undef, ## will be defined in subclasses
@@ -115,6 +115,7 @@ sub send
   alarm(0) if ($timeout); ## removes our alarm
   if ($@) ## some die happened inside the eval
   {
+   die($@) if (ref($@) eq 'Net::DRI::Protocol::ResultStatus');
    my $is_timeout=(!ref($@) && ($@=~m/timeout/))? 1 : 0;
    $@=Net::DRI::Exception->new(1,'internal',0,"Error not handled: $@") unless ref($@);
    Net::DRI::Exception::err_insufficient_parameters() unless ($cb2 && (ref($cb2) eq 'CODE'));
@@ -126,6 +127,7 @@ sub send
   sleep($self->pause()) if $self->pause();
  } ## end of loop, no more retries
 
+ ## Get inner error message ?
  Net::DRI::Exception->die(0,'transport',4,'Unable to send message to registry') unless $ok;
  
  alarm($prevalarm) if $prevalarm; ## re-enable previous alarm (warning, time is off !!)

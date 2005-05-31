@@ -21,7 +21,7 @@ use strict;
 use Net::DRI::Protocol::RRP;
 use Net::DRI::Data::Hosts;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -86,7 +86,7 @@ sub build_msg
  Net::DRI::Exception->die(1,'protocol/RRP',3,"Host name needed") unless defined($hostname) && $hostname;
  Net::DRI::Exception->die(1,'protocol/RRP',10,"Invalid host name") unless ($hostname=~m/^([a-z0-9]([a-z0-9\-]{0,61}[a-z0-9])?\.)?[a-z0-9]([a-z0-9\-]{0,61}[a-z0-9])?\.[a-z0-9]([a-z0-9\-]{0,61}[a-z0-9])?$/i); ## from RRP grammar
  $msg->command($command) if defined($command);
- $msg->entityname('NameServer');
+ $msg->entities('EntityName','NameServer');
  $msg->entities('NameServer',uc($hostname));
 }
 

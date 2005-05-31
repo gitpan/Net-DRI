@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-use Test::More tests => 240;
+use Test::More tests => 241;
 
 use Net::DRI::Util;
 
@@ -67,8 +67,9 @@ is(Net::DRI::Util::is_ipv4('192.0.2.6',1),0,'is_ipv4(192.0.2.6,1)');
 is(Net::DRI::Util::is_ipv4('192.168.1.3',1),0,'is_ipv4(192.168.1.3)');
 is(Net::DRI::Util::is_ipv4('230.0.0.0',1),0,'is_ipv4(230.0.0.0,1)');
 
-
-warn("TODO: tests on is_ipv6");
-warn("TODO: tests on compare_duration");
+TODO: {
+        local $TODO="tests on is_ipv6(), compare_duration()";
+        ok(0);
+}
 
 exit 0;

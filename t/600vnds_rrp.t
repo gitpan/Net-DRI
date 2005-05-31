@@ -24,8 +24,8 @@ $dri->add_registry('VNDS',{tz=>'America/New_York'});
 $dri->target('VNDS')->new_current_profile('p1','Net::DRI::Transport::Dummy',[{f_send=>\&mysend,f_recv=>\&myrecv}],'Net::DRI::Protocol::RRP',[]);
 
 $R2="200 Command completed successfully\r\nregistration expiration date:2009-09-22 10:27:00.0\r\nstatus:ACTIVE\r\n.\r\n";
-my $rc=$dri->domain_create_only('example.com',{duration => DateTime::Duration->new(years => 10)});
-is($R1,"add\r\nEntityName:Domain\r\nDomainName:EXAMPLE.COM\r\n-Period:10\r\n.\r\n",'domain_create_only send');
+my $rc=$dri->domain_create_only('example2.com',{duration => DateTime::Duration->new(years => 10)});
+is($R1,"add\r\nEntityName:Domain\r\nDomainName:EXAMPLE2.COM\r\n-Period:10\r\n.\r\n",'domain_create_only send');
 is($rc->is_success(),1,'domain_create_only rc is_success');
 is($rc->code(),1000,'domain_create_only rc code');
 is($rc->native_code(),200,'domain_create_only rc native_code');
@@ -41,8 +41,8 @@ is($s->is_published(),1,'domain_create_only get_info(status) is_published');
 is($s->can_update(),1,'domain_create_only get_info(status) can_update');
 
 $R2="211 Domain name not available\r\n.\r\n";
-$rc=$dri->domain_check('example.com');
-is($R1,"check\r\nEntityName:Domain\r\nDomainName:EXAMPLE.COM\r\n.\r\n",'domain_check send');
+$rc=$dri->domain_check('example2.com');
+is($R1,"check\r\nEntityName:Domain\r\nDomainName:EXAMPLE2.COM\r\n.\r\n",'domain_check send');
 is($rc->is_success(),1,'domain_check rc is_success');
 is($rc->code(),2302,'domain_check rc code');
 is($rc->native_code(),211,'domain_check rc native_code');
@@ -51,12 +51,12 @@ is($rc->object_exist(),1,'domain_check rc object_exist');
 is($rc->object_available(),0,'domain_check rc object_available');
 
 $R2="213 Name server not available\r\nipAddress:192.10.10.10\r\n.\r\n";
-$rc=$dri->host_check('ns1.example.com');
-is($R1,"check\r\nEntityName:NameServer\r\nNameServer:NS1.EXAMPLE.COM\r\n.\r\n",'host_check send');
+$rc=$dri->host_check('ns1.example2.com');
+is($R1,"check\r\nEntityName:NameServer\r\nNameServer:NS1.EXAMPLE2.COM\r\n.\r\n",'host_check send');
 is($rc->object_exist(),1,'host_check rc object_exist');
 my $dh=$dri->get_info('self');
 my @c=$dh->get_names(1);
-is_deeply(\@c,['ns1.example.com'],'host_check get_info(self) get_names');
+is_deeply(\@c,['ns1.example2.com'],'host_check get_info(self) get_names');
 
 $R2="532 Domain names linked with name server\r\n.\r\n";
 $rc=$dri->host_delete('ns1.registrarA.com');
@@ -65,16 +65,16 @@ is($rc->is_success(),0,'host_delete rc is_success');
 is($rc->code(),2305,'host_delete rc code');
 
 $R2=undef;
-$rc=$dri->domain_update_ns_add('example.com',Net::DRI::Data::Hosts->new('ns3.registrarA.com'));
-is($R1,"mod\r\nEntityName:Domain\r\nDomainName:EXAMPLE.COM\r\nNameServer:ns3.registrara.com\r\n.\r\n",'domain_update_ns_add send');
-$rc=$dri->domain_update_ns_del('example.com',Net::DRI::Data::Hosts->new('ns1.registrarA.com'));
-is($R1,"mod\r\nEntityName:Domain\r\nDomainName:EXAMPLE.COM\r\nNameServer:ns1.registrara.com=\r\n.\r\n",'domain_update_ns_del send');
-$rc=$dri->domain_update_ns('example.com',Net::DRI::Data::Hosts->new('ns3.registrarA.com'),Net::DRI::Data::Hosts->new('ns1.registrarA.com'));
-is($R1,"mod\r\nEntityName:Domain\r\nDomainName:EXAMPLE.COM\r\nNameServer:ns3.registrara.com\r\nNameServer:ns1.registrara.com=\r\n.\r\n",'domain_update_ns send');
+$rc=$dri->domain_update_ns_add('example2.com',Net::DRI::Data::Hosts->new('ns3.registrarA.com'));
+is($R1,"mod\r\nEntityName:Domain\r\nDomainName:EXAMPLE2.COM\r\nNameServer:ns3.registrara.com\r\n.\r\n",'domain_update_ns_add send');
+$rc=$dri->domain_update_ns_del('example2.com',Net::DRI::Data::Hosts->new('ns1.registrarA.com'));
+is($R1,"mod\r\nEntityName:Domain\r\nDomainName:EXAMPLE2.COM\r\nNameServer:ns1.registrara.com=\r\n.\r\n",'domain_update_ns_del send');
+$rc=$dri->domain_update_ns('example2.com',Net::DRI::Data::Hosts->new('ns3.registrarA.com'),Net::DRI::Data::Hosts->new('ns1.registrarA.com'));
+is($R1,"mod\r\nEntityName:Domain\r\nDomainName:EXAMPLE2.COM\r\nNameServer:ns3.registrara.com\r\nNameServer:ns1.registrara.com=\r\n.\r\n",'domain_update_ns send');
 
 $R2="200 Command completed successfully\r\nnameserver:ns2.registrarA.com\r\nnameserver:ns3.registrarA.com\r\nregistration expiration date:2010-09-22 10:27:00.0\r\nregistrar:registrarA\r\nregistrar transfer date:1999-09-22 10:27:00.0\r\nstatus:ACTIVE\r\ncreated date:1998-09-22 10:27:00.0\r\ncreated by:registrarA\r\nupdated date:2002-09-22 10:27:00.0\r\nupdated by:registrarA\r\n.\r\n";
-$rc=$dri->domain_info('example.com');
-is($R1,"status\r\nEntityName:Domain\r\nDomainName:EXAMPLE.COM\r\n.\r\n",'domain_info send');
+$rc=$dri->domain_info('example2.com');
+is($R1,"status\r\nEntityName:Domain\r\nDomainName:EXAMPLE2.COM\r\n.\r\n",'domain_info send');
 is($rc->is_success(),1,'domain_info rc is_success');
 is($dri->result_is_success(),1,'result_is_success');
 is($dri->result_code(),1000,'result_code');

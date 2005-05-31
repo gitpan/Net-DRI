@@ -24,7 +24,7 @@ __PACKAGE__->mk_accessors(qw(name version factories commands message capabilitie
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -85,9 +85,9 @@ sub new
 sub create_status
 {
  my $self=shift;
-
- my $fn=$self->factories->{status};
- return $fn->new(@_);
+ my $fn=$self->factories();
+ return undef unless (defined($fn) && ref($fn) && exists($fn->{status}));
+ return $fn->{status}->new(@_);
 }
 
 sub _load
@@ -151,6 +151,7 @@ sub action
  ## Create a new message from scratch and loop through all functions registered for given action & type
  my $f=$self->factories();
  my $msg=$f->{message}->new();
+ Net::DRI::Exception->die(0,'protocol',1,'Unsuccessfull message creation') unless ($msg && ref($msg) && $msg->isa('Net::DRI::Protocol::Message'));
  $msg->version($self->version());
  $self->message($msg); ## store it for later use (in loop below)
  
@@ -171,15 +172,14 @@ sub reaction
  my $h=$self->_load_commands($otype,$oaction);
  my $f=$self->factories();
  my $msg=$f->{message}->new();
- $msg->parse($dr);
- Net::DRI::Exception->die(0,'protocol',1,'Unsuccessfull parse') unless ($msg && ref($msg) && $msg->isa('Net::DRI::Protocol::Message'));
+ Net::DRI::Exception->die(0,'protocol',1,'Unsuccessfull message creation') unless ($msg && ref($msg) && $msg->isa('Net::DRI::Protocol::Message'));
+ $msg->parse($dr); ## will trigger an Exception by itself if problem
 
  $msg->version($self->version());
  $self->message($msg); ## store it for later use (in loop below)
- my $rc=$msg->result_status();
 
  my %info;
- my $oname;
+ my $oname; ## Should be done by retrieving information from sent object (will be with LocalStorage)
  $oname=$sent->get_name_from_message() if $sent->can('get_name_from_message');
  $info{$otype}->{$oname}->{name}=$oname if (defined($oname) && $oname);
 
@@ -190,6 +190,7 @@ sub reaction
   $pf->($self,$otype,$oaction,$oname,\%info);
  }
 
+ my $rc=$msg->result_status();
  $self->message(undef); ## needed ? useful ?
 
  return ($rc,\%info,$oname);

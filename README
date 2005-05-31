@@ -28,8 +28,15 @@ standard for domain name activities, for example for status codes.
 Currently Net::DRI ships with
 - a full RRP implementation (RFC 2832 & 3632)
 - a TCP/TLS transport
+- a SOAP transport (HTTP/HTTPS)
+- a Web scraping ``transport''
 - a Net::DRI::DRD::VNDS covering Verisign Naming & Directory Services for
   .COM & .NET
+- a Net::DRI::DRD::AFNIC covering AFNIC registry for .FR
+     (only domain_check through web services)
+- a Net::DRI::DRD::Gandi covering Gandi registrar for .COM/.NET/.ORG/.BIZ/
+   .INFO/.NAME/.BE
+     (only domain_update for nameservers through web site)
 
 Work is underway to provide a full EPP implementation for various registries,
 as well as an email transport.
@@ -37,7 +44,7 @@ as well as an email transport.
 If you are a registry/registrar/reseller, we would welcome
 the opportunity to be able to test Net::DRI against your system. Please
 drop a note to the authors of Net::DRI and do not hesitate to provide
-this framework to your clients (see license in COPYING file).
+this framework to your clients (see license file).
 
 
 Perl modules needed
@@ -55,26 +62,34 @@ Time::HiRes
 
 IO::Socket::INET
 IO::Socket::SSL (>=0.90)
+SOAP::Lite
+WWW::Mechanize
 
 Install
 -------
 
-Just copy the content of the lib/ directory somewhere in your path.
+Use the standard procedure:
+perl Makefile.PL ; make ; make tests ; make install
+Or just copy the content of the lib/ directory somewhere in your path.
 You can use tests available in t/ to make sure everything is well.
 (all tests are done locally and do not require a network connection)
 
 How to use
 ----------
 
-See the attached example in eg/vnds_rrp.pl
+You can find examples in the eg subdirectory:
+vnds_rrp.pl : as registrar, to connect to Verisign systems using RRP
+afnic_ws.pl : as AFNIC member, to use AFNIC web services
+gandi_web.pl : as Gandi client, to change nameservers for your domain, 
+               through the web interface
 
 All errors trigger an exception using die and a specific class
 (Net::DRI::Exception). Thus all calls to Net::DRI methods should be
 put in an eval() to easily trap exceptions. Please see Net::DRI::Exception
-for details about information available when an exception arrive.
+for details about information available when an exception is raised.
 
 Net::DRI uses an internal cache (in the future many different backends will
-be available for this service), and you can provide the global ttl of objects
+be available for this service), and you can provide the global time to live of objects
 in it when you create the Net::DRI object. A negative ttl means no cache at all.
 It is recommended not to completely disable the cache, and to have a ttl of at
 least of few seconds : it will cut down the use of checks and related verifications
@@ -92,8 +107,9 @@ Typical use of this library would go along those lines:
   Besides the registry name you can also pass a domain name or a TLD, and the library
   will try to find the correct registry. This will work only if you have no overlap between
   your TLDs among various registries
-- $dri->new_profile('profilename','transport class',[transport params],'protocol class',[protocol param])
- (or new_current_profile with same parameters to be as new_profile and set the default profile to the one being created)
+- $dri->new_profile('profilename','transport class',[transport params],'protocol class',[protocol params])
+ (or new_current_profile with same parameters as in new_profile and it will also
+   set the default profile to the one being created)
   Each registry driver is used through a specific profile. Each driver can have at the same time
   as many profiles as needed.
   A profile is:
@@ -107,7 +123,18 @@ Typical use of this library would go along those lines:
 
   You switch profile using the $dri->target('registry name','profile name') call.
 
-- after registries and profiles have been created (others can be added later),
+  Optionnally, you can use an auto target function:
+  by providing details about which profile to use for each given action,
+  Net::DRI can switch to the profile needed automatically, thus you will not need
+  anymore to call target() by yourself.
+  To do that, you will need to provide information by calling:
+  $dri->set_auto_target('profile','type','action')
+  Profile is the profile name to use when doing
+  action 'action' (check, info, create, etc...) on object type 'type' (domain, host, contact).
+  The profile must exist before calling set_auto_target()
+  A default profile can be specified when type and/or action is undef.
+
+- after registries and profiles have been created (others can be added at any time),
  you can apply many methods (see below) to the $dri object
  You can change the current registry and/or current profile at any time using $dri->target(...,...)
 
@@ -213,7 +240,7 @@ Available API
  - status : a Net::DRI::Protocol::StatusList object representing the current status list of the domain queried
  - exDate, crDate, upDate, trDate : DateTime objects representing the expiration, creation, last update, and
                           transfer date for the domain queried
- - clID, crID, upID : (strings) local registry ID of the current sponsoring registrar, the registrar having created ,
+ - clID, crID, upID : (strings) local registry ID of the current sponsoring registrar, the registrar having created,
                        and the registrar (or registry) having last modified the domain queried
 
 * domain_check()

@@ -25,8 +25,8 @@ use Net::DRI::Util;
 use strict;
 
 our $AUTOLOAD;
-our $VERSION="0.11";
-our $CVS_REVISION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION="0.12";
+our $CVS_REVISION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -86,8 +86,6 @@ sub new
             time_created     => time(),
             trid_factory     => \&Net::DRI::Util::create_trid_1,
           };
-
-## handle trace/debug level ?
 
  bless($self,$class); 
  return $self;
@@ -205,7 +203,7 @@ sub AUTOLOAD
 
  my $ndr=$self->registry(); ## This is a Net::DRI::Registry object
  Net::DRI::Exception::err_method_not_implemented("$attr in $ndr") unless (ref($ndr) && $ndr->can($attr));
- return $ndr->$attr(@_);
+ return $ndr->$attr(@_); ## is goto beter here ?
 }
 
 sub end

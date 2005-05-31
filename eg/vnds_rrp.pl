@@ -1,5 +1,6 @@
 #!/usr/bin/perl -w
 #
+#
 # A Net::DRI example
 # See also t/600vnds_rrp.t
 

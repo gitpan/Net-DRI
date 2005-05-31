@@ -24,10 +24,11 @@ __PACKAGE__->mk_ro_accessors(qw(name driver profile trid)); ## READ-ONLY !!
 
 use Net::DRI::Exception;
 use Net::DRI::Util;
+use Net::DRI::Protocol::ResultStatus;
 
 our $AUTOLOAD;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -88,6 +89,7 @@ sub new
                            ##                   }
                            ## }
            profile => undef, ## current profile
+           auto_target => {},
            last_data => {},
            trid => $trid,
           };
@@ -201,8 +203,42 @@ sub get_info
 sub target
 {
  my ($self,$profile)=@_;
- err_profile_name_does_not_exist($profile) unless exists($self->{profiles}->{$profile});
+ err_profile_name_does_not_exist($profile) unless ($profile && exists($self->{profiles}->{$profile}));
  $self->{profile}=$profile;
+}
+
+sub profile_auto_switch
+{
+ my ($self,$otype,$oaction)=@_;
+ my $p=$self->get_auto_target($otype,$oaction);
+ return unless defined($p);
+ $self->target($p);
+ return;
+}
+
+sub set_auto_target
+{
+ my ($self,$profile,$otype,$oaction)=@_; ## $otype/$oaction may be undef
+ err_profile_name_does_not_exist($profile) unless ($profile && exists($self->{profiles}->{$profile}));
+
+ my $rh=$self->{auto_target};
+ $otype||='_default';
+ $oaction||='_default';
+ $rh->{$otype}={} unless (exists($rh->{$otype}));
+ $rh->{$otype}->{$oaction}=$profile;
+}
+
+sub get_auto_target
+{
+ my ($self,$otype,$oaction)=@_;
+ my $at=$self->{auto_target};
+ $otype='_default' unless (exists($at->{$otype}));
+ return undef unless (exists($at->{$otype}));
+ my $ac=$at->{$otype};
+ return undef unless (defined($ac) && ref($ac));
+ $oaction='_default' unless (exists($ac->{$oaction}));
+ return undef unless (exists($ac->{$oaction}));
+ return $ac->{$oaction};
 }
 
 sub new_profile
@@ -221,9 +257,8 @@ sub new_profile
  Net::DRI::Exception->die(1,'DRI',8,"Failed to load Perl module $protocol") if $@;
 
  my $drd=$self->{driver};
- my $to=$transport->new($drd,@{$t_params});
+ my $to=$transport->new($drd,@{$t_params}); ## this may die !
  my $po=$protocol->new($drd,@{$p_params});
-
  my $compat=$self->driver()->transport_protocol_compatible($to,$po); ## 0/1/undef
  unless (defined($compat))
  {
@@ -277,24 +312,32 @@ sub has_action
 sub process
 {
  my ($self,$otype,$oaction)=@_[0,1,2];
- my $pa=$_[3] || [];
+ my $pa=$_[3] || []; ## store them ?
  my $ta=$_[4] || [];
+
+ ## Automated switch, if enabled
+ $self->profile_auto_switch($otype,$oaction);
 
  ## Current protocol/transport objects for current profile
  my ($po,$to)=$self->protocol_transport();
  my $trid=$self->trid->($self->name());
 
  eval {
-  my $tosend=$po->action($otype,$oaction,@$pa); ## something with a as_string() method
-  $self->{ops}->{$trid}=[0,$tosend]; ## 0 = todo, not sent
+  my $tosend=$po->action($otype,$oaction,@$pa);
+  $self->{ops}->{$trid}=[0,$tosend]; ## 0 = todo, not sent ## This will be done in/with LocalStorage
 
-  $to->send($tosend,@$ta);
+  $to->send($tosend,@$ta); ## if synchronous, store results somewhere in dri, keyed by trid
 
   $self->{ops}->{$trid}->[0]=1; ## now it is sent
  };
 
  if ($@) ## some kind of error happened
  {
+  if (ref($@) eq 'Net::DRI::Protocol::ResultStatus')
+  {
+   $self->status($@);
+   return $@;
+  }
   $@=Net::DRI::Exception->new(1,'internal',0,"Error not handled: $@") unless ref($@);
   die($@);
  }
@@ -303,6 +346,7 @@ sub process
  $self->process_back($trid,$po,$to,$otype,$oaction);
 }
 
+## also called directly , when we found something to do for asynchronous case, through TRID
 sub process_back
 {
  my ($self,$trid,$po,$to,$otype,$oaction)=@_;
@@ -312,12 +356,18 @@ sub process_back
  
  eval
  {
+  ## transport parameters ?
   my $res=$to->receive(); ## a Net::DRI::Data::Raw or die inside
   ($rc,$ri,$oname)=$po->reaction($otype,$oaction,$res,$self->{ops}->{$trid}->[1]);
  };
 
  if ($@) ## some kind of error happened
  {
+  if (ref($@) eq 'Net::DRI::Protocol::ResultStatus')
+  {
+   $self->status($@);
+   return $@;
+  }
   $@=Net::DRI::Exception->new(1,'internal',0,"Error not handled: $@") unless ref($@);
   die($@);
  }

@@ -2,12 +2,17 @@ TODO file for Net::DRI
 Send your wishlist to <netdri@dotandco.com>
 =====================================================================
 
+All
+	* sign the distribution (Module::Signature)
+
 Net::DRI
 	* way to use it without exceptions (wrap in eval + carp ?)
 	* let the user choose a trid factory (ex: UUID/UGID)
 
 Net::DRI::DRD
 	* bulk operations (many domains at once)
+	* domain_update_contacts_*
+	* domain_delete() : try to rename nameservers created in domain about to be deleted
 
 Net::DRI::Protocol::RRP::Core::Status
 	* take into account: REDEMPTIONPERIOD PENDINGRESTORE PENDINGDELETE PENDINGTRANSFER

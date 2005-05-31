@@ -26,7 +26,7 @@ use Net::DRI::Data::Changes;
 use Net::DRI::Data::Hosts;
 use Net::DRI::Data::StatusList;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -107,6 +107,7 @@ sub root_servers { Net::DRI::Exception::err_method_not_implemented("root_servers
 
 sub transport_protocol_compatible { Net::DRI::Exception::err_method_not_implemented("transport_protocol_compatible in ".ref($_[0])); }
 
+## We will need to deal with specific characters allowed/specific languages allowed
 sub has_idn { Net::DRI::Exception::err_method_not_implemented("has_idn in ".ref($_[0])); }
 
 sub verify_name_domain { Net::DRI::Exception::err_method_not_implemented("verify_name_domain in ".ref($_[0])); }
@@ -135,7 +136,7 @@ sub check_name
 
  return 2 unless Net::DRI::Util::is_hostname($data);
  my @d=split(/\./,$data);
- return 3 if ($dots && $dots!=@d);
+ return 3 if ($dots && 1+$dots!=@d);
  
  return 0; #everything ok
 }
@@ -194,14 +195,14 @@ sub verify_duration_transfer
 sub err_invalid_domain_name
 {
  my $domain=shift;
- Net::DRI::Exception->new(0,'DRD',1,'Invalid domain name : '.(defined($domain) && $domain)? $domain : '?');
+ Net::DRI::Exception->die(0,'DRD',1,'Invalid domain name : '.((defined($domain) && $domain)? $domain : '?'));
 }
 
 sub err_invalid_host_name
 {
  my $dh=shift;
  $dh||='?';
- Net::DRI::Exception->new(0,'DRD',2,'Invalid host name : '.(ref($dh))? $dh->get_names(1) : $dh);
+ Net::DRI::Exception->die(0,'DRD',2,'Invalid host name : '.((ref($dh))? $dh->get_names(1) : $dh));
 }
 
 
@@ -322,8 +323,6 @@ sub domain_delete
   push @r,$rc2;
   return wantarray()? @r : $rc2 unless $rc2->is_success();
  }
-
- ## TO FIX : try to rename nameservers created in domain about to be deleted
 
  my $rc=$ndr->process('domain','delete',[$domain]);
  push @r,$rc;
@@ -463,8 +462,6 @@ sub domain_update_status
   return $self->domain_update($ndr,$domain,Net::DRI::Data::Changes->new_set('status',$sadd));
  }
 }
-
-## TO FIX : sub domain_update_contacts_*
 
 sub domain_renew
 {
@@ -690,7 +687,7 @@ sub host_update
                                                                                        ! $ndr->protocol_capable('host_update',$w,'set'));
   Net::DRI::Exception->new(0,'DRD',6,"Change host_update/${w} with simultaneous set and add or del not supported") if (defined($set) && (defined($add) || defined($del)));
  }
-
+ 
  my $rc=$ndr->process('host','update',[$dh,$tochange]);
  return $rc;
 }
@@ -757,7 +754,7 @@ sub host_current_status
 
 sub host_is_mine
 {
- my ($self,$ndr,$$dh)=@_;
+ my ($self,$ndr,$dh)=@_;
  my $clid=$self->info('clid');
  return 0 unless defined($clid);
  my $id;

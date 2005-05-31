@@ -19,13 +19,13 @@ package Net::DRI::Protocol::ResultStatus;
 
 use strict;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Protocol::ResultStatus - store details of an operation results
+Net::DRI::Protocol::ResultStatus - Encapsulate details of an operation result with standardization on EPP
 
 =head1 DESCRIPTION
 
@@ -122,13 +122,37 @@ sub object_available
  return 1-$e;
 }
 
+sub new_generic_success
+{
+ my ($class,$msg)=@_;
+ return $class->new('epp',1900,undef,1,$msg);
+}
+
+sub new_generic_error
+{
+ my ($class,$msg)=@_;
+ return $class->new('epp',2900,undef,0,$msg);
+}
+
+sub new_success
+{
+ my ($class,$code,$msg)=@_;
+ return $class->new('epp',$code,undef,1,$msg);
+}
+
+sub new_error
+{
+ my ($class,$code,$msg)=@_;
+ return $class->new('epp',$code,undef,0,$msg);
+}
+
 ## Local codes (not used in EPP): 19XX for ok, 29XX for errors
 ## Thus: EPP/2900 : Undefined error
 ##       EPP/1900 : Undefined success
 sub _standardize_code
 {
  my ($type,$code,$rcodes,$is_success)=@_;
- return 2900 unless defined($type) && $type && defined($code); ## $code can be 0 maybe
+ return 2900 unless defined($type) && $type && defined($code); ## $code can be 0 (ex: AFNIC WebServices for domain_check)
  $type=lc($type);
  return $code if ($type eq 'epp'); ## we standardize on EPP codes
  return 2900 unless (defined($rcodes) && (ref($rcodes) eq 'HASH') && exists($rcodes->{$type}));

@@ -20,11 +20,12 @@ package Net::DRI::Protocol::RRP::Message;
 use strict;
 
 use Net::DRI::Exception;
+use Net::DRI::Protocol::ResultStatus;
 
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
-__PACKAGE__->mk_accessors(qw(version errcode errmsg command entityname));
+__PACKAGE__->mk_accessors(qw(version errcode errmsg command));
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -71,6 +72,24 @@ our $EOL="\r\n"; ## as mandated by RFC 2832
 
 our %CODES; ## defined at bottom
 
+our %ORDER=('add_domain'        => ['EntityName','DomainName','-Period','NameServer'],
+            'add_nameserver'    => ['EntityName','NameServer','IPAddress'],
+            'check_domain'      => ['EntityName','DomainName'],
+            'check_nameserver'  => ['EntityName','NameServer'],
+            'del_domain'        => ['EntityName','DomainName'],
+            'del_nameserver'    => ['EntityName','NameServer'],
+            'describe'          => ['-Target'],
+            'mod_domain'        => ['EntityName','DomainName','NameServer','Status'],
+            'mod_nameserver'    => ['EntityName','NameServer','NewNameServer','IPAddress'],
+            'quit'              => [],
+            'renew_domain'      => ['EntityName','DomainName','-Period','-CurrentExpirationYear'],
+            'session'           => ['-Id','-Password','-NewPassword'],
+            'status_domain'     => ['EntityName','DomainName'],
+            'status_nameserver' => ['EntityName','NameServer'],
+            'transfer_domain'   => ['-Approve','EntityName','DomainName'],
+           );
+
+
 sub new
 {
  my $proto=shift;
@@ -84,7 +103,7 @@ sub new
  {
   $self->command($rh->{command})       if exists($rh->{command});
   $self->options($rh->{options})       if exists($rh->{options});
-  $self->entityname($rh->{entityname}) if exists($rh->{entityname});
+  $self->entities('EntityName',$rh->{entityname}) if exists($rh->{entityname});
   if (exists($rh->{entities}))
   {
    while(my ($k,$v)=each(%{$rh->{entities}})) { $self->entities($k,$v); };
@@ -104,25 +123,29 @@ sub result_status
 sub as_string
 {
  my $self=shift;
- my @r;
- push @r,$self->command();
- my $en=$self->entityname();
- push @r,"EntityName:${en}" if ($en); ## test mandatory for quit/session/describe commands (without entityname)
+ my $cmd=$self->command();
+ my $ent=$self->entities('EntityName');
+ my $allopt=$self->options();
+ my $order=lc($cmd);
+ $order.="_".lc($ent) if ($ent);
 
- ## Entities
- foreach my $k ($self->entities())
+ Net::DRI::Exception->die(1,'protocol/RRP',5,'Unknown command $cmd, no order found') unless (exists($ORDER{$order}));
+
+ my @r=($cmd);
+ foreach my $o (@{$ORDER{$order}})
  {
-  push @r,map { "${k}:${_}" } ($self->entities($k));
+  if ($o=~m/^-(.+)$/) ## Option
+  {
+   push @r,"${o}:".$allopt->{$1} if exists($allopt->{$1});
+  } else ## Entity
+  {
+   my @e=$self->entities($o);
+   push @r,map { "${o}:${_}" } @e if @e;
+  }
  }
-
- ## Options
- while(my ($k,$v)=each(%{$self->options()}))
- {
-  push @r,"-${k}:${v}";
- }
-
- push @r,"."; ## end
- return join($EOL,@r).$EOL;
+ 
+ push @r,".${EOL}"; ## end
+ return join($EOL,@r);
 }
 
 sub parse
@@ -168,19 +191,15 @@ sub entities
    return;
   } else ## only key given => get value of key
   {
-   return undef unless (exists($self->{entities}));
+   return wantarray()? () : undef unless (exists($self->{entities}));
    $k=lc($k);
    foreach my $i (keys(%{$self->{entities}})) { next unless (lc($i) eq $k); $k=$i; last; };
-   return undef unless (exists($self->{entities}->{$k}));
+   return wantarray()? () : undef unless (exists($self->{entities}->{$k}));
    return wantarray()? @{$self->{entities}->{$k}} : join(" ",@{$self->{entities}->{$k}});
   }
  } else ## nothing given => get list of keys
  {
-  return () unless exists($self->{entities});
-  my @k=keys(%{$self->{entities}});
-  return ('DomainName',grep { $_ ne 'DomainName' } @k) if exists($self->{entities}->{DomainName});
-  return ('NameServer',grep { $_ ne 'NameServer' } @k) if exists($self->{entities}->{NameServer});
-  return @k;
+  return exists($self->{entities})? keys(%{$self->{entities}}) : ();
  }
 }
 
@@ -206,7 +225,7 @@ sub options
 sub get_name_from_message
 {
  my ($self)=@_;
- my $ename=$self->entityname();
+ my $ename=$self->entities('EntityName');
 
  return uc($self->entities('DomainName')) if ($ename eq 'Domain');
  return uc($self->entities('NameServer')) if ($ename eq 'NameServer');

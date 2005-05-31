@@ -24,7 +24,7 @@ use Net::DRI::Protocol::RRP::Core::Status;
 use Net::DRI::Protocol::RRP;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -92,7 +92,7 @@ sub build_msg
  Net::DRI::Exception->die(1,'protocol/RRP',2,"Domain name needed") unless defined($domain) && $domain;
  Net::DRI::Exception->die(1,'protocol/RRP',10,"Invalid domain name") unless ($domain=~m/^[a-z0-9]([a-z0-9\-]{0,61}[a-z0-9])?\.[a-z0-9]([a-z0-9\-]{0,61}[a-z0-9])?$/i); ## from RRP grammar
  $msg->command($command) if defined($command);
- $msg->entityname('Domain');
+ $msg->entities('EntityName','Domain');
  $msg->entities('DomainName',uc($domain));
 }
 

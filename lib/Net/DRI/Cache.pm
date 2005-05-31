@@ -87,7 +87,7 @@ sub set
  Net::DRI::Exception::err_insufficient_parameters() unless Net::DRI::Util::all_valid($regname,$type,$key);
 
  $type=lc($type);
- $key=lc($key); ## ok in all cases ?
+ $key=lc($key);
 
  my $now=Net::DRI::Util::microtime();
  $ttl=$self->{ttl} unless defined($ttl);

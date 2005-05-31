@@ -2,7 +2,7 @@
 
 use Net::DRI::Protocol;
 
-use Test::More tests => 6;
+use Test::More tests => 7;
 
 my $p;
 $p=Net::DRI::Protocol->new();
@@ -17,9 +17,9 @@ is($p->name(),'myname','name()');
 is($p->version(),'1.5','version()');
 is($p->nameversion(),'myname/1.5','nameversion()');
 
-warn("TODO: create_status & others");
-## factories, commands
-
-
+TODO: {
+	local $TODO="tests on create_status() & others (factories, commands)";
+	ok(0);
+}
 
 exit 0;

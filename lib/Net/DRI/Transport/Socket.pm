@@ -30,7 +30,7 @@ use Net::DRI::Protocol::RRP::Connection;
 use Net::DRI::Util;
 use Net::DRI::Data::Raw;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -135,7 +135,8 @@ sub new
  }
  Net::DRI::Exception::usererr_insufficient_parameters("protocol_connection") unless (exists($opts{protocol_connection}) && $opts{protocol_connection});
  $t{pc}=$opts{protocol_connection};
- 
+
+ eval "require $t{pc}";
  Net::DRI::Exception::usererr_invalid_parameters("protocol_connection class must have: login() logout() is_login_successfull() is_end_command() is_server_close()") if (grep { ! $t{pc}->can($_) } ('login','logout','is_login_successfull','is_end_command','is_server_close'));
 
  Net::DRI::Exception::usererr_invalid_parameters("close_after must be an integer") if ($opts{close_after} && !Net::DRI::Util::isint($opts{close_after}));
@@ -264,6 +265,7 @@ sub open_connection
  $self->open_socket();
  $self->send_login();
  $self->current_state(1);
+ $self->time_open(now());
  $self->{transport}->{exchanges_done}=0;
 }
 

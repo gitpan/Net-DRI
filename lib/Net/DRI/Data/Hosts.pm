@@ -21,7 +21,7 @@ use strict;
 
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -34,7 +34,7 @@ Net::DRI::Data::Hosts - Handle ordered list of nameservers (name, IPv4 addresses
  use Net::DRI::Data::Hosts;
 
  my $dh=Net::DRI::Data::Hosts->new();
- $dh->add('ns.example.foo',['1.2.3.4','1.2.3.5');
+ $dh->add('ns.example.foo',['1.2.3.4','1.2.3.5']);
  $dh->add('ns2.example.foo',['10.1.1.1']); ## Third element can be an array ref of IPv6 addresses
 
  ## Number of nameservers

@@ -14,7 +14,7 @@ is($n->command(),'add','RRP Message create domain add 1 command');
 is($n->get_name_from_message(),'EXAMPLE.COM','RRP Message create domain add 1 get_name_from_message');
 
 $n=Net::DRI::Protocol::RRP::Message->new({command=>'add',entityname=>'Domain',entities=>{DomainName=>'example.com',NameServer=>['ns1.example.com','ns2.example.com']},options=>{Period=>10}});
-is($n->as_string(),"add\r\nEntityName:Domain\r\nDomainName:example.com\r\nNameServer:ns1.example.com\r\nNameServer:ns2.example.com\r\n-Period:10\r\n.\r\n",'RRP Message create domain add 2');
+is($n->as_string(),"add\r\nEntityName:Domain\r\nDomainName:example.com\r\n-Period:10\r\nNameServer:ns1.example.com\r\nNameServer:ns2.example.com\r\n.\r\n",'RRP Message create domain add 2');
 
 $n=Net::DRI::Protocol::RRP::Message->new({command=>'add',entityname=>'NameServer',entities=>{NameServer=>'ns1.example.com',IPAddress=>'198.41.1.11'}});
 is($n->as_string(),"add\r\nEntityName:NameServer\r\nNameServer:ns1.example.com\r\nIPAddress:198.41.1.11\r\n.\r\n",'RRP Message create nameserver add string');
@@ -60,7 +60,7 @@ $n=Net::DRI::Protocol::RRP::Message->new({command=>'transfer',entityname=>'Domai
 is($n->as_string(),"transfer\r\nEntityName:Domain\r\nDomainName:example.com\r\n.\r\n",'RRP Message create domain transfer');
 
 $n=Net::DRI::Protocol::RRP::Message->new({command=>'transfer',entityname=>'Domain',entities=>{DomainName=>'example.com'},options=>{Approve=>'Yes'}});
-is($n->as_string(),"transfer\r\nEntityName:Domain\r\nDomainName:example.com\r\n-Approve:Yes\r\n.\r\n",'RRP Message create domain transfer');
+is($n->as_string(),"transfer\r\n-Approve:Yes\r\nEntityName:Domain\r\nDomainName:example.com\r\n.\r\n",'RRP Message create domain transfer');
 
 
 ### Parse

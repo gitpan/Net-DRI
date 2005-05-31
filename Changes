@@ -1,3 +1,26 @@
+0.12 2005-05-31
+
++ New ``registries'': 
+   1) AFNIC (through web services, domain check only)
+   2) Gandi (through web site, domain nameservers update only)
++ New transport: SOAP (HTTP/HTTPS only)
++ New transport: Web (Web Scraping)
++ New protocol: Gandi Web Site (domain update only)
++ New protocol: AFNIC web services (domain check only)
++ New way of using profiles in Net::DRI::Registry : an auto switch functionnality is provided
+    so that the calling app does not have to call target() explicitely over and over
+    (see README for details)
+- BUGFIX for RRP : order of elements is now exactly as specified by standard
+- BUGFIX for Net::DRI::DRD in host_is_mine: parameters (warning not triggered in some perls)
+- BUGFIX for Net::DRI::DRD in err_invalid_domain_name/err_invalid_host_name: correct message 
+                                               & really raise an exception if a problem is found !
+- BUGFIX for Net::DRI::DRD in check_name: correct count of dots
++ Net::DRI::Transport::Socket : require on the protocol connection class to make sure it works
+- DOCFIX for Net::DRI::Data::Hosts (a ] was missing for the ref array of IPs)
++ New tests for Net::DRI::Protocol::RRP::Connection, Net::DRI::Protocol::AFNIC::WS::Message,
+   Net::DRI::Protocol::Gandi::Web::Message, Net::DRI::Protocol::Gandi::Web::Connection
+- BUGFIX : no more warnings in tests, we use the TODO block of Test::More
+
 0.11 2005-04-25
 
 + POD NAME section for each file with a short description
