@@ -19,7 +19,7 @@ package Net::DRI::Protocol::Gandi::Web::Domain;
 
 use strict;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -96,7 +96,7 @@ sub mod
  my $mes=$gweb->message();
  build_msg($mes,'mod',$domain);
 
- Net::DRI::Exception::usererr_invalid_parameters($todo." must be a Net::DRI::Data::Changes object") unless ($todo && ref($todo) && $todo->isa('Net::DRI::Data::Changes'));
+ Net::DRI::Exception::usererr_invalid_parameters($todo." must be a Net::DRI::Data::Changes object") unless ($todo && UNIVERSAL::isa($todo,'Net::DRI::Data::Changes'));
  if ((grep { ! /^(?:ns)$/ } $todo->types()) ||
      (grep { ! /^(?:add|del|set)$/ } $todo->types('ns'))
     )

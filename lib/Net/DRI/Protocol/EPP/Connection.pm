@@ -1,4 +1,4 @@
-## Domain Registry Interface, RRP Connection handling
+## Domain Registry Interface, EPP Connection handling
 ##
 ## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
@@ -15,18 +15,19 @@
 #
 #########################################################################################
 
-package Net::DRI::Protocol::RRP::Connection;
+package Net::DRI::Protocol::EPP::Connection;
 
 use strict;
-use Net::DRI::Protocol::RRP::Message;
+use Net::DRI::Protocol::EPP::Message;
+use Net::DRI::Data::Raw;
 
-our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Protocol::RRP::Connection - RRP Connection handling for Net::DRI
+Net::DRI::Protocol::EPP::Connection - EPP Connection handling for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -65,50 +66,73 @@ See the LICENSE file that comes with this distribution for more details.
 
 ###############################################################################
 
-
 sub login
 {
  shift if ($_[0] eq __PACKAGE__);
  my ($id,$pass,$cltrid,$dr)=@_;
- my $mes=Net::DRI::Protocol::RRP::Message->new({ command => 'session', options => { Id => $id, Password => $pass}});
- return $mes->as_string();
+
+ my $got=Net::DRI::Protocol::EPP::Message->new();
+ $got->parse($dr);
+ my $rg=$got->result_greeting();
+
+ my $mes=Net::DRI::Protocol::EPP::Message->new();
+ $mes->command(['login']);
+ my @d;
+ push @d,['clID',$id];
+ push @d,['pw',$pass];
+ push @d,['options',[['version',$rg->{version}->[0]],['lang','en']]];
+
+ my @s;
+ push @s,map { ['objURI',$_] } @{$rg->{svcs}};
+ push @s,['svcExtension',[map {['extURI',$_]} @{$rg->{svcext}}]];
+ push @d,['svcs',\@s];
+
+ $mes->command_body(\@d);
+ $mes->cltrid($cltrid) if $cltrid;
+ return $mes->as_string('tcp');
 }
 
 sub logout
 {
- my $mes=Net::DRI::Protocol::RRP::Message->new({ command => 'quit' });
- return $mes->as_string();
+ shift if ($_[0] eq __PACKAGE__);
+ my $cltrid=shift(@_);
+ my $mes=Net::DRI::Protocol::EPP::Message->new();
+ $mes->command(['logout']);
+ $mes->cltrid($cltrid) if $cltrid;
+ return $mes->as_string('tcp');
 }
 
 sub keepalive
 {
- my $mes=Net::DRI::Protocol::RRP::Message->new({ command => 'describe' });
- return $mes->as_string();
+ shift if ($_[0] eq __PACKAGE__);
+ my $cltrid=shift(@_);
+ my $mes=Net::DRI::Protocol::EPP::Message->new();
+ $mes->command([['poll',{'op'=>'req'}]]); ## It should be ok, since ACK is necessary to really dequeue
+ $mes->cltrid($cltrid) if $cltrid;
+ return $mes->as_string('tcp');
 }
 
-########################################################################
+####################################################################################################
 
 sub get_data
 {
  shift if ($_[0] eq __PACKAGE__);
  my ($to,$sock)=@_;
 
- my (@l);
- while(my $l=$sock->getline())
- {
-  push @l,$l;
-  last if ($l=~m/^\.\s*\n?$/);
- }
- die() unless ($l[-1]=~m/^\.\s*\n?$/);
- return Net::DRI::Data::Raw->new_from_array(\@l);
+ my $c;
+ $sock->read($c,4); ## first 4 bytes are the packed length
+ my $length=unpack('N',$c)-4;
+ my $m;
+ $sock->read($m,$length);
+ die() unless ($m=~m!</epp>$!);
+ return Net::DRI::Data::Raw->new_from_string($m);
 }
 
 sub is_greeting_successful
 {
  shift if ($_[0] eq __PACKAGE__);
  my $dc=shift;
- my $code=find_code($dc);
- return ($code==0)? 1 : 0;
+ return ($dc->as_string()=~m/<greeting>/)? 1 : 0;
 }
 
 sub is_login_successful
@@ -116,7 +140,7 @@ sub is_login_successful
  shift if ($_[0] eq __PACKAGE__);
  my $dc=shift;
  my $code=find_code($dc);
- return (defined($code) && ($code==200));
+ return (defined($code) && ($code==1000));
 }
 
 sub is_server_close
@@ -124,23 +148,18 @@ sub is_server_close
  shift if ($_[0] eq __PACKAGE__);
  my $dc=shift;
  my $code=find_code($dc);
-
- ## 220 : after a successful QUIT
- ## 420 : Command failed due to server error. Server closing connection
- ## 520 : Server closing connection. Client should try opening new connection (timeout)
- ## 521 : Too many sessions open. Server closing connection
- return (defined($code) && ($code=~m/^(?:[245]20|521)$/));
+ return (defined($code) && ($code=~m/^(?:1500|250[012])$/));
 }
 
 sub find_code
 {
  my $dc=shift;
- my @a=$dc->as_array();
- return 0 if ($a[0]=~m/^.+ RRP Server version/); ## initial login
- return undef unless $#a>0; ## at least 2 lines
- return undef unless $a[-1]=~m/^\.\s*\n?$/;
- return undef unless $a[0]=~m/^(\d+) \S/;
- return 0+$1;
+ my $a=$dc->as_string();
+ return undef unless ($a=~m!</epp>!);
+ return 1000  if ($a=~m!<greeting>!);
+ $a=~s/[\n\s\t]+//g;
+ return undef unless ($a=~m!<response><resultcode=["'](\d+)["']>!);
+ return 0+$1; 
 }
 
 ###################################################################################################################:

@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-use Test::More tests => 241;
+use Test::More tests => 262;
 
 use Net::DRI::Util;
 
@@ -71,5 +71,28 @@ TODO: {
         local $TODO="tests on is_ipv6(), compare_duration()";
         ok(0);
 }
+
+is(Net::DRI::Util::xml_is_normalizedstring("A\tB"),0,'xml_is_normalizedstring() 1');
+is(Net::DRI::Util::xml_is_normalizedstring("A",1),1,'xml_is_normalizedstring() 2');
+is(Net::DRI::Util::xml_is_normalizedstring("A",2),0,'xml_is_normalizedstring() 3');
+is(Net::DRI::Util::xml_is_normalizedstring("A",undef,1),1,'xml_is_normalizedstring() 4');
+is(Net::DRI::Util::xml_is_normalizedstring("AB",undef,1),0,'xml_is_normalizedstring() 5');
+is(Net::DRI::Util::xml_is_normalizedstring("A",1,2),1,'xml_is_normalizedstring() 6');
+is(Net::DRI::Util::xml_is_normalizedstring("A",1,1),1,'xml_is_normalizedstring() 7');
+is(Net::DRI::Util::xml_is_normalizedstring("AB",1,2),1,'xml_is_normalizedstring() 8');
+is(Net::DRI::Util::xml_is_normalizedstring("ABC",1,2),0,'xml_is_normalizedstring() 9');
+
+is(Net::DRI::Util::xml_is_token("A\tB"),0,'xml_is_token()  1');
+is(Net::DRI::Util::xml_is_token(" AB"),0,'xml_is_token()  2');
+is(Net::DRI::Util::xml_is_token("AB "),0,'xml_is_token()  3');
+is(Net::DRI::Util::xml_is_token("A  B"),0,'xml_is_token()  4');
+is(Net::DRI::Util::xml_is_token("A",1),1,'xml_is_token()  5');
+is(Net::DRI::Util::xml_is_token("A",2),0,'xml_is_token()  6');
+is(Net::DRI::Util::xml_is_token("A",undef,1),1,'xml_is_token()  7');
+is(Net::DRI::Util::xml_is_token("AB",undef,1),0,'xml_is_token()  8');
+is(Net::DRI::Util::xml_is_token("A",1,2),1,'xml_is_token()  9');
+is(Net::DRI::Util::xml_is_token("A",1,1),1,'xml_is_token() 10');
+is(Net::DRI::Util::xml_is_token("AB",1,2),1,'xml_is_token() 11');
+is(Net::DRI::Util::xml_is_token("ABC",1,2),0,'xml_is_token() 12');
 
 exit 0;

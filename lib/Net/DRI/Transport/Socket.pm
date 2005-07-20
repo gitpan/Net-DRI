@@ -26,11 +26,10 @@ use IO::Socket::INET;
 use IO::Socket::SSL 0.90;
 
 use Net::DRI::Exception;
-use Net::DRI::Protocol::RRP::Connection;
 use Net::DRI::Util;
 use Net::DRI::Data::Raw;
 
-our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -70,7 +69,7 @@ C<client_login> / C<client_password> : protocol login & password
 
 =item *
 
-C<protocol_connection> : Net::DRI class handling protocol connection details. For now: Net::DRI::Protocol::RRP::Connection
+C<protocol_connection> : Net::DRI class handling protocol connection details. (Ex: C<Net::DRI::Protocol::RRP::Connection> or C<Net::DRI::Protocol::EPP::Connection>)
 
 =item *
 
@@ -137,7 +136,8 @@ sub new
  $t{pc}=$opts{protocol_connection};
 
  eval "require $t{pc}";
- Net::DRI::Exception::usererr_invalid_parameters("protocol_connection class must have: login() logout() is_login_successfull() is_end_command() is_server_close()") if (grep { ! $t{pc}->can($_) } ('login','logout','is_login_successfull','is_end_command','is_server_close'));
+ my @need=qw/login logout is_greeting_successful is_login_successful is_server_close get_data/;
+ Net::DRI::Exception::usererr_invalid_parameters('protocol_connection class must have: '.join(' ',@need)) if (grep { ! $t{pc}->can($_) } @need);
 
  Net::DRI::Exception::usererr_invalid_parameters("close_after must be an integer") if ($opts{close_after} && !Net::DRI::Util::isint($opts{close_after}));
  $t{close_after}=$opts{close_after} || 0;
@@ -212,26 +212,17 @@ sub send_login
  my $t=$self->{transport};
  my $sock=$self->sock();
  my $pc=$t->{pc};
+ my $cltrid=Net::DRI::Util::create_trid_1('transport');
 
  ## Get registry greeting
- my @j;
- while(my $l=$sock->getline())
- {
-  push @j,$l;
-  last if $pc->is_end_command(\@j);
- }
+ my $dr=$pc->get_data($self,$sock);
+ die() unless ($pc->is_greeting_successful($dr));
+ my $login=$pc->login($t->{client_login},$t->{client_password},$cltrid,$dr);
+ die() unless ($sock->print($login)); ## TO FIX
 
- my $login=$pc->login($t->{client_login},$t->{client_password});
- die() unless ($sock->print($login));
-
- ## Verify login successfull
- @j=();
- while(my $l=$sock->getline())
- {
-  push @j,$l;
-  last if $pc->is_login_successfull(\@j);
-  die() if ($pc->is_server_close(\@j));
- }
+ ## Verify login successful
+ $dr=$pc->get_data($self,$sock);
+ die() unless ($pc->is_login_successful($dr) && !$pc->is_server_close($dr));
 }
 
 sub send_logout
@@ -240,20 +231,17 @@ sub send_logout
  my $t=$self->{transport};
  my $sock=$self->sock();
  my $pc=$t->{pc};
+ my $cltrid=Net::DRI::Util::create_trid_1('transport');
 
- my $logout=$pc->logout();
+ my $logout=$pc->logout($cltrid);
  eval
  {
   local $SIG{ALRM}=sub { die "timeout" };
   alarm(10);
-  die() unless ($sock->print($logout));
+  die() unless ($sock->print($logout)); ## TO FIX
 
-  my @j;
-  while(my $l=$sock->getline())
-  {
-   push @j,$l;
-   last if ($pc->is_server_close(\@j));
-  }
+  my $dr=$pc->get_data($self,$sock);
+  die() unless ($pc->is_server_close($dr));
 
   alarm(0);
  };
@@ -265,7 +253,7 @@ sub open_connection
  $self->open_socket();
  $self->send_login();
  $self->current_state(1);
- $self->time_open(now());
+ $self->time_open(time());
  $self->{transport}->{exchanges_done}=0;
 }
 
@@ -300,7 +288,7 @@ sub _print ## here we are sure open_connection() was called before
  my ($self,$count,$tosend)=@_;
  my $sock=$self->sock();
 
- die() unless ($sock->print($tosend->as_string()));
+ die() unless ($sock->print($tosend->as_string('tcp')));
  return 1; ## very important
 }
 
@@ -319,12 +307,7 @@ sub _get
  my $pc=$t->{pc};
 
  ## Answer
- my @m;
- while(my $l=$sock->getline())
- {
-  push @m,$l;
-  last if $pc->is_end_command(\@m); ## is_end_command
- }
+ my $dr=$pc->get_data($self,$sock);
 
  ## Do we allow other messages ?
  $t->{exchanges_done}++;
@@ -333,7 +316,7 @@ sub _get
   $self->close_connection();
  }
 
- return Net::DRI::Data::Raw->new_from_array(\@m);
+ return $dr;
 }
 
 ########################################################################################################

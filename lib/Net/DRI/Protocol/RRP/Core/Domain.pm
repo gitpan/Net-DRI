@@ -24,7 +24,7 @@ use Net::DRI::Protocol::RRP::Core::Status;
 use Net::DRI::Protocol::RRP;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -78,8 +78,8 @@ sub register_commands
            delete => [ \&del ],
 	   renew  => [ \&renew, \&add_parse ],
 	   update => [ \&mod ],
-	   transfer_start  => [ \&transfer_request ],
-	   transfer_answer => [ \&transfer_answer ],
+	   transfer_request => [ \&transfer_request ],
+	   transfer_answer  => [ \&transfer_answer ],
          );
 
  $tmp{transfer_cancel}=[ \&transfer_answer ] if ($version eq "2.0");
@@ -185,11 +185,11 @@ sub status_parse
 
 sub transfer_answer
 {
- my ($rrp,$domain,$approve)=@_;
+ my ($rrp,$domain,$rd)=@_;
  my $mes=$rrp->message();
  build_msg($mes,'transfer',$domain);
 
- $mes->entities('Approve',(defined($approve) && $approve)? 'Yes' : 'No');
+ $mes->entities('Approve',(defined($rd) && ref($rd) && exists($rd->{approve}) && $rd->{approve})? 'Yes' : 'No');
 }
 
 sub mod
@@ -198,7 +198,7 @@ sub mod
  my $mes=$rrp->message();
  build_msg($mes,'mod',$domain);
 
- Net::DRI::Exception::usererr_invalid_parameters($todo." must be a Net::DRI::Data::Changes object") unless ($todo && ref($todo) && $todo->isa('Net::DRI::Data::Changes'));
+ Net::DRI::Exception::usererr_invalid_parameters($todo." must be a Net::DRI::Data::Changes object") unless ($todo && UNIVERSAL::isa($todo,'Net::DRI::Data::Changes'));
  if ((grep { ! /^(?:ns|status)$/ } $todo->types()) ||
      (grep { ! /^(?:add|del)$/ } $todo->types('ns')) ||
      (grep { ! /^(?:add|del)$/ } $todo->types('status'))

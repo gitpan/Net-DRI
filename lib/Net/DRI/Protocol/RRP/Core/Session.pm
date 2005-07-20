@@ -20,13 +20,13 @@ package Net::DRI::Protocol::RRP::Core::Session;
 use strict;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Protocol::RRP::Core::Session - RRP Session commands
+Net::DRI::Protocol::RRP::Core::Session - RRP Session commands for Net::DRI
 
 =head1 DESCRIPTION
 

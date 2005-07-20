@@ -24,7 +24,7 @@ __PACKAGE__->mk_accessors(qw(name version factories commands message capabilitie
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -81,7 +81,6 @@ sub new
  return $self;
 }
 
-## in calling app: $protocol->create_status({transfer=>0}) if we do not want to allow transfers
 sub create_status
 {
  my $self=shift;
@@ -146,11 +145,12 @@ sub action
  my $self=shift;
  my $otype=shift;
  my $oaction=shift;
+ my $trid=shift;
  my $h=$self->_load_commands($otype,$oaction);
 
  ## Create a new message from scratch and loop through all functions registered for given action & type
  my $f=$self->factories();
- my $msg=$f->{message}->new();
+ my $msg=$f->{message}->new($trid);
  Net::DRI::Exception->die(0,'protocol',1,'Unsuccessfull message creation') unless ($msg && ref($msg) && $msg->isa('Net::DRI::Protocol::Message'));
  $msg->version($self->version());
  $self->message($msg); ## store it for later use (in loop below)

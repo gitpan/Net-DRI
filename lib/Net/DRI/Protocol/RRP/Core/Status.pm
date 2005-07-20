@@ -22,7 +22,7 @@ use base qw!Net::DRI::Data::StatusList!;
 use Net::DRI::Exception;
 use strict;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -75,22 +75,17 @@ sub new
  my $self=$class->SUPER::new('rrp','2.0');
  bless($self,$class);
 
+ my %s=('delete'   => 'REGISTRAR-LOCK',
+        'update'   => 'REGISTRAR-LOCK',
+        'transfer' => 'REGISTRAR-LOCK',
+        'publish'  => 'REGISTRAR-HOLD',
+       );
+ $self->_register_pno(\%s);
+
  my $msg=shift;
  return $self unless defined($msg);
 
- if (ref($msg) eq 'HASH')
- {
-  my $side=shift;
-  $side=(lc($side) eq 'client')? 'REGISTRAR' : 'REGISTRY';
- 
-  $self->add($side.'-LOCK') if ((exists($msg->{update})   && !$msg->{update})    ||
-                                (exists($msg->{transfer}) && !$msg->{transfert}) ||
-                                (exists($msg->{delete})   && !$msg->{delete}));
-
-  Net::DRI::Exception->die(0,'protocol/RRP',4,"Renew status not available") if (exists($msg->{renew})); ## impossible to do in RRP, not fatal error
-  $self->add($side.'-HOLD') if (exists($msg->{publish}) && !$msg->{publish});
-
- } elsif (ref($msg) eq 'Net::DRI::Protocol::RRP::Message')
+ if (ref($msg) eq 'Net::DRI::Protocol::RRP::Message')
  {
   my @s=$msg->entities('status');
   $self->add(@s) if (@s);

@@ -1,4 +1,4 @@
-## Domain Registry Interface, Handling of statuses list (order is irrelevant) (virtual class)
+## Domain Registry Interface, Handling of statuses list (order is irrelevant) (base class)
 ##
 ## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
@@ -21,13 +21,13 @@ use strict;
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Data::StatusList - Handle a collection of statuses for an object, in a registry independent fashion
+Net::DRI::Data::StatusList - Handle a collection of statuses for an object, in a registry independent fashion for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -45,7 +45,7 @@ C<is_active()> returns 1 if these statuses enable an object to be active
 
 =item *
 
-C<is_publised()> returns 1 if these statuses enable the object to be published on registry DNS servers
+C<is_published()> returns 1 if these statuses enable the object to be published on registry DNS servers
 
 =item *
 
@@ -71,6 +71,15 @@ C<can_delete()> returns 1 if theses statuses allow to delete the object at regis
 
 C<can_renew()> returns 1 if theses statuses allow to renew the object at registry
 
+=item *
+
+C<possible_no()> returns an array with the list of available status to use in the no() call
+
+=item *
+
+C<no()> can be used to build a status, which will be added to the list. Must be given three parameters:
+  a status (from list given by C<possible_no()>), a message (optional), a lang (optional, default to 'en')
+
 =back
 
 You may also use the following methods, but they should be less useful as
@@ -80,7 +89,11 @@ the purpose of the module is to give an abstract view of the underlying statuses
 
 =item *
 
-C<list_status()> to get only the statuses' names (always in uppercase)
+C<list_status()> to get only the statuses' names
+
+=item *
+
+C<status_details()> to get an hash ref with all status information
 
 =item *
 
@@ -133,7 +146,7 @@ sub new
 
  my $self={ proto_name    => $pname,
             proto_version => $pversion,
-            sl => {}, ## uc(statusname) => { lang => lc(lang), msg => '', other per class }
+            sl => {}, ## statusname => { lang => lc(lang), msg => '', other per class }
           };
 
  bless($self,$class);
@@ -141,11 +154,17 @@ sub new
  return $self;
 }
 
+sub _register_pno
+{
+ my ($self,$rs)=@_;
+ $self->{possible_no}=$rs;
+}
+
 sub add
 {
  my $self=shift;
  my $rs=$self->{sl};
- 
+
  foreach my $el (@_)
  {
   if (ref($el))
@@ -153,10 +172,10 @@ sub add
    my %tmp=%{$el};
    my $name=$tmp{name};
    delete($tmp{name});
-   $rs->{uc($name)}=\%tmp;
+   $rs->{$name}=\%tmp;
   } else
   {
-   $rs->{uc($el)}={};
+   $rs->{$el}={};
   }
  }
 }
@@ -164,21 +183,30 @@ sub add
 sub list_status
 {
  my $self=shift;
- return keys(%{$self->{sl}});
+ return sort(keys(%{$self->{sl}}));
+}
+
+sub status_details
+{
+ my $self=shift;
+ return $self->{sl};
 }
 
 sub is_empty
 {
  my $self=shift;
- return ($self->list_status() > 0)? 0 : 1;
+ my @a=$self->list_status();
+ return (@a > 0)? 0 : 1;
 }
 
 sub has_any
 {
  my $self=shift;
+ my %tmp=map { uc($_) => 1 } $self->list_status();
+
  foreach my $el (@_)
  {
-  return 1 if exists($self->{sl}->{uc($el)});
+  return 1 if exists($tmp{uc($el)});
  }
  return 0;
 }
@@ -186,14 +214,35 @@ sub has_any
 sub has_not
 {
  my $self=shift;
+ my %tmp=map { uc($_) => 1 } $self->list_status();
+
  foreach my $el (@_)
  {
-  return 0 if exists($self->{sl}->{uc($el)})
+  return 0 if exists($tmp{uc($el)});
  }
  return 1;
 }
 
-#sub has_all useful ?
+sub possible_no
+{
+ my $self=shift;
+ return sort(keys(%{$self->{possible_no}}));
+}
+
+sub no
+{
+ my ($self,$what,$msg,$lang)=@_;
+ my $rs=$self->{possible_no};
+ return $self unless (defined($what) && exists($rs->{$what}));
+ if (defined($msg) && $msg)
+ {
+  $self->add({name=>$rs->{$what},msg=>$msg,lang=>(defined($lang) && $lang)? $lang : 'en'});
+ } else
+ {
+  $self->add($rs->{$what});
+ }
+ return $self;
+}
 
 ###########################################################################################################
 ## Methods that must be defined in subclasses

@@ -1,3 +1,14 @@
+0.15 2005-07-20
+
++ New protocol: EPP, with Grace Period extension (other can easily be added)
++ Better way to create statuses (no() function in StatusList), see README for domain_update_status_add
+  and statuses name are not put in uppercase automatically
++ Handling of contacts : modules Contact & ContactSet + new functions in DRD (contact_*)
++ New functions: domain_check_multi, host_check_multi (if registry supports, check multiple objects at once)
+- BUGFIX in Net::DRI::Util::is_ipv6
+- BUGFIX : better checks of references with UNIVERSAL::isa instead of pure ref()
+= Rework of Net::DRI::Transport::Socket & associated connection classes
+
 0.12 2005-05-31
 
 + New ``registries'': 

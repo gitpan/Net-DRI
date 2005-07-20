@@ -21,7 +21,7 @@ use strict;
 use Net::DRI::Protocol::RRP;
 use Net::DRI::Data::Hosts;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -156,7 +156,7 @@ sub mod
  my ($rrp,$hostname,$todo)=@_;
  my $mes=$rrp->message();
 
- Net::DRI::Exception::usererr_invalid_parameters($todo." must be a Net::DRI::Data::Changes object") unless ($todo && ref($todo) && $todo->isa('Net::DRI::Data::Changes'));
+ Net::DRI::Exception::usererr_invalid_parameters($todo." must be a Net::DRI::Data::Changes object") unless ($todo && UNIVERSAL::isa($todo,'Net::DRI::Data::Changes'));
  if ((grep { ! /^(?:ip|name)$/ } $todo->types()) ||
      (grep { ! /^(?:add|del)$/ } $todo->types('ip')) ||
      (grep { ! /^(?:set)$/ } $todo->types('name'))

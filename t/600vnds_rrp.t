@@ -3,7 +3,7 @@
 use Net::DRI;
 use Net::DRI::Data::Raw;
 
-use Test::More tests => 41;
+use Test::More tests => 40;
 
 our $R1;
 sub mysend
@@ -47,13 +47,12 @@ is($rc->is_success(),1,'domain_check rc is_success');
 is($rc->code(),2302,'domain_check rc code');
 is($rc->native_code(),211,'domain_check rc native_code');
 is($rc->message(),'Domain name not available','domain_check rc message');
-is($rc->object_exist(),1,'domain_check rc object_exist');
-is($rc->object_available(),0,'domain_check rc object_available');
+is($dri->domain_exist('example2.com'),1,'domain_exist');
 
 $R2="213 Name server not available\r\nipAddress:192.10.10.10\r\n.\r\n";
 $rc=$dri->host_check('ns1.example2.com');
 is($R1,"check\r\nEntityName:NameServer\r\nNameServer:NS1.EXAMPLE2.COM\r\n.\r\n",'host_check send');
-is($rc->object_exist(),1,'host_check rc object_exist');
+is($dri->host_exist('ns1.example2.com'),1,'host_exist');
 my $dh=$dri->get_info('self');
 my @c=$dh->get_names(1);
 is_deeply(\@c,['ns1.example2.com'],'host_check get_info(self) get_names');

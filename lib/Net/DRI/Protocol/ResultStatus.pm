@@ -19,7 +19,7 @@ package Net::DRI::Protocol::ResultStatus;
 
 use strict;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -49,11 +49,6 @@ C<native_code()> gives the true status code we got back from registry
 =item *
 
 C<message()> gives the message attached to the the status code we got back from registry
-
-=item *
-
-C<object_exist()> and C<object_available()> is an abstraction over specific EPP code for
-  object existence or availability at registry
 
 =back
 
@@ -89,12 +84,13 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my ($class,$type,$code,$rcodes,$is_success,$message)=@_;
+ my ($class,$type,$code,$rcodes,$is_success,$message,$lang)=@_;
  my %s=(
         is_success  => defined($is_success)? $is_success : 0,
         native_code => $code,
         message     => $message || '',
         type        => $type, ## rrp/epp/afnic/etc...
+        lang        => $lang || '?',
        );
 
  $s{code}=_standardize_code($type,$code,$rcodes,$is_success);
@@ -106,21 +102,7 @@ sub is_success  { return shift->{is_success}; }
 sub native_code { return shift->{native_code}; }
 sub code        { return shift->{code}; }
 sub message     { return shift->{message}; }
-
-sub object_exist 
-{ 
- my $code=shift->code();
- return 1 if ($code==2302);
- return 0 if ($code==2303);
- return undef;
-}
-
-sub object_available
-{
- my $e=shift->object_exist();
- return undef unless defined($e);
- return 1-$e;
-}
+sub lang        { return shift->{lang}; }
 
 sub new_generic_success
 {

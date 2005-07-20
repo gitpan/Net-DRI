@@ -11,9 +11,18 @@ Net::DRI
 
 Net::DRI::DRD
 	* bulk operations (many domains at once)
-	* domain_update_contacts_*
 	* domain_delete() : try to rename nameservers created in domain about to be deleted
+	* domain_create() : create contacts if needed
+
+Net::DRI::Protocol::RRP
+	* DateTime::Format::ISO8601 should be enough instead of DateTime::Format::Strptime
 
 Net::DRI::Protocol::RRP::Core::Status
 	* take into account: REDEMPTIONPERIOD PENDINGRESTORE PENDINGDELETE PENDINGTRANSFER
 	* is_linked() : should be has_any('REGISTRY-DELETE-NOTIFY') ?
+
+Net::DRI::Protocol::EPP::Core::*
+	* handle poll & offline review of requested actions
+
+Net::DRI::Protocol::EPP::Message
+	* finish parsing result (value & extValue)

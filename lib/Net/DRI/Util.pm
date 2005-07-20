@@ -22,7 +22,7 @@ use strict;
 use Time::HiRes ();
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -98,7 +98,7 @@ sub check_equal
 sub check_isa
 {
  my ($what,$isa)=@_;
- Net::DRI::Exception::usererr_invalid_parameters((${what} || 'parameter')." must be a ${isa} object") unless ($what && ref($what) && $what->isa($isa));
+ Net::DRI::Exception::usererr_invalid_parameters((${what} || 'parameter')." must be a ${isa} object") unless ($what && UNIVERSAL::isa($what,$isa));
  return 1;
 }
 
@@ -120,7 +120,7 @@ sub create_trid_1
 
 ########################################################################################################
 
-sub is_hostname
+sub is_hostname ## RFC952/1123
 {
  my ($name)=@_;
  
@@ -171,8 +171,7 @@ sub is_ipv6
  return 0 unless defined($ip);
 
  my (@ip)=split(/:/,$ip);
- return 0 unless ((@ip > 0) && (@ip < 8));
-
+ return 0 unless ((@ip > 0) && (@ip <= 8));
  return 0 if (($ip=~m/^:[^:]/) || ($ip=~m/[^:]:$/));
  return 0 if ($ip =~ s/:(?=:)//g > 1);
  
@@ -183,8 +182,8 @@ sub is_ipv6
 
  ## Check if this IP is public
  my ($ip1,$ip2)=split(/::/,$ip);
- $ip1=join("",map { sprintf("%04s",$_) } split(/:/,$ip1));
- $ip2=join("",map { sprintf("%04s",$_) } split(/:/,$ip2));
+ $ip1=join("",map { sprintf("%04s",$_) } split(/:/,$ip1 || ''));
+ $ip2=join("",map { sprintf("%04s",$_) } split(/:/,$ip2 || ''));
  my $wip=$ip1.('0' x (32-length($ip1)-length($ip2))).$ip2; ## 32 chars
  my $bip=unpack('B128',pack('H32',$wip)); ## 128-bit array
 
@@ -215,6 +214,34 @@ sub compare_durations
          ($d1{minutes} <=> $d2{minutes}) ||
          ($d1{seconds} <=> $d2{seconds}) 
         );
+}
+
+#############################################################################################
+
+sub xml_is_normalizedstring
+{
+ my ($what,$min,$max)=@_;
+
+ return 0 if ($what=~m/[\r\n\t]/);
+ my $l=length($what);
+ return 0 if (defined($min) && ($l < $min));
+ return 0 if (defined($max) && ($l > $max));
+ return 1;
+}
+
+sub xml_is_token
+{
+ my ($what,$min,$max)=@_;
+
+ return 0 if ($what=~m/[\r\n\t]/);
+ return 0 if ($what=~m/^\s/);
+ return 0 if ($what=~m/\s$/);
+ return 0 if ($what=~m/\s\s/);
+
+ my $l=length($what);
+ return 0 if (defined($min) && ($l < $min));
+ return 0 if (defined($max) && ($l > $max));
+ return 1;
 }
 
 #############################################################################################

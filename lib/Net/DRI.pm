@@ -25,8 +25,8 @@ use Net::DRI::Util;
 use strict;
 
 our $AUTOLOAD;
-our $VERSION="0.12";
-our $CVS_REVISION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION="0.15";
+our $CVS_REVISION=do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 

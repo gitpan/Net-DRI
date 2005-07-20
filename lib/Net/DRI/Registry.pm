@@ -28,7 +28,7 @@ use Net::DRI::Protocol::ResultStatus;
 
 our $AUTOLOAD;
 
-our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -131,6 +131,7 @@ sub _current
 sub transport { return shift->_current('transport'); }
 sub protocol  { return shift->_current('protocol');  }
 sub status    { return shift->_current('status',@_); }
+sub create_status { return shift->_current('protocol')->create_status(@_); }
 
 sub protocol_transport { my $self=shift; return ($self->protocol(),$self->transport()); }
 
@@ -142,6 +143,7 @@ sub _result
  err_no_current_profile() unless (defined($p));
  Net::DRI::Exception->die(0,'DRI',6,"No last status code available for current registry and profile") unless (exists($self->{profiles}->{$p}->{status}));
  my $rc=$self->{profiles}->{$p}->{status}; ## a Net::DRI::Protocol::ResultStatus object !
+ Net::DRI::Exception->die(1,'DRI',5,'Status key if not a Net::DRI::Protocol::ResultStatus object') unless UNIVERSAL::isa($rc,'Net::DRI::Protocol::ResultStatus');
  Net::DRI::Exception->die(1,'DRI',5,"Method $f not implemented in Net::DRI::Protocol::ResultStatus") unless ($f && $rc->can($f));
 
  return $rc->$f();
@@ -152,6 +154,7 @@ sub is_success         { return shift->_result('is_success');  } ## Alias
 sub result_code        { return shift->_result('code');        }
 sub result_native_code { return shift->_result('native_code'); }
 sub result_message     { return shift->_result('message');     }
+sub result_lang        { return shift->_result('lang');        }
 
 
 sub cache_expire { return shift->{cache}->delete_expired(); }
@@ -323,10 +326,10 @@ sub process
  my $trid=$self->trid->($self->name());
 
  eval {
-  my $tosend=$po->action($otype,$oaction,@$pa);
+  my $tosend=$po->action($otype,$oaction,$trid,@$pa);
   $self->{ops}->{$trid}=[0,$tosend]; ## 0 = todo, not sent ## This will be done in/with LocalStorage
 
-  $to->send($tosend,@$ta); ## if synchronous, store results somewhere in dri, keyed by trid
+  $to->send($tosend,@$ta); ## if synchronous, store results somewhere in dri, keyed by trid, store also $tosend + params passed that created $tosend (domain name, etc...)
 
   $self->{ops}->{$trid}->[0]=1; ## now it is sent
  };
@@ -358,6 +361,8 @@ sub process_back
  {
   ## transport parameters ?
   my $res=$to->receive(); ## a Net::DRI::Data::Raw or die inside
+  ###  return $self->protocol()->new_from_reply($tosend,$gotback);
+  ###  ## $tosend needed to propagate EPP version, for example
   ($rc,$ri,$oname)=$po->reaction($otype,$oaction,$res,$self->{ops}->{$trid}->[1]);
  };
 
