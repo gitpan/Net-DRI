@@ -2,17 +2,21 @@
 
 use Net::DRI::Data::Hosts;
 
-use Test::More tests => 11;
+use Test::More tests => 13;
 
 my $d=Net::DRI::Data::Hosts->new();
 isa_ok($d,'Net::DRI::Data::Hosts');
 
 $d=Net::DRI::Data::Hosts->new('ns.example.foo',['1.2.3.4','1.2.3.5']);
+$d->name('test1');
+$d->loid(12345);
 isa_ok($d,'Net::DRI::Data::Hosts');
 is($d->count(),1,'count()');
 my @c;
 @c=$d->get_details(1);
 is_deeply($c[1],['1.2.3.4','1.2.3.5']);
+is($d->name(),'test1','name()');
+is($d->loid(),12345,'loid()');
 
 $d=Net::DRI::Data::Hosts->new('ns.example.foo',['1.2.3.4','1.2.3.4']);
 isa_ok($d,'Net::DRI::Data::Hosts');

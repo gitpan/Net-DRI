@@ -18,15 +18,23 @@
 package Net::DRI;
 
 use Net::DRI::Cache;
-use Net::DRI::Protocol::ResultStatus;
 use Net::DRI::Registry;
 use Net::DRI::Util;
+
+## These modules are not needed here, but we load them now,
+## since if you use Net::DRI, you will probably need them sooner or later
+use Net::DRI::Data::Changes;
+use Net::DRI::Data::Contact;
+use Net::DRI::Data::ContactSet;
+use Net::DRI::Data::Hosts;
+use Net::DRI::Data::StatusList;
+use Net::DRI::Protocol::ResultStatus;
 
 use strict;
 
 our $AUTOLOAD;
-our $VERSION="0.15";
-our $CVS_REVISION=do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION="0.16";
+our $CVS_REVISION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 

@@ -1,4 +1,4 @@
-## Domain Registry Interface, ``Verisign Naming and Directory Services'' Registry Driver for .COM & .NET
+## Domain Registry Interface, ``WorldSite.WS'' Registry Driver for .WS
 ##
 ## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
@@ -15,22 +15,22 @@
 #
 #########################################################################################
 
-package Net::DRI::DRD::VNDS;
+package Net::DRI::DRD::WS;
 
 use strict;
 use base qw/Net::DRI::DRD/;
 
-use Net::DRI::DRD::ICANN;
 use DateTime::Duration;
 use DateTime;
+use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::DRD::VNDS - Verisign .COM/.NET Registry driver for Net::DRI
+Net::DRI::DRD::WS - Website.WS .WS Registry driver for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -69,11 +69,10 @@ See the LICENSE file that comes with this distribution for more details.
 
 #####################################################################################
 
-sub root_servers { return wantarray()? map { $_.'.GTLD-SERVERS.NET' } ('a'..'m') : 'GTLD-SERVERS.NET'; }
 sub is_thick     { return 0; }
 sub periods      { return map { DateTime::Duration->new(years => $_) } (1..10); }
-sub name         { return "VNDS"; }
-sub tlds         { return ('com','net'); }
+sub name         { return "WS"; }
+sub tlds         { return ('ws'); }
 
 sub transport_protocol_compatible 
 {
@@ -83,7 +82,6 @@ sub transport_protocol_compatible
  my $tn=$to->name();
 
  return 1 if (($pn eq 'RRP') && ($tn eq 'socket_inet'));
- return 1 if (($pn eq 'EPP') && ($tn eq 'socket_inet'));
  return undef;
 }
 
@@ -97,27 +95,12 @@ sub verify_name_domain
  my $r=$self->SUPER::check_name($domain,1);
  return $r if ($r);
  return 10 unless $self->is_my_tld($domain);
- return 11 if Net::DRI::DRD::ICANN::is_reserved_name($domain);
-
  return 0;
 }
 
-## We can not start a transfer, if domain name has already been transfered less than 15 days ago.
 sub verify_duration_transfer
 {
- my ($self,$ndr,$duration,$domain,$op)=@_;
- ($duration,$domain,$op)=($ndr,$duration,$domain) unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
-
- return 0 unless ($op eq 'start'); ## we are not interested by other cases, they are always OK
- my $rc=$self->domain_info($ndr,$domain);
- return 1 unless ($rc->is_success());
- my $trdate=$ndr->get_info('trDate');
- return 0 unless ($trdate && $trdate->isa('DateTime'));
- 
- my $now=DateTime->now(time_zone => $trdate->time_zone()->name());
- my $cmp=DateTime->compare($now,$trdate+DateTime::Duration->new(days => 15));
- return ($cmp == 1)? 0 : 1; ## we must have : now > transferdate + 15days
- ## we return 0 if OK, anything else if not
+ return 1; ## no transfer possible at all
 }
 
 
@@ -129,9 +112,17 @@ sub domain_operation_needs_is_mine
  return undef unless defined($op);
 
  return 1 if ($op=~m/^(?:renew|update|delete)$/);
- return 0 if ($op eq 'transfer');
  return undef;
 }
+
+## Transfer operations are not possible
+
+sub domain_transfer        { Net::DRI::Exception->die(0,'DRD',4,'No transfer available in .WS'); }
+sub domain_transfer_start  { Net::DRI::Exception->die(0,'DRD',4,'No transfer available in .WS'); }
+sub domain_transfer_stop   { Net::DRI::Exception->die(0,'DRD',4,'No transfer available in .WS'); }
+sub domain_transfer_query  { Net::DRI::Exception->die(0,'DRD',4,'No transfer available in .WS'); }
+sub domain_transfer_accept { Net::DRI::Exception->die(0,'DRD',4,'No transfer available in .WS'); }
+sub domain_transfer_refuse { Net::DRI::Exception->die(0,'DRD',4,'No transfer available in .WS'); }
 
 ######################################################################################
 1;

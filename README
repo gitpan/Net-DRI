@@ -27,8 +27,9 @@ standard for domain name activities, for example for status codes.
 
 Currently Net::DRI ships with
 - a full RRP implementation (RFC 2832 & 3632)
-- a full EPP implementation (RFC 3730/3731/3732/3733/3734/3735) 
-  with one extension (RFC 3915) and room to plug any other extensions
+- a full EPP implementation (RFC 3730/3731/3732/3733/3734/3735)
+- 4 EPP extensions: GracePeriods (RFC 3915), E164 for ENUM (RFC4114),
+  SecDNS for DNSSEC (draft-hollenbeck-epp-secdns-08), NSgroup (used by .BE and .EU)
 - a TCP/TLS transport
 - a SOAP transport (HTTP/HTTPS)
 - a Web scraping ``transport''
@@ -39,6 +40,8 @@ Currently Net::DRI ships with
 - a Net::DRI::DRD::Gandi covering Gandi registrar for .COM/.NET/.ORG/.BIZ/
    .INFO/.NAME/.BE
      (only domain_update for nameservers through web site)
+- a Net::DRI::DRD::WS covering .WS registry
+
 
 Work is underway to provide an email transport, as well as full support for
 asynchronous registries.
@@ -135,6 +138,11 @@ Typical use of this library would go along those lines:
   and by TCP at the same time.
 
   You switch profile using the $dri->target('registry name','profile name') call.
+
+  new_profile() and new_current_profile() return a Net::DRI::Protocol::ResultStatus
+  in all cases, and this should be tested with ->is_success() to be sure the profile
+  has been created correctly.
+  They may also die for some other internal errors.
 
   Optionnally, you can use an auto target function:
   by providing details about which profile to use for each given action,
@@ -314,7 +322,7 @@ Available API
  - second (optional) one is a message (ex: Payment overdue),
  - third (optional, default to 'en') is the language of the previous message.
 
- The call to ->no() creates a new object from a class which is a subclass of Net::DRI::Data::StatusList,
+ The call to ->create_status() creates a new object from a class which is a subclass of Net::DRI::Data::StatusList,
  that can be used in all functions related to statuses.
 
 * domain_update_status_del()
@@ -479,9 +487,3 @@ See corresponding domain_* methods.
 * contact_is_mine()
 
 See above methods.
-
-
-
-Please note that another API is available, through the use of Net::DRI::RegistryObject
-It is still under consideration, and will be explained later if kept.
-Please do not use for now, and report suggestions on it.

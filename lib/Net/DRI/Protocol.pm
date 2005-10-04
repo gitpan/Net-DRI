@@ -24,7 +24,7 @@ __PACKAGE__->mk_accessors(qw(name version factories commands message capabilitie
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -94,6 +94,7 @@ sub _load
  my $self=shift;
  my $etype='protocol/'.$self->name();
  my $version=$self->version();
+ my $rcapa=$self->capabilities();
 
  my %c;
  foreach my $class (@_)
@@ -103,6 +104,11 @@ sub _load
   Net::DRI::Exception->die(1,$etype,6,"Failed to load Perl module ${class}") if $@;
   Net::DRI::Exception::err_method_not_implemented("register_commands() in $class") unless $class->can('register_commands');
   my $rh=$class->register_commands($version);
+  if ($class->can('capabilities_add'))
+  {
+   my $rca=$class->capabilities_add();
+   while(my ($k,$v)=each(%{$rca})) { $rcapa->{$k}=$v; }
+  }
   while(my ($k,$v)=each(%$rh)) ## $k=object type, $v=hash ref of actions
   {
    $c{$k}={} unless exists($c{$k});

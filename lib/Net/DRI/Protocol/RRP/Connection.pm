@@ -19,8 +19,10 @@ package Net::DRI::Protocol::RRP::Connection;
 
 use strict;
 use Net::DRI::Protocol::RRP::Message;
+use Net::DRI::Protocol::ResultStatus;
+use Net::DRI::Data::Raw;
 
-our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -99,48 +101,63 @@ sub get_data
   push @l,$l;
   last if ($l=~m/^\.\s*\n?$/);
  }
- die() unless ($l[-1]=~m/^\.\s*\n?$/);
+ die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_SYNTAX_ERROR',@l? $l[0] : '<empty message from server>','en')) unless (@l && $l[-1]=~m/^\.\s*\n?$/);
  return Net::DRI::Data::Raw->new_from_array(\@l);
 }
 
-sub is_greeting_successful
+sub parse_greeting
 {
  shift if ($_[0] eq __PACKAGE__);
  my $dc=shift;
- my $code=find_code($dc);
- return ($code==0)? 1 : 0;
+ my ($code,$msg)=find_code($dc);
+ unless (defined($code) && ($code==0))
+ {
+  return Net::DRI::Protocol::ResultStatus->new_error('COMMAND_SYNTAX_ERROR',($msg || '?').' ('.($code || '?').')','en');
+ } else
+ {
+  return Net::DRI::Protocol::ResultStatus->new_success('COMMAND_SUCCESSFUL','Greeting OK','en');
+ }
 }
 
-sub is_login_successful
+sub parse_login
 {
  shift if ($_[0] eq __PACKAGE__);
  my $dc=shift;
- my $code=find_code($dc);
- return (defined($code) && ($code==200));
+ my ($code,$msg)=find_code($dc);
+ unless (defined($code) && ($code==200))
+ {
+  my $eppcode=(defined($code))? Net::DRI::Protocol::RRP::Message::_eppcode($code) : 'COMMAND_SYNTAX_ERROR';
+  return Net::DRI::Protocol::ResultStatus->new_error($eppcode,($msg || 'Login failed').' ('.($code || '?').')','en');
+ } else
+ {
+  return Net::DRI::Protocol::ResultStatus->new_success('COMMAND_SUCCESSFUL',$msg || 'Login OK','en');
+ }
 }
 
-sub is_server_close
+sub parse_logout
 {
  shift if ($_[0] eq __PACKAGE__);
  my $dc=shift;
- my $code=find_code($dc);
-
- ## 220 : after a successful QUIT
- ## 420 : Command failed due to server error. Server closing connection
- ## 520 : Server closing connection. Client should try opening new connection (timeout)
- ## 521 : Too many sessions open. Server closing connection
- return (defined($code) && ($code=~m/^(?:[245]20|521)$/));
+ my ($code,$msg)=find_code($dc);
+ unless (defined($code) && ($code==220))
+ {
+  my $eppcode=(defined($code))? Net::DRI::Protocol::RRP::Message::_eppcode($code) : 'COMMAND_SYNTAX_ERROR';
+  return Net::DRI::Protocol::ResultStatus->new_error($eppcode,($msg || 'Logout failed').' ('.($code || '?').')','en');
+ } else
+ {
+  return Net::DRI::Protocol::ResultStatus->new_success('COMMAND_SUCCESSFUL_END ',$msg || 'Logout OK','en');
+ }
 }
 
 sub find_code
 {
  my $dc=shift;
  my @a=$dc->as_array();
- return 0 if ($a[0]=~m/^.+ RRP Server version/); ## initial login
- return undef unless $#a>0; ## at least 2 lines
- return undef unless $a[-1]=~m/^\.\s*\n?$/;
- return undef unless $a[0]=~m/^(\d+) \S/;
- return 0+$1;
+ return (0,'LOGIN') if ($a[0]=~m/^.+ RRP Server version/); ## initial login
+ return () unless $#a>0; ## at least 2 lines
+ return () unless $a[-1]=~m/^\.\s*\n?$/;
+ return () unless $a[0]=~m/^(\d+) (\S.+)$/;
+ return (0+$1,$2);
 }
 
 ###################################################################################################################:

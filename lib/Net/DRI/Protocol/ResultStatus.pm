@@ -19,7 +19,7 @@ package Net::DRI::Protocol::ResultStatus;
 
 use strict;
 
-our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -82,65 +82,58 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
+## We give symbolic names only to codes that are used in some modules
+our %EPP_CODES=(
+                COMMAND_SUCCESSFUL => 1000,
+                COMMAND_SUCCESSFUL_END => 1500, ## after logout
+
+                COMMAND_SYNTAX_ERROR => 2001,
+                AUTHENTICATION_ERROR => 2200,
+                AUTHORIZATION_ERROR => 2201,
+                OBJECT_EXISTS   => 2302,
+                OBJECT_DOES_NOT_EXIST => 2303,
+
+                GENERIC_SUCCESS => 1900, ## these codes are not defined in EPP RFCs, but provide a nice extension
+                GENERIC_ERROR   => 2900, ##     19XX for ok (1900=Undefined success), 29XX for errors (2900=Undefined error)
+               );
+
 sub new
 {
- my ($class,$type,$code,$rcodes,$is_success,$message,$lang)=@_;
+ my ($class,$type,$code,$eppcode,$is_success,$message,$lang)=@_;
  my %s=(
-        is_success  => defined($is_success)? $is_success : 0,
+        is_success  => (defined($is_success) && $is_success)? 1 : 0,
         native_code => $code,
         message     => $message || '',
         type        => $type, ## rrp/epp/afnic/etc...
         lang        => $lang || '?',
        );
 
- $s{code}=_standardize_code($type,$code,$rcodes,$is_success);
+ $s{code}=_eppcode($type,$code,$eppcode,$s{is_success});
  bless(\%s,$class);
  return \%s;
 }
+
+sub _eppcode
+{
+ my ($type,$code,$eppcode,$is_success)=@_;
+ return $EPP_CODES{GENERIC_ERROR} unless defined($type) && $type && defined($code);
+ $eppcode=$code if (!defined($eppcode) && ($type eq 'epp'));
+ return $is_success? $EPP_CODES{GENERIC_SUCCESS} : $EPP_CODES{GENERIC_ERROR} unless defined($eppcode);
+ return $eppcode if ($eppcode=~m/^\d{4}$/);
+ return $EPP_CODES{$eppcode} if exists($EPP_CODES{$eppcode});
+ return $EPP_CODES{GENERIC_ERROR};
+}
+
+sub new_generic_success { my ($class,$msg,$lang)=@_; return $class->new('epp',$EPP_CODES{GENERIC_SUCCESS},undef,1,$msg,$lang); }
+sub new_generic_error   { my ($class,$msg,$lang)=@_; return $class->new('epp',$EPP_CODES{GENERIC_ERROR},undef,0,$msg,$lang); }
+sub new_success         { my ($class,$code,$msg,$lang)=@_; return $class->new('epp',$code,undef,1,$msg,$lang); }
+sub new_error           { my ($class,$code,$msg,$lang)=@_; return $class->new('epp',$code,undef,0,$msg,$lang); }
 
 sub is_success  { return shift->{is_success}; }
 sub native_code { return shift->{native_code}; }
 sub code        { return shift->{code}; }
 sub message     { return shift->{message}; }
 sub lang        { return shift->{lang}; }
-
-sub new_generic_success
-{
- my ($class,$msg)=@_;
- return $class->new('epp',1900,undef,1,$msg);
-}
-
-sub new_generic_error
-{
- my ($class,$msg)=@_;
- return $class->new('epp',2900,undef,0,$msg);
-}
-
-sub new_success
-{
- my ($class,$code,$msg)=@_;
- return $class->new('epp',$code,undef,1,$msg);
-}
-
-sub new_error
-{
- my ($class,$code,$msg)=@_;
- return $class->new('epp',$code,undef,0,$msg);
-}
-
-## Local codes (not used in EPP): 19XX for ok, 29XX for errors
-## Thus: EPP/2900 : Undefined error
-##       EPP/1900 : Undefined success
-sub _standardize_code
-{
- my ($type,$code,$rcodes,$is_success)=@_;
- return 2900 unless defined($type) && $type && defined($code); ## $code can be 0 (ex: AFNIC WebServices for domain_check)
- $type=lc($type);
- return $code if ($type eq 'epp'); ## we standardize on EPP codes
- return 2900 unless (defined($rcodes) && (ref($rcodes) eq 'HASH') && exists($rcodes->{$type}));
- return $rcodes->{$type}->{$code} if exists($rcodes->{$type}->{$code});
- return (defined($is_success) && $is_success)? 1900 : 2900;
-}
 
 ###################################################################################################################
 1;

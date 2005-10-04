@@ -23,7 +23,7 @@ use strict;
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -111,7 +111,7 @@ sub build_xml
    push @d,[$name,$v->{msg} || '',\%tmp];
   } else
   {
-   push @d,[$name,undef,{s=>$k}];
+   push @d,[$name,{s=>$k}];
   }
  }
  return @d;

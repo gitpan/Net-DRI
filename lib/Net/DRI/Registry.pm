@@ -25,10 +25,11 @@ __PACKAGE__->mk_ro_accessors(qw(name driver profile trid)); ## READ-ONLY !!
 use Net::DRI::Exception;
 use Net::DRI::Util;
 use Net::DRI::Protocol::ResultStatus;
+use Net::DRI::Data::RegistryObject;
 
 our $AUTOLOAD;
 
-our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -112,6 +113,12 @@ sub exist_profile
 
 sub err_no_current_profile           { Net::DRI::Exception->die(0,'DRI',3,"No current profile available"); }
 sub err_profile_name_does_not_exist  { Net::DRI::Exception->die(0,'DRI',4,"Profile name $_[0] does not exist"); }
+
+sub remote_object
+{
+ my $self=shift;
+ return Net::DRI::Data::RegistryObject->new($self,@_);
+}
 
 sub _current
 {
@@ -260,7 +267,20 @@ sub new_profile
  Net::DRI::Exception->die(1,'DRI',8,"Failed to load Perl module $protocol") if $@;
 
  my $drd=$self->{driver};
- my $to=$transport->new($drd,@{$t_params}); ## this may die !
+ my $to;
+ eval {
+  $to=$transport->new($drd,@{$t_params}); ## this may die !
+ };
+ if ($@) ## some kind of error happened
+ {
+  if (ref($@) eq 'Net::DRI::Protocol::ResultStatus')
+  {
+   return $@;
+  }
+  $@=Net::DRI::Exception->new(1,'internal',0,"Error not handled: $@") unless ref($@);
+  die($@);
+ }
+
  my $po=$protocol->new($drd,@{$p_params});
  my $compat=$self->driver()->transport_protocol_compatible($to,$po); ## 0/1/undef
  unless (defined($compat))
@@ -272,14 +292,15 @@ sub new_profile
  Net::DRI::Exception->die(0,'DRI',13,"Transport & Protocol not compatible") unless $compat;
 
  $self->{profiles}->{$name}={ transport => $to, protocol => $po, status => undef };
+ return Net::DRI::Protocol::ResultStatus->new_success('COMMAND_SUCCESSFUL',"Profile ${name} added successfully");
 }
 
 sub new_current_profile
 {
  my $self=shift(@_);
- $self->new_profile(@_);
- $self->target($_[0]);
- return $self;
+ my $rc=$self->new_profile(@_);
+ $self->target($_[0]) if ($rc->is_success());
+ return $rc;
 }
 
 sub end

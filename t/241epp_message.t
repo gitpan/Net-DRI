@@ -226,7 +226,7 @@ is($msg->as_string(),_n($s),'build host delete [RFC 3732 §3.2.2]');
 
 $msg=Net::DRI::Protocol::EPP::Message->new();
 $msg->command(['update','host:update','xmlns:host="urn:ietf:params:xml:ns:host-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:host-1.0 host-1.0.xsd"']);
-$msg->command_body([['host:name','ns1.example.com'],['host:add',[['host:addr','192.0.2.22',{ip=>'v4'}],['host:status',undef,{s=>'clientUpdateProhibited'}]]],['host:rem',[['host:addr','1080:0:0:0:8:800:200C:417A',{ip=>'v6'}]]],['host:chg',[['host:name','ns2.example.com']]]]);
+$msg->command_body([['host:name','ns1.example.com'],['host:add',['host:addr','192.0.2.22',{ip=>'v4'}],['host:status',undef,{s=>'clientUpdateProhibited'}]],['host:rem',['host:addr','1080:0:0:0:8:800:200C:417A',{ip=>'v6'}]],['host:chg',['host:name','ns2.example.com']]]);
 $msg->cltrid('ABC-12345');
 
 

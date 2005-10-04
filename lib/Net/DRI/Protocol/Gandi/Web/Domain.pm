@@ -19,7 +19,9 @@ package Net::DRI::Protocol::Gandi::Web::Domain;
 
 use strict;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+use Net::DRI::Protocol::ResultStatus;
+
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -121,7 +123,7 @@ sub mod_act
  my $pc=$to->pc();
 
  my ($domain,$nsadd,$nsdel,$nsset)=@$rp;
- die(Net::DRI::Protocol::ResultStatus->new_error(2201,"Authorization error: ${domain} not in list of domains that can be modified")) unless exists($ctx->{urls}->{lc($domain)});
+ die(Net::DRI::Protocol::ResultStatus->new_error('AUTHORIZATION_ERROR',"${domain} not in list of domains that can be modified")) unless exists($ctx->{urls}->{lc($domain)});
 
  $wm->get($ctx->{urls}->{lc($domain)});
  Net::DRI::Exception->die(0,'transport',4,'Unable to send message to registry') unless $wm->success();

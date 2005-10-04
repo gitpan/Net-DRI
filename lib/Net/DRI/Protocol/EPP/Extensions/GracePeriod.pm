@@ -22,7 +22,7 @@ use strict;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 our $NS='urn:ietf:params:xml:ns:rgp-1.0';
 
 =pod
@@ -118,7 +118,7 @@ sub update
 
  if ($op eq 'request')
  {
-  $mes->command_extension($eid,['rgp:restore',undef,{ op => $op }]);
+  $mes->command_extension($eid,['rgp:restore',{ op => $op }]);
  } else
  {
   my %r=%{$rgp->{report}};
@@ -146,7 +146,7 @@ sub update
    push @d,['rgp:statement',$r{statement2}];
   }
   push @d,['rgp:other',$r{other}] if exists($r{other});
-  $mes->command_extension($eid,['rgp:restore',[['rgp:report',\@d]],{ op => $op }]);
+  $mes->command_extension($eid,['rgp:restore',['rgp:report',@d],{ op => $op }]);
  }
 }
 

@@ -26,7 +26,7 @@ use Net::DRI::Protocol::EPP::Core::Status;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 our $NS='urn:ietf:params:xml:ns:contact-1.0';
 
 =pod
@@ -114,7 +114,7 @@ sub build_command
   my $az=$contact[0]->auth();
   if ($az && ref($az) && exists($az->{pw}))
   {
-   push @d,['contact:authInfo',[['contact:pw',$az->{pw}]]];
+   push @d,['contact:authInfo',['contact:pw',$az->{pw}]];
   }
  }
  
@@ -151,7 +151,7 @@ sub check_parse
    if ($n eq 'contact:id')
    {
     $contact=$c->firstChild->getData();
-    $rinfo->{contact}->{$contact}->{exist}=1-Net::DRI::Protocol::EPP::parse_type_boolean($c->getAttribute('avail'));
+    $rinfo->{contact}->{$contact}->{exist}=1-Net::DRI::Util::xml_parse_boolean($c->getAttribute('avail'));
    }
    if ($n eq 'contact:reason')
    {
@@ -291,7 +291,7 @@ sub parse_postalinfo
 sub parse_disclose ## RFC 3733 §2.9
 {
  my $c=shift;
- my $flag=Net::DRI::Protocol::EPP::parse_type_boolean($c->getAttribute('flag'));
+ my $flag=Net::DRI::Util::xml_parse_boolean($c->getAttribute('flag'));
  my %tmp;
  my $n=$c->firstChild;
  while($n)
@@ -368,7 +368,7 @@ sub build_authinfo
  my $contact=shift;
  my $az=$contact->auth();
  return () unless ($az && ref($az) && exists($az->{pw}));
- return ['contact:authInfo',[['contact:pw',$az->{pw}]]];
+ return ['contact:authInfo',['contact:pw',$az->{pw}]];
 }
 
 sub build_disclose
@@ -379,19 +379,19 @@ sub build_disclose
  my %v=map { $_ => 1 } values(%$d);
  return () unless (keys(%v)==1); ## 1 or 0 as values, not both at same time
  my @d;
- push @d,['contact:name',undef,{type=>'int'}] if (exists($d->{name_int}) && !exists($d->{name}));
- push @d,['contact:name',undef,{type=>'loc'}] if (exists($d->{name_loc}) && !exists($d->{name}));
- push @d,['contact:name',undef,{type=>'int'}],['contact:name',undef,{type=>'loc'}] if exists($d->{name});
- push @d,['contact:org',undef,{type=>'int'}] if (exists($d->{org_int}) && !exists($d->{org}));
- push @d,['contact:org',undef,{type=>'loc'}] if (exists($d->{org_loc}) && !exists($d->{org}));
- push @d,['contact:org',undef,{type=>'int'}],['contact:org',undef,{type=>'loc'}] if exists($d->{org});
- push @d,['contact:addr',undef,{type=>'int'}] if (exists($d->{addr_int}) && !exists($d->{addr}));
- push @d,['contact:addr',undef,{type=>'loc'}] if (exists($d->{addr_loc}) && !exists($d->{addr}));
- push @d,['contact:addr',undef,{type=>'int'}],['contact:addr',undef,{type=>'loc'}] if exists($d->{addr});
- push @d,['contact:voice',undef] if exists($d->{voice});
- push @d,['contact:fax',undef]   if exists($d->{fax});
- push @d,['contact:email',undef] if exists($d->{email});
- return ['contact:disclose',\@d,{flag=>(keys(%v))[0]}];
+ push @d,['contact:name',{type=>'int'}] if (exists($d->{name_int}) && !exists($d->{name}));
+ push @d,['contact:name',{type=>'loc'}] if (exists($d->{name_loc}) && !exists($d->{name}));
+ push @d,['contact:name',{type=>'int'}],['contact:name',{type=>'loc'}] if exists($d->{name});
+ push @d,['contact:org',{type=>'int'}] if (exists($d->{org_int}) && !exists($d->{org}));
+ push @d,['contact:org',{type=>'loc'}] if (exists($d->{org_loc}) && !exists($d->{org}));
+ push @d,['contact:org',{type=>'int'}],['contact:org',{type=>'loc'}] if exists($d->{org});
+ push @d,['contact:addr',{type=>'int'}] if (exists($d->{addr_int}) && !exists($d->{addr}));
+ push @d,['contact:addr',{type=>'loc'}] if (exists($d->{addr_loc}) && !exists($d->{addr}));
+ push @d,['contact:addr',{type=>'int'}],['contact:addr',{type=>'loc'}] if exists($d->{addr});
+ push @d,['contact:voice'] if exists($d->{voice});
+ push @d,['contact:fax']   if exists($d->{fax});
+ push @d,['contact:email'] if exists($d->{email});
+ return ['contact:disclose',@d,{flag=>(keys(%v))[0]}];
 }
 
 sub build_cdata
@@ -407,8 +407,8 @@ sub build_cdata
  push @addr,['contact:sp',$contact->sp()] if defined($contact->sp());
  push @addr,['contact:pc',$contact->pc()] if defined($contact->pc());
  push @addr,['contact:cc',$contact->cc()];
- push @post,['contact:addr',\@addr];
- push @d,['contact:postalInfo',\@post,{type=>'int'}];
+ push @post,['contact:addr',@addr];
+ push @d,['contact:postalInfo',@post,{type=>'int'}];
  push @d,build_tel('contact:voice',$contact->voice()) if defined($contact->voice());
  push @d,build_tel('contact:fax',$contact->fax()) if defined($contact->fax());
  push @d,['contact:email',$contact->email()] if defined($contact->email());
@@ -500,15 +500,15 @@ sub update
 
  my $sadd=$todo->add('status');
  my $sdel=$todo->del('status');
- push @d,['contact:add',[$sadd->build_xml('contact:status')]] if ($sadd);
- push @d,['contact:rem',[$sdel->build_xml('contact:status')]] if ($sdel);
+ push @d,['contact:add',$sadd->build_xml('contact:status')] if ($sadd);
+ push @d,['contact:rem',$sdel->build_xml('contact:status')] if ($sdel);
 
  my $newc=$todo->set('info');
  if ($newc)
  {
   Net::DRI::Exception->die(1,'protocol/EPP',10,'Invalid contact '.$newc) unless (UNIVERSAL::isa($newc,'Net::DRI::Data::Contact'));
   $newc->validate(1); ## will trigger an Exception if needed
-  push @d,['contact:chg',[build_cdata($newc)]];
+  push @d,['contact:chg',build_cdata($newc)];
  }
  $mes->command_body(\@d);
 }

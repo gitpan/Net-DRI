@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-use Test::More tests => 262;
+use Test::More tests => 324;
 
 use Net::DRI::Util;
 
@@ -35,6 +35,8 @@ is(Net::DRI::Util::is_hostname('a.'),0,'is_hostname(a.)');
 is(Net::DRI::Util::is_hostname('.a'),0,'is_hostname(.a)');
 is(Net::DRI::Util::is_hostname('a..b'),0,'is_hostname(a..b)');
 is(Net::DRI::Util::is_hostname('a.foo'),1,'is_hostname(a.foo)');
+is(Net::DRI::Util::is_hostname('0.foo'),1,'is_hostname(0.foo)');
+is(Net::DRI::Util::is_hostname('a.0.foo'),1,'is_hostname(a.0.foo)');
 is(Net::DRI::Util::is_hostname('abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk.foo'),1,'is_hostname(abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyabcdefghijk.foo)');
 is(Net::DRI::Util::is_hostname('abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijkl.foo'),0,'is_hostname(abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyabcdefghijkl.foo)');
 is(Net::DRI::Util::is_hostname('-a.foo'),0,'is_hostname(-a.foo)');
@@ -72,15 +74,16 @@ TODO: {
         ok(0);
 }
 
-is(Net::DRI::Util::xml_is_normalizedstring("A\tB"),0,'xml_is_normalizedstring() 1');
-is(Net::DRI::Util::xml_is_normalizedstring("A",1),1,'xml_is_normalizedstring() 2');
-is(Net::DRI::Util::xml_is_normalizedstring("A",2),0,'xml_is_normalizedstring() 3');
-is(Net::DRI::Util::xml_is_normalizedstring("A",undef,1),1,'xml_is_normalizedstring() 4');
-is(Net::DRI::Util::xml_is_normalizedstring("AB",undef,1),0,'xml_is_normalizedstring() 5');
-is(Net::DRI::Util::xml_is_normalizedstring("A",1,2),1,'xml_is_normalizedstring() 6');
-is(Net::DRI::Util::xml_is_normalizedstring("A",1,1),1,'xml_is_normalizedstring() 7');
-is(Net::DRI::Util::xml_is_normalizedstring("AB",1,2),1,'xml_is_normalizedstring() 8');
-is(Net::DRI::Util::xml_is_normalizedstring("ABC",1,2),0,'xml_is_normalizedstring() 9');
+is(Net::DRI::Util::xml_is_normalizedstring("A\tB"),0,'xml_is_normalizedstring()  1');
+is(Net::DRI::Util::xml_is_normalizedstring("A",1),1,'xml_is_normalizedstring()  2');
+is(Net::DRI::Util::xml_is_normalizedstring("A",2),0,'xml_is_normalizedstring()  3');
+is(Net::DRI::Util::xml_is_normalizedstring("A",undef,1),1,'xml_is_normalizedstring()  4');
+is(Net::DRI::Util::xml_is_normalizedstring("AB",undef,1),0,'xml_is_normalizedstring()  5');
+is(Net::DRI::Util::xml_is_normalizedstring("A",1,2),1,'xml_is_normalizedstring()  6');
+is(Net::DRI::Util::xml_is_normalizedstring("A",1,1),1,'xml_is_normalizedstring()  7');
+is(Net::DRI::Util::xml_is_normalizedstring("AB",1,2),1,'xml_is_normalizedstring()  8');
+is(Net::DRI::Util::xml_is_normalizedstring("ABC",1,2),0,'xml_is_normalizedstring()  9');
+is(Net::DRI::Util::xml_is_normalizedstring(),0,'xml_is_normalizedstring() 10');
 
 is(Net::DRI::Util::xml_is_token("A\tB"),0,'xml_is_token()  1');
 is(Net::DRI::Util::xml_is_token(" AB"),0,'xml_is_token()  2');
@@ -94,5 +97,69 @@ is(Net::DRI::Util::xml_is_token("A",1,2),1,'xml_is_token()  9');
 is(Net::DRI::Util::xml_is_token("A",1,1),1,'xml_is_token() 10');
 is(Net::DRI::Util::xml_is_token("AB",1,2),1,'xml_is_token() 11');
 is(Net::DRI::Util::xml_is_token("ABC",1,2),0,'xml_is_token() 12');
+is(Net::DRI::Util::xml_is_token(),0,'xml_is_token() 13');
+
+is(Net::DRI::Util::verify_ushort(),0,'verify_ushort() 1');
+is(Net::DRI::Util::verify_ushort("A"),0,'verify_ushort() 2');
+is(Net::DRI::Util::verify_ushort(123),1,'verify_ushort() 3');
+is(Net::DRI::Util::verify_ushort(1000000),0,'verify_ushort() 4');
+is(Net::DRI::Util::verify_ushort(-1000),0,'verify_ushort() 5');
+
+is(Net::DRI::Util::verify_ubyte(),0,'verify_ubyte() 1');
+is(Net::DRI::Util::verify_ubyte("A"),0,'verify_ubyte() 2');
+is(Net::DRI::Util::verify_ubyte(123),1,'verify_ubyte() 3');
+is(Net::DRI::Util::verify_ubyte(1000),0,'verify_ubyte() 4');
+is(Net::DRI::Util::verify_ubyte(-1000),0,'verify_ubyte() 5');
+
+is(Net::DRI::Util::verify_hex(),0,'verify_hex() 1');
+is(Net::DRI::Util::verify_hex("G"),0,'verify_hex() 2');
+is(Net::DRI::Util::verify_hex("AF65"),1,'verify_hex() 3');
+is(Net::DRI::Util::verify_hex("af65"),1,'verify_hex() 4');
+
+is(Net::DRI::Util::verify_int(),0,'verify_int()  1');
+is(Net::DRI::Util::verify_int("A"),0,'verify_int()  2');
+is(Net::DRI::Util::verify_int(1000),1,'verify_int()  3');
+is(Net::DRI::Util::verify_int(-1000),1,'verify_int()  4');
+is(Net::DRI::Util::verify_int(-2147483649),0,'verify_int()  5');
+is(Net::DRI::Util::verify_int(2147483648),0,'verify_int()  6');
+is(Net::DRI::Util::verify_int(-1000,-999),0,'verify_int()  7');
+is(Net::DRI::Util::verify_int(-1000,-1001),1,'verify_int()  8');
+is(Net::DRI::Util::verify_int(1000,undef,1001),1,'verify_int()  9');
+is(Net::DRI::Util::verify_int(1000,undef,999),0,'verify_int() 10');
+is(Net::DRI::Util::verify_int(1000,999,1001),1,'verify_int() 11');
+is(Net::DRI::Util::verify_int(1000,1002,1004),0,'verify_int() 12');
+is(Net::DRI::Util::verify_int(1000,996,998),0,'verify_int() 13');
+
+is(Net::DRI::Util::verify_base64('Z'),0,'verify_base64()  1');
+is(Net::DRI::Util::verify_base64('AAAA'),1,'verify_base64()  2');
+is(Net::DRI::Util::verify_base64('A AAA'),1,'verify_base64()  3');
+is(Net::DRI::Util::verify_base64('A A AA'),1,'verify_base64()  4');
+is(Net::DRI::Util::verify_base64('A A A A'),1,'verify_base64()  5');
+is(Net::DRI::Util::verify_base64('A A A A '),0,'verify_base64()  6');
+is(Net::DRI::Util::verify_base64('BBE='),1,'verify_base64()  7');
+is(Net::DRI::Util::verify_base64('BBB='),0,'verify_base64()  8');
+is(Net::DRI::Util::verify_base64('B BE='),1,'verify_base64()  9');
+is(Net::DRI::Util::verify_base64('B B E='),1,'verify_base64() 10');
+is(Net::DRI::Util::verify_base64('B B E ='),1,'verify_base64() 11');
+is(Net::DRI::Util::verify_base64('CA=='),1,'verify_base64() 12');
+is(Net::DRI::Util::verify_base64('CC=='),0,'verify_base64() 13');
+is(Net::DRI::Util::verify_base64('C A=='),1,'verify_base64() 14');
+is(Net::DRI::Util::verify_base64('C A =='),1,'verify_base64() 15');
+is(Net::DRI::Util::verify_base64('C A = ='),1,'verify_base64() 16');
+is(Net::DRI::Util::verify_base64('AAAABBBB'),1,'verify_base64() 17');
+is(Net::DRI::Util::verify_base64('A AAABBBB'),1,'verify_base64() 18');
+is(Net::DRI::Util::verify_base64('A A AABBBB'),1,'verify_base64() 19');
+is(Net::DRI::Util::verify_base64('A A A ABBBB'),1,'verify_base64() 20');
+is(Net::DRI::Util::verify_base64('A A A A BBBB'),1,'verify_base64() 21');
+is(Net::DRI::Util::verify_base64('FPucA9l+'),1,'verify_base64() 22'); ## From RFC3548
+is(Net::DRI::Util::verify_base64('FPucA9k='),1,'verify_base64() 23');
+is(Net::DRI::Util::verify_base64('FPucAw=='),1,'verify_base64() 24');
+is(Net::DRI::Util::verify_base64('AAAABBBB',4),1,'verify_base64() 25');
+is(Net::DRI::Util::verify_base64('AAAABBBB',10),0,'verify_base64() 26');
+is(Net::DRI::Util::verify_base64('AAAABBBB',undef,4),0,'verify_base64() 27');
+is(Net::DRI::Util::verify_base64('AAAABBBB',undef,10),1,'verify_base64() 28');
+is(Net::DRI::Util::verify_base64('AAAABBBB',10,12),0,'verify_base64() 29');
+is(Net::DRI::Util::verify_base64('AAAABBBB',4,13),1,'verify_base64() 30');
+is(Net::DRI::Util::verify_base64('AAAABBBB',15,20),0,'verify_base64() 31');
 
 exit 0;

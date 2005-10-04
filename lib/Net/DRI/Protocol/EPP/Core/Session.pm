@@ -21,7 +21,7 @@ use strict;
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -83,7 +83,7 @@ sub pollreq
 {
  my ($epp)=@_;
  my $mes=$epp->message();
- $mes->command([['poll',{'op'=>'req'}]]); ## It should be ok, since ACK is necessary to really dequeue
+ $mes->command([['poll',{op=>'req'}]]); ## It should be ok, since ACK is necessary to really dequeue
 }
 
 sub hello ## should trigger a greeting from server
@@ -137,14 +137,14 @@ sub login
  $tmp=$tmp->[0] if ref($tmp);
  Net::DRI::Exception::usererr_invalid_parameters('lang') unless ($tmp=~m/^[a-z]{1,8}(?:-[a-z0-9]{1,8})?$/i);
  push @o,['lang',$tmp];
- push @d,['options',\@o];
+ push @d,['options',@o];
 
  my @s;
  $tmp=_opt($opts,$rg,'svcs');
  push @s,map { ['objURI',$_] } @$tmp if (defined($tmp) && (ref($tmp) eq 'ARRAY'));
  $tmp=_opt($opts,$rg,'svcext');
- push @s,['svcExtension',[map {['extURI',$_]} @$tmp]] if (defined($tmp) && (ref($tmp) eq 'ARRAY'));
- push @d,['svcs',\@s] if @s;
+ push @s,['svcExtension',map {['extURI',$_]} @$tmp] if (defined($tmp) && (ref($tmp) eq 'ARRAY'));
+ push @d,['svcs',@s] if @s;
 
  $mes->command_body(\@d);
 }

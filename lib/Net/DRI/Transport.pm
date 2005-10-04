@@ -77,7 +77,6 @@ sub new
  	   is_sync   => exists($opts{is_sync})? $opts{is_sync} : 1, ## do we need to wait for reply as soon as command sent ?
            retry     => exists($opts{retry})?   $opts{retry}   : 1,  ## by default, we will try once only
            pause     => exists($opts{pause})?   $opts{pause}   : 10, ## time in seconds to wait between two retries
-#           trace     => exists($opts{trace})?   $opts{trace}   : 0, ## NOT IMPL
            timeout   => exists($opts{timeout})? $opts{timeout} : 0,
            defer     => exists($opts{defer})?   $opts{defer}   : 0, ## defer opening connection as long as possible (irrelevant if stateless) ## XX maybe not here, too low
            current_state => undef, ## for stateless transport, otherwise 0=close, 1=open

@@ -19,9 +19,8 @@ package Net::DRI::Protocol::Gandi::Web::Connection;
 
 use strict;
 use Net::DRI::Exception;
-use Net::DRI::Protocol::ResultStatus;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 

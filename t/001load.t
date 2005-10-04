@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-use Test::More tests => 48;
+use Test::More tests => 51;
 
 BEGIN { 
 use_ok('Net::DRI');
@@ -51,6 +51,9 @@ use_ok('Net::DRI::Protocol::EPP::Core::Domain');
 use_ok('Net::DRI::Protocol::EPP::Core::Host');
 use_ok('Net::DRI::Protocol::EPP::Core::Session');
 use_ok('Net::DRI::Protocol::EPP::Extensions::GracePeriod');
+use_ok('Net::DRI::Protocol::EPP::Extensions::E164');
+use_ok('Net::DRI::Protocol::EPP::Extensions::SecDNS');
+use_ok('Net::DRI::Protocol::EPP::Extensions::NSgroup');
 }
 
 exit 0;

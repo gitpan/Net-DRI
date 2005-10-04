@@ -21,13 +21,14 @@ use strict;
 
 use XML::LibXML;
 
+use Net::DRI::Protocol::ResultStatus;
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version errcode errmsg errlang command command_body cltrid svtrid queue_count queue_headid message_qdate message_content message_lang node_resdata node_extension result_greeting));
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 our $NS='urn:ietf:params:xml:ns:epp-1.0';
 
@@ -97,7 +98,8 @@ sub is_success { return (shift->errcode()=~m/^1/)? 1 : 0; } ## 1XXX is for succe
 sub result_status
 {
  my $self=shift;
- return Net::DRI::Protocol::ResultStatus->new('epp',$self->errcode(),{},$self->is_success(),$self->errmsg(),$self->errlang());
+ my $code=$self->errcode();
+ return Net::DRI::Protocol::ResultStatus->new('epp',$self->errcode(),undef,$self->is_success(),$self->errmsg(),$self->errlang());
 }
 
 sub command_extension_register
@@ -180,7 +182,7 @@ sub as_string
   {
    my ($ecmd,$ens,$rdata)=@$e;
    push @d,"<${ecmd} ${ens}>";
-   push @d,_toxml([$rdata]);
+   push @d,_toxml($rdata);
    push @d,"</${ecmd}>";
   }
   push @d,'</extension>';
@@ -201,18 +203,30 @@ sub _toxml
 {
  my $rd=shift;
  my @t;
- foreach my $d (@$rd)
+ foreach my $d ((ref($rd->[0]))? @$rd : ($rd)) ## $d is a node=ref array
  {
-  my ($tag,$c,$p)=@$d;
-  my $attr=(defined($p) && ref($p) && keys(%$p))? ' '.join(' ',map { $_.'="'.$p->{$_}.'"' } sort(keys(%$p))) : '';
-  if (defined($c) && $c)
+  my @c; ## list of children nodes
+  my %attr;
+  foreach my $e (grep { defined } @$d)
   {
-   push @t,"<${tag}${attr}>";
-   push @t,(ref($c)? _toxml($c) : $c);
-   push @t,"</$tag>";
-  } else
+   if (ref($e) eq 'HASH')
+   {
+    while(my ($k,$v)=each(%$e)) { $attr{$k}=$v; }
+   } else
+   {
+    push @c,$e;
+   }
+  }
+  my $tag=shift(@c);
+  my $attr=keys(%attr)? ' '.join(' ',map { $_.'="'.$attr{$_}.'"' } sort(keys(%attr))) : '';
+  if (!@c || (@c==1 && !ref($c[0]) && ($c[0] eq '')))
   {
    push @t,"<${tag}${attr}/>";
+  } else
+  {
+   push @t,"<${tag}${attr}>";
+   push @t,(@c==1 && !ref($c[0]))? $c[0] : _toxml(\@c);
+   push @t,"</${tag}>";
   }
  }
  return @t;
@@ -372,7 +386,7 @@ sub get_name_from_message
  return 'session' unless (defined($cb) && ref($cb)); ## TO FIX
  foreach my $e (@$cb)
  {
-  return $e->[1] if ($e->[0]=~m/^(?:domain|host):name$/); ## TO FIX (notably in case of check_multi)
+  return $e->[1] if ($e->[0]=~m/^(?:domain|host|nsgroup):name$/); ## TO FIX (notably in case of check_multi)
   return $e->[1] if ($e->[0]=~m/^contact:id$/); ## TO FIX
  }
  return 'session'; ## TO FIX

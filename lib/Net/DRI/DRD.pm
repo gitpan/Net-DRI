@@ -27,7 +27,7 @@ use Net::DRI::Data::Hosts;
 use Net::DRI::Data::StatusList;
 use Net::DRI::Data::ContactSet;
 
-our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -117,13 +117,14 @@ sub domain_operation_needs_is_mine { Net::DRI::Exception::err_method_not_impleme
 ##############################################################################################################
 sub verify_name_host
 {
- my ($self,$ndr,$host)=@_;
+ my ($self,$ndr,$host,$checktld)=@_;
+ $checktld||=0;
  $host=$ndr unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
 
  $host=$host->get_names(1) if (ref($host));
  my $r=$self->check_name($host);
  return $r if ($r);
- return 10 unless $self->is_my_tld($host);
+ return 10 if ($checktld && !$self->is_my_tld($host));
 
  return 0;
 }
@@ -224,7 +225,7 @@ sub domain_create_only
  my %rd=(defined($rd) && (ref($rd) eq 'HASH'))? %$rd : ();
  
  $rd{duration}=$self->verify_duration_create($rd{duration},$domain);
- Net::DRI::Exception->new(0,'DRD',3,'Invalid duration') unless (defined($rd{duration}) && (ref($rd{duration}) eq 'DateTime::Duration'));
+ Net::DRI::Exception->die(0,'DRD',3,'Invalid duration') unless (defined($rd{duration}) && (ref($rd{duration}) eq 'DateTime::Duration'));
  Net::DRI::Util::check_isa($rd{ns},'Net::DRI::Data::Hosts') if (exists($rd{ns}));
 
  my $rc=$ndr->process('domain','create',[$domain,\%rd]);
@@ -342,7 +343,8 @@ sub domain_info
 
  my $rc;
  my $exist;
- if (defined($exist=$ndr->get_info('exist','domain',$domain)) && $exist)
+ ## After a successfull domain_info, get_info('ns') must be defined and is an Hosts object, even if empty
+ if (defined($exist=$ndr->get_info('exist','domain',$domain)) && $exist && defined($ndr->get_info('ns','domain',$domain)))
  {
   $ndr->set_info_from_cache('domain',$domain);
   $rc=$ndr->get_info('rc');
@@ -412,10 +414,12 @@ sub domain_update
  err_invalid_domain_name($domain) if $self->verify_name_domain($domain);
  Net::DRI::Util::check_isa($tochange,'Net::DRI::Data::Changes');
 
+ Net::DRI::Exception->new(0,'DRD',4,'Registry does not handle contacts') if ($tochange->all_defined('contact') && ! $self->is_thick());
+
  foreach my $t (grep { /^(?:ns|status|contact)$/ } $tochange->types())
  {
   next if $ndr->protocol_capable('domain_update',$t);
-  Net::DRI::Exception->new(0,'DRD',5,"Protocol ${fp} is not capable of domain_update/${t}");
+  Net::DRI::Exception->die(0,'DRD',5,"Protocol ${fp} is not capable of domain_update/${t}");
  }
 
   my %what=('ns'      => [ $tochange->all_defined('ns') ],
@@ -436,15 +440,15 @@ sub domain_update
   my $del=$tochange->del($w);
   my $set=$tochange->set($w);
 
-  Net::DRI::Exception->new(0,'DRD',5,"Protocol ${fp} is not capable for domain_update/${w} to add") if (defined($add) &&
+  Net::DRI::Exception->die(0,'DRD',5,"Protocol ${fp} is not capable for domain_update/${w} to add") if (defined($add) &&
                                                                                        ! $ndr->protocol_capable('domain_update',$w,'add'));
-  Net::DRI::Exception->new(0,'DRD',5,"Protocol ${fp} is not capable for domain_update/${w} to del") if (defined($del) &&
+  Net::DRI::Exception->die(0,'DRD',5,"Protocol ${fp} is not capable for domain_update/${w} to del") if (defined($del) &&
                                                                                        ! $ndr->protocol_capable('domain_update',$w,'del'));
-  Net::DRI::Exception->new(0,'DRD',5,"Protocol ${fp} is not capable for domain_update/${w} to set") if (defined($set) &&
+  Net::DRI::Exception->die(0,'DRD',5,"Protocol ${fp} is not capable for domain_update/${w} to set") if (defined($set) &&
                                                                                        ! $ndr->protocol_capable('domain_update',$w,'set'));
   ## TO FIX : be a good boy, accomodate if possible (set => info+add+del, add=>info+set, del=>info+set)
   ## TO FIX : verify not same info in add & del
-  Net::DRI::Exception->new(0,'DRD',6,"Change domain_update/${w} with simultaneous set and add or del not supported") if (defined($set) && (defined($add) || defined($del)));
+  Net::DRI::Exception->die(0,'DRD',6,"Change domain_update/${w} with simultaneous set and add or del not supported") if (defined($set) && (defined($add) || defined($del)));
  }
 
  ## TO FIX : verify not same info in add & del (what about adding something already there ? removing something not there ?)
@@ -524,7 +528,7 @@ sub domain_renew
  Net::DRI::Util::check_isa($duration,'DateTime::Duration') if defined($duration);
  Net::DRI::Util::check_isa($curexp,'DateTime') if defined($curexp);
 
- Net::DRI::Exception->new(0,'DRD',3,'Invalid duration') if $self->verify_duration_renew($duration,$domain,$curexp);
+ Net::DRI::Exception->die(0,'DRD',3,'Invalid duration') if $self->verify_duration_renew($duration,$domain,$curexp);
 
  my $rc=$ndr->process('domain','renew',[$domain,$duration,$curexp]);
  return $rc;
@@ -536,7 +540,7 @@ sub domain_transfer
  err_invalid_domain_name($domain) if $self->verify_name_domain($domain);
  Net::DRI::Exception::usererr_invalid_parameters("Transfer operation must be start,stop,accept,refuse or query") unless ($op=~m/^(?:start|stop|query|accept|refuse)$/);
 
- Net::DRI::Exception->new(0,'DRD',3,'Invalid duration') if $self->verify_duration_transfer(undef,$domain,$op);
+ Net::DRI::Exception->die(0,'DRD',3,'Invalid duration') if $self->verify_duration_transfer(undef,$domain,$op);
 
  my $rc;
  if ($op eq 'start')
@@ -632,7 +636,7 @@ sub host_create
  my ($self,$ndr,$dh)=@_;
 
  my $name=(UNIVERSAL::isa($dh,'Net::DRI::Data::Hosts'))? $dh->get_details(1) : $dh;
- err_invalid_host_name($name) if $self->verify_name_host($name);
+ err_invalid_host_name($name) if $self->verify_name_host($name,1);
  my $rc=$ndr->process('host','create',[$dh]);
 
  return $rc;
@@ -657,7 +661,7 @@ sub host_info
  err_invalid_host_name($name) if $self->verify_name_host($name);
 
  my ($rc,$exist);
- if (defined($exist=$ndr->get_info('exist','host',$name)) && $exist) ## check cache
+ if (defined($exist=$ndr->get_info('exist','host',$name)) && $exist && defined($ndr->get_info('self','host',$name)))
  {
   $ndr->set_info_from_cache('host',$name);
   $rc=$ndr->get_info('rc');
@@ -735,9 +739,9 @@ sub host_update
 
  foreach my $t ($tochange->types())
  {
-  Net::DRI::Exception->new(0,'DRD',6,"Change host_update/${t} not handled") unless ($t=~m/^(?:ip|status|name)$/);
+  Net::DRI::Exception->die(0,'DRD',6,"Change host_update/${t} not handled") unless ($t=~m/^(?:ip|status|name)$/);
   next if $ndr->protocol_capable('host_update',$t);
-  Net::DRI::Exception->new(0,'DRD',5,"Protocol ${fp} is not capable of host_update/${t}");
+  Net::DRI::Exception->die(0,'DRD',5,"Protocol ${fp} is not capable of host_update/${t}");
  }
 
  my %what=('ip'     => [ $tochange->all_defined('ip') ],
@@ -757,15 +761,15 @@ sub host_update
   my $del=$tochange->del($w);
   my $set=$tochange->set($w);
 
-  Net::DRI::Exception->new(0,'DRD',5,"Protocol ${fp} is not capable for host_update/${w} to add") if (defined($add) &&
+  Net::DRI::Exception->die(0,'DRD',5,"Protocol ${fp} is not capable for host_update/${w} to add") if (defined($add) &&
                                                                                        ! $ndr->protocol_capable('host_update',$w,'add'));
-  Net::DRI::Exception->new(0,'DRD',5,"Protocol ${fp} is not capable for host_update/${w} to del") if (defined($del) &&
+  Net::DRI::Exception->die(0,'DRD',5,"Protocol ${fp} is not capable for host_update/${w} to del") if (defined($del) &&
                                                                                        ! $ndr->protocol_capable('host_update',$w,'del'));
-  Net::DRI::Exception->new(0,'DRD',5,"Protocol ${fp} is not capable for host_update/${w} to set") if (defined($set) &&
+  Net::DRI::Exception->die(0,'DRD',5,"Protocol ${fp} is not capable for host_update/${w} to set") if (defined($set) &&
                                                                                        ! $ndr->protocol_capable('host_update',$w,'set'));
   ## TO FIX : be a good boy, accomodate if possible (set => info+add+del, add=>info+set, del=>info+set)
   ## TO FIX : verify not same info in add & del
-  Net::DRI::Exception->new(0,'DRD',6,"Change host_update/${w} with simultaneous set and add or del not supported") if (defined($set) && (defined($add) || defined($del)));
+  Net::DRI::Exception->die(0,'DRD',6,"Change host_update/${w} with simultaneous set and add or del not supported") if (defined($set) && (defined($add) || defined($del)));
  }
 
  ## TO FIX : verify not same info in add & del (what about adding something already there ? removing something not there ?)
@@ -877,7 +881,8 @@ sub contact_info
  
  my $rc;
  my $exist;
- if (defined($exist=$ndr->get_info('exist','contact',$contact->srid())) && $exist)
+ ## See comments in domain_info
+ if (defined($exist=$ndr->get_info('exist','contact',$contact->srid())) && $exist && defined($ndr->get_info('self','contact',$contact->srid())))
  {
   $ndr->set_info_from_cache('domain',$contact->srid());
   $rc=get_info('rc');
@@ -949,7 +954,7 @@ sub contact_update
  foreach my $t ($tochange->types())
  {
   next if $ndr->protocol_capable('contact_update',$t);
-  Net::DRI::Exception->new(0,'DRD',5,"Protocol ${fp} is not capable of contact_update/${t}");
+  Net::DRI::Exception->die(0,'DRD',5,"Protocol ${fp} is not capable of contact_update/${t}");
  }
 
  foreach ($tochange->all_defined('status')) { Net::DRI::Util::check_isa($_,'Net::DRI::Data::StatusList'); }
@@ -960,11 +965,11 @@ sub contact_update
   my $del=$tochange->del($w);
   my $set=$tochange->set($w);
 
-  Net::DRI::Exception->new(0,'DRD',5,"Protocol ${fp} is not capable for contact_update/${w} to add") if (defined($add) && ! $ndr->protocol_capable('contact_update',$w,'add'));
-  Net::DRI::Exception->new(0,'DRD',5,"Protocol ${fp} is not capable for contact_update/${w} to del") if (defined($del) && ! $ndr->protocol_capable('contact_update',$w,'del'));
-  Net::DRI::Exception->new(0,'DRD',5,"Protocol ${fp} is not capable for contact_update/${w} to set") if (defined($set) && ! $ndr->protocol_capable('contact_update',$w,'set'));
+  Net::DRI::Exception->die(0,'DRD',5,"Protocol ${fp} is not capable for contact_update/${w} to add") if (defined($add) && ! $ndr->protocol_capable('contact_update',$w,'add'));
+  Net::DRI::Exception->die(0,'DRD',5,"Protocol ${fp} is not capable for contact_update/${w} to del") if (defined($del) && ! $ndr->protocol_capable('contact_update',$w,'del'));
+  Net::DRI::Exception->die(0,'DRD',5,"Protocol ${fp} is not capable for contact_update/${w} to set") if (defined($set) && ! $ndr->protocol_capable('contact_update',$w,'set'));
 
-  Net::DRI::Exception->new(0,'DRD',6,"Change contact_update/${w} with simultaneous set and add or del not supported") if (defined($set) && (defined($add) || defined($del)));
+  Net::DRI::Exception->die(0,'DRD',6,"Change contact_update/${w} with simultaneous set and add or del not supported") if (defined($set) && (defined($add) || defined($del)));
  }
 
  my $rc=$ndr->process('contact','update',[$contact,$tochange]);

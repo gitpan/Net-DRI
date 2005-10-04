@@ -24,7 +24,7 @@ use Net::DRI::Protocol::RRP::Core::Status;
 use Net::DRI::Protocol::RRP;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -180,7 +180,7 @@ sub status_parse
  $rinfo->{domain}->{$oname}->{status}=Net::DRI::Protocol::RRP::Core::Status->new($mes);
 
  my @ns=$mes->entities('nameserver');
- $rinfo->{domain}->{$oname}->{ns}=Net::DRI::Data::Hosts->new_set(@ns) if @ns;
+ $rinfo->{domain}->{$oname}->{ns}=Net::DRI::Data::Hosts->new_set(@ns);
 }
 
 sub transfer_answer

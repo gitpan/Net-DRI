@@ -24,7 +24,7 @@ use Net::DRI::Protocol::ResultStatus;
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version service method params result errcode));
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -66,8 +66,6 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
-our %CODES; ## defined at bottom
-
 sub new
 {
  my $proto=shift;
@@ -102,19 +100,42 @@ sub parse
  ## to find the correct errcode, as it will obviously not be done the same way accross all services.
 }
 
-sub is_success { return 0; } ## because, it is either an error, or the domain does not exist (which is a 2xxx in EPP)
+## We handle all non free cases as errors, even if we should not
+sub is_success 
+{
+ my $self=shift;
+ my $r=$self->result();
+ my $code=$self->errcode();
+
+ return 1 if ($r->{free});
+ return 0;
+}
 
 sub result_status
 {
  my $self=shift;
  my $r=$self->result();
- return Net::DRI::Protocol::ResultStatus->new_error(2303,$r->{message}) if ($r->{free});
- return Net::DRI::Protocol::ResultStatus->new('afnic_ws_check_domain',$self->errcode(),\%CODES,$self->is_success(),$r->{message});
+
+ return Net::DRI::Protocol::ResultStatus->new_success('COMMAND_SUCCESSFUL',$r->{message}) if ($r->{free});
+ 
+ my %codes=( 0   => 2400, # problème de connexion à la base de données => Command failed
+             1   => 2302, # le nom de domaine est déjà enregistré => Object exists
+             2   => 2308, # un nom de domaine est déjà enregistré à l'identique dans l'une des extensions du domaine public => Data management policy violation
+             4   => 2304, # une opération est en cours pour ce nom de domaine => Object status prohibits operation
+             5   => 2308, # nom de domaine interdit (termes fondamentaux) => Data management policy violation
+             51  => 2308, # nom de domaine réservé pour les communes => Data management policy violation
+             100 => 2005, # mauvaise syntaxe du nom de domaine => Parameter value syntax error
+           );
+
+ my $code=$self->errcode();
+ my $eppcode=(!defined($code) || $code >=1000 || !exists($codes{$code}))? 'GENERIC_ERROR' : $codes{$code};
+
+ return Net::DRI::Protocol::ResultStatus->new('afnic_ws_check_domain',$code,$eppcode,$self->is_success(),$r->{message});
  ## Warning: when we handle multiple web services, we will need a way to retrieve the method name called,
- ## to find the correct key of the %CODES hash (and special case of free <=> 2303)
+ ## to find the correct key of the hash (and special case of free <=> 2303)
 }
 
-########################################################################
+####################################################################################################
 
 sub get_name_from_message
 {
@@ -125,19 +146,5 @@ sub get_name_from_message
  return $rp->[0] if ($c eq 'check_domain');
 }
 
-#############################################################################################
-
-
-%CODES=( 'afnic_ws_check_domain' =>
-          {
-           0   => 2400, # problème de connexion à la base de données => Command failed
-           1   => 2302, # le nom de domaine est déjà enregistré => Object exists
-           2   => 2308, # refusé car un nom de domaine équivalent existe déjà sous .fr ou sous .re => Data management policy violation
-           4   => 2304, # une opération est en cours pour ce nom de domaine => Object status prohibits operation
-           5   => 2308, # nom de domaine interdit (faisant partie de la liste des termes fondamentaux) => Data management policy violation
-           100 => 2005, # mauvaise syntaxe du nom de domaine => Parameter value syntax error
-          },
-       );
-
-########################################################################
+####################################################################################################
 1;

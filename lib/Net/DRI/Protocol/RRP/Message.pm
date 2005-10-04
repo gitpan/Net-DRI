@@ -25,7 +25,7 @@ use Net::DRI::Protocol::ResultStatus;
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version errcode errmsg command));
 
-our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -117,7 +117,15 @@ sub is_success { return (shift->errcode()=~m/^2/)? 1 : 0; }
 sub result_status
 {
  my $self=shift;
- return Net::DRI::Protocol::ResultStatus->new('rrp',$self->errcode(),\%CODES,$self->is_success(),$self->errmsg());
+ my $code=$self->errcode();
+ my $eppcode=_eppcode($code);
+ return Net::DRI::Protocol::ResultStatus->new('rrp',$code,$eppcode,$self->is_success(),$self->errmsg(),'en');
+}
+
+sub _eppcode
+{
+ my $code=shift;
+ return (defined($code) && exists($CODES{$code}))? $CODES{$code} : 'GENERIC_ERROR';
 }
 
 sub as_string
@@ -234,55 +242,53 @@ sub get_name_from_message
 #############################################################################################
 
 
-%CODES=( 'rrp' =>
-          {
-           200 => 1000, # Command completed successfully
-           210 => 2303, # Domain name available => Object does not exist
-           211 => 2302, # Domain name not available => Object exists
-           212 => 2303, # Name server available => Object does not exist
-           213 => 2302, # Name server not available => Object exists
-           220 => 1500, # Command completed successfully. Server closing connection
-           420 => 2500, # Command failed due to server error. Server closing connection
-           421 => 2400, # Command failed due to server error. Client should try again
-           500 => 2000, # Invalid command name => Unknown command
-           501 => 2102, # Invalid command option => Unimplemented option
-           502 => 2005, # Invalid entity value => Parameter value syntax error
-           503 => 2005, # Invalid attribute name => Parameter value syntax error
-           504 => 2003, # Missing required attribute => Required parameter missing
-           505 => 2005, # Invalid attribute value syntax => Parameter value syntax error
-           506 => 2004, # Invalid option value => Parameter value range error
-           507 => 2001, # Invalid command format => Command syntax error
-           508 => 2003, # Missing required entity => Required parameter missing
-           509 => 2003, # Missing command option => Required parameter missing
-           510 => 2306, # Invalid encoding => Parameter value policy error (RRP v2.0)
-           520 => 2500, # Server closing connection. Client should try opening new connection => Command failed; server closing connection
-           521 => 2502, # Too many sessions open. Server closing connection => Session limit exceeded; server closing connection
-           530 => 2200, # Authentication failed => Authentication error
-           531 => 2201, # Authorization failed => Authorization error
-           532 => 2305, # Domain names linked with name server => Object association prohibits operation
-           533 => 2305, # Domain name has active name servers => Object association prohibits operation
-           534 => 2301, # Domain name has not been flagged for transfer => Object not pending transfer
-           535 => 2306, # Restricted IP address => Parameter value policy error
-           536 => 2300, # Domain already flagged for transfer => Object pending transfer
-           540 => 2308, # Attribute value is not unique => Data management policy violation
-           541 => 2005, # Invalid attribute value => Parameter value syntax error
-           542 => 2306, # Invalid old value for an attribute => Parameter value policy error
-           543 => 2308, # Final or implicit attribute cannot be updated => Data management policy violation
-           544 => 2304, # Entity on hold => Object status prohibits operation
-           545 => 2308, # Entity reference not found => Data management policy violation
-           546 => 2104, # Credit limit exceeded => Billing failure
-           547 => 2002, # Invalid command sequence => Command use error
-           548 => 2105, # Domain is not up for renewal => Object is not eligible for renewal
-           549 => 2400, # Command failed
-           550 => 2308, # Parent domain not registered => Data management policy violation
-           551 => 2308, # Parent domain status does not allow for operation => Data management policy violation
-           552 => 2304, # Domain status does not allow for operation => Object status prohibits operation
-           553 => 2300, # Operation not allowed. Domain pending transfer => Object pending transfer
-           554 => 2302, # Domain already registered => Object exists
-           555 => 2105, # Domain already renewed => Object is not eligible for renewal
-           556 => 2308, # Maximum registration period exceeded => Data management policy violation
-           557 => 2304, # Name server locked => Object status prohibits operation (RRP v2.0)
-          },
+%CODES=(
+        200 => 1000, # Command completed successfully
+        210 => 2303, # Domain name available => Object does not exist
+        211 => 2302, # Domain name not available => Object exists
+        212 => 2303, # Name server available => Object does not exist
+        213 => 2302, # Name server not available => Object exists
+        220 => 1500, # Command completed successfully. Server closing connection
+        420 => 2500, # Command failed due to server error. Server closing connection
+        421 => 2400, # Command failed due to server error. Client should try again
+        500 => 2000, # Invalid command name => Unknown command
+        501 => 2102, # Invalid command option => Unimplemented option
+        502 => 2005, # Invalid entity value => Parameter value syntax error
+        503 => 2005, # Invalid attribute name => Parameter value syntax error
+        504 => 2003, # Missing required attribute => Required parameter missing
+        505 => 2005, # Invalid attribute value syntax => Parameter value syntax error
+        506 => 2004, # Invalid option value => Parameter value range error
+        507 => 2001, # Invalid command format => Command syntax error
+        508 => 2003, # Missing required entity => Required parameter missing
+        509 => 2003, # Missing command option => Required parameter missing
+        510 => 2306, # Invalid encoding => Parameter value policy error (RRP v2.0)
+        520 => 2500, # Server closing connection. Client should try opening new connection => Command failed; server closing connection
+        521 => 2502, # Too many sessions open. Server closing connection => Session limit exceeded; server closing connection
+        530 => 2200, # Authentication failed => Authentication error
+        531 => 2201, # Authorization failed => Authorization error
+        532 => 2305, # Domain names linked with name server => Object association prohibits operation
+        533 => 2305, # Domain name has active name servers => Object association prohibits operation
+        534 => 2301, # Domain name has not been flagged for transfer => Object not pending transfer
+        535 => 2306, # Restricted IP address => Parameter value policy error
+        536 => 2300, # Domain already flagged for transfer => Object pending transfer
+        540 => 2308, # Attribute value is not unique => Data management policy violation
+        541 => 2005, # Invalid attribute value => Parameter value syntax error
+        542 => 2306, # Invalid old value for an attribute => Parameter value policy error
+        543 => 2308, # Final or implicit attribute cannot be updated => Data management policy violation
+        544 => 2304, # Entity on hold => Object status prohibits operation
+        545 => 2308, # Entity reference not found => Data management policy violation
+        546 => 2104, # Credit limit exceeded => Billing failure
+        547 => 2002, # Invalid command sequence => Command use error
+        548 => 2105, # Domain is not up for renewal => Object is not eligible for renewal
+        549 => 2400, # Command failed
+        550 => 2308, # Parent domain not registered => Data management policy violation
+        551 => 2308, # Parent domain status does not allow for operation => Data management policy violation
+        552 => 2304, # Domain status does not allow for operation => Object status prohibits operation
+        553 => 2300, # Operation not allowed. Domain pending transfer => Object pending transfer
+        554 => 2302, # Domain already registered => Object exists
+        555 => 2105, # Domain already renewed => Object is not eligible for renewal
+        556 => 2308, # Maximum registration period exceeded => Data management policy violation
+        557 => 2304, # Name server locked => Object status prohibits operation (RRP v2.0)
        );
 
 ########################################################################

@@ -1,3 +1,25 @@
+0.16 2005-10-04
+
++ Three new EPP extensions : SecDNS (for DNSSEC), E164 (for ENUM) and NSgroup (for .BE & .EU)
++ New registry : .WS
++ New API in addition to the existing one, with Net::DRI::Data::RegistryObject : needed for extensions
+  that handle new types of objects, such as NSgroup
++ Take into account new error codes for AFNIC Web Services (technical note RP-20050913/DT-01)
++ Add a name() and loid() accessor in Net::DRI::Data::Hosts
+- In EPP, we load host commands only if hosts are handled as an object by the registry
+- For domain_info(), host_info() and contact_info() we use data from cache, if we really
+  did an *_info() before.
+- Various bugfixes in DRD and RRP protocol.
+= Rework of Net:DRI::Protocol::ResultStatus & associated classes to handle more cases
+  by directly passing the EPP code
+= Simpler in-memory XML nodes representation in Net::DRI::Protocol::EPP::Message
+= Rework of Net::DRI::Protocol::{EPP,RRP}::Connection & Net::DRI::Transport::Socket (send_login)
+  to die with a Net::DRI::Protocol::ResultStatus in case of problems
+  + Changes in Net::DRI::Registry::new{,_current}_profile to return a ResultStatus object
+= Change in EPP domain_update as RFC3731 is ambigous (text & XML schema do not agree)
+  With this change, we now conform to the XML schema, which seems normative per
+  provreg mailing-list consensus. This will break with any server implementing the text part
+
 0.15 2005-07-20
 
 + New protocol: EPP, with Grace Period extension (other can easily be added)

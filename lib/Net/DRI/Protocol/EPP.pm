@@ -27,7 +27,7 @@ use Net::DRI::Protocol::EPP::Message;
 use Net::DRI::Protocol::EPP::Core::Status;
 use Net::DRI::Data::Contact;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -104,7 +104,9 @@ sub _load
 {
  my ($self,$extrah)=@_;
 
- my @class=map { "Net::DRI::Protocol::EPP::Core::".$_ } ('Session','Domain','Host','Contact');
+ my @core=('Session','Domain','Contact');
+ push @core,'Host' unless $self->{hostasattr};
+ my @class=map { "Net::DRI::Protocol::EPP::Core::".$_ } @core;
  if (defined($extrah) && $extrah)
  {
   push @class,map { /::/? $_ : "Net::DRI::Protocol::EPP::Extensions::".$_ } (ref($extrah)? @$extrah : ($extrah));
@@ -123,12 +125,6 @@ sub parse_status
  $tmp{lang}=$node->getAttribute('lang') || 'en';
  $tmp{msg}=$node->firstChild()->getData() if ($node->firstChild());
  return \%tmp;
-}
-
-sub parse_type_boolean
-{
- my $in=shift;
- return {'true'=>1,1=>1,0=>0,'false'=>0}->{$in};
 }
 
 ############################################################################################

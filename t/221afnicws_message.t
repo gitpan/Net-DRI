@@ -27,9 +27,9 @@ $r={free=>1};
 $n->parse($r);
 is($n->errcode(),undef,'parse free=1');
 is_deeply($n->result(),$r,'parse set result()');
-is($n->is_success(),0,'parse is_success');
+is($n->is_success(),1,'parse is_success');
 my $rs=$n->result_status();
-is($rs->code(),2303,'result_status code');
+is($rs->code(),1000,'result_status code');
 
 $r={free=>0,reason=>1,message=>'whatever'};
 $n=Net::DRI::Protocol::AFNIC::WS::Message->new();

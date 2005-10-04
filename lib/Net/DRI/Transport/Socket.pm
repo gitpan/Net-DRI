@@ -29,7 +29,7 @@ use Net::DRI::Exception;
 use Net::DRI::Util;
 use Net::DRI::Data::Raw;
 
-our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -136,7 +136,7 @@ sub new
  $t{pc}=$opts{protocol_connection};
 
  eval "require $t{pc}";
- my @need=qw/login logout is_greeting_successful is_login_successful is_server_close get_data/;
+ my @need=qw/login logout parse_greeting parse_login parse_logout get_data/;
  Net::DRI::Exception::usererr_invalid_parameters('protocol_connection class must have: '.join(' ',@need)) if (grep { ! $t{pc}->can($_) } @need);
 
  Net::DRI::Exception::usererr_invalid_parameters("close_after must be an integer") if ($opts{close_after} && !Net::DRI::Util::isint($opts{close_after}));
@@ -216,13 +216,15 @@ sub send_login
 
  ## Get registry greeting
  my $dr=$pc->get_data($self,$sock);
- die() unless ($pc->is_greeting_successful($dr));
+ my $rc1=$pc->parse_greeting($dr); ## gives back a Net::DRI::Protocol::ResultStatus
+ die($rc1) unless $rc1->is_success();
  my $login=$pc->login($t->{client_login},$t->{client_password},$cltrid,$dr);
- die() unless ($sock->print($login)); ## TO FIX
+ Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send login message') unless ($sock->print($login));
 
  ## Verify login successful
  $dr=$pc->get_data($self,$sock);
- die() unless ($pc->is_login_successful($dr) && !$pc->is_server_close($dr));
+ my $rc2=$pc->parse_login($dr); ## gives back a Net::DRI::Protocol::ResultStatus
+ die($rc2) unless $rc2->is_success();
 }
 
 sub send_logout
@@ -234,17 +236,10 @@ sub send_logout
  my $cltrid=Net::DRI::Util::create_trid_1('transport');
 
  my $logout=$pc->logout($cltrid);
- eval
- {
-  local $SIG{ALRM}=sub { die "timeout" };
-  alarm(10);
-  die() unless ($sock->print($logout)); ## TO FIX
-
-  my $dr=$pc->get_data($self,$sock);
-  die() unless ($pc->is_server_close($dr));
-
-  alarm(0);
- };
+ Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send logout message') unless ($sock->print($logout));
+ my $dr=$pc->get_data($self,$sock);
+ my $rc1=$pc->parse_logout($dr);
+ die($rc1) unless $rc1->is_success();
 }
 
 sub open_connection
@@ -271,7 +266,13 @@ sub end
  my $self=shift;
  if ($self->current_state())
  {
-  $self->close_connection();
+  eval
+  {
+   local $SIG{ALRM}=sub { die "timeout" };
+   alarm(10);
+   $self->close_connection();
+   alarm(0);
+  };
  }
 }
 
@@ -288,7 +289,7 @@ sub _print ## here we are sure open_connection() was called before
  my ($self,$count,$tosend)=@_;
  my $sock=$self->sock();
 
- die() unless ($sock->print($tosend->as_string('tcp')));
+ Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send message') unless ($sock->print($tosend->as_string('tcp')));
  return 1; ## very important
 }
 

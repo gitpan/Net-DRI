@@ -28,7 +28,7 @@ use Net::DRI::Protocol::EPP::Core::Status;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 our $NS='urn:ietf:params:xml:ns:domain-1.0';
 
 =pod
@@ -115,7 +115,7 @@ sub build_command
 sub build_authinfo
 {
  my $rauth=shift;
- return ['domain:authInfo',[['domain:pw',$rauth->{pw},exists($rauth->{roid})? { 'roid' => $rauth->{roid} } : undef]]];
+ return ['domain:authInfo',['domain:pw',$rauth->{pw},exists($rauth->{roid})? { 'roid' => $rauth->{roid} } : undef]];
 }
 
 sub build_period
@@ -170,7 +170,7 @@ sub check_parse
    if ($n eq 'domain:name')
    {
     $domain=$c->firstChild->getData();
-    $rinfo->{domain}->{$domain}->{exist}=1-Net::DRI::Protocol::EPP::parse_type_boolean($c->getAttribute('avail'));
+    $rinfo->{domain}->{$domain}->{exist}=1-Net::DRI::Util::xml_parse_boolean($c->getAttribute('avail'));
    }
    if ($n eq 'domain:reason')
    {
@@ -402,7 +402,7 @@ sub build_ns
   @d=map { ['domain:hostObj',$_] } $ns->get_names();
  }
 
- return ['domain:ns',\@d];
+ return ['domain:ns',@d];
 }
 
 sub create_parse
@@ -550,19 +550,24 @@ sub update
  push @del,build_contact_noregistrant($cdel) if $cdel;
  push @del,$sdel->build_xml('domain:status') if $sdel;
 
- push @d,['domain:add',\@add] if @add;
- push @d,['domain:rem',\@del] if @del;
+ push @d,['domain:add',@add] if @add;
+ push @d,['domain:rem',@del] if @del;
 
  my $chg=$todo->set('registrant');
  my @chg;
  push @chg,['domain:registrant',$chg->srid()] if ($chg && ref($chg) && UNIVERSAL::can($chg,'srid'));
  $chg=$todo->set('auth');
  push @chg,build_authinfo($chg) if ($chg && ref($chg));
- push @d,['domain:chg',\@chg] if @chg;
+ push @d,['domain:chg',@chg] if @chg;
 
- ## RFC3915 §4.2.5
- my $hasext=(grep { ! /^(?:ns|status|contact|registrant|authinfo)$/ } $todo->types())? 1 : 0;
- push @d,['domain:chg'] if ($hasext && !@chg);
+ ## RFC3731 is ambigous
+ ## The text says that domain:add domain:rem or domain:chg must be there,
+ ## but the XML schema has minOccurs=0 for each of them
+ ## The consensus on the mailing-list is that the XML schema is normative
+ ## However some server might follow the text, in which case we will need the following lines
+ ## which were removed for Net::DRI 0.16
+## my $hasext=(grep { ! /^(?:ns|status|contact|registrant|authinfo)$/ } $todo->types())? 1 : 0;
+## push @d,['domain:chg'] if ($hasext && !@chg);
  
  $mes->command_body(\@d);
 }

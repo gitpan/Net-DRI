@@ -21,7 +21,7 @@ use strict;
 use Net::DRI::Protocol::RRP;
 use Net::DRI::Data::Hosts;
 
-our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -82,9 +82,9 @@ sub register_commands
 sub build_msg
 {
  my ($msg,$command,$hostname)=@_;
- $hostname=$hostname->get_names(1) if (defined($hostname) && ref($hostname));
+ ($hostname)=$hostname->get_names(1) if (defined($hostname) && ref($hostname));
  Net::DRI::Exception->die(1,'protocol/RRP',3,"Host name needed") unless defined($hostname) && $hostname;
- Net::DRI::Exception->die(1,'protocol/RRP',10,"Invalid host name") unless ($hostname=~m/^([a-z0-9]([a-z0-9\-]{0,61}[a-z0-9])?\.)?[a-z0-9]([a-z0-9\-]{0,61}[a-z0-9])?\.[a-z0-9]([a-z0-9\-]{0,61}[a-z0-9])?$/i); ## from RRP grammar
+ Net::DRI::Exception->die(1,'protocol/RRP',10,"Invalid host name") unless ($hostname=~m/^([a-z0-9]([a-z0-9\-]{0,61}[a-z0-9])?\.)*[a-z0-9]([a-z0-9\-]{0,61}[a-z0-9])?\.[a-z0-9]([a-z0-9\-]{0,61}[a-z0-9])?$/i); ## from RRP grammar
  $msg->command($command) if defined($command);
  $msg->entities('EntityName','NameServer');
  $msg->entities('NameServer',uc($hostname));

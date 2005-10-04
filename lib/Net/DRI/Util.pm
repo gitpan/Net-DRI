@@ -22,7 +22,7 @@ use strict;
 use Time::HiRes ();
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -129,7 +129,7 @@ sub is_hostname ## RFC952/1123
  my @d=split(/\./,$name,-1);
  foreach my $d (@d)
  { 
-  return 0 unless (defined($d) && $d);
+  return 0 unless (defined($d) && ($d ne ''));
   return 0 unless (length($d)<=63);
   return 0 if (($d=~m/[^A-Za-z0-9\-]/) || ($d=~m/^-/) || ($d=~m/-$/));
  }
@@ -221,7 +221,8 @@ sub compare_durations
 sub xml_is_normalizedstring
 {
  my ($what,$min,$max)=@_;
-
+ 
+ return 0 unless defined($what);
  return 0 if ($what=~m/[\r\n\t]/);
  my $l=length($what);
  return 0 if (defined($min) && ($l < $min));
@@ -233,6 +234,7 @@ sub xml_is_token
 {
  my ($what,$min,$max)=@_;
 
+ return 0 unless defined($what);
  return 0 if ($what=~m/[\r\n\t]/);
  return 0 if ($what=~m/^\s/);
  return 0 if ($what=~m/\s$/);
@@ -243,6 +245,37 @@ sub xml_is_token
  return 0 if (defined($max) && ($l > $max));
  return 1;
 }
+
+sub verify_ushort { my $in=shift; return (defined($in) && ($in=~m/^\d+$/) && ($in < 65536))? 1 : 0; }
+sub verify_ubyte  { my $in=shift; return (defined($in) && ($in=~m/^\d+$/) && ($in < 256))? 1 : 0; }
+sub verify_hex    { my $in=shift; return (defined($in) && ($in=~m/^[0-9A-F]+$/i))? 1 : 0; }
+sub verify_int   
+{
+ my ($in,$min,$max)=@_;
+ return 0 unless defined($in) && ($in=~m/^-?\d+$/);
+ return 0 if ($in < (defined($min)? $min : -2147483648));
+ return 0 if ($in > (defined($max)? $max : 2147483647));
+ return 1;
+}
+
+sub verify_base64
+{
+ my ($in,$min,$max)=@_;
+ my $b04='[AQgw]';
+ my $b16='[AEIMQUYcgkosw048]';
+ my $b64='[A-Za-z0-9+/]';
+ return 0 unless ($in=~m/^(?:(?:$b64 ?$b64 ?$b64 ?$b64 ?)*(?:(?:$b64 ?$b64 ?$b64 ?$b64)|(?:$b64 ?$b64 ?$b16 ?=)|(?:$b64 ?$b04 ?= ?=)))?$/);
+ return 0 if (defined($min) && (length($in) < $min));
+ return 0 if (defined($max) && (length($in) > $max));
+ return 1;
+}
+
+sub xml_parse_boolean
+{
+ my $in=shift;
+ return {'true'=>1,1=>1,0=>0,'false'=>0}->{$in};
+}
+
 
 #############################################################################################
 1;

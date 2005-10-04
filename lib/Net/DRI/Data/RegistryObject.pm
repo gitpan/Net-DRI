@@ -1,4 +1,4 @@
-## Domain Registry Interface, RegistryObject (experimental API)
+## Domain Registry Interface, RegistryObject
 ##
 ## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
@@ -22,25 +22,41 @@ use Net::DRI::Exception;
 
 our $AUTOLOAD;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
-
-## instead of
-## $ndr->process('domain','add',[$domain,$ns,$period],[]);
-## we can do
-## $o=Net::DRI::Data::RegistryObject->new($ndr,'domain',$domain);
-## $o->add([$ns,$period],[]); // or $o->add($ns,$period);
-##
-## $ndr can be $dri too
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Data::RegistryObject - Experimental API for Net::DRI operations
+Net::DRI::Data::RegistryObject - Additional API for Net::DRI operations
+
+=head1 SYNOPSYS
+
+ my $dri=Net::DRI->new();
+ my $nsg=$dri->remote_object('nsgroup');
+ $nsg->create(...);
+ $nsg->update(...);
+ $nsg->whatever(...);
+
+ Also:
+ my $nsg=$dri->remote_object('nsgroup','name');
 
 =head1 DESCRIPTION
 
-Please see the README file for details.
+For objects other than domains, hosts, or contacts, Net::DRI::Data::RegistryObject
+can be used to apply actions.
+
+Net::DRI::remote_object is used to create a new Net::DRI::Data::RegistryObject
+with either only one parameter (the object type) or two parameters (the object
+type and the object name)
+
+If the object name is not passed at creation it will need to be passed for all
+later actions as first parameter.
+
+All calls are handled by an AUTOLOAD, except target() which is the same as in Net::DRI.
+
+All calls need either two array references (protocol parameters and transport parameters)
+or a list (protocol parameters only).
 
 =head1 SUPPORT
 
@@ -80,46 +96,59 @@ sub new
  my $proto=shift;
  my $class=ref($proto) || $proto;
 
+ my ($p,$type,$name)=@_; ## $name (object name) not necessarily defined
+
+ Net::DRI::Exception::err_invalid_parameters() unless (defined($p) && ((ref($p) eq 'Net::DRI') || (ref($p) eq 'Net::DRI::Registry')));
+ Net::DRI::Exception::err_insufficient_parameters() unless (defined($type) && $type);
+
  my $self={ 
-            p    => $_[0], ## ndr or dri
-            type => $_[1],
-            name => $_[2], ## not always defined
+            p    => $p,
+            type => $type,
+            name => $name,
           };
 
  bless($self,$class);
  return $self;
 }
 
+sub target
+{
+ my $self=shift;
+ $self->{p}->target(@_);
+ return $self;
+}
+
 sub AUTOLOAD
 {
  my $self=shift;
- my $attr=$AUTOLOAD;
+ my $attr=$AUTOLOAD; ## this is the action wanted on the object
  $attr=~s/.*:://;
  return unless $attr=~m/[^A-Z]/; ## skip DESTROY and all-cap methods
 
- my ($ra1,$ra2);
- if (@_==2 && ref($_[0]) && ref($_[1]))
+ my $name=$self->{name};
+ my ($rp,$rt);
+ if (@_==2 && (ref($_[0]) eq 'ARRAY') && (ref($_[1]) eq 'ARRAY'))
  {
-  $ra1=$_[0];
-  $ra1=[ $self->{name}, @$ra1 ] if (exists($self->{name}) && $self->{name});
-  $ra2=$_[1];
+  $rp=$_[0];
+  $rp=[ $self->{name}, @$rp ] if (defined($name) && $name);
+  $rt=$_[1];
  } else
  {
-  $ra1=(exists($self->{name}) && $self->{name})? [$self->{name},@_] : [@_];
-  $ra2=[];
+  $rp=(defined($name) && $name)? [ $name, @_ ] : [ @_ ];
+  $rt=[];
  }
 
- my $ndr;
- if (ref($self->{p}) eq 'Net::DRI::Registry')
+ my $p=$self->{p};
+ if (ref($p) eq 'Net::DRI::Registry')
  {
-  return $self->{p}->process($self->{type},$attr,$ra1,$ra2);
- } elsif (ref($self->{p}) eq 'Net::DRI')
+  return $p->process($self->{type},$attr,$rp,$rt);
+ } elsif (ref($p) eq 'Net::DRI')
  {
   my $c=$self->{type}."_".$attr;
-  return $self->{p}->$c->(@$ra1);
+  return $p->$c->(@$rp);
  } else
  {
-  Net::DRI::Exception::err_assert("case not handled: ".ref($self->{p}));
+  Net::DRI::Exception::err_assert("case not handled: ".ref($p));
  }
 }
 

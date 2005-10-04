@@ -27,7 +27,7 @@ use Net::DRI::Protocol::EPP::Core::Status;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 our $NS='urn:ietf:params:xml:ns:host-1.0';
 
 =pod
@@ -135,7 +135,7 @@ sub check_parse
    if ($n eq 'host:name')
    {
     $host=$c->firstChild->getData();
-    $rinfo->{host}->{$host}->{exist}=1-Net::DRI::Protocol::EPP::parse_type_boolean($c->getAttribute('avail'));
+    $rinfo->{host}->{$host}->{exist}=1-Net::DRI::Util::xml_parse_boolean($c->getAttribute('avail'));
    }
    if ($n eq 'host:reason')
    {
@@ -270,13 +270,13 @@ sub update
  push @rem,add_ip($nsdel)    if $nsdel;
  push @rem,$sdel->build_xml('host:status') if $sdel;
 
- push @d,['host:add',\@add] if (@add);
- push @d,['host:rem',\@rem] if (@rem);
+ push @d,['host:add',@add] if (@add);
+ push @d,['host:rem',@rem] if (@rem);
 
  if (defined($newname) && $newname)
  {
   Net::DRI::Exception->die(1,'protocol/EPP',10,'Invalid host name: '.$newname) unless Net::DRI::Util::is_hostname($newname);
-  push @d,['host:chg',[['host:name',$newname]]];
+  push @d,['host:chg',['host:name',$newname]];
  }
  $mes->command_body(\@d);
 }

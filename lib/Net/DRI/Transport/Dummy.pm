@@ -22,7 +22,7 @@ use strict;
 
 use Net::DRI::Data::Raw;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -64,6 +64,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
+
 sub new
 {
  my $proto=shift;
@@ -91,7 +92,13 @@ sub send
 {
  my $self=shift;
  my $tosend=shift;
- $self->SUPER::send($tosend,$self->{f_send});
+ $self->SUPER::send($tosend,$self->{f_send},\&handle_error);
+}
+
+sub handle_error
+{
+ my ($self,$err,$c,$is_timeout,$ok)=@_;
+ die($err->as_string());
 }
 
 sub _print
