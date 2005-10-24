@@ -27,8 +27,7 @@ use Net::DRI::Protocol::EPP::Core::Status;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
-our $NS='urn:ietf:params:xml:ns:host-1.0';
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -99,7 +98,8 @@ sub build_command
   Net::DRI::Exception->die(1,'protocol/EPP',10,'Invalid host name: '.$n) unless Net::DRI::Util::is_hostname($n);
  }
 
- $msg->command([$command,'host:'.$command,'xmlns:host="urn:ietf:params:xml:ns:host-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:host-1.0 host-1.0.xsd"']);
+ my @ns=@{$msg->ns->{host}};
+ $msg->command([$command,'host:'.$command,sprintf('xmlns:host="%s" xsi:schemaLocation="%s %s"',$ns[0],$ns[0],$ns[1])]);
 
  my @d=map { ['host:name',$_] } @n;
  return @d;
@@ -123,9 +123,9 @@ sub check_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $chkdata=$mes->get_content('chkData',$NS);
+ my $chkdata=$mes->get_content('chkData',$mes->ns('host'));
  return unless $chkdata;
- foreach my $cd ($chkdata->getElementsByTagNameNS($NS,'cd'))
+ foreach my $cd ($chkdata->getElementsByTagNameNS($mes->ns('host'),'cd'))
  {
   my $c=$cd->firstChild;
   my $host;
@@ -160,7 +160,7 @@ sub info_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $infdata=$mes->get_content('infData',$NS);
+ my $infdata=$mes->get_content('infData',$mes->ns('host'));
  return unless $infdata;
 
  $rinfo->{host}->{$oname}->{exist}=1;
@@ -214,7 +214,7 @@ sub create_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $infdata=$mes->get_content('creData',$NS);
+ my $infdata=$mes->get_content('creData',$mes->ns('host'));
  return unless $infdata;
 
  $rinfo->{host}->{$oname}->{exist}=1;

@@ -24,8 +24,7 @@ use Net::DRI::Util;
 use Net::DRI::Exception;
 use Net::DRI::Data::Hosts;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
-our $NS='http://www.dns.be/xml/epp/nsgroup-1.0';
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -90,9 +89,15 @@ sub capabilities_add
  return { 'nsgroup_update' => { 'ns' => ['set'] } };
 }
 
+sub ns
+{
+ my ($mes)=@_;
+ return (exists($mes->ns->{nsgroup}))? $mes->ns->{nsgroup}->[0] : 'http://www.dns.be/xml/epp/nsgroup-1.0';
+}
+
 sub build_command
 {
- my ($msg,$command,$hosts)=@_;
+ my ($epp,$msg,$command,$hosts)=@_;
 
  my @gn;
  foreach my $h ( grep { defined } (ref($hosts) eq 'ARRAY')? @$hosts : ($hosts))
@@ -104,7 +109,8 @@ sub build_command
 
  Net::DRI::Exception->die(1,'protocol/EPP',2,'NSgroup name needed') unless @gn;
 
- $msg->command([$command,'nsgroup:'.$command,'xmlns:nsgroup="http://www.dns.be/xml/epp/nsgroup-1.0" xsi:schemaLocation="http://www.dns.be/xml/epp/nsgroup-1.0 nsgroup-1.0.xsd"']);
+ my @ns=exists($msg->ns->{nsgroup})? @{$msg->ns->{nsgroup}} : ('http://www.dns.be/xml/epp/nsgroup-1.0','nsgroup-1.0.xsd');
+ $msg->command([$command,'nsgroup:'.$command,sprintf('xmlns:nsgroup="%s" xsi:schemaLocation="%s %s"',$ns[0],$ns[0],$ns[1])]);
 
  return map { ['nsgroup:name',$_] } @gn;
 }
@@ -140,9 +146,10 @@ sub add_nsname
 
 sub check
 {
- my ($epp,$hosts)=@_;
+ my $epp=shift;
+ my @hosts=@_;
  my $mes=$epp->message();
- my @d=build_command($mes,'check',$hosts);
+ my @d=build_command($epp,$mes,'check',\@hosts);
  $mes->command_body(\@d);
 }
 
@@ -152,9 +159,10 @@ sub check_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $chkdata=$mes->get_content('chkData',$NS);
+ my $ns=ns($mes);
+ my $chkdata=$mes->get_content('chkData',$ns);
  return unless $chkdata;
- foreach my $cd ($chkdata->getElementsByTagNameNS($NS,'cd'))
+ foreach my $cd ($chkdata->getElementsByTagNameNS($ns,'cd'))
  {
   my $c=$cd->firstChild;
   my $nsgroup;
@@ -175,7 +183,7 @@ sub info
 {
  my ($epp,$hosts)=@_;
  my $mes=$epp->message();
- my @d=build_command($mes,'info',$hosts);
+ my @d=build_command($epp,$mes,'info',$hosts);
  $mes->command_body(\@d);
 }
 
@@ -185,7 +193,7 @@ sub info_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $infdata=$mes->get_content('infData',$NS);
+ my $infdata=$mes->get_content('infData',ns($mes));
  return unless $infdata;
 
  my $ns=Net::DRI::Data::Hosts->new();
@@ -216,7 +224,7 @@ sub create
 {
  my ($epp,$hosts)=@_;
  my $mes=$epp->message();
- my @d=build_command($mes,'create',$hosts);
+ my @d=build_command($epp,$mes,'create',$hosts);
  push @d,add_nsname($hosts);
  $mes->command_body(\@d);
 }
@@ -225,7 +233,7 @@ sub delete
 {
  my ($epp,$hosts)=@_;
  my $mes=$epp->message();
- my @d=build_command($mes,'delete',$hosts);
+ my @d=build_command($epp,$mes,'delete',$hosts);
  $mes->command_body(\@d);
 }
 
@@ -242,8 +250,7 @@ sub update
  }
 
  my $ns=$todo->set('ns');
- 
- my @d=build_command($mes,'update',$hosts);
+ my @d=build_command($epp,$mes,'update',$hosts);
  push @d,add_nsname($ns);
  $mes->command_body(\@d);
 }

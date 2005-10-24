@@ -22,7 +22,7 @@ use strict;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 our $NS='urn:ietf:params:xml:ns:secDNS-1.0';
 
 =pod
@@ -77,6 +77,11 @@ sub register_commands
          );
 
  return { 'domain' => \%tmp };
+}
+
+sub capabilities_add
+{
+ return { 'domain_update' => { 'secdns' => [ 'add','del','set' ], 'secdns_urgent' => ['set'] }};
 }
 
 ###################################################################################################

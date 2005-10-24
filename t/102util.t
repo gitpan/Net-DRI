@@ -1,8 +1,15 @@
 #!/usr/bin/perl -w
 
-use Test::More tests => 324;
+use Test::More tests => 331;
 
 use Net::DRI::Util;
+
+is(defined(%Net::DRI::Util::CCA2),1,'%CCA2 defined');
+isa_ok(\%Net::DRI::Util::CCA2,'HASH','%CCA2 hash');
+is(keys(%Net::DRI::Util::CCA2),240,'%CCA2 number of elements');
+is_deeply([grep { ! /^[A-Z]{2}$/ } keys(%Net::DRI::Util::CCA2)],[],'%CCA2 keys');
+is(exists($Net::DRI::Util::CCA2{'FR'}),1,'%CCA2 FR exists');
+is(!exists($Net::DRI::Util::CCA2{'ZZ'}),1,'%CCA2 ZZ not exists');                  
 
 is(Net::DRI::Util::all_valid(undef,1,'A'),0,'all_valid() with one undef');
 is(Net::DRI::Util::all_valid('B',undef,2,undef),0,'all_valid() with two undef');
@@ -161,5 +168,10 @@ is(Net::DRI::Util::verify_base64('AAAABBBB',undef,10),1,'verify_base64() 28');
 is(Net::DRI::Util::verify_base64('AAAABBBB',10,12),0,'verify_base64() 29');
 is(Net::DRI::Util::verify_base64('AAAABBBB',4,13),1,'verify_base64() 30');
 is(Net::DRI::Util::verify_base64('AAAABBBB',15,20),0,'verify_base64() 31');
+
+TODO: {
+        local $TODO="tests on hash_merge()";
+        ok(0);
+}
 
 exit 0;

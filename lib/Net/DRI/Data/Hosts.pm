@@ -23,13 +23,13 @@ __PACKAGE__->mk_accessors(qw(name loid));
 
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Data::Hosts - Handle ordered list of nameservers (name, IPv4 addresses, IPv6 addresses)
+Net::DRI::Data::Hosts - Handle ordered list of nameservers (name, IPv4 addresses, IPv6 addresses) for Net::DRI
 
 =head1 SYNOPSIS
 
@@ -38,6 +38,7 @@ Net::DRI::Data::Hosts - Handle ordered list of nameservers (name, IPv4 addresses
  my $dh=Net::DRI::Data::Hosts->new();
  $dh->add('ns.example.foo',['1.2.3.4','1.2.3.5']);
  $dh->add('ns2.example.foo',['10.1.1.1']); ## Third element can be an array ref of IPv6 addresses
+ ## ->add() returns the object itself, and thus can be chained
 
  ## Number of nameservers
  print $dh->count(); ## Gives 2
@@ -52,9 +53,9 @@ Net::DRI::Data::Hosts - Handle ordered list of nameservers (name, IPv4 addresses
 
 Order of nameservers is preserved. Order of IP addresses is preserved.
 
-Hostnames are verifies before being used with Net::DRI::Util::is_hostname().
+Hostnames are verified before being used with Net::DRI::Util::is_hostname().
 
-IP addresses are verified with Net::DRI::Util::is_ipv4() and Net::DRI::Util::ipv6().
+IP addresses are verified with Net::DRI::Util::is_ipv4() and Net::DRI::Util::is_ipv6().
 
 =head1 SUPPORT
 
@@ -122,17 +123,17 @@ sub add
  if (defined($e2) && $e2)
  {
   $self->_push($in,$e1,$e2);
-  return;
+  return $self;
  }
 
  if (defined($e1) && $e1)
  {
   $self->_push($in,_separate_ips($e1));
-  return;
+  return $self;
  }
  
  $self->_push($in,[],[]);
- return;
+ return $self;
 }
 
 sub _separate_ips

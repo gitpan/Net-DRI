@@ -14,7 +14,6 @@
 # 
 #
 #########################################################################################
-## TO FIX : use LocalStorage as backend, but not enough ! (memcached ?)
 
 package Net::DRI::Cache;
 
@@ -23,7 +22,7 @@ use strict;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -152,7 +151,7 @@ sub delete_expired
 {
  my $self=shift;
  my $now=Net::DRI::Util::microtime();
- my $c=$self->{c};
+ my $c=$self->{data};
  while(my ($type,$c1)=each(%$c))
  {
   while(my ($key,$c2)=each(%{$c1}))
@@ -160,6 +159,12 @@ sub delete_expired
    delete($c->{$type}->{$key}) if ($c2->{_until} > 0 && ($now > $c2->{_until}));
   }
  }
+}
+
+sub delete
+{
+ my $self=shift;
+ $self->{data}={};
 }
 
 ##############################################################################

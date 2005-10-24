@@ -22,7 +22,7 @@ use strict;
 
 use Net::DRI::Data::Raw;
 
-our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -71,6 +71,7 @@ sub new
  my $class=ref($proto) || $proto;
 
  my $drd=shift;
+ my $po=shift;
  my $rh=shift;
 
  my $self=$class->SUPER::new($rh); ## We are now officially a Net::DRI::Transport instance

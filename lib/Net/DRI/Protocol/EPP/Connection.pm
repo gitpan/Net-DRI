@@ -18,11 +18,10 @@
 package Net::DRI::Protocol::EPP::Connection;
 
 use strict;
-use Net::DRI::Protocol::EPP::Message;
 use Net::DRI::Data::Raw;
 use Net::DRI::Protocol::ResultStatus;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -70,13 +69,13 @@ See the LICENSE file that comes with this distribution for more details.
 sub login
 {
  shift if ($_[0] eq __PACKAGE__);
- my ($id,$pass,$cltrid,$dr)=@_;
+ my ($cm,$id,$pass,$cltrid,$dr)=@_;
 
- my $got=Net::DRI::Protocol::EPP::Message->new();
+ my $got=$cm->();
  $got->parse($dr);
  my $rg=$got->result_greeting();
 
- my $mes=Net::DRI::Protocol::EPP::Message->new();
+ my $mes=$cm->();
  $mes->command(['login']);
  my @d;
  push @d,['clID',$id];
@@ -96,8 +95,8 @@ sub login
 sub logout
 {
  shift if ($_[0] eq __PACKAGE__);
- my $cltrid=shift(@_);
- my $mes=Net::DRI::Protocol::EPP::Message->new();
+ my ($cm,$cltrid)=@_;
+ my $mes=$cm->();
  $mes->command(['logout']);
  $mes->cltrid($cltrid) if $cltrid;
  return $mes->as_string('tcp');
@@ -106,8 +105,8 @@ sub logout
 sub keepalive
 {
  shift if ($_[0] eq __PACKAGE__);
- my $cltrid=shift(@_);
- my $mes=Net::DRI::Protocol::EPP::Message->new();
+ my ($cm,$cltrid)=@_;
+ my $mes=$cm->();
  $mes->command([['poll',{'op'=>'req'}]]); ## It should be ok, since ACK is necessary to really dequeue
  $mes->cltrid($cltrid) if $cltrid;
  return $mes->as_string('tcp');
@@ -123,8 +122,13 @@ sub get_data
  my $c;
  $sock->read($c,4); ## first 4 bytes are the packed length
  my $length=unpack('N',$c)-4;
- my $m;
- $sock->read($m,$length);
+ my ($m,$l,$mm);
+ while (my $gl=$sock->read($mm,$length))
+ {
+  $l+=$gl;
+  $m.=$mm;
+  last if $l == $length;
+ }
  die() unless ($m=~m!</epp>$!);
  die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_SYNTAX_ERROR',$m? $m : '<empty message from server>','en')) unless ($m=~m!</epp>$!);
 

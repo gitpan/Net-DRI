@@ -8,58 +8,58 @@ my $n;
 
 ## Creation
 
-$n=Net::DRI::Protocol::RRP::Message->new({command=>'add',entityname=>'Domain',entities=>{DomainName=>'example.com'},options=>{Period=>10}});
+$n=Net::DRI::Protocol::RRP::Message->new()->command('add')->entities('EntityName','Domain')->entities('DomainName','example.com')->options('Period',10);
 is($n->as_string(),"add\r\nEntityName:Domain\r\nDomainName:example.com\r\n-Period:10\r\n.\r\n",'RRP Message create domain add 1 string');
 is($n->command(),'add','RRP Message create domain add 1 command');
 is($n->get_name_from_message(),'EXAMPLE.COM','RRP Message create domain add 1 get_name_from_message');
 
-$n=Net::DRI::Protocol::RRP::Message->new({command=>'add',entityname=>'Domain',entities=>{DomainName=>'example.com',NameServer=>['ns1.example.com','ns2.example.com']},options=>{Period=>10}});
+$n=Net::DRI::Protocol::RRP::Message->new()->command('add')->entities('EntityName','Domain')->entities('DomainName','example.com')->entities('NameServer',['ns1.example.com','ns2.example.com'])->options('Period',10);
 is($n->as_string(),"add\r\nEntityName:Domain\r\nDomainName:example.com\r\n-Period:10\r\nNameServer:ns1.example.com\r\nNameServer:ns2.example.com\r\n.\r\n",'RRP Message create domain add 2');
 
-$n=Net::DRI::Protocol::RRP::Message->new({command=>'add',entityname=>'NameServer',entities=>{NameServer=>'ns1.example.com',IPAddress=>'198.41.1.11'}});
+$n=Net::DRI::Protocol::RRP::Message->new()->command('add')->entities('EntityName','NameServer')->entities('NameServer','ns1.example.com')->entities('IPAddress','198.41.1.11');
 is($n->as_string(),"add\r\nEntityName:NameServer\r\nNameServer:ns1.example.com\r\nIPAddress:198.41.1.11\r\n.\r\n",'RRP Message create nameserver add string');
 is($n->get_name_from_message(),'NS1.EXAMPLE.COM','RRP Message create nameserver add get_name_from_message');
 
-$n=Net::DRI::Protocol::RRP::Message->new({command=>'check',entityname=>'Domain',entities=>{DomainName=>'example.com'}});
+$n=Net::DRI::Protocol::RRP::Message->new()->command('check')->entities('EntityName','Domain')->entities('DomainName','example.com');
 is($n->as_string(),"check\r\nEntityName:Domain\r\nDomainName:example.com\r\n.\r\n",'RRP Message create domain check');
 
-$n=Net::DRI::Protocol::RRP::Message->new({command=>'check',entityname=>'NameServer',entities=>{NameServer=>'ns1.example.com'}});
+$n=Net::DRI::Protocol::RRP::Message->new()->command('check')->entities('EntityName','NameServer')->entities('NameServer','ns1.example.com');
 is($n->as_string(),"check\r\nEntityName:NameServer\r\nNameServer:ns1.example.com\r\n.\r\n",'RRP Message create nameserver check');
 
-$n=Net::DRI::Protocol::RRP::Message->new({command=>'del',entityname=>'Domain',entities=>{DomainName=>'example.com'}});
+$n=Net::DRI::Protocol::RRP::Message->new()->command('del')->entities('EntityName','Domain')->entities('DomainName','example.com');
 is($n->as_string(),"del\r\nEntityName:Domain\r\nDomainName:example.com\r\n.\r\n",'RRP Message create domain del');
 
-$n=Net::DRI::Protocol::RRP::Message->new({command=>'del',entityname=>'NameServer',entities=>{NameServer=>'ns1.registrarA.com'}});
+$n=Net::DRI::Protocol::RRP::Message->new()->command('del')->entities('EntityName','NameServer')->entities('NameServer','ns1.registrarA.com');
 is($n->as_string(),"del\r\nEntityName:NameServer\r\nNameServer:ns1.registrarA.com\r\n.\r\n",'RRP Message create nameserver del');
 
-$n=Net::DRI::Protocol::RRP::Message->new({command=>'describe',options=>{Target=>'Protocol'}});
+$n=Net::DRI::Protocol::RRP::Message->new()->command('describe')->options('Target','Protocol');
 is($n->as_string(),"describe\r\n-Target:Protocol\r\n.\r\n",'RRP Message create describe');
 
-$n=Net::DRI::Protocol::RRP::Message->new({command=>'mod',entityname=>'Domain',entities=>{DomainName=>'example.com',NameServer=>['ns3.registrarA.com','ns1.registrarA.com=']}});
+$n=Net::DRI::Protocol::RRP::Message->new()->command('mod')->entities('EntityName','Domain')->entities('DomainName','example.com')->entities('NameServer',['ns3.registrarA.com','ns1.registrarA.com=']);
 is($n->as_string(),"mod\r\nEntityName:Domain\r\nDomainName:example.com\r\nNameServer:ns3.registrarA.com\r\nNameServer:ns1.registrarA.com=\r\n.\r\n",'RRP Message create domain mod');
 
-$n=Net::DRI::Protocol::RRP::Message->new({command=>'mod',entityname=>'NameServer',entities=>{NameServer=>'ns1.registrarA.com',NewNameServer=>'ns2.registrarA.com',IPAddress=>['198.42.1.11','198.41.1.11=']}});
+$n=Net::DRI::Protocol::RRP::Message->new()->command('mod')->entities('EntityName','NameServer')->entities('NameServer','ns1.registrarA.com')->entities('NewNameServer','ns2.registrarA.com')->entities('IPAddress',['198.42.1.11','198.41.1.11=']);
 is($n->as_string(),"mod\r\nEntityName:NameServer\r\nNameServer:ns1.registrarA.com\r\nNewNameServer:ns2.registrarA.com\r\nIPAddress:198.42.1.11\r\nIPAddress:198.41.1.11=\r\n.\r\n",'RRP Message create nameserver mod');
 
-$n=Net::DRI::Protocol::RRP::Message->new({command=>'quit'});
+$n=Net::DRI::Protocol::RRP::Message->new()->command('quit');
 is($n->as_string(),"quit\r\n.\r\n",'RRP Message create quit');
 
-$n=Net::DRI::Protocol::RRP::Message->new({command=>'renew',entityname=>'Domain',entities=>{DomainName=>'example.com'},options=>{Period=>9,CurrentExpirationYear=>2001}});
+$n=Net::DRI::Protocol::RRP::Message->new()->command('renew')->entities('EntityName','Domain')->entities('DomainName','example.com')->options('Period',9)->options('CurrentExpirationYear',2001);
 is($n->as_string(),"renew\r\nEntityName:Domain\r\nDomainName:example.com\r\n-Period:9\r\n-CurrentExpirationYear:2001\r\n.\r\n",'RRP Message create domain renew');
 
-$n=Net::DRI::Protocol::RRP::Message->new({command=>'session',options=>{Id=>'registrarA',Password=>'i-am-registrarA'}});
+$n=Net::DRI::Protocol::RRP::Message->new()->command('session')->options('Id','registrarA')->options('Password','i-am-registrarA');
 is($n->as_string(),"session\r\n-Id:registrarA\r\n-Password:i-am-registrarA\r\n.\r\n",'RRP Message create session');
 
-$n=Net::DRI::Protocol::RRP::Message->new({command=>'status',entityname=>'Domain',entities=>{DomainName=>'example.com'}});
+$n=Net::DRI::Protocol::RRP::Message->new()->command('status')->entities('EntityName','Domain')->entities('DomainName','example.com');
 is($n->as_string(),"status\r\nEntityName:Domain\r\nDomainName:example.com\r\n.\r\n",'RRP Message create domain status');
 
-$n=Net::DRI::Protocol::RRP::Message->new({command=>'status',entityname=>'NameServer',entities=>{NameServer=>'ns1.registrarA.com'}});
+$n=Net::DRI::Protocol::RRP::Message->new()->command('status')->entities('EntityName','NameServer')->entities('NameServer','ns1.registrarA.com');
 is($n->as_string(),"status\r\nEntityName:NameServer\r\nNameServer:ns1.registrarA.com\r\n.\r\n",'RRP Message create nameserver status');
 
-$n=Net::DRI::Protocol::RRP::Message->new({command=>'transfer',entityname=>'Domain',entities=>{DomainName=>'example.com'}});
+$n=Net::DRI::Protocol::RRP::Message->new()->command('transfer')->entities('EntityName','Domain')->entities('DomainName','example.com');
 is($n->as_string(),"transfer\r\nEntityName:Domain\r\nDomainName:example.com\r\n.\r\n",'RRP Message create domain transfer');
 
-$n=Net::DRI::Protocol::RRP::Message->new({command=>'transfer',entityname=>'Domain',entities=>{DomainName=>'example.com'},options=>{Approve=>'Yes'}});
+$n=Net::DRI::Protocol::RRP::Message->new()->command('transfer')->entities('EntityName','Domain')->entities('DomainName','example.com')->options('Approve','Yes');
 is($n->as_string(),"transfer\r\n-Approve:Yes\r\nEntityName:Domain\r\nDomainName:example.com\r\n.\r\n",'RRP Message create domain transfer');
 
 

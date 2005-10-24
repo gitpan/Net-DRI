@@ -25,7 +25,7 @@ use WWW::Mechanize;
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -91,6 +91,7 @@ sub new
  my $class=ref($proto) || $proto;
 
  my $drd=shift;
+ my $po=shift;
  my %opts=(@_==1 && ref($_[0]))? %{$_[0]} : @_;
  my $self=$class->SUPER::new(\%opts); ## We are now officially a Net::DRI::Transport instance
  $self->has_state(1);

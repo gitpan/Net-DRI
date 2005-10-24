@@ -1,3 +1,19 @@
+0.17 2005-10-24
+
++ Full support for EURid (.EU) with Net::DRI::DRD::EURid, Net::DRI::Data::Contact::EURid,
+  Net::DRI::Protocol::EPP::Extensions::EURid and Net::DRI::Protocol::EPP::Extensions::EURid::*
++ Query list of object types managed by registry (ex: domain, contact, etc...) with $dri->has_object()
++ A copy of all exchanges can be sent to the filehandle of your choices 
+  (see log_fh in Net::DRI::Transport)
+- BUGFIX in handling of dates in EPP : we switch to UTC before printing
+- BUGFIX in Net::DRI::Protocol::EPP::Connection : data may come in multiple chunks
+- BUGFIX in Net::DRI::Protocol::EPP::Core::Domain : handling of hosts as attributes
+= Net::DRI::Data::Hosts::add() returns the object itself (useful for chains)
+= Net::DRI::Data::Contact::validate() verifies the country code against the list in Util
+= No more hardcoding of various xml namespaces names in various modules, the list is
+  set during protocol object creation.
+= domain_create() : a duration is not mandatory
+
 0.16 2005-10-04
 
 + Three new EPP extensions : SecDNS (for DNSSEC), E164 (for ENUM) and NSgroup (for .BE & .EU)

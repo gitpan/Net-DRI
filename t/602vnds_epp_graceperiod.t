@@ -46,10 +46,7 @@ is_deeply([$s->list_status()],['addPeriod','ok'],'domain_info get_info(status) l
 $R2='';
 $toc=Net::DRI::Data::Changes->new();
 $toc->set('rgp',{ op => 'request'});
-eval {
 $rc=$dri->domain_update('example51.com',$toc);
-};
-die($@->as_string()) if $@;
 is($R1,$E1.'<command><update><domain:update xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example51.com</domain:name></domain:update></update><extension><rgp:update xmlns:rgp="urn:ietf:params:xml:ns:rgp-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:rgp-1.0 rgp-1.0.xsd"><rgp:restore op="request"/></rgp:update></extension><clTRID>ABC-12345</clTRID></command>'.$E2,'domain_update build +RGP/restore_request');
 is($rc->is_success(),1,'domain_update is_success +RGP');
 

@@ -26,8 +26,7 @@ use Net::DRI::Protocol::EPP::Core::Status;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
-our $NS='urn:ietf:params:xml:ns:contact-1.0';
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -105,7 +104,8 @@ sub build_command
  }
 
  my $tcommand=(ref($command))? $command->[0] : $command;
- $msg->command([$command,'contact:'.$tcommand,'xmlns:contact="urn:ietf:params:xml:ns:contact-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:contact-1.0 contact-1.0.xsd"']);
+ my @ns=@{$msg->ns->{contact}};
+ $msg->command([$command,'contact:'.$tcommand,sprintf('xmlns:contact="%s" xsi:schemaLocation="%s %s"',$ns[0],$ns[0],$ns[1])]);
 
  my @d=map { ['contact:id',$_] } @c;
 
@@ -139,9 +139,9 @@ sub check_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $chkdata=$mes->get_content('chkData',$NS);
+ my $chkdata=$mes->get_content('chkData',$mes->ns('contact'));
  return unless $chkdata;
- foreach my $cd ($chkdata->getElementsByTagNameNS($NS,'cd'))
+ foreach my $cd ($chkdata->getElementsByTagNameNS($mes->ns('contact'),'cd'))
  {
   my $c=$cd->firstChild;
   my $contact;
@@ -176,12 +176,12 @@ sub info_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $infdata=$mes->get_content('infData',$NS);
+ my $infdata=$mes->get_content('infData',$mes->ns('contact'));
  return unless $infdata;
 
  $rinfo->{contact}->{$oname}->{exist}=1;
 
- my $contact=$po->factories()->{'contact'}->new();
+ my $contact=$po->factories()->{contact}->();
  my @s;
  my $c=$infdata->firstChild();
  while ($c)
@@ -218,7 +218,7 @@ sub info_parse
    parse_postalinfo($c,$contact);
   } elsif ($name eq 'contact:authInfo')
   {
-   my $pw=($c->getElementsByTagNameNS($NS,'pw'))[0]->firstChild->getData();
+   my $pw=($c->getElementsByTagNameNS($mes->ns('contact'),'pw'))[0]->firstChild->getData();
    $contact->auth({pw => $pw});
   } elsif ($name eq 'contact:disclose')
   {
@@ -240,11 +240,17 @@ sub parse_tel
  return $num;
 }
 
+sub get_data
+{
+ my $n=shift;
+ return ($n->getFirstChild())? $n->getFirstChild()->getData() : '';
+}
+
 sub parse_postalinfo
 {
  my ($c,$contact)=@_;
  my $type=$c->getAttribute('type'); ## int or loc, but for now we do not take care of that
- return if (($type eq 'loc') && ($contact->name())); ## we prefer int over loc
+ return if (($type eq 'int') && ($contact->name())); ## we prefer loc over int
  my $n=$c->getFirstChild();
  while($n)
  {
@@ -252,10 +258,10 @@ sub parse_postalinfo
   next unless $name;
   if ($name eq 'contact:name')
   {
-   $contact->name($n->getFirstChild()->getData());
+   $contact->name(get_data($n));
   } elsif ($name eq 'contact:org')
   {
-   $contact->org($n->getFirstChild()->getData());
+   $contact->org(get_data($n));
   } elsif ($name eq 'contact:addr')
   {
    my $nn=$n->getFirstChild();
@@ -266,19 +272,19 @@ sub parse_postalinfo
     next unless $name2;
     if ($name2 eq 'contact:street')
     {
-     push @street,$nn->getFirstChild->getData();
+     push @street,get_data($nn);
     } elsif ($name2 eq 'contact:city')
     {
-     $contact->city($nn->getFirstChild->getData());
+     $contact->city(get_data($nn));
     } elsif ($name2 eq 'contact:sp')
     {
-     $contact->sp($nn->getFirstChild->getData());
+     $contact->sp(get_data($nn));
     } elsif ($name2 eq 'contact:pc')
     {
-     $contact->pc($nn->getFirstChild->getData());
+     $contact->pc(get_data($nn));
     } elsif ($name2 eq 'contact:cc')
     {
-     $contact->cc($nn->getFirstChild->getData());
+     $contact->cc(get_data($nn));
     }
     $nn=$nn->getNextSibling();
    }
@@ -327,7 +333,7 @@ sub transfer_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $trndata=$mes->get_content('trnData',$NS);
+ my $trndata=$mes->get_content('trnData',$mes->ns('contact'));
  return unless $trndata;
 
  $rinfo->{contact}->{$oname}->{exist}=1;
@@ -403,12 +409,12 @@ sub build_cdata
  push @post,['contact:org',$contact->org()] if defined($contact->org());
  my @addr;
  if (defined($contact->street())) { foreach (@{$contact->street()}) { push @addr,['contact:street',$_]; } }
- push @addr,['contact:city',$contact->city()];
+ push @addr,['contact:city',$contact->city()] if defined($contact->city());
  push @addr,['contact:sp',$contact->sp()] if defined($contact->sp());
  push @addr,['contact:pc',$contact->pc()] if defined($contact->pc());
- push @addr,['contact:cc',$contact->cc()];
- push @post,['contact:addr',@addr];
- push @d,['contact:postalInfo',@post,{type=>'int'}];
+ push @addr,['contact:cc',$contact->cc()] if defined($contact->cc());
+ push @post,['contact:addr',@addr] if @addr;
+ push @d,['contact:postalInfo',@post,{type=>'loc'}] if @post;
  push @d,build_tel('contact:voice',$contact->voice()) if defined($contact->voice());
  push @d,build_tel('contact:fax',$contact->fax()) if defined($contact->fax());
  push @d,['contact:email',$contact->email()] if defined($contact->email());
@@ -435,17 +441,20 @@ sub create_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $credata=$mes->get_content('creData',$NS);
+ my $credata=$mes->get_content('creData',$mes->ns('contact'));
  return unless $credata;
 
  $rinfo->{contact}->{$oname}->{exist}=1;
  my $c=$credata->firstChild();
- while ($c) ## contact:id is not used
+ while ($c)
  {
   my $name=$c->nodeName();
   if ($name=~m/^contact:(crDate)$/)
   {
    $rinfo->{contact}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->firstChild->getData());
+  } elsif ($name eq 'contact:id')
+  {
+   $rinfo->{contact}->{$oname}->{id}=$c->firstChild->getData();
   }
   $c=$c->getNextSibling();
  }
@@ -508,7 +517,8 @@ sub update
  {
   Net::DRI::Exception->die(1,'protocol/EPP',10,'Invalid contact '.$newc) unless (UNIVERSAL::isa($newc,'Net::DRI::Data::Contact'));
   $newc->validate(1); ## will trigger an Exception if needed
-  push @d,['contact:chg',build_cdata($newc)];
+  my @c=build_cdata($newc);
+  push @d,['contact:chg',@c] if @c;
  }
  $mes->command_body(\@d);
 }

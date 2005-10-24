@@ -23,8 +23,9 @@ use base qw(Class::Accessor::Chained::Fast);
 __PACKAGE__->mk_accessors(qw/name version retry pause trace timeout defer current_state has_state is_sync time_open/);
 
 use Net::DRI::Exception;
+use Time::HiRes;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -79,6 +80,7 @@ sub new
            pause     => exists($opts{pause})?   $opts{pause}   : 10, ## time in seconds to wait between two retries
            timeout   => exists($opts{timeout})? $opts{timeout} : 0,
            defer     => exists($opts{defer})?   $opts{defer}   : 0, ## defer opening connection as long as possible (irrelevant if stateless) ## XX maybe not here, too low
+           log_fh    => exists($opts{log_fh})? $opts{log_fh} : undef,
            current_state => undef, ## for stateless transport, otherwise 0=close, 1=open
            has_state     => undef, ## do we need to open a session before sending commands ?
            transport     => undef, ## will be defined in subclasses
@@ -108,6 +110,7 @@ sub send
 
    ## Try to reconnect if needed
    $self->open_connection() if ($self->has_state() && !$self->current_state());
+   $self->log('C=>S',$tosend);
    $ok=$self->$cb1($c,$tosend);
   }; ## end of try
 
@@ -168,7 +171,31 @@ sub receive
  Net::DRI::Exception->die(0,'transport',5,'Unable to receive message to registry') unless defined($ans);
 
  alarm($prevalarm) if $prevalarm; ## re-enable previous alarm (warning, time is off !!)
+ $self->log('C<=S',$ans);
  return $ans;
+}
+
+sub log
+{
+ my $self=shift;
+ my $fh=$self->{log_fh};
+ return unless defined($fh);
+ my $tp=join(' ',map {UNIVERSAL::can($_,'as_string')? $_->as_string() : $_} @_);
+ $tp=~s/^\s+//mg;
+ $tp=~s/\s+$//mg;
+ $tp=~s/\n/ /g;
+ $tp=~s/> </></g;
+ my ($t,$v)=Time::HiRes::gettimeofday();
+ my @t=localtime($t);
+ my $when=sprintf('%d-%02d-%02d %02d:%02d:%02d.%06d',1900+$t[5],$t[4],$t[3],$t[2],1+$t[1],$t[0],$v);
+ $tp=$when.' '.$tp."\n";
+ if (UNIVERSAL::can($fh,'print'))
+ {
+  $fh->print($tp);
+ } else
+ {
+  print $fh $tp;
+ }
 }
 
 #################################################################################################

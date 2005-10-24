@@ -20,9 +20,9 @@ package Net::DRI::Data::ContactSet;
 
 use strict;
 
-our @TYPES=('registrant','admin','tech','bill'); ## default list of types
+#our @TYPES=('registrant','admin','tech','billing'); ## default list of types
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -112,7 +112,8 @@ sub new
  my $class=ref($proto) || $proto;
 
  my $self={};
- $self->{c}={ map { $_ => [] } @TYPES };
+# $self->{c}={ map { $_ => [] } @TYPES };
+ $self->{c}={};
  bless($self,$class);
 }
 

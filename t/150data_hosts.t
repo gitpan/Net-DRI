@@ -2,7 +2,7 @@
 
 use Net::DRI::Data::Hosts;
 
-use Test::More tests => 13;
+use Test::More tests => 15;
 
 my $d=Net::DRI::Data::Hosts->new();
 isa_ok($d,'Net::DRI::Data::Hosts');
@@ -24,7 +24,9 @@ isa_ok($d,'Net::DRI::Data::Hosts');
 is_deeply($c[1],['1.2.3.4'],'remove dups IP');
 is(($d->get_names(1))[0],'ns.example.foo','get_names()');
 
-$d->add('ns2.example.foo',['1.2.10.4']);
+my $dd=$d->add('ns2.example.foo',['1.2.10.4']);
+isa_ok($dd,'Net::DRI::Data::Hosts');
+is_deeply($d,$dd,'add() returns the object itself');
 @c=$d->get_names();
 is_deeply(\@c,['ns.example.foo','ns2.example.foo'],'get_names() after add');
 @c=$d->get_names(2);

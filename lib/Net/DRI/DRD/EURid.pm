@@ -1,4 +1,4 @@
-## Domain Registry Interface, ``Verisign Naming and Directory Services'' Registry Driver for .COM & .NET
+## Domain Registry Interface, EURid (.EU) policy on reserved names
 ##
 ## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
@@ -15,22 +15,20 @@
 #
 #########################################################################################
 
-package Net::DRI::DRD::VNDS;
+package Net::DRI::DRD::EURid;
 
 use strict;
 use base qw/Net::DRI::DRD/;
 
-use Net::DRI::DRD::ICANN;
-use DateTime::Duration;
-use DateTime;
+use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::DRD::VNDS - Verisign .COM/.NET Registry driver for Net::DRI
+Net::DRI::DRD::EURid - EURid (.EU) policies for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -66,29 +64,41 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
-
 #####################################################################################
 
-sub root_servers { return wantarray()? map { $_.'.GTLD-SERVERS.NET' } ('a'..'m') : 'GTLD-SERVERS.NET'; } ## TO FIX: return a Hosts object ?
-sub periods      { return map { DateTime::Duration->new(years => $_) } (1..10); }
-sub name         { return 'VNDS'; }
-sub tlds         { return ('com','net'); }
-sub object_types { return ('domain','ns'); }
+our %CCA2_EU=map { $_ => 1 } qw/AT AX BE CZ CY DE DK ES EE FI FR GB GF GI GP GR HU IE IT LT LU LV MQ MT NL PL PT RE SE SK SI/;
+our %LANGA2_EU=map { $_ => 1 } qw/cs da de el en es et fi fr hu it lt lv mt nl pl pt sk sl sv/;
 
-sub transport_protocol_compatible 
+sub new
+{
+ my $proto=shift;
+ my $class=ref($proto) || $proto;
+
+ my $self=$class->SUPER::new(@_);
+ $self->{info}->{host_as_attr}=1;
+
+ bless($self,$class);
+ return $self;
+}
+
+sub periods  { return map { DateTime::Duration->new(years => $_) } (1); }
+sub name     { return 'EURid'; }
+sub tlds     { return ('eu'); }
+sub object_types { return ('domain','contact','ns','nsgroup'); }
+
+sub transport_protocol_compatible
 {
  my ($self,$to,$po)=@_;
  my $pn=$po->name();
- my $pv=$po->version();
  my $tn=$to->name();
 
- return 1 if (($pn eq 'RRP') && ($tn eq 'socket_inet'));
  return 1 if (($pn eq 'EPP') && ($tn eq 'socket_inet'));
  return undef;
 }
 
 ######################################################################################
 
+## See terms_and_conditions_v1_0_.pdf, Section 2.2.ii
 sub verify_name_domain
 {
  my ($self,$ndr,$domain)=@_;
@@ -97,29 +107,23 @@ sub verify_name_domain
  my $r=$self->SUPER::check_name($domain,1);
  return $r if ($r);
  return 10 unless $self->is_my_tld($domain);
- return 11 if Net::DRI::DRD::ICANN::is_reserved_name($domain);
+
+ my @d=split(/\./,$domain);
+ return 11 if exists($Net::DRI::Util::CCA2{uc($d[0])});
+ return 12 if length($d[0]) < 2;
+ return 13 if substr($d[0],2,2) eq '--';
 
  return 0;
 }
 
-## We can not start a transfer, if domain name has already been transfered less than 15 days ago.
 sub verify_duration_transfer
 {
  my ($self,$ndr,$duration,$domain,$op)=@_;
  ($duration,$domain,$op)=($ndr,$duration,$domain) unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
 
  return 0 unless ($op eq 'start'); ## we are not interested by other cases, they are always OK
- my $rc=$self->domain_info($ndr,$domain);
- return 1 unless ($rc->is_success());
- my $trdate=$ndr->get_info('trDate');
- return 0 unless ($trdate && $trdate->isa('DateTime'));
- 
- my $now=DateTime->now(time_zone => $trdate->time_zone()->name());
- my $cmp=DateTime->compare($now,$trdate+DateTime::Duration->new(days => 15));
- return ($cmp == 1)? 0 : 1; ## we must have : now > transferdate + 15days
- ## we return 0 if OK, anything else if not
+ return 0; ## Always OK to start a transfer, since the new expiration is one year away from the transfer date
 }
-
 
 sub domain_operation_needs_is_mine
 {
@@ -133,5 +137,15 @@ sub domain_operation_needs_is_mine
  return undef;
 }
 
-######################################################################################
+## Only transfer requests are possible
+sub domain_transfer_stop    { Net::DRI::Exception->die(0,'DRD',4,'No domain transfer cancel available in .EU'); }
+sub domain_transfer_query   { Net::DRI::Exception->die(0,'DRD',4,'No domain transfer query available in .EU'); }
+sub domain_transfer_accept  { Net::DRI::Exception->die(0,'DRD',4,'No domain transfer approve available in .EU'); }
+sub domain_transfer_refuse  { Net::DRI::Exception->die(0,'DRD',4,'No domain transfer reject in .EU'); }
+sub domain_renew        { Net::DRI::Exception->die(0,'DRD',4,'No domain renew available in .EU'); }
+sub contact_check       { Net::DRI::Exception->die(0,'DRD',4,'No contact check available in .EU'); }
+sub contact_check_multi { Net::DRI::Exception->die(0,'DRD',4,'No contact check available in .EU'); }
+sub contact_transfer    { Net::DRI::Exception->die(0,'DRD',4,'No contact transfer available in .EU'); }
+
+#################################################################################################################
 1;

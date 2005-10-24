@@ -24,7 +24,7 @@ use DateTime::Duration;
 use DateTime;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -69,10 +69,10 @@ See the LICENSE file that comes with this distribution for more details.
 
 #####################################################################################
 
-sub is_thick     { return 0; }
 sub periods      { return map { DateTime::Duration->new(years => $_) } (1..10); }
-sub name         { return "WS"; }
+sub name         { return 'WS'; }
 sub tlds         { return ('ws'); }
+sub object_types { return ('domain','ns'); }
 
 sub transport_protocol_compatible 
 {

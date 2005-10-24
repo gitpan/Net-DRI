@@ -13,6 +13,10 @@ Net::DRI::DRD
 	* bulk operations (many domains at once)
 	* domain_delete() : try to rename nameservers created in domain about to be deleted
 	* domain_create() : create contacts if needed
+	* domain_update() / host_update()
+	  - try to accomodate (set=>info+add+del, add=>info+set, del=>info+set)
+          - verify not same info in add & del
+          - verify final change is not empty ?
 
 Net::DRI::Protocol::RRP
 	* DateTime::Format::ISO8601 should be enough instead of DateTime::Format::Strptime
@@ -26,3 +30,6 @@ Net::DRI::Protocol::EPP::Core::*
 
 Net::DRI::Protocol::EPP::Message
 	* finish parsing result (value & extValue)
+
+Net::DRI::Protocol::EPP::Extensions::EURid
+	* parse <eurid:ext>

@@ -29,7 +29,7 @@ use Net::DRI::Exception;
 use Net::DRI::Util;
 use Net::DRI::Data::Raw;
 
-our $VERSION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -114,6 +114,7 @@ sub new
  my $class=ref($proto) || $proto;
 
  my $drd=shift;
+ my $po=shift;
 
  my %opts=(@_==1 && ref($_[0]))? %{$_[0]} : @_;
  my $self=$class->SUPER::new(\%opts); ## We are now officially a Net::DRI::Transport instance
@@ -122,7 +123,7 @@ sub new
  $self->name('socket_inet');
  $self->version('0.1');
 
- my %t;
+ my %t=(message_factory => $po->factories()->{message});
 
  Net::DRI::Exception::usererr_insufficient_parameters("socktype must be defined") unless (exists($opts{socktype}));
  Net::DRI::Exception::usererr_invalid_parameters("socktype must be ssl or tcp") unless ($opts{socktype}=~m/^(ssl|tcp)$/);
@@ -201,7 +202,7 @@ sub open_socket
                              );
  }
 
- Net::DRI::Exception->die(1,"transport/socket",6,"Unable to setup tcp socket") unless defined($sock);
+ Net::DRI::Exception->die(1,'transport/socket',6,"Unable to setup the ${type} socket") unless defined($sock);
  $sock->autoflush(1);
  $self->sock($sock);
 }
@@ -216,13 +217,16 @@ sub send_login
 
  ## Get registry greeting
  my $dr=$pc->get_data($self,$sock);
+ $self->log('C<=S',$dr);
  my $rc1=$pc->parse_greeting($dr); ## gives back a Net::DRI::Protocol::ResultStatus
  die($rc1) unless $rc1->is_success();
- my $login=$pc->login($t->{client_login},$t->{client_password},$cltrid,$dr);
+ my $login=$pc->login($t->{message_factory},$t->{client_login},$t->{client_password},$cltrid,$dr);
+ $self->log('C=>S',$login);
  Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send login message') unless ($sock->print($login));
 
  ## Verify login successful
  $dr=$pc->get_data($self,$sock);
+ $self->log('C<=S',$dr);
  my $rc2=$pc->parse_login($dr); ## gives back a Net::DRI::Protocol::ResultStatus
  die($rc2) unless $rc2->is_success();
 }
@@ -235,9 +239,11 @@ sub send_logout
  my $pc=$t->{pc};
  my $cltrid=Net::DRI::Util::create_trid_1('transport');
 
- my $logout=$pc->logout($cltrid);
+ my $logout=$pc->logout($t->{message_factory},$cltrid);
+ $self->log('C=>S',$logout);
  Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send logout message') unless ($sock->print($logout));
  my $dr=$pc->get_data($self,$sock);
+ $self->log('C<=S',$dr);
  my $rc1=$pc->parse_logout($dr);
  die($rc1) unless $rc1->is_success();
 }

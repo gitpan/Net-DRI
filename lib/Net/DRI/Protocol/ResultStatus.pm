@@ -19,13 +19,13 @@ package Net::DRI::Protocol::ResultStatus;
 
 use strict;
 
-our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Protocol::ResultStatus - Encapsulate details of an operation result with standardization on EPP
+Net::DRI::Protocol::ResultStatus - Encapsulate details of an operation result with standardization on EPP for Net::DRI
 
 =head1 DESCRIPTION
 

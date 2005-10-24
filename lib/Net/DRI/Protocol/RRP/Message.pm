@@ -25,7 +25,7 @@ use Net::DRI::Protocol::ResultStatus;
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version errcode errmsg command));
 
-our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -98,17 +98,8 @@ sub new
  my $self={errcode => 0};
  bless($self,$class);
 
- my $rh=shift;
- if (defined($rh) && (ref($rh) eq 'HASH'))
- {
-  $self->command($rh->{command})       if exists($rh->{command});
-  $self->options($rh->{options})       if exists($rh->{options});
-  $self->entities('EntityName',$rh->{entityname}) if exists($rh->{entityname});
-  if (exists($rh->{entities}))
-  {
-   while(my ($k,$v)=each(%{$rh->{entities}})) { $self->entities($k,$v); };
-  }
- }
+ my $trid=shift;
+
  return $self;
 }
 
@@ -196,7 +187,7 @@ sub entities
    {
     $self->{entities}->{$k}=\@v;
    }
-   return;
+   return $self;
   } else ## only key given => get value of key
   {
    return wantarray()? () : undef unless (exists($self->{entities}));
@@ -224,6 +215,7 @@ sub options
   {
    $self->{options}->{$rh1}=$v;
   }
+  return $self;
  }
  return exists($self->{options})? $self->{options} : {};
 }

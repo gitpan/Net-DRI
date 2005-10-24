@@ -20,7 +20,7 @@ package Net::DRI::DRD::AFNIC;
 use strict;
 use base qw/Net::DRI::DRD/;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -69,9 +69,9 @@ See the LICENSE file that comes with this distribution for more details.
 
 #####################################################################################
 
-sub is_thick     { return 1; }
 sub name         { return "AFNIC"; }
 sub tlds         { return ('fr','re'); }
+sub object_types { return ('domain','contact'); }
 
 sub transport_protocol_compatible 
 {

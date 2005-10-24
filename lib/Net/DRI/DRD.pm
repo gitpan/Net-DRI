@@ -27,7 +27,7 @@ use Net::DRI::Data::Hosts;
 use Net::DRI::Data::StatusList;
 use Net::DRI::Data::ContactSet;
 
-our $VERSION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.14 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -102,7 +102,7 @@ sub is_my_tld
 ## Methods to be defined in subclasses:
 sub name     { Net::DRI::Exception::err_method_not_implemented("name in ".ref($_[0])); } ## No dot is allowed in name
 sub tlds     { Net::DRI::Exception::err_method_not_implemented("tlds in ".ref($_[0])); }
-sub is_thick { Net::DRI::Exception::err_method_not_implemented("is_thick in ".ref($_[0])); }
+sub object_types { Net::DRI::Exception::err_method_not_implemented("object_types in ".ref($_[0])); }
 sub periods  { Net::DRI::Exception::err_method_not_implemented("periods in ".ref($_[0])); } ## should return an array
 sub root_servers { Net::DRI::Exception::err_method_not_implemented("root_servers in ".ref($_[0])); }
 
@@ -113,6 +113,16 @@ sub has_idn { Net::DRI::Exception::err_method_not_implemented("has_idn in ".ref(
 
 sub verify_name_domain { Net::DRI::Exception::err_method_not_implemented("verify_name_domain in ".ref($_[0])); }
 sub domain_operation_needs_is_mine { Net::DRI::Exception::err_method_not_implemented("domain_operation_needs_is_mine in ".ref($_[0])); }
+
+sub is_thick { return shift->has_object('contact'); } ## DEPRECATED
+
+sub has_object
+{
+ my ($self,$type)=@_;
+ return 0 unless (defined($type) && $type);
+ $type=lc($type);
+ return (grep { lc($_) eq $type } ($self->object_types()))? 1 : 0;
+}
 
 ##############################################################################################################
 sub verify_name_host
@@ -149,10 +159,9 @@ sub verify_duration_create
  ($duration,$domain)=($ndr,$duration) unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
 
  my @d=$self->periods();
- return undef unless @d;
- return $d[0] unless (defined($duration));
- foreach my $d (@d) { return $d if (0==Net::DRI::Util::compare_durations($d,$duration)) }
- return undef;
+ return 1 unless @d;
+ foreach my $d (@d) { return 0 if (0==Net::DRI::Util::compare_durations($d,$duration)) }
+ return 2;
 }
 
 sub verify_duration_renew
@@ -224,8 +233,10 @@ sub domain_create_only
  err_invalid_domain_name($domain) if $self->verify_name_domain($domain);
  my %rd=(defined($rd) && (ref($rd) eq 'HASH'))? %$rd : ();
  
- $rd{duration}=$self->verify_duration_create($rd{duration},$domain);
- Net::DRI::Exception->die(0,'DRD',3,'Invalid duration') unless (defined($rd{duration}) && (ref($rd{duration}) eq 'DateTime::Duration'));
+ if (defined($rd{duration}))
+ {
+  Net::DRI::Exception->die(0,'DRD',3,'Invalid duration') if ((ref($rd{duration}) ne 'DateTime::Duration') || $self->verify_duration_create($rd{duration},$domain));
+ }
  Net::DRI::Util::check_isa($rd{ns},'Net::DRI::Data::Hosts') if (exists($rd{ns}));
 
  my $rc=$ndr->process('domain','create',[$domain,\%rd]);
@@ -239,7 +250,7 @@ sub domain_create
  err_invalid_domain_name($domain) if $self->verify_name_domain($domain);
  my %rd=(defined($rd) && (ref($rd) eq 'HASH'))? %$rd : ();
 
- ## TODO : if contacts  && is_thick, make sure they exist, or create them
+ ## TODO : if contacts  && has_object('contact'), make sure they exist, or create them
 
  my @rc;
  my $nsin=Net::DRI::Data::Hosts->new();
@@ -270,7 +281,7 @@ sub domain_create
   $rd{ns}=$nsout;
  }
 
- ## TODO ($rc1) : if contacts  && is_thick, make sure they exist, or create them
+ ## TODO ($rc1) : if contacts  && has_object('contact'), make sure they exist, or create them
 
  my $rc2=$self->domain_create_only($ndr,$domain,\%rd);
  $rc[2]=$rc2;
@@ -306,16 +317,16 @@ sub domain_create
 
 sub domain_delete_only
 {
- my ($self,$ndr,$domain)=@_;
+ my ($self,$ndr,$domain,$rd)=@_;
  err_invalid_domain_name($domain) if $self->verify_name_domain($domain);
 
- my $rc=$ndr->process('domain','delete',[$domain]);
+ my $rc=$ndr->process('domain','delete',[$domain,$rd]);
  return $rc;
 }
 
 sub domain_delete
 {
- my ($self,$ndr,$domain)=@_;
+ my ($self,$ndr,$domain,$rd)=@_;
  err_invalid_domain_name($domain) if $self->verify_name_domain($domain);
 
  my @r;
@@ -324,14 +335,14 @@ sub domain_delete
  return wantarray()? @r : $rc1 unless $rc1->is_success();
 
  my $ns=$ndr->get_info('ns');
- unless ($ns->is_empty())
+ if (defined($ns) && !$ns->is_empty())
  {
   my $rc2=$self->domain_update_ns_del($ndr,$domain,$ns);
   push @r,$rc2;
   return wantarray()? @r : $rc2 unless $rc2->is_success();
  }
 
- my $rc=$ndr->process('domain','delete',[$domain]);
+ my $rc=$ndr->process('domain','delete',[$domain,$rd]);
  push @r,$rc;
  return wantarray()? @r : $rc;
 }
@@ -414,9 +425,9 @@ sub domain_update
  err_invalid_domain_name($domain) if $self->verify_name_domain($domain);
  Net::DRI::Util::check_isa($tochange,'Net::DRI::Data::Changes');
 
- Net::DRI::Exception->new(0,'DRD',4,'Registry does not handle contacts') if ($tochange->all_defined('contact') && ! $self->is_thick());
+ Net::DRI::Exception->new(0,'DRD',4,'Registry does not handle contacts') if ($tochange->all_defined('contact') && ! $self->has_object('contact'));
 
- foreach my $t (grep { /^(?:ns|status|contact)$/ } $tochange->types())
+ foreach my $t ($tochange->types())
  {
   next if $ndr->protocol_capable('domain_update',$t);
   Net::DRI::Exception->die(0,'DRD',5,"Protocol ${fp} is not capable of domain_update/${t}");
@@ -446,13 +457,9 @@ sub domain_update
                                                                                        ! $ndr->protocol_capable('domain_update',$w,'del'));
   Net::DRI::Exception->die(0,'DRD',5,"Protocol ${fp} is not capable for domain_update/${w} to set") if (defined($set) &&
                                                                                        ! $ndr->protocol_capable('domain_update',$w,'set'));
-  ## TO FIX : be a good boy, accomodate if possible (set => info+add+del, add=>info+set, del=>info+set)
-  ## TO FIX : verify not same info in add & del
   Net::DRI::Exception->die(0,'DRD',6,"Change domain_update/${w} with simultaneous set and add or del not supported") if (defined($set) && (defined($add) || defined($del)));
  }
 
- ## TO FIX : verify not same info in add & del (what about adding something already there ? removing something not there ?)
- ## TO FIX : verify final change is not empty ?
  my $rc=$ndr->process('domain','update',[$domain,$tochange]);
  return $rc;
 }
@@ -522,7 +529,7 @@ sub domain_update_contact
 
 sub domain_renew
 {
- my ($self,$ndr,$domain,$duration,$curexp)=@_;
+ my ($self,$ndr,$domain,$duration,$curexp,$deletedate)=@_;
  err_invalid_domain_name($domain) if $self->verify_name_domain($domain);
 
  Net::DRI::Util::check_isa($duration,'DateTime::Duration') if defined($duration);
@@ -530,7 +537,7 @@ sub domain_renew
 
  Net::DRI::Exception->die(0,'DRD',3,'Invalid duration') if $self->verify_duration_renew($duration,$domain,$curexp);
 
- my $rc=$ndr->process('domain','renew',[$domain,$duration,$curexp]);
+ my $rc=$ndr->process('domain','renew',[$domain,$duration,$curexp,$deletedate]);
  return $rc;
 }
 
@@ -767,14 +774,9 @@ sub host_update
                                                                                        ! $ndr->protocol_capable('host_update',$w,'del'));
   Net::DRI::Exception->die(0,'DRD',5,"Protocol ${fp} is not capable for host_update/${w} to set") if (defined($set) &&
                                                                                        ! $ndr->protocol_capable('host_update',$w,'set'));
-  ## TO FIX : be a good boy, accomodate if possible (set => info+add+del, add=>info+set, del=>info+set)
-  ## TO FIX : verify not same info in add & del
   Net::DRI::Exception->die(0,'DRD',6,"Change host_update/${w} with simultaneous set and add or del not supported") if (defined($set) && (defined($add) || defined($del)));
  }
 
- ## TO FIX : verify not same info in add & del (what about adding something already there ? removing something not there ?)
- ## TO FIX : verify final change is not empty ?
- 
  my $rc=$ndr->process('host','update',[$dh,$tochange]);
  return $rc;
 }

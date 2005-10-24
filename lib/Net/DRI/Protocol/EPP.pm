@@ -27,7 +27,7 @@ use Net::DRI::Protocol::EPP::Message;
 use Net::DRI::Protocol::EPP::Core::Status;
 use Net::DRI::Data::Contact;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -80,7 +80,7 @@ sub new
 
  my $self=$c->SUPER::new(); ## we are now officially a Net::DRI::Protocol object
  $self->name('EPP');
- $version=Net::DRI::Util::check_equal($version,["1.0"],"1.0");
+ $version=Net::DRI::Util::check_equal($version,['1.0'],'1.0');
  $self->version($version);
 
  $self->capabilities({ 'host_update'   => { 'ip' => ['add','del'], 'status' => ['add','del'], 'name' => ['set'] },
@@ -88,12 +88,19 @@ sub new
                        'domain_update' => { 'ns' => ['add','del'], 'status' => ['add','del'], 'contact' => ['add','del'], 'registrant' => ['set'], 'auth' => ['set'] },
                      });
 
- $self->factories({ 'message' => 'Net::DRI::Protocol::EPP::Message',
-                    'status'  => 'Net::DRI::Protocol::EPP::Core::Status',
-                    'contact' => 'Net::DRI::Data::Contact', ## will possibly be set during object creation
+ $self->{hostasattr}=$drd->info('host_as_attr') || 0;
+ $self->{ns}={ _main =>   ['urn:ietf:params:xml:ns:epp-1.0','epp-1.0.xsd'],
+               domain =>  ['urn:ietf:params:xml:ns:domain-1.0','domain-1.0.xsd'],
+               host =>    ['urn:ietf:params:xml:ns:host-1.0','host-1.0.xsd'],
+               contact => ['urn:ietf:params:xml:ns:contact-1.0','contact-1.0.xsd'],
+             };
+
+ $self->factories({ 
+                   message => sub { my $m=Net::DRI::Protocol::EPP::Message->new(@_); $m->ns($self->{ns}); $m->version($version); return $m; },
+                   status  => sub { return Net::DRI::Protocol::EPP::Core::Status->new(); },
+                   contact => sub { return Net::DRI::Data::Contact->new(); },
                   });
 
- $self->{hostasattr}=$drd->info('host_as_attr') || 0;
  bless($self,$c); ## rebless
 
  $self->_load($extrah);

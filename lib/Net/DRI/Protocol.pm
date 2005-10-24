@@ -23,8 +23,9 @@ use base qw(Class::Accessor::Chained::Fast);
 __PACKAGE__->mk_accessors(qw(name version factories commands message capabilities));
 
 use Net::DRI::Exception;
+use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -81,12 +82,13 @@ sub new
  return $self;
 }
 
-sub create_status
+sub create_local_object
 {
  my $self=shift;
+ my $what=shift;
  my $fn=$self->factories();
- return undef unless (defined($fn) && ref($fn) && exists($fn->{status}));
- return $fn->{status}->new(@_);
+ return undef unless (defined($fn) && ref($fn) && exists($fn->{$what}) && (ref($fn->{$what}) eq 'CODE'));
+ return $fn->{$what}->(@_);
 }
 
 sub _load
@@ -104,20 +106,11 @@ sub _load
   Net::DRI::Exception->die(1,$etype,6,"Failed to load Perl module ${class}") if $@;
   Net::DRI::Exception::err_method_not_implemented("register_commands() in $class") unless $class->can('register_commands');
   my $rh=$class->register_commands($version);
+  Net::DRI::Util::hash_merge(\%c,$rh); ## { object type => { action type => [ build action, parse action ]+ } }
   if ($class->can('capabilities_add'))
   {
    my $rca=$class->capabilities_add();
-   while(my ($k,$v)=each(%{$rca})) { $rcapa->{$k}=$v; }
-  }
-  while(my ($k,$v)=each(%$rh)) ## $k=object type, $v=hash ref of actions
-  {
-   $c{$k}={} unless exists($c{$k});
-   while(my ($kk,$vv)=each(%$v)) ## $kk=action type, $vv=array ref of array refs [build,parse]
-   {
-    $c{$k}->{$kk}=[] unless exists($c{$k}->{$kk});
-    my @t=@$vv;
-    push @{$c{$k}->{$kk}},\@t;
-   }
+   Net::DRI::Util::hash_merge($rcapa,$rca);
   }
  }
 
@@ -156,9 +149,8 @@ sub action
 
  ## Create a new message from scratch and loop through all functions registered for given action & type
  my $f=$self->factories();
- my $msg=$f->{message}->new($trid);
+ my $msg=$f->{message}->($trid);
  Net::DRI::Exception->die(0,'protocol',1,'Unsuccessfull message creation') unless ($msg && ref($msg) && $msg->isa('Net::DRI::Protocol::Message'));
- $msg->version($self->version());
  $self->message($msg); ## store it for later use (in loop below)
  
  foreach my $t (@{$h->{$otype}->{$oaction}})
@@ -177,11 +169,9 @@ sub reaction
  my ($self,$otype,$oaction,$dr,$sent)=@_;
  my $h=$self->_load_commands($otype,$oaction);
  my $f=$self->factories();
- my $msg=$f->{message}->new();
+ my $msg=$f->{message}->();
  Net::DRI::Exception->die(0,'protocol',1,'Unsuccessfull message creation') unless ($msg && ref($msg) && $msg->isa('Net::DRI::Protocol::Message'));
  $msg->parse($dr); ## will trigger an Exception by itself if problem
-
- $msg->version($self->version());
  $self->message($msg); ## store it for later use (in loop below)
 
  my %info;

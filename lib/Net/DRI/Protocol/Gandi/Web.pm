@@ -23,7 +23,7 @@ use base qw(Net::DRI::Protocol);
 
 use Net::DRI::Protocol::Gandi::Web::Message;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -80,8 +80,8 @@ sub new
 
  $self->capabilities({ domain_update => { 'ns' => ['add','del','set'] }});
 
- $self->factories({ 'message' => 'Net::DRI::Protocol::Gandi::Web::Message',
-                    'status'  => undef,
+ $self->factories({ message => sub { my $m=Net::DRI::Protocol::Gandi::Web::Message->new(); $m->version($VERSION); return $m; },
+                    status  => undef,
                   });
 
  bless($self,$c); ## rebless

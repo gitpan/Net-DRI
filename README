@@ -28,11 +28,13 @@ standard for domain name activities, for example for status codes.
 Currently Net::DRI ships with
 - a full RRP implementation (RFC 2832 & 3632)
 - a full EPP implementation (RFC 3730/3731/3732/3733/3734/3735)
-- 4 EPP extensions: GracePeriods (RFC 3915), E164 for ENUM (RFC4114),
-  SecDNS for DNSSEC (draft-hollenbeck-epp-secdns-08), NSgroup (used by .BE and .EU)
+- 5 EPP extensions: GracePeriods (RFC 3915), E164 for ENUM (RFC4114),
+  SecDNS for DNSSEC (draft-hollenbeck-epp-secdns-08), NSgroup (used by .BE and .EU),
+  EURid extensions (for .EU).
 - a TCP/TLS transport
 - a SOAP transport (HTTP/HTTPS)
 - a Web scraping ``transport''
+- a Net::DRI::DRD::EURid covering EURid for .EU (with EPP & EPP extensions)
 - a Net::DRI::DRD::VNDS covering Verisign Naming & Directory Services for
   .COM & .NET (with RRP or EPP)
 - a Net::DRI::DRD::AFNIC covering AFNIC registry for .FR
@@ -91,6 +93,8 @@ vnds_rrp.pl : as registrar, to connect to Verisign systems using RRP
 afnic_ws.pl : as AFNIC member, to use AFNIC web services
 gandi_web.pl : as Gandi client, to change nameservers for your domain, 
                through the web interface
+ws_rrp.pl    : as registrar, to connect to .WS using RRP
+
 In the t subdirectory, the test files can also be studied for insight
 of all the API available.
 
@@ -189,6 +193,11 @@ Available API
 * is_thick()
 
  gives 1 if the current registry stores contacts (thick registry)
+ [DEPRECATED, use has_object('contact')]
+
+* has_object($type)
+
+ gives 1 if the registry manages objects of type $type (domain, ns, contact, etc...)
  
 * periods()
 
@@ -199,6 +208,10 @@ Available API
 
  with a domain name as argument, returns 1 if the current registry handles this
  domain name (TLD of domain name is handled by registry)
+
+* cache_clear()
+
+ completely delete cache for current registry and current profile
 
 * verify_name_domain() verify_name_host() 
 

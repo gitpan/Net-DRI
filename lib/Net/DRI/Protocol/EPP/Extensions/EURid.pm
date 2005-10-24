@@ -1,4 +1,4 @@
-## Domain Registry Interface, AFNIC Web Services Protocol
+## Domain Registry Interface, EURid EPP extensions
 ##
 ## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
@@ -15,16 +15,14 @@
 #
 #########################################################################################
 
-package Net::DRI::Protocol::AFNIC::WS;
+package Net::DRI::Protocol::EPP::Extensions::EURid;
 
 use strict;
 
-use base qw(Net::DRI::Protocol);
+use base qw/Net::DRI::Protocol::EPP/;
 
-use Net::DRI::Exception;
-use Net::DRI::Util;
-
-use Net::DRI::Protocol::AFNIC::WS::Message;
+use Net::DRI::Data::Contact::EURid;
+use Net::DRI::Protocol::EPP::Message;
 
 our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
@@ -32,7 +30,7 @@ our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r,
 
 =head1 NAME
 
-Net::DRI::Protocol::AFNIC::WS - AFNIC Web Services Protocol for Net::DRI
+Net::DRI::Protocol::EPP::Extensions::EURid - EURid EPP extensions for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -68,39 +66,37 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
-###################################################################################################
-
+####################################################################################################
 sub new
 {
  my $h=shift;
  my $c=ref($h) || $h;
 
  my ($drd,$version,$extrah)=@_;
+ my %e=map { $_ => 1 } (defined($extrah)? (ref($extrah)? @$extrah : ($extrah)) : ());
 
- my $self=$c->SUPER::new(); ## we are now officially a Net::DRI::Protocol object
- $self->name('afnic_ws');
- $self->version($VERSION);
+ $e{'Net::DRI::Protocol::EPP::Extensions::EURid::Domain'}=1;
+ $e{'Net::DRI::Protocol::EPP::Extensions::EURid::Contact'}=1;
+ $e{'Net::DRI::Protocol::EPP::Extensions::NSgroup'}=1;
+ ## Sunrise should be added when calling, as it is not mandatory
 
- $self->capabilities({});
+ my $self=$c->SUPER::new($drd,$version,[keys(%e)]); ## we are now officially a Net::DRI::Protocol::EPP object
 
- $self->factories({ message => sub { my $m=Net::DRI::Protocol::AFNIC::WS::Message->new(); $m->version($VERSION); return $m; },
-                  });
+ $self->{ns}->{_main}=['http://www.eurid.eu/xml/epp/epp-1.0','epp-1.0.xsd'];
+ foreach my $w ('domain','contact','eurid','nsgroup')
+ {
+  $self->{ns}->{$w}=['http://www.eurid.eu/xml/epp/'.$w.'-1.0',$w.'-1.0.xsd'];
+ }
+
+ my $rcapa=$self->capabilities();
+ delete($rcapa->{contact_update}->{status});
+ my $rfact=$self->factories();
+ $rfact->{contact}=sub { return Net::DRI::Data::Contact::EURid->new()->srid('ABCD') };
+ $rfact->{message}=sub { my $m=Net::DRI::Protocol::EPP::Message->new(@_); $m->ns($self->{ns}); $m->version($version); return $m;};
 
  bless($self,$c); ## rebless
-
- $self->_load($extrah);
  return $self;
 }
 
-sub _load
-{
- my ($self,$extrah)=@_;
-
- my @class=map { "Net::DRI::Protocol::AFNIC::WS::".$_ } ('Domain');
-
- $self->SUPER::_load(@class);
-}
-
-
-##########################################################################################################
+####################################################################################################
 1;

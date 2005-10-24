@@ -28,8 +28,7 @@ use Net::DRI::Protocol::EPP::Core::Status;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
-our $NS='urn:ietf:params:xml:ns:domain-1.0';
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -106,7 +105,9 @@ sub build_command
  }
 
  my $tcommand=(ref($command))? $command->[0] : $command;
- $msg->command([$command,'domain:'.$tcommand,'xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"']);
+ my @ns=@{$msg->ns->{domain}};
+ $msg->command([$command,'domain:'.$tcommand,sprintf('xmlns:domain="%s" xsi:schemaLocation="%s %s"',$ns[0],$ns[0],$ns[1])]);
+
 
  my @d=map { ['domain:name',$_,$domainattr] } @dom;
  return @d;
@@ -158,9 +159,9 @@ sub check_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $chkdata=$mes->get_content('chkData',$NS);
+ my $chkdata=$mes->get_content('chkData',$mes->ns('domain'));
  return unless $chkdata;
- foreach my $cd ($chkdata->getElementsByTagNameNS($NS,'cd'))
+ foreach my $cd ($chkdata->getElementsByTagNameNS($mes->ns('domain'),'cd'))
  {
   my $c=$cd->firstChild;
   my $domain;
@@ -204,7 +205,7 @@ sub info_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $infdata=$mes->get_content('infData',$NS);
+ my $infdata=$mes->get_content('infData',$mes->ns('domain'));
  return unless $infdata;
  $rinfo->{domain}->{$oname}->{exist}=1;
 
@@ -224,10 +225,10 @@ sub info_parse
    push @s,Net::DRI::Protocol::EPP::parse_status($c);
   } elsif ($name eq 'domain:registrant')
   {
-   $cs->set($cf->new->srid($c->firstChild->getData()),'registrant');
+   $cs->set($cf->()->srid($c->firstChild->getData()),'registrant');
   } elsif ($name eq 'domain:contact')
   {
-   $cs->add($cf->new->srid($c->firstChild->getData()),$c->getAttribute('type'));
+   $cs->add($cf->()->srid($c->firstChild->getData()),$c->getAttribute('type'));
   } elsif ($name eq 'domain:ns')
   {
    $rinfo->{domain}->{$oname}->{ns}=parse_ns($c);
@@ -242,7 +243,7 @@ sub info_parse
    $rinfo->{domain}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->firstChild->getData());
   } elsif ($name eq 'domain:authInfo')
   {
-   $rinfo->{domain}->{$oname}->{auth}={pw=>($c->getElementsByTagNameNS($NS,'pw'))[0]->firstChild->getData()};
+   $rinfo->{domain}->{$oname}->{auth}={pw=>($c->getElementsByTagNameNS($mes->ns('domain'),'pw'))[0]->firstChild->getData()};
   }
   $c=$c->getNextSibling();
  }
@@ -275,16 +276,16 @@ sub parse_ns ## RFC 3731 §1.1
     next unless $name2;
     if ($name2 eq 'domain:hostName')
     {
-     $hostname=$nn->getFirstChild->getNextSibling();
+     $hostname=$nn->getFirstChild->getData();
     } elsif ($name2 eq 'domain:hostAddr')
     {
      my $ip=$nn->getAttribute('ip') || 'v4';
      if ($ip eq 'v6')
      {
-      push @ip6,$nn->getFirstChild->getNextSibling();
+      push @ip6,$nn->getFirstChild->getData();
      } else
      {
-      push @ip4,$nn->getFirstChild->getNextSibling();
+      push @ip4,$nn->getFirstChild->getData();
      }
     }
     $nn=$nn->getNextSibling();
@@ -311,7 +312,7 @@ sub transfer_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $trndata=$mes->get_content('trnData',$NS);
+ my $trndata=$mes->get_content('trnData',$mes->ns('domain'));
  return unless $trndata;
 
  $rinfo->{domain}->{$oname}->{exist}=1;
@@ -350,7 +351,7 @@ sub create
  }
 
  ## Nameservers, OPTIONAL
- push @d,build_ns($epp,$rd->{ns}) if (verify_rd($rd,'ns') && (ref($rd->{ns}) eq 'Net::DRI::Data::Hosts'));
+ push @d,build_ns($epp,$rd->{ns},$domain) if (verify_rd($rd,'ns') && UNIVERSAL::isa($rd->{ns},'Net::DRI::Data::Hosts'));
 
  ## Contacts, all OPTIONAL
  if (verify_rd($rd,'contact') && UNIVERSAL::isa($rd->{contact},'Net::DRI::Data::ContactSet'))
@@ -362,7 +363,7 @@ sub create
  }
 
  ## AuthInfo
- Net::DRI::Exception::err_insufficient_parameters("authInfo is mandatory") unless (verify_rd($rd,'auth') && (ref($rd->{auth}) eq 'HASH'));
+ Net::DRI::Exception::usererr_insufficient_parameters("authInfo is mandatory") unless (verify_rd($rd,'auth') && (ref($rd->{auth}) eq 'HASH'));
  push @d,build_authinfo($rd->{auth});
  $mes->command_body(\@d);
 }
@@ -382,7 +383,8 @@ sub build_contact_noregistrant
 
 sub build_ns
 {
- my ($epp,$ns)=@_;
+ my ($epp,$ns,$domain,$xmlns)=@_;
+
  my @d;
  my $asattr=$epp->{hostasattr};
 
@@ -393,16 +395,20 @@ sub build_ns
    my ($n,$r4,$r6)=$ns->get_details($i);
    my @h;
    push @h,['domain:hostName',$n];
-   push @h,map { ['domain:hostAddr',$_,{ip=>'v4'}] } @$r4 if @$r4;
-   push @h,map { ['domain:hostAddr',$_,{ip=>'v6'}] } @$r6 if @$r6;
-   push @d,['domain:hostAttr',\@h];
+   if (($n=~m/\S+\.${domain}$/i) || (lc($n) eq lc($domain)))
+   {
+    push @h,map { ['domain:hostAddr',$_,{ip=>'v4'}] } @$r4 if @$r4;
+    push @h,map { ['domain:hostAddr',$_,{ip=>'v6'}] } @$r6 if @$r6;
+   }
+   push @d,['domain:hostAttr',@h];
   }
  } else
  {
   @d=map { ['domain:hostObj',$_] } $ns->get_names();
  }
 
- return ['domain:ns',@d];
+ $xmlns='domain' unless defined($xmlns);
+ return [$xmlns.':ns',@d];
 }
 
 sub create_parse
@@ -411,7 +417,7 @@ sub create_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $credata=$mes->get_content('creData',$NS);
+ my $credata=$mes->get_content('creData',$mes->ns('domain'));
  return unless $credata;
 
  $rinfo->{domain}->{$oname}->{exist}=1;
@@ -442,7 +448,7 @@ sub renew
 {
  my ($epp,$domain,$period,$curexp)=@_;
  Net::DRI::Exception::usererr_insufficient_parameters("current expiration year") unless defined($curexp);
- $curexp=$curexp->strftime("%Y-%m-%d") if (ref($curexp) && UNIVERSAL::can($curexp,'strftime')); ## for DateTime objects
+ $curexp=$curexp->set_time_zone('UTC')->strftime("%Y-%m-%d") if (ref($curexp) && UNIVERSAL::isa($curexp,'DateTime'));
  Net::DRI::Exception::usererr_invalid_parameters("current expiration year must be YYYY-MM-DD") unless $curexp=~m/^\d{4}-\d{2}-\d{2}$/;
  
  my $mes=$epp->message();
@@ -463,7 +469,7 @@ sub renew_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $rendata=$mes->get_content('renData',$NS);
+ my $rendata=$mes->get_content('renData',$mes->ns('domain'));
  return unless $rendata;
 
  $rinfo->{domain}->{$oname}->{exist}=1;
@@ -543,10 +549,10 @@ sub update
  my $cdel=$todo->del('contact');
  my (@add,@del);
 
- push @add,build_ns($epp,$nsadd)             if $nsadd;
+ push @add,build_ns($epp,$nsadd,$domain)     if $nsadd;
  push @add,build_contact_noregistrant($cadd) if $cadd;
  push @add,$sadd->build_xml('domain:status') if $sadd;
- push @del,build_ns($epp,$nsdel)             if $nsdel;
+ push @del,build_ns($epp,$nsdel,$domain)     if $nsdel;
  push @del,build_contact_noregistrant($cdel) if $cdel;
  push @del,$sdel->build_xml('domain:status') if $sdel;
 

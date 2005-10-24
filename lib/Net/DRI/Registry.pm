@@ -29,7 +29,7 @@ use Net::DRI::Data::RegistryObject;
 
 our $AUTOLOAD;
 
-our $VERSION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -138,7 +138,10 @@ sub _current
 sub transport { return shift->_current('transport'); }
 sub protocol  { return shift->_current('protocol');  }
 sub status    { return shift->_current('status',@_); }
-sub create_status { return shift->_current('protocol')->create_status(@_); }
+
+sub create_status { return shift->_current('protocol')->create_local_object('status',@_); }
+
+sub local_object { return shift->_current('protocol')->create_local_object(@_); }
 
 sub protocol_transport { my $self=shift; return ($self->protocol(),$self->transport()); }
 
@@ -165,6 +168,7 @@ sub result_lang        { return shift->_result('lang');        }
 
 
 sub cache_expire { return shift->{cache}->delete_expired(); }
+sub cache_clear  { return shift->{cache}->delete(); }
 
 sub set_info
 {
@@ -267,9 +271,10 @@ sub new_profile
  Net::DRI::Exception->die(1,'DRI',8,"Failed to load Perl module $protocol") if $@;
 
  my $drd=$self->{driver};
+ my $po=$protocol->new($drd,@{$p_params}); ## Protocol must come first, as it may be needed during transport setup
  my $to;
  eval {
-  $to=$transport->new($drd,@{$t_params}); ## this may die !
+  $to=$transport->new($drd,$po,@{$t_params}); ## this may die !
  };
  if ($@) ## some kind of error happened
  {
@@ -281,7 +286,6 @@ sub new_profile
   die($@);
  }
 
- my $po=$protocol->new($drd,@{$p_params});
  my $compat=$self->driver()->transport_protocol_compatible($to,$po); ## 0/1/undef
  unless (defined($compat))
  {

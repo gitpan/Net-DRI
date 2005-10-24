@@ -4,7 +4,7 @@ use strict;
 
 use Net::DRI::Cache;
 
-use Test::More tests => 8;
+use Test::More tests => 11;
 
 my $c;
 
@@ -24,6 +24,11 @@ sleep(1);
 is($c->get('domain','example.foo','whatever2','regname'),undef,'get from cache after expiry');
 
 $c2->delete_expired();
+is_deeply($c2->{data},{},'empty cache after delete_expired');
+
+isa_ok($c->set('regname','domain','example.foo',{'whatever' => 'whatever2'}),'HASH','set 2');
+is($c->get('domain','example.foo','whatever','regname'),'whatever2','get from cache 3');
+$c2->delete();
 is_deeply($c2->{data},{},'empty cache after delete_expired');
 
 exit 0;

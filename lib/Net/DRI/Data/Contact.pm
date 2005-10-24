@@ -27,7 +27,7 @@ use Net::DRI::Util;
 
 use Email::Valid;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -88,7 +88,7 @@ C<pc()> postal code of the contact
 
 =item *
 
-C<cc()> country code of the contact
+C<cc()> alpha2 country code of the contact (will be verified against list of valid country codes)
 
 =item *
 
@@ -170,6 +170,7 @@ sub validate ## See RFC3733,§4
  push @errs,'sp'   if ($self->sp()   && !Net::DRI::Util::xml_is_normalizedstring($self->sp(),undef,255));
  push @errs,'pc'   if ($self->pc()   && !Net::DRI::Util::xml_is_token($self->pc(),undef,16));
  push @errs,'cc'   if ($self->cc()   && !Net::DRI::Util::xml_is_token($self->cc(),2,2));
+ push @errs,'cc'   if ($self->cc()   && !exists($Net::DRI::Util::CCA2{uc($self->cc())}));
 
  push @errs,'voice' if ($self->voice() && !Net::DRI::Util::xml_is_token($self->voice(),undef,17) && $self->voice()!~m/^\+[0-9]{1,3}\.[0-9]{1,14}(?:x\d+)?$/);
  push @errs,'fax'   if ($self->fax()   && !Net::DRI::Util::xml_is_token($self->fax(),undef,17)   && $self->fax()!~m/^\+[0-9]{1,3}\.[0-9]{1,14}(?:x\d+)?$/);

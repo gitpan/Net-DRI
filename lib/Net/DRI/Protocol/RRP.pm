@@ -31,7 +31,7 @@ use DateTime;
 use DateTime::TimeZone;
 use DateTime::Format::Strptime;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -103,8 +103,9 @@ sub new
                        'domain_update' => { 'ns' => ['add','del'], 'status' => ['add','del'] },
                      });
 
- $self->factories({ 'message' => 'Net::DRI::Protocol::RRP::Message',
-                    'status'  => 'Net::DRI::Protocol::RRP::Core::Status',
+ $self->factories({ 
+                    message => sub { my $m=Net::DRI::Protocol::RRP::Message->new(@_); $m->version($version); return $m; },
+                    status  => sub { return Net::DRI::Protocol::RRP::Core::Status->new(); },
                   });
 
  ## Verify that we have the timezone of the registry, since dates in RRP are local to registries

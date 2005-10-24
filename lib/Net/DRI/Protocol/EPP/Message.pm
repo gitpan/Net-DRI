@@ -28,9 +28,7 @@ use Net::DRI::Util;
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version errcode errmsg errlang command command_body cltrid svtrid queue_count queue_headid message_qdate message_content message_lang node_resdata node_extension result_greeting));
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
-
-our $NS='urn:ietf:params:xml:ns:epp-1.0';
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -84,13 +82,26 @@ sub new
 
  my $self={
            errcode => 2999,
-           ns => {},
+           ns => { _main => ['urn:ietf:params:xml:ns:epp-1.0','epp-1.0.xsd'] },
           };
 
  bless($self,$class);
 
  $self->cltrid($trid) if (defined($trid) && $trid);
  return $self;
+}
+
+sub ns
+{
+ my ($self,$what)=@_;
+ return $self->{ns} unless defined($what);
+
+ if (ref($what) eq 'HASH')
+ {
+  $self->{ns}=$what;
+  return $what;
+ }
+ return exists($self->{ns}->{$what})? $self->{ns}->{$what}->[0] : undef;
 }
 
 sub is_success { return (shift->errcode()=~m/^1/)? 1 : 0; } ## 1XXX is for success, 2XXX for failures
@@ -125,19 +136,13 @@ sub command_extension
  }
 }
 
-sub register_ns
-{
- my ($self,$nsn,$nsv)=@_;
- return unless defined($nsn) && $nsn && defined($nsv) && $nsv;
- $self->{ns}->{$nsn}=$nsv;
-}
-
 sub as_string
 {
  my ($self,$to)=@_;
- my $rns=$self->{ns};
- my $ens=join(" ",map { ${_}.'="'.$rns->{$_}.'"'} keys(%$rns));
- $ens='xmlns="urn:ietf:params:xml:ns:epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="urn:ietf:params:xml:ns:epp-1.0 epp-1.0.xsd"'.($ens? ' '.$ens : '');
+ my $rns=$self->ns();
+ my $topns=$rns->{_main};
+ my $ens=sprintf('xmlns="%s" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="%s %s"',$topns->[0],$topns->[0],$topns->[1]);
+ ## need_ns
  my @d;
  push @d,'<?xml version="1.0" encoding="UTF-8" standalone="no"?>';
  push @d,'<epp '.$ens.'>';
@@ -194,9 +199,9 @@ sub as_string
  push @d,'</command>';
  push @d,'</epp>';
 
- my $m=join("",@d);
- $m=pack('N',4+length($m)).$m if (defined($to) && ($to eq 'tcp')); ## RFC 3734 §4
- return $m;
+ my $m=join('',@d);
+ my $l=pack('N',4+length($m)); ## RFC 3734 §4
+ return (defined($to) && ($to eq 'tcp'))? $l.$m : $m;
 }
 
 sub _toxml
@@ -225,12 +230,23 @@ sub _toxml
   } else
   {
    push @t,"<${tag}${attr}>";
-   push @t,(@c==1 && !ref($c[0]))? $c[0] : _toxml(\@c);
+   push @t,(@c==1 && !ref($c[0]))? xml_escape($c[0]) : _toxml(\@c);
    push @t,"</${tag}>";
   }
  }
  return @t;
 }
+
+sub xml_escape
+{
+ my $in=shift;
+ $in=~s/&/&amp;/g;
+ $in=~s/</&lt;/g;
+ $in=~s/>/&gt;/g;
+ return $in;
+}
+
+sub topns { return shift->ns->{_main}->[0]; }
 
 sub get_content
 {
@@ -241,7 +257,7 @@ sub get_content
  my $n1=$self->node_resdata();
  my $n2=$self->node_extension();
 
- $ns||=$NS;
+ $ns||=$self->topns();
 
  if ($ext)
  {
@@ -259,10 +275,12 @@ sub parse
 {
  my ($self,$dc)=@_; ## DataRaw
 
+ my $NS=$self->topns();
  my $parser=XML::LibXML->new();
  my $doc=$parser->parse_string($dc->as_string());
  my $root=$doc->getDocumentElement();
  Net::DRI::Exception->die(0,'protocol/EPP',1,'Unsuccessfull parse, root element is not epp') unless ($root->getName() eq 'epp');
+
  if ($root->getElementsByTagNameNS($NS,'greeting'))
  {
   $self->errcode(1000); ## fake an OK
@@ -319,7 +337,7 @@ sub parse
 sub parse_result
 {
  my ($self,$node)=@_;
- 
+ my $NS=$self->topns();
  my $code=$node->getAttribute('code');
  my $msg=($node->getElementsByTagNameNS($NS,'msg'))[0];
  my $lang=$msg->getAttribute('lang') || 'en';
