@@ -20,12 +20,12 @@ package Net::DRI::Protocol;
 use strict;
 
 use base qw(Class::Accessor::Chained::Fast);
-__PACKAGE__->mk_accessors(qw(name version factories commands message capabilities));
+__PACKAGE__->mk_accessors(qw(name version factories commands message capabilities default_parameters));
 
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -79,6 +79,7 @@ sub new
 
  $self->message(undef);
  $self->capabilities({});
+ $self->default_parameters({});
  return $self;
 }
 

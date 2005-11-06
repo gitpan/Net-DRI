@@ -22,7 +22,7 @@ use base qw!Net::DRI::Data::StatusList!;
 use Net::DRI::Exception;
 use strict;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -99,12 +99,12 @@ sub new
 
 sub is_active    { return shift->has_any('ACTIVE'); }
 sub is_published { return ! shift->has_any('REGISTRY-HOLD','REGISTRAR-HOLD'); }
-sub is_pending   { return shift->has_any('REGISTRY-DELETE-NOTIFY'); }
-sub is_linked    { return 0; }
-sub can_update   { return ! shift->has_any('REGISTRY-LOCK','REGISTRY-HOLD','REGISTRAR-HOLD','REGISTRAR-LOCK','REGISTRY-DELETE-NOTIFY'); }
+sub is_pending   { return shift->has_any('REGISTRY-DELETE-NOTIFY','PENDINGRESTORE','PENDINGDELETE','PENDINGTRANSFER'); }
+sub is_linked    { return shift->has_any('REGISTRY-DELETE-NOTIFY'); }
+sub can_update   { return ! shift->has_any('REGISTRY-LOCK','REGISTRY-HOLD','REGISTRAR-HOLD','REGISTRAR-LOCK','REGISTRY-DELETE-NOTIFY','PENDINGRESTORE','PENDINGDELETE','PENDINGTRANSFER'); }
 sub can_transfer { return shift->can_update(); }
 sub can_delete   { return shift->can_update(); }
-sub can_renew    { return ! shift->has_any('REGISTRY-DELETE-NOTIFY'); }
+sub can_renew    { return ! shift->has_any('REGISTRY-DELETE-NOTIFY','REDEMPTIONPERIOD','PENDINGRESTORE','PENDINGDELETE','PENDINGTRANSFER'); }
 
 #######################################################################################
 1;

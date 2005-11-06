@@ -14,6 +14,7 @@
 # 
 #
 #########################################################################################
+## TO FIX : use LocalStorage as backend, but not enough ! (memcached ?)
 
 package Net::DRI::Cache;
 

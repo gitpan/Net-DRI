@@ -1,5 +1,5 @@
 ## Domain Registry Interface, EURid Sunrise EPP extension for Net::DRI
-## (from registration_guidelines_v1_0D-appendix2-sunrise.pdf )
+## (from registration_guidelines_v1_0E-appendix2-sunrise.pdf )
 ##
 ## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
@@ -26,7 +26,7 @@ use Net::DRI::Protocol::EPP::Core::Domain;
 use Net::DRI::Protocol::EPP::Extensions::EURid::Domain;
 use Net::DRI::DRD::EURid;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 

@@ -1,6 +1,7 @@
 Changes
 eg/afnic_ws.pl
 eg/epp_server.pl
+eg/eurid_epp.pl
 eg/gandi_web.pl
 eg/vnds_rrp.pl
 eg/ws_rrp.pl
@@ -68,6 +69,7 @@ MANIFEST			This list of files
 README
 SUPPORT
 t/001load.t
+t/002pod.t
 t/101exception.t
 t/102util.t
 t/103cache.t

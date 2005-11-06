@@ -1,3 +1,13 @@
+0.18 2005-11-06
+
++ Many improvements for .EU support : no need to specify empty useless values needed for EPP
+  but not used by EURid (domain/contact auth), no status handling for domains, example
+  for test systems (eg/eurid_epp.pl)
+- EPP/Message : use bytes is necessary for correct length calculation
+= Transport : if a server closes the connection on us (at protocol level, not socket one),
+  we note the fact and will try to reconnect later if needed
+= RRP : take into account PENDINGRESTORE PENDINGDELETE PENDINGTRANSFER status
+
 0.17 2005-10-24
 
 + Full support for EURid (.EU) with Net::DRI::DRD::EURid, Net::DRI::Data::Contact::EURid,

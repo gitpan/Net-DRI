@@ -29,7 +29,7 @@ use Net::DRI::Exception;
 use Net::DRI::Util;
 use Net::DRI::Data::Raw;
 
-our $VERSION=do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.14 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -74,6 +74,11 @@ C<protocol_connection> : Net::DRI class handling protocol connection details. (E
 =item *
 
 C<close_after> : number of protocol commands to send to server (we will automatically close and re-open connection if needed)
+
+=item *
+
+C<log_fh> : either a reference to something that have a print() method or a filehandle (ex: \*STDERR or an anonymous filehandle) on something already opened for write ;
+if defined, all exchanges (messages sent to server, messages received from server) will be printed to this filehandle
 
 =back
 
@@ -164,7 +169,7 @@ sub new
 
  $self->{transport}=\%t;
  bless($self,$class); ## rebless in my class
-
+ 
  if ($self->defer()) ## we will open, but later
  {
   $self->current_state(0);
@@ -192,6 +197,7 @@ sub open_socket
                              PeerPort => $t->{remote_port},
                              Proto    => 'tcp',
                              SSL_cipher_list => $t->{ssl_cipher_list},
+			     Blocking => 1,
                             );
  }
  if ($type eq 'tcp')
@@ -199,6 +205,7 @@ sub open_socket
   $sock=IO::Socket::INET->new(PeerAddr => $t->{remote_host},
                               PeerPort => $t->{remote_port},
                               Proto    => 'tcp',
+                              Blocking => 1,
                              );
  }
 
@@ -318,7 +325,7 @@ sub _get
 
  ## Do we allow other messages ?
  $t->{exchanges_done}++;
- if ($t->{exchanges_done}==$t->{close_after})
+ if ($t->{exchanges_done}==$t->{close_after} && $self->current_state())
  {
   $self->close_connection();
  }

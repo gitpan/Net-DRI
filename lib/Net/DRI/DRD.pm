@@ -27,7 +27,7 @@ use Net::DRI::Data::Hosts;
 use Net::DRI::Data::StatusList;
 use Net::DRI::Data::ContactSet;
 
-our $VERSION=do { my @r=(q$Revision: 1.14 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.15 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -863,7 +863,9 @@ sub host_is_mine
 sub contact_create
 {
  my ($self,$ndr,$contact)=@_;
- err_invalid_contact($contact) unless (defined($contact) && UNIVERSAL::isa($contact,'Net::DRI::Data::Contact') && $contact->validate());
+ err_invalid_contact($contact) unless (defined($contact) && UNIVERSAL::isa($contact,'Net::DRI::Data::Contact'));
+ $contact->init('create') if $contact->can('init');
+ $contact->validate(); ## will trigger an Exception if validation not ok
  my $rc=$ndr->process('contact','create',[$contact]);
  return $rc;
 }

@@ -22,7 +22,7 @@ use strict;
 
 use Net::DRI::Data::Raw;
 
-our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -64,7 +64,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
-
+####################################################################################################
 sub new
 {
  my $proto=shift;

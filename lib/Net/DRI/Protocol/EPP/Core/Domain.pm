@@ -28,7 +28,7 @@ use Net::DRI::Protocol::EPP::Core::Status;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -342,6 +342,17 @@ sub create
  my $mes=$epp->message();
  my @d=build_command($mes,'create',$domain);
  
+ my $def=$epp->default_parameters();
+ if ($def && (ref($def) eq 'HASH') && exists($def->{domain_create}) && (ref($def->{domain_create}) eq 'HASH'))
+ {
+  $rd={} unless ($rd && (ref($rd) eq 'HASH') && keys(%$rd));
+  while(my ($k,$v)=each(%{$def->{domain_create}}))
+  {
+   next if exists($rd->{$k});
+   $rd->{$k}=$v;
+  }
+ }
+
  ## Period, OPTIONAL
  if (verify_rd($rd,'duration') && (ref($rd->{duration}) eq 'DateTime::Duration'))
  {

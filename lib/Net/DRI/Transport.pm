@@ -25,7 +25,7 @@ __PACKAGE__->mk_accessors(qw/name version retry pause trace timeout defer curren
 use Net::DRI::Exception;
 use Time::HiRes;
 
-our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -78,6 +78,7 @@ sub new
  	   is_sync   => exists($opts{is_sync})? $opts{is_sync} : 1, ## do we need to wait for reply as soon as command sent ?
            retry     => exists($opts{retry})?   $opts{retry}   : 1,  ## by default, we will try once only
            pause     => exists($opts{pause})?   $opts{pause}   : 10, ## time in seconds to wait between two retries
+#           trace     => exists($opts{trace})?   $opts{trace}   : 0, ## NOT IMPL
            timeout   => exists($opts{timeout})? $opts{timeout} : 0,
            defer     => exists($opts{defer})?   $opts{defer}   : 0, ## defer opening connection as long as possible (irrelevant if stateless) ## XX maybe not here, too low
            log_fh    => exists($opts{log_fh})? $opts{log_fh} : undef,
@@ -168,7 +169,7 @@ sub receive
   sleep($self->pause()) if $self->pause();
  } ## end of loop, no more retries
 
- Net::DRI::Exception->die(0,'transport',5,'Unable to receive message to registry') unless defined($ans);
+ Net::DRI::Exception->die(0,'transport',5,'Unable to receive message from registry') unless defined($ans);
 
  alarm($prevalarm) if $prevalarm; ## re-enable previous alarm (warning, time is off !!)
  $self->log('C<=S',$ans);
@@ -198,7 +199,7 @@ sub log
  }
 }
 
-#################################################################################################
+####################################################################################################
 ## Returns 1 if we are still connected, 0 otherwise (and sets current_state to 0)
 sub ping
 {
@@ -221,5 +222,5 @@ sub end
  Net::DRI::Exception::err_method_not_implemented();
 }
 
-####################################################################################################################
+####################################################################################################
 1;

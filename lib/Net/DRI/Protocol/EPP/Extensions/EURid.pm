@@ -24,7 +24,7 @@ use base qw/Net::DRI::Protocol::EPP/;
 use Net::DRI::Data::Contact::EURid;
 use Net::DRI::Protocol::EPP::Message;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -89,10 +89,14 @@ sub new
  }
 
  my $rcapa=$self->capabilities();
- delete($rcapa->{contact_update}->{status});
+ delete($rcapa->{contact_update}->{status}); ## No changes in status possible for .EU domains/contacts
+ delete($rcapa->{domain_update}->{status});
+
  my $rfact=$self->factories();
  $rfact->{contact}=sub { return Net::DRI::Data::Contact::EURid->new()->srid('ABCD') };
  $rfact->{message}=sub { my $m=Net::DRI::Protocol::EPP::Message->new(@_); $m->ns($self->{ns}); $m->version($version); return $m;};
+
+ $self->default_parameters({domain_create => { auth => { pw => '' } } });
 
  bless($self,$c); ## rebless
  return $self;

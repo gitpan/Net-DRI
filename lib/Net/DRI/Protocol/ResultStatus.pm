@@ -19,7 +19,7 @@ package Net::DRI::Protocol::ResultStatus;
 
 use strict;
 
-our $VERSION=do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -49,6 +49,10 @@ C<native_code()> gives the true status code we got back from registry
 =item *
 
 C<message()> gives the message attached to the the status code we got back from registry
+
+=item *
+
+C<print()> will print all details as a single line
 
 =back
 
@@ -134,6 +138,12 @@ sub native_code { return shift->{native_code}; }
 sub code        { return shift->{code}; }
 sub message     { return shift->{message}; }
 sub lang        { return shift->{lang}; }
+
+sub print
+{
+ my $self=shift;
+ printf("%s (%s/%s) %s",$self->message(),$self->code(),$self->native_code(),$self->is_success()? 'SUCCESS' : 'ERROR' );
+}
 
 ###################################################################################################################
 1;

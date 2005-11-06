@@ -33,8 +33,8 @@ use Net::DRI::Protocol::ResultStatus;
 use strict;
 
 our $AUTOLOAD;
-our $VERSION='0.17';
-our $CVS_REVISION=do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION='0.18';
+our $CVS_REVISION=do { my @r=(q$Revision: 1.14 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 

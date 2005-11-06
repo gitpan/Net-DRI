@@ -6,6 +6,7 @@ All
 	* sign the distribution (Module::Signature)
 
 Net::DRI
+	* IDN support
 	* way to use it without exceptions (wrap in eval + carp ?)
 	* let the user choose a trid factory (ex: UUID/UGID)
 
@@ -20,10 +21,6 @@ Net::DRI::DRD
 
 Net::DRI::Protocol::RRP
 	* DateTime::Format::ISO8601 should be enough instead of DateTime::Format::Strptime
-
-Net::DRI::Protocol::RRP::Core::Status
-	* take into account: REDEMPTIONPERIOD PENDINGRESTORE PENDINGDELETE PENDINGTRANSFER
-	* is_linked() : should be has_any('REGISTRY-DELETE-NOTIFY') ?
 
 Net::DRI::Protocol::EPP::Core::*
 	* handle poll & offline review of requested actions

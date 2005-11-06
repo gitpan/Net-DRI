@@ -29,7 +29,7 @@ use Net::DRI::Data::RegistryObject;
 
 our $AUTOLOAD;
 
-our $VERSION=do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.14 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -389,6 +389,7 @@ sub process_back
   ###  return $self->protocol()->new_from_reply($tosend,$gotback);
   ###  ## $tosend needed to propagate EPP version, for example
   ($rc,$ri,$oname)=$po->reaction($otype,$oaction,$res,$self->{ops}->{$trid}->[1]);
+  $to->current_state(0) if ($rc->code() == $Net::DRI::Protocol::ResultStatus::EPP_CODES{COMMAND_SUCCESSFUL_END});
  };
 
  if ($@) ## some kind of error happened

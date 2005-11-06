@@ -21,7 +21,7 @@ use strict;
 use Net::DRI::Data::Raw;
 use Net::DRI::Protocol::ResultStatus;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -121,15 +121,15 @@ sub get_data
 
  my $c;
  $sock->read($c,4); ## first 4 bytes are the packed length
+ die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_SYNTAX_ERROR','Unable to read EPP 4 bytes length','en')) unless $c;
  my $length=unpack('N',$c)-4;
- my ($m,$l,$mm);
- while (my $gl=$sock->read($mm,$length))
+ my ($m);
+ while ($length > 0)
  {
-  $l+=$gl;
-  $m.=$mm;
-  last if $l == $length;
+  my $new;
+  $length-=$sock->read($new,$length);
+  $m.=$new;
  }
- die() unless ($m=~m!</epp>$!);
  die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_SYNTAX_ERROR',$m? $m : '<empty message from server>','en')) unless ($m=~m!</epp>$!);
 
  return Net::DRI::Data::Raw->new_from_string($m);
@@ -185,9 +185,9 @@ sub find_code
  my $a=$dc->as_string();
  return () unless ($a=~m!</epp>!);
  return (1000,'Greeting OK')  if ($a=~m!<greeting>!);
- $a=~s/[\n\s\t]+//g;
+ $a=~s/>[\n\s\t]+/>/g;
  my ($code,$msg);
- return () unless (($code)=($a=~m!<response><resultcode=["'](\d+)["']>!));
+ return () unless (($code)=($a=~m!<response><result code=["'](\d+)["']>!));
  return () unless (($msg) =($a=~m!<msg>(.+)</msg>!));
  return (0+$code,$msg);
 }

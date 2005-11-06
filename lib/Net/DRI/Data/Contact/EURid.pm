@@ -24,7 +24,7 @@ __PACKAGE__->mk_accessors(qw(type vat lang));
 use Net::DRI::DRD::EURid;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -115,6 +115,17 @@ sub validate
  Net::DRI::Exception::usererr_invalid_parameters('Registrant contact must be in EU') if ($self->type() && ($self->type() eq 'registrant') && !exists($Net::DRI::DRD::EURid::CCA2_EU{uc($self->cc())}));
 
  return 1; ## everything ok.
+}
+
+sub init
+{
+ my ($self,$what)=@_;
+
+ if ($what eq 'create')
+ {
+  my $a=$self->auth();
+  $self->auth({pw=>''}) unless ($a && (ref($a) eq 'HASH') && exists($a->{pw}));
+ }
 }
 
 ####################################################################################################

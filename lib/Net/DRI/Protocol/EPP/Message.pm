@@ -28,7 +28,7 @@ use Net::DRI::Util;
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version errcode errmsg errlang command command_body cltrid svtrid queue_count queue_headid message_qdate message_content message_lang node_resdata node_extension result_greeting));
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -201,6 +201,7 @@ sub as_string
 
  my $m=join('',@d);
  my $l=pack('N',4+length($m)); ## RFC 3734 §4
+ use bytes;
  return (defined($to) && ($to eq 'tcp'))? $l.$m : $m;
 }
 
