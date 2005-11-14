@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-use Test::More tests => 58;
+use Test::More tests => 59;
 
 BEGIN { 
 use_ok('Net::DRI');
@@ -61,6 +61,7 @@ use_ok('Net::DRI::Protocol::EPP::Extensions::EURid');
 use_ok('Net::DRI::Protocol::EPP::Extensions::EURid::Sunrise');
 use_ok('Net::DRI::Protocol::EPP::Extensions::EURid::Domain');
 use_ok('Net::DRI::Protocol::EPP::Extensions::EURid::Contact');
+use_ok('Net::DRI::Protocol::EPP::Extensions::EURid::Message');
 }
 
 exit 0;

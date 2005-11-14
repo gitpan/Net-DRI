@@ -2,7 +2,7 @@
 
 use Net::DRI::Data::Hosts;
 
-use Test::More tests => 15;
+use Test::More tests => 20;
 
 my $d=Net::DRI::Data::Hosts->new();
 isa_ok($d,'Net::DRI::Data::Hosts');
@@ -14,9 +14,22 @@ isa_ok($d,'Net::DRI::Data::Hosts');
 is($d->count(),1,'count()');
 my @c;
 @c=$d->get_details(1);
-is_deeply($c[1],['1.2.3.4','1.2.3.5']);
+is_deeply($c[1],['1.2.3.4','1.2.3.5'],'get_details(integer) ip address');
 is($d->name(),'test1','name()');
 is($d->loid(),12345,'loid()');
+
+@c=$d->get_details('ns.example.foo');
+is_deeply($c[1],['1.2.3.4','1.2.3.5'],'get_details(name) ip address');
+$d->add('ns.example.foo',['1.2.3.5']);
+@c=$d->get_details('ns.example.foo');
+is_deeply($c[1],['1.2.3.4','1.2.3.5'],'get_details(name) ip address add 1');
+$d->add('ns.example.foo',['1.2.3.6']);
+@c=$d->get_details('ns.example.foo');
+is_deeply($c[1],['1.2.3.4','1.2.3.5','1.2.3.6'],'get_details(name) ip address add 2');
+$d->add('ns.example.foo',[],['2001:0:0:0:8:800:200C:417A']);
+@c=$d->get_details('ns.example.foo');
+is_deeply($c[1],['1.2.3.4','1.2.3.5','1.2.3.6'],'get_details(name) ip address add 3 ip4');
+is_deeply($c[2],['2001:0:0:0:8:800:200C:417A'],'get_details(name) ip address add 3 ip6');
 
 $d=Net::DRI::Data::Hosts->new('ns.example.foo',['1.2.3.4','1.2.3.4']);
 isa_ok($d,'Net::DRI::Data::Hosts');

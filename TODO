@@ -4,6 +4,7 @@ Send your wishlist to <netdri@dotandco.com>
 
 All
 	* sign the distribution (Module::Signature)
+	* Module::Build instead of ExtUtils::MakeMaker for better META.yml ?
 
 Net::DRI
 	* IDN support
@@ -19,14 +20,9 @@ Net::DRI::DRD
           - verify not same info in add & del
           - verify final change is not empty ?
 
-Net::DRI::Protocol::RRP
-	* DateTime::Format::ISO8601 should be enough instead of DateTime::Format::Strptime
-
 Net::DRI::Protocol::EPP::Core::*
 	* handle poll & offline review of requested actions
 
 Net::DRI::Protocol::EPP::Message
-	* finish parsing result (value & extValue)
-
-Net::DRI::Protocol::EPP::Extensions::EURid
-	* parse <eurid:ext>
+	* handle case of multiple <result> block
+	* better parse for value/extValue blocks ?

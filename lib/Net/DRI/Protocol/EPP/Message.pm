@@ -26,9 +26,9 @@ use Net::DRI::Exception;
 use Net::DRI::Util;
 
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
-__PACKAGE__->mk_accessors(qw(version errcode errmsg errlang command command_body cltrid svtrid queue_count queue_headid message_qdate message_content message_lang node_resdata node_extension result_greeting));
+__PACKAGE__->mk_accessors(qw(version errcode errmsg errlang command command_body cltrid svtrid queue_count queue_headid message_qdate message_content message_lang node_resdata node_extension result_greeting result_extra_info));
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -110,7 +110,7 @@ sub result_status
 {
  my $self=shift;
  my $code=$self->errcode();
- return Net::DRI::Protocol::ResultStatus->new('epp',$self->errcode(),undef,$self->is_success(),$self->errmsg(),$self->errlang());
+ return Net::DRI::Protocol::ResultStatus->new('epp',$self->errcode(),undef,$self->is_success(),$self->errmsg(),$self->errlang(),$self->result_extra_info());
 }
 
 sub command_extension_register
@@ -294,7 +294,7 @@ sub parse
 
  ## result block(s)
  my @results=$res->getElementsByTagNameNS($NS,'result'); ## one element if success, multiple elements if failure RFC3730 §2.6
- foreach (reverse(@results))
+ foreach (@results)
  {
   my ($errc,$errm,$errl)=$self->parse_result($_);
   ## TODO : store all in a stack (to preserve the list of results ?)
@@ -331,8 +331,8 @@ sub parse
 
  ## trID
  my $trid=($res->getElementsByTagNameNS($NS,'trID'))[0];
- $self->cltrid(($trid->getElementsByTagNameNS($NS,'clTRID'))[0]->firstChild->getData());
- $self->svtrid(($trid->getElementsByTagNameNS($NS,'svTRID'))[0]->firstChild->getData());
+ $self->cltrid(($trid->getElementsByTagNameNS($NS,'clTRID'))[0]->firstChild->getData()) if $trid->getElementsByTagNameNS($NS,'clTRID');
+ $self->svtrid(($trid->getElementsByTagNameNS($NS,'svTRID'))[0]->firstChild->getData()) if $trid->getElementsByTagNameNS($NS,'svTRID');
 }
 
 sub parse_result
@@ -344,14 +344,21 @@ sub parse_result
  my $lang=$msg->getAttribute('lang') || 'en';
  $msg=$msg->firstChild()->getData();
 
- foreach my $v ($node->getElementsByTagNameNS($NS,'value')) ## OPTIONAL
+ my $c=$node->getFirstChild();
+ while ($c)
  {
-  ## TO FIX
- }
+  my $name=$c->nodeName();
+  next unless $name;
+ 
+  if ($name eq 'extValue') ## OPTIONAL
+  {
+   push @{$self->{result_extra_info}},substr(substr($c->toString(),10),0,-11);
+  } elsif ($name eq 'value') ## OPTIONAL
+  {
+   push @{$self->{result_extra_info}},$c->toString();
+  }
 
- foreach my $v ($node->getElementsByTagNameNS($NS,'extValue')) ## OPTIONAL
- {
-  ## TO FIX
+  $c=$c->getNextSibling();
  }
 
  return ($code,$msg,$lang);

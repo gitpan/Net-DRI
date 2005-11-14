@@ -1,5 +1,5 @@
 ## Domain Registry Interface, EURid Domain EPP extension commands
-## (based on EURid registration_guidelines_v1_0D-epp.pdf)
+## (based on EURid registration_guidelines_v1_0E-epp.pdf)
 ##
 ## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
@@ -25,7 +25,7 @@ use Net::DRI::Exception;
 use Net::DRI::Protocol::EPP::Core::Domain;
 use Net::DRI::Data::Hosts;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 

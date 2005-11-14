@@ -5,6 +5,7 @@ eg/eurid_epp.pl
 eg/gandi_web.pl
 eg/vnds_rrp.pl
 eg/ws_rrp.pl
+INSTALL
 lib/Net/DRI.pm
 lib/Net/DRI/Cache.pm
 lib/Net/DRI/Data/Changes.pm
@@ -38,6 +39,7 @@ lib/Net/DRI/Protocol/EPP/Extensions/E164.pm
 lib/Net/DRI/Protocol/EPP/Extensions/EURid.pm
 lib/Net/DRI/Protocol/EPP/Extensions/EURid/Contact.pm
 lib/Net/DRI/Protocol/EPP/Extensions/EURid/Domain.pm
+lib/Net/DRI/Protocol/EPP/Extensions/EURid/Message.pm
 lib/Net/DRI/Protocol/EPP/Extensions/EURid/Sunrise.pm
 lib/Net/DRI/Protocol/EPP/Extensions/GracePeriod.pm
 lib/Net/DRI/Protocol/EPP/Extensions/NSgroup.pm

@@ -23,7 +23,7 @@ __PACKAGE__->mk_accessors(qw(name loid));
 
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -49,9 +49,15 @@ Net::DRI::Data::Hosts - Handle ordered list of nameservers (name, IPv4 addresses
  ## Details for the nth nameserver (the list starts at 1 !)
  my @d=$dh->get_details(2); ## Gives ('ns2.example.foo',['10.1.1.1'])
 
+ ## Details by name is possible also
+ my @d=$dh->get_details('ns2.example.foo');
+
 =head1 DESCRIPTION
 
-Order of nameservers is preserved. Order of IP addresses is preserved.
+Order of nameservers is preserved. Order of IP addresses is preserved, but no duplicate IP is allowed.
+
+If you try to add a nameserver that is already in the list, the IP
+adresses provided will be added to the existing IP addresses (without duplicates)
 
 Hostnames are verified before being used with Net::DRI::Util::is_hostname().
 
@@ -154,14 +160,25 @@ sub _push
  return unless Net::DRI::Util::is_hostname($name);
  $name=lc($name); ## by default, hostnames are case insensitive
 
- my $c=$self->count();
- return if ($c && (grep { $_ eq $name } ($self->get_names()))); ## by default, we remove duplicates (same name)
-
  ## We keep only the public ips
  my @ipv4=grep { Net::DRI::Util::is_ipv4($_,1) } ref($ipv4)? @$ipv4 : ($ipv4);
  my @ipv6=grep { Net::DRI::Util::is_ipv6($_,1) } ref($ipv6)? @$ipv6 : ($ipv6);
 
- push @{$self->{list}},[$name,_remove_dups_ip(\@ipv4),_remove_dups_ip(\@ipv6)];
+ if ($self->count() && defined($self->get_details($name))) ## name already here, we append IP
+ {
+  foreach my $el (@{$self->{list}})
+  {
+   next unless ($el->[0] eq $name);
+   unshift @ipv4,@{$el->[1]};
+   unshift @ipv6,@{$el->[2]};
+   $el->[1]=_remove_dups_ip(\@ipv4);
+   $el->[2]=_remove_dups_ip(\@ipv6);
+   last;
+  }
+ } else
+ {
+  push @{$self->{list}},[$name,_remove_dups_ip(\@ipv4),_remove_dups_ip(\@ipv6)];
+ }
 }
 
 sub _remove_dups_ip
@@ -206,11 +223,24 @@ sub get_details
 {
  my ($self,$pos)=@_;
  return undef unless (defined($self) && ref($self));
- return undef unless defined($pos);
+ return undef unless defined($pos) && $pos;
  my $c=$self->count();
- return undef unless ($c && ($pos <= $c));
- my $el=$self->{list}->[$pos-1];
- return wantarray()? @$el : $el->[0];
+
+ if ($pos=~m/^\d+$/)
+ {
+  return undef unless ($c && ($pos <= $c));
+  my $el=$self->{list}->[$pos-1];
+  return wantarray()? @$el : $el->[0];
+ } else
+ {
+  $pos=lc($pos);
+  foreach my $el (@{$self->{list}})
+  {
+   next unless ($el->[0] eq $pos);
+   return wantarray()? @$el : $el->[0];
+  }
+  return undef; 
+ }
 }
 
 ################################################################################

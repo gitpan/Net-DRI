@@ -19,7 +19,10 @@ package Net::DRI::Protocol::ResultStatus;
 
 use strict;
 
-our $VERSION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+use base qw(Class::Accessor::Chained::Fast);
+__PACKAGE__->mk_ro_accessors(qw(is_success native_code code message lang));
+
+our $VERSION=do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -33,26 +36,34 @@ You have the following methods available:
 
 =over
 
-=item *
+=item is_success
 
-C<is_success()> returns 1 if the operation was a success
+returns 1 if the operation was a success
 
-=item *
+=item code
 
-C<code()> returns the EPP code corresponding to the native code (registry dependent)
-  for this operation (see RFC for full list or source of this file)
+returns the EPP code corresponding to the native code (registry dependent)
+for this operation (see RFC for full list or source of this file)
 
-=item *
+=item native_code
 
-C<native_code()> gives the true status code we got back from registry
+gives the true status code we got back from registry
 
-=item *
+=item message
 
-C<message()> gives the message attached to the the status code we got back from registry
+gives the message attached to the the status code we got back from registry
 
-=item *
+=item lang
 
-C<print()> will print all details as a single line
+gives the language in which the message above is written
+
+=item info
+
+gives back an array with additionnal data from registry, especially in case of errors. If no data, an empty array is returned
+
+=item print
+
+will print all details (except the info part) as a single line
 
 =back
 
@@ -103,7 +114,7 @@ our %EPP_CODES=(
 
 sub new
 {
- my ($class,$type,$code,$eppcode,$is_success,$message,$lang)=@_;
+ my ($class,$type,$code,$eppcode,$is_success,$message,$lang,$info)=@_;
  my %s=(
         is_success  => (defined($is_success) && $is_success)? 1 : 0,
         native_code => $code,
@@ -113,6 +124,7 @@ sub new
        );
 
  $s{code}=_eppcode($type,$code,$eppcode,$s{is_success});
+ $s{info}=(defined($info))? $info : [];
  bless(\%s,$class);
  return \%s;
 }
@@ -133,11 +145,11 @@ sub new_generic_error   { my ($class,$msg,$lang)=@_; return $class->new('epp',$E
 sub new_success         { my ($class,$code,$msg,$lang)=@_; return $class->new('epp',$code,undef,1,$msg,$lang); }
 sub new_error           { my ($class,$code,$msg,$lang)=@_; return $class->new('epp',$code,undef,0,$msg,$lang); }
 
-sub is_success  { return shift->{is_success}; }
-sub native_code { return shift->{native_code}; }
-sub code        { return shift->{code}; }
-sub message     { return shift->{message}; }
-sub lang        { return shift->{lang}; }
+sub info
+{
+ my $self=shift;
+ return (defined($self->{info}) && (ref($self->{info}) eq 'ARRAY'))? @{$self->{info}} : ();
+}
 
 sub print
 {

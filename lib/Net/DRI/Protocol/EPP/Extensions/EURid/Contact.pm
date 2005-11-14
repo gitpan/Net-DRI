@@ -1,5 +1,5 @@
 ## Domain Registry Interface, EURid Contact EPP extension commands
-## (based on EURid registration_guidelines_v1_0D-epp.pdf)
+## (based on EURid registration_guidelines_v1_0E-epp.pdf)
 ##
 ## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
@@ -20,7 +20,7 @@ package Net::DRI::Protocol::EPP::Extensions::EURid::Contact;
 
 use strict;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 

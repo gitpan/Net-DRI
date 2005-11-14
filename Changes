@@ -1,3 +1,15 @@
+0.19 2005-11-14
++ Updates for conformity with latest EURid specifications :
+   # extra information in result of apply during Sunrise (reference, code, crDate)
+   # new action apply_info during Sunrise to get back information on previously submitted applications
+   (reference, code, crDate, application_status, contact, ns, docsReceivedDate, adr)
++ Protocol/Resultatus : extra information from registry (error messages) is available with info()
++ EPP/Extensions/EURid : we parse eurid:msg for extra information, especially useful if errors
+- EPP/Extensions/EURid/Sunrise : invalid call for nsgroup (bug found & fixed by Jørgen Thomsen)
+= Data/Hosts has 2 significative changes : you can use get_details with a name and
+  you can add a nameserver already in the list, in which case the new IP addresses are added with existing
+  ones (without duplicates)
+
 0.18 2005-11-06
 
 + Many improvements for .EU support : no need to specify empty useless values needed for EPP

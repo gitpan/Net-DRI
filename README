@@ -94,6 +94,7 @@ afnic_ws.pl : as AFNIC member, to use AFNIC web services
 gandi_web.pl : as Gandi client, to change nameservers for your domain, 
                through the web interface
 ws_rrp.pl    : as registrar, to connect to .WS using RRP
+eurid_epp.pl : as registrar, connect to EURid test systems
 
 In the t subdirectory, the test files can also be studied for insight
 of all the API available.
@@ -500,3 +501,15 @@ See corresponding domain_* methods.
 * contact_is_mine()
 
 See above methods.
+
+
+* all other operations
+
+For objects other than domain/contact/hosts or for other actions on domain/contact/hosts another API must be
+used.
+For example, to do action foobar on an object of type zorglub, here is what to do:
+my $ro=$dri->remote_object('zorglub');
+my $rc=$ro->foobar(...specific parameters...);
+
+Please see the test files for more examples.
+

@@ -27,7 +27,7 @@ use Net::DRI::Protocol::EPP::Message;
 use Net::DRI::Protocol::EPP::Core::Status;
 use Net::DRI::Data::Contact;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -89,9 +89,9 @@ sub new
                      });
 
  $self->{hostasattr}=$drd->info('host_as_attr') || 0;
- $self->{ns}={ _main =>   ['urn:ietf:params:xml:ns:epp-1.0','epp-1.0.xsd'],
-               domain =>  ['urn:ietf:params:xml:ns:domain-1.0','domain-1.0.xsd'],
-               host =>    ['urn:ietf:params:xml:ns:host-1.0','host-1.0.xsd'],
+ $self->{ns}={ _main   => ['urn:ietf:params:xml:ns:epp-1.0','epp-1.0.xsd'],
+               domain  => ['urn:ietf:params:xml:ns:domain-1.0','domain-1.0.xsd'],
+               host    => ['urn:ietf:params:xml:ns:host-1.0','host-1.0.xsd'],
                contact => ['urn:ietf:params:xml:ns:contact-1.0','contact-1.0.xsd'],
              };
 

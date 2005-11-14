@@ -22,7 +22,7 @@ use base qw/Net::DRI::DRD/;
 
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -66,7 +66,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 #####################################################################################
 
-our %CCA2_EU=map { $_ => 1 } qw/AT AX BE CZ CY DE DK ES EE FI FR GB GF GI GP GR HU IE IT LT LU LV MQ MT NL PL PT RE SE SK SI/;
+our %CCA2_EU=map { $_ => 1 } qw/AT BE CZ CY DE DK ES EE FI FR GR GB HU IE IT LT LU LV MT NL PL PT SE SK SI AX GF GI GP MQ RE/;
 our %LANGA2_EU=map { $_ => 1 } qw/cs da de el en es et fi fr hu it lt lv mt nl pl pt sk sl sv/;
 
 sub new

@@ -22,9 +22,9 @@ use strict;
 use base qw/Net::DRI::Protocol::EPP/;
 
 use Net::DRI::Data::Contact::EURid;
-use Net::DRI::Protocol::EPP::Message;
+use Net::DRI::Protocol::EPP::Extensions::EURid::Message;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -94,7 +94,7 @@ sub new
 
  my $rfact=$self->factories();
  $rfact->{contact}=sub { return Net::DRI::Data::Contact::EURid->new()->srid('ABCD') };
- $rfact->{message}=sub { my $m=Net::DRI::Protocol::EPP::Message->new(@_); $m->ns($self->{ns}); $m->version($version); return $m;};
+ $rfact->{message}=sub { my $m=Net::DRI::Protocol::EPP::Extensions::EURid::Message->new(@_); $m->ns($self->{ns}); $m->version($version); return $m;};
 
  $self->default_parameters({domain_create => { auth => { pw => '' } } });
 
