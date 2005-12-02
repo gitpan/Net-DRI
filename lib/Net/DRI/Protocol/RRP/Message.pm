@@ -25,7 +25,7 @@ use Net::DRI::Protocol::ResultStatus;
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version errcode errmsg command));
 
-our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -190,11 +190,11 @@ sub entities
    return $self;
   } else ## only key given => get value of key
   {
-   return wantarray()? () : undef unless (exists($self->{entities}));
+   return unless (exists($self->{entities}));
    $k=lc($k);
    foreach my $i (keys(%{$self->{entities}})) { next unless (lc($i) eq $k); $k=$i; last; };
-   return wantarray()? () : undef unless (exists($self->{entities}->{$k}));
-   return wantarray()? @{$self->{entities}->{$k}} : join(" ",@{$self->{entities}->{$k}});
+   return unless (exists($self->{entities}->{$k}));
+   return wantarray()? @{$self->{entities}->{$k}} : join(' ',@{$self->{entities}->{$k}});
   }
  } else ## nothing given => get list of keys
  {

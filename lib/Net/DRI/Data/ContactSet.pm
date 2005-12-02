@@ -22,7 +22,7 @@ use strict;
 
 #our @TYPES=('registrant','admin','tech','billing'); ## default list of types
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -143,7 +143,8 @@ sub _pos
  my $c=$self->{c};
  my $l=$#{$c->{$t}};
  my @p=grep { $c->{$t}->[$_]->id() eq $id } (0..$l);
- return (@p)? $p[0] : undef;
+ return $p[0] if @p;
+ return;
 }
 
 sub add
@@ -205,9 +206,9 @@ sub set
 sub get
 {
  my ($self,$ctype)=@_;
- return undef unless defined($ctype);
+ return unless defined($ctype);
  my $c=$self->{c};
- return undef unless exists($c->{$ctype});
+ return unless exists($c->{$ctype});
  return wantarray()? @{$c->{$ctype}} : $c->{$ctype}->[0];
 }
 

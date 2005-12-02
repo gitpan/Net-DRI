@@ -22,7 +22,7 @@ use base qw/Net::DRI::DRD/;
 
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -93,7 +93,7 @@ sub transport_protocol_compatible
  my $tn=$to->name();
 
  return 1 if (($pn eq 'EPP') && ($tn eq 'socket_inet'));
- return undef;
+ return;
 }
 
 ######################################################################################
@@ -130,11 +130,11 @@ sub domain_operation_needs_is_mine
  my ($self,$ndr,$domain,$op)=@_;
  ($domain,$op)=($ndr,$domain) unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
 
- return undef unless defined($op);
+ return unless defined($op);
 
  return 1 if ($op=~m/^(?:renew|update|delete)$/);
  return 0 if ($op eq 'transfer');
- return undef;
+ return;
 }
 
 ## Only transfer requests are possible

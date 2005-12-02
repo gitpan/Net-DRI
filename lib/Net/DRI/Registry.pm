@@ -29,7 +29,7 @@ use Net::DRI::Data::RegistryObject;
 
 our $AUTOLOAD;
 
-our $VERSION=do { my @r=(q$Revision: 1.14 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.16 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -92,6 +92,7 @@ sub new
            profile => undef, ## current profile
            auto_target => {},
            last_data => {},
+	   last_process => {},
            trid => $trid,
           };
 
@@ -198,7 +199,7 @@ sub clear_info
 sub get_info
 {
  my ($self,$what,$type,$key)=@_;
- return undef unless (defined($what) && $what);
+ return unless (defined($what) && $what);
 
  if (Net::DRI::Util::all_valid($type,$key)) ## search the cache, by default same registry & profile !
  {
@@ -208,7 +209,8 @@ sub get_info
   return $self->{cache}->get($type,$key,$what,"${regname}.${p}");
  } else
  {
-  return (exists($self->{last_data}->{$what}))? $self->{last_data}->{$what} : undef;
+  return unless exists($self->{last_data}->{$what});
+  return $self->{last_data}->{$what};
  }
 }
 
@@ -247,11 +249,11 @@ sub get_auto_target
  my ($self,$otype,$oaction)=@_;
  my $at=$self->{auto_target};
  $otype='_default' unless (exists($at->{$otype}));
- return undef unless (exists($at->{$otype}));
+ return unless (exists($at->{$otype}));
  my $ac=$at->{$otype};
- return undef unless (defined($ac) && ref($ac));
+ return unless (defined($ac) && ref($ac));
  $oaction='_default' unless (exists($ac->{$oaction}));
- return undef unless (exists($ac->{$oaction}));
+ return unless (exists($ac->{$oaction}));
  return $ac->{$oaction};
 }
 
@@ -342,6 +344,7 @@ sub process
  my ($self,$otype,$oaction)=@_[0,1,2];
  my $pa=$_[3] || []; ## store them ?
  my $ta=$_[4] || [];
+ $self->{last_process}=[$otype,$oaction,$pa,$ta];
 
  ## Automated switch, if enabled
  $self->profile_auto_switch($otype,$oaction);
@@ -370,7 +373,7 @@ sub process
   die($@);
  }
 
- return undef unless $to->is_sync();
+ return unless $to->is_sync();
  $self->process_back($trid,$po,$to,$otype,$oaction);
 }
 
@@ -389,7 +392,6 @@ sub process_back
   ###  return $self->protocol()->new_from_reply($tosend,$gotback);
   ###  ## $tosend needed to propagate EPP version, for example
   ($rc,$ri,$oname)=$po->reaction($otype,$oaction,$res,$self->{ops}->{$trid}->[1]);
-  $to->current_state(0) if ($rc->code() == $Net::DRI::Protocol::ResultStatus::EPP_CODES{COMMAND_SUCCESSFUL_END});
  };
 
  if ($@) ## some kind of error happened
@@ -402,6 +404,13 @@ sub process_back
   $@=Net::DRI::Exception->new(1,'internal',0,"Error not handled: $@") unless ref($@);
   die($@);
  }
+
+ if (($rc->code() == $Net::DRI::Protocol::ResultStatus::EPP_CODES{COMMAND_SUCCESSFUL_END}) 
+     || (exists($ri->{_internal}) && exists($ri->{_internal}->{must_reconnect}) && $ri->{_internal}->{must_reconnect}))
+ {
+  $to->current_state(0);
+ }
+ delete($ri->{_internal});
 
  ## Set latest status from what we got
  $self->status($rc);

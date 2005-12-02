@@ -22,7 +22,7 @@ use strict;
 use Time::HiRes ();
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -109,7 +109,8 @@ sub check_equal
  {
   return $a if ($a=~m/^${input}$/);
  }
- return ($default)? $default : undef;
+ return $default if $default;
+ return;
 }
 
 sub check_isa
@@ -124,7 +125,7 @@ sub check_isa
 sub microtime
 {
  my ($t,$v)=Time::HiRes::gettimeofday();
- return $t.sprintf("%06d",$v);
+ return $t.sprintf('%06d',$v);
 }
 
 ## From EPP, trID=token from 3 to 64 characters
@@ -132,7 +133,7 @@ sub create_trid_1
 {
  my ($name)=@_;
  my $mt=microtime(); ## length=16
- return uc($name)."-".$$."-".$mt;
+ return uc($name).'-'.$$.'-'.$mt;
 }
 
 ########################################################################################################

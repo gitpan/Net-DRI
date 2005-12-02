@@ -21,7 +21,7 @@ use strict;
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -154,7 +154,7 @@ sub _opt
  my ($ro,$rg,$w)=@_;
  return $ro->{$w} if ($ro && (ref($ro) eq 'HASH') && exists($ro->{$w}));
  return $rg->{$w} if ($rg && (ref($rg) eq 'HASH') && exists($rg->{$w}));
- return undef;
+ return;
 }
 
 ###############################################################################################

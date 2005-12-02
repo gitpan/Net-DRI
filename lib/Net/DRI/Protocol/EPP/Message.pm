@@ -28,7 +28,7 @@ use Net::DRI::Util;
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version errcode errmsg errlang command command_body cltrid svtrid queue_count queue_headid message_qdate message_content message_lang node_resdata node_extension result_greeting result_extra_info));
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -101,7 +101,8 @@ sub ns
   $self->{ns}=$what;
   return $what;
  }
- return exists($self->{ns}->{$what})? $self->{ns}->{$what}->[0] : undef;
+ return $self->{ns}->{$what}->[0] if exists($self->{ns}->{$what});
+ return;
 }
 
 sub is_success { return (shift->errcode()=~m/^1/)? 1 : 0; } ## 1XXX is for success, 2XXX for failures
@@ -252,7 +253,7 @@ sub topns { return shift->ns->{_main}->[0]; }
 sub get_content
 {
  my ($self,$nodename,$ns,$ext)=@_;
- return wantarray()? () : undef unless (defined($nodename) && $nodename);
+ return unless (defined($nodename) && $nodename);
 
  my @tmp;
  my $n1=$self->node_resdata();
@@ -268,7 +269,7 @@ sub get_content
   @tmp=$n1->getElementsByTagNameNS($ns,$nodename) if (defined($n1));
  }
 
- return wantarray()? () : undef unless @tmp;
+ return unless @tmp;
  return wantarray()? @tmp : $tmp[0];
 }
 

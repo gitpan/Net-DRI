@@ -22,7 +22,7 @@ use strict;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -119,32 +119,34 @@ sub get
 {
  my ($self,$type,$key,$data,$from)=@_;
 
- return undef unless ($self->{ttl} >= 0);
+ return unless ($self->{ttl} >= 0);
  Net::DRI::Exception::err_insufficient_parameters() unless Net::DRI::Util::all_valid($type,$key);
 
  $type=lc($type);
  $key=lc($key);
 
- return undef unless exists($self->{data}->{$type});
- return undef unless exists($self->{data}->{$type}->{$key});
+ return unless exists($self->{data}->{$type});
+ return unless exists($self->{data}->{$type}->{$key});
 
  my $c=$self->{data}->{$type}->{$key};
 
  if ($c->{_until} > 0 && (Net::DRI::Util::microtime() > $c->{_until}))
  {
   delete($self->{data}->{$type}->{$key});
-  return undef;
+  return;
  } 
 
- return undef if (defined($from) && ($c->{_from} ne $from));
+ return if (defined($from) && ($c->{_from} ne $from));
 
  if (defined($data))
  {
-  return (exists($c->{$data}))? $c->{$data} : undef;
+  return $c->{$data} if exists($c->{$data});
  } else
  {
   return $c;
  }
+
+ return;
 }
 
 sub delete_expired

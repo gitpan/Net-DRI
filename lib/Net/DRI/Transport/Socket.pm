@@ -29,7 +29,7 @@ use Net::DRI::Exception;
 use Net::DRI::Util;
 use Net::DRI::Data::Raw;
 
-our $VERSION=do { my @r=(q$Revision: 1.14 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.15 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -152,13 +152,14 @@ sub new
  {
   $IO::Socket::SSL::DEBUG=$opts{ssl_debug} if exists($opts{ssl_debug});
 
-  my %s=(SSL_use_cert => 1);
-  $s{SSL_verify_mod}=(exists($opts{ssl_verify}))? $opts{ssl_verify} : 0x01;
+  my %s=(SSL_use_cert => 0);
+  $s{SSL_verify_mod}=(exists($opts{ssl_verify}))? $opts{ssl_verify} : 0x00; ## by default, no authentication whatsoever
   foreach my $s ('key_file','cert_file','ca_file','ca_path')
   {
    next unless exists($opts{"ssl_$s"});
    $s{"SSL_$s"}=$opts{"ssl_$s"};
   }
+  $s{SSL_use_cert}=1 if exists($s{SSL_cert_file});
   
   $t{ssl_context}=IO::Socket::SSL::context_init(\%s);
   Net::DRI::Exception->die(1,"transport/socket",6,"Unable to setup ssl context") unless (defined($t{ssl_context}));
@@ -209,7 +210,7 @@ sub open_socket
                              );
  }
 
- Net::DRI::Exception->die(1,'transport/socket',6,"Unable to setup the ${type} socket") unless defined($sock);
+ Net::DRI::Exception->die(1,'transport/socket',6,"Unable to setup the ${type} socket".($type eq 'ssl'? ' with SSL error: '.IO::Socket::SSL::errstr() : '')) unless defined($sock);
  $sock->autoflush(1);
  $self->sock($sock);
 }
@@ -249,7 +250,7 @@ sub send_logout
  my $logout=$pc->logout($t->{message_factory},$cltrid);
  $self->log('C=>S',$logout);
  Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send logout message') unless ($sock->print($logout));
- my $dr=$pc->get_data($self,$sock);
+ my $dr=$pc->get_data($self,$sock); ## We expect this to throw an exception, since the server will probably cut the connection
  $self->log('C<=S',$dr);
  my $rc1=$pc->parse_logout($dr);
  die($rc1) unless $rc1->is_success();

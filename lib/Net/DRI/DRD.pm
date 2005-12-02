@@ -27,7 +27,7 @@ use Net::DRI::Data::Hosts;
 use Net::DRI::Data::StatusList;
 use Net::DRI::Data::ContactSet;
 
-our $VERSION=do { my @r=(q$Revision: 1.15 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.16 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -86,8 +86,8 @@ sub new
 sub info
 {
  my ($self,$key)=@_;
- return undef unless defined($self->{info});
- return undef unless (defined($key) && exists($self->{info}->{$key}));
+ return unless defined($self->{info});
+ return unless (defined($key) && exists($self->{info}->{$key}));
  return $self->{info}->{$key};
 }
 
@@ -413,7 +413,7 @@ sub domain_exist ## 1/0/undef
  err_invalid_domain_name($domain) if $self->verify_name_domain($domain);
 
  my $rc=$ndr->domain_check($domain);
- return undef unless $rc->is_success();
+ return unless $rc->is_success();
  return $ndr->get_info('exist');
 }
 
@@ -585,7 +585,7 @@ sub domain_can
 
  my $ismine=$self->domain_is_mine($ndr,$domain);
  my $n=$self->domain_operation_needs_is_mine($domain,$what);
- return undef unless (defined($n));
+ return unless (defined($n));
  return ($ismine xor $n)? 0 : 1;
 }
 
@@ -613,9 +613,9 @@ sub domain_current_status
 {
  my ($self,$ndr,$domain)=@_;
  my $rc=$self->domain_info($ndr,$domain);
- return undef unless $rc->is_success();
+ return unless $rc->is_success();
  my $s=$ndr->get_info('status');
- return undef unless (defined($s) && UNIVERSAL::isa($s,'Net::DRI::Data::StatusList'));
+ return unless (defined($s) && UNIVERSAL::isa($s,'Net::DRI::Data::StatusList'));
  return $s;
 }
 
@@ -731,7 +731,7 @@ sub host_exist ## 1/0/undef
  err_invalid_host_name($name) if $self->verify_name_host($name);
 
  my $rc=$ndr->host_check($name);
- return undef unless $rc->is_success();
+ return unless $rc->is_success();
  return $ndr->get_info('exist');
 }
 
@@ -835,9 +835,9 @@ sub host_current_status
 {
  my ($self,$ndr,$dh)=@_;
  my $rc=$self->host_info($ndr,$dh);
- return undef unless $rc->is_success();
+ return unless $rc->is_success();
  my $s=$ndr->get_info('status');
- return undef unless (defined($s) && UNIVERSAL::isa($s,'Net::DRI::Data::StatusList'));
+ return unless (defined($s) && UNIVERSAL::isa($s,'Net::DRI::Data::StatusList'));
  return $s;
 }
 
@@ -943,7 +943,7 @@ sub contact_exist ## 1/0/undef
  err_invalid_contact($contact) unless (defined($contact) && UNIVERSAL::isa($contact,'Net::DRI::Data::Contact') && $contact->srid());
 
  my $rc=$ndr->contact_check($contact);
- return undef unless $rc->is_success();
+ return unless $rc->is_success();
  return $ndr->get_info('exist');
 }
 
@@ -1036,9 +1036,9 @@ sub contact_current_status
 {
  my ($self,$ndr,$contact)=@_;
  my $rc=$self->contact_info($ndr,$contact);
- return undef unless $rc->is_success();
+ return unless $rc->is_success();
  my $s=$ndr->get_info('status');
- return undef unless (defined($s) && UNIVERSAL::isa($s,'Net::DRI::Data::StatusList'));
+ return unless (defined($s) && UNIVERSAL::isa($s,'Net::DRI::Data::StatusList'));
  return $s;
 }
 

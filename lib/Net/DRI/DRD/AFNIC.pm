@@ -20,7 +20,7 @@ package Net::DRI::DRD::AFNIC;
 use strict;
 use base qw/Net::DRI::DRD/;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -81,7 +81,7 @@ sub transport_protocol_compatible
  my $tn=$to->name();
 
  return 1 if (($pn eq 'afnic_ws') && ($tn eq 'soap'));
- return undef;
+ return;
 }
 
 ######################################################################################
@@ -102,7 +102,7 @@ sub domain_operation_needs_is_mine
  my ($self,$ndr,$domain,$op)=@_;
  ($domain,$op)=($ndr,$domain) unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
 
- return undef;
+ return;
 }
 
 ######################################################################################

@@ -25,7 +25,7 @@ __PACKAGE__->mk_accessors(qw/name version retry pause trace timeout defer curren
 use Net::DRI::Exception;
 use Time::HiRes;
 
-our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -121,7 +121,7 @@ sub send
    die($@) if (ref($@) eq 'Net::DRI::Protocol::ResultStatus');
    my $is_timeout=(!ref($@) && ($@=~m/timeout/))? 1 : 0;
    $@=Net::DRI::Exception->new(1,'internal',0,"Error not handled: $@") unless ref($@);
-   Net::DRI::Exception::err_insufficient_parameters() unless ($cb2 && (ref($cb2) eq 'CODE'));
+   die($@) unless ($cb2 && (ref($cb2) eq 'CODE'));
    $self->$cb2($@,$c,$is_timeout,$ok); ## will determine if 1) we break now the loop/we propagate the error (fatal error) 2) we retry
   }
 
@@ -160,7 +160,7 @@ sub receive
   {
    my $is_timeout=(!ref($@) && ($@=~m/timeout/))? 1 : 0;
    $@=Net::DRI::Exception->new(1,'internal',0,"Error not handled: $@") unless ref($@);
-   Net::DRI::Exception::err_insufficient_parameters() unless ($cb2 && (ref($cb2) eq 'CODE'));
+   die($@) unless ($cb2 && (ref($cb2) eq 'CODE'));
    $self->$cb2($@,$c,$is_timeout,defined($ans)); ## will determine if 1) we break now the loop/we propagate the error (fatal error) 2) we retry
   }
 

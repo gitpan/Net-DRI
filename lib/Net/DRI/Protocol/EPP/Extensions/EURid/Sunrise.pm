@@ -28,7 +28,7 @@ use Net::DRI::Protocol::EPP::Core::Domain;
 use Net::DRI::Protocol::EPP::Extensions::EURid::Domain;
 use Net::DRI::DRD::EURid;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -175,8 +175,8 @@ sub apply
  Net::DRI::Exception::usererr_invalid_parameters('documentaryevidence must be applicant, registrar or thirdparty') unless $rd->{documentaryevidence}=~m/^(?:applicant|registrar|thirdparty)$/;
  if ($rd->{documentaryevidence} eq 'thirdparty')
  {
-  Net::DRI::Exception::usererr_invalid_parameters('documentaryevidence_email must be a valid email address') unless (defined($rd->{documentary_evidence}) && Email::Valid->rfc822($rd->{documentaryevidence_email}));
-  push @d,['domain:documentaryevidence',['domain:thirdparty',[]]];
+  Net::DRI::Exception::usererr_invalid_parameters('documentaryevidence_email must be a valid email address') unless (defined($rd->{documentaryevidence_email}) && Email::Valid->rfc822($rd->{documentaryevidence_email}));
+  push @d,['domain:documentaryevidence',['domain:thirdparty',$rd->{documentaryevidence_email}]];
  } else
  {
   push @d,['domain:documentaryevidence',['domain:'.$rd->{documentaryevidence}]];
@@ -213,6 +213,7 @@ sub apply_parse
 {
  my ($po,$otype,$oaction,$oname,$rinfo)=@_;
  my $mes=$po->message();
+ $rinfo->{_internal}->{must_reconnect}=1; ## All apply commands (successful or not) close the connection
  return unless $mes->is_success();
 
  my $credata=$mes->get_content('appData',$mes->ns('domain'));

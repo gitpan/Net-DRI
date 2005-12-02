@@ -24,7 +24,7 @@ use Net::DRI::DRD::ICANN;
 use DateTime::Duration;
 use DateTime;
 
-our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -84,7 +84,7 @@ sub transport_protocol_compatible
 
  return 1 if (($pn eq 'RRP') && ($tn eq 'socket_inet'));
  return 1 if (($pn eq 'EPP') && ($tn eq 'socket_inet'));
- return undef;
+ return;
 }
 
 ####################################################################################################
@@ -126,11 +126,11 @@ sub domain_operation_needs_is_mine
  my ($self,$ndr,$domain,$op)=@_;
  ($domain,$op)=($ndr,$domain) unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
 
- return undef unless defined($op);
+ return unless defined($op);
 
  return 1 if ($op=~m/^(?:renew|update|delete)$/);
  return 0 if ($op eq 'transfer');
- return undef;
+ return;
 }
 
 ####################################################################################################

@@ -25,7 +25,7 @@ __PACKAGE__->mk_accessors(qw(name version factories commands message capabilitie
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -88,7 +88,7 @@ sub create_local_object
  my $self=shift;
  my $what=shift;
  my $fn=$self->factories();
- return undef unless (defined($fn) && ref($fn) && exists($fn->{$what}) && (ref($fn->{$what}) eq 'CODE'));
+ return unless (defined($fn) && ref($fn) && exists($fn->{$what}) && (ref($fn->{$what}) eq 'CODE'));
  return $fn->{$what}->(@_);
 }
 
@@ -196,7 +196,7 @@ sub reaction
 sub nameversion
 {
  my $self=shift;
- return $self->name()."/".$self->version();
+ return $self->name().'/'.$self->version();
 }
 
 ##############################################################################################################

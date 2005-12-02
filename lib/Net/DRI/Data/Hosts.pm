@@ -23,7 +23,7 @@ __PACKAGE__->mk_accessors(qw(name loid));
 
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -119,7 +119,7 @@ sub new_set
 sub add
 {
  my ($self,$in,$e1,$e2)=@_;
- return undef unless (defined($in) && $in);
+ return unless (defined($in) && $in);
 
  if (ref($in) eq 'ARRAY')
  {
@@ -194,7 +194,7 @@ sub _remove_dups_ip
 sub get_names
 {
  my ($self,$limit)=@_;
- return undef unless (defined($self) && ref($self));
+ return unless (defined($self) && ref($self));
  my $c=$self->count();
  $c=$limit if ($limit && ($limit <= $c));
  my @r;
@@ -208,7 +208,7 @@ sub get_names
 sub count
 {
  my $self=shift;
- return undef unless (defined($self) && ref($self));
+ return unless (defined($self) && ref($self));
  return scalar(@{$self->{list}});
 }
 
@@ -222,13 +222,13 @@ sub is_empty
 sub get_details
 {
  my ($self,$pos)=@_;
- return undef unless (defined($self) && ref($self));
- return undef unless defined($pos) && $pos;
+ return unless (defined($self) && ref($self));
+ return unless (defined($pos) && $pos);
  my $c=$self->count();
 
  if ($pos=~m/^\d+$/)
  {
-  return undef unless ($c && ($pos <= $c));
+  return unless ($c && ($pos <= $c));
   my $el=$self->{list}->[$pos-1];
   return wantarray()? @$el : $el->[0];
  } else
@@ -239,7 +239,7 @@ sub get_details
    next unless ($el->[0] eq $pos);
    return wantarray()? @$el : $el->[0];
   }
-  return undef; 
+  return;
  }
 }
 

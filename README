@@ -80,7 +80,7 @@ Install
 -------
 
 Use the standard procedure:
-perl Makefile.PL ; make ; make tests ; make install
+perl Makefile.PL ; make ; make test ; make install
 Or just copy the content of the lib/ directory somewhere in your path.
 You can use tests available in t/ to make sure everything is well.
 (all tests are done locally and do not require a network connection)

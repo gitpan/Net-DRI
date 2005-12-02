@@ -1,3 +1,12 @@
+0.20 2005-12-02
++ EURid/Sunrise : we automatically reconnect after each apply command (successful or not), when needed,
+                  since the connection is dropped by registry (bug reported by Lucas Vossberg)
++ Transport/Socket : a client certificate is no more mandatory, the default verification level is lowered,
+                     better error message for SSL problems (suggested by Peter van Dijk)
+- Protocol/EPP/Extensions/EURid/Sunrise : various bugfixes for documentaryevidence=thirdparty (found by Yves Cartenstadt)
+= EURid : the sample provided (eurid_epp.pl) dumps all exchanges to a file
+
+
 0.19 2005-11-14
 + Updates for conformity with latest EURid specifications :
    # extra information in result of apply during Sunrise (reference, code, crDate)

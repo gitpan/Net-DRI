@@ -33,8 +33,8 @@ use Net::DRI::Protocol::ResultStatus;
 use strict;
 
 our $AUTOLOAD;
-our $VERSION='0.19';
-our $CVS_REVISION=do { my @r=(q$Revision: 1.15 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION='0.20';
+our $CVS_REVISION=do { my @r=(q$Revision: 1.17 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -154,24 +154,15 @@ sub registry
  return wantarray()? ($regname,$ndr) : $ndr;
 }
 
-sub registry_profile
-{
- my $self=shift;
- my $regname=$self->registry_name();
-
- return (undef,undef) unless defined($regname);
- return ($regname,$self->profile());
-}
-
 sub tld2reg
 {
  my ($self,$tld)=@_;
- return wantarray()? () : 0 unless defined($tld) && $tld;
+ return unless defined($tld) && $tld;
  $tld=lc($tld);
  $tld=$1 if ($tld=~m/\.([a-z0-9]+)$/);
- return wantarray()? () : 0 unless exists($self->{tlds}->{$tld});
+ return unless exists($self->{tlds}->{$tld});
  my @t=@{$self->{tlds}->{$tld}};
- return wantarray()? @t : scalar(@t);
+ return @t;
 }
 
 #########################################################################################################
