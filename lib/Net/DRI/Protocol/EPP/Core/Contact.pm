@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Contact commands (RFC3733)
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -26,7 +26,7 @@ use Net::DRI::Protocol::EPP::Core::Status;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -56,7 +56,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -180,7 +180,8 @@ sub info_parse
  return unless $infdata;
 
  $rinfo->{contact}->{$oname}->{exist}=1;
-
+ 
+ my %cd=map { $_ => [] } qw/name org street city sp pc cc/;
  my $contact=$po->factories()->{contact}->();
  my @s;
  my $c=$infdata->firstChild();
@@ -215,7 +216,7 @@ sub info_parse
    $contact->fax(parse_tel($c));
   } elsif ($name eq 'contact:postalInfo')
   {
-   parse_postalinfo($c,$contact);
+   parse_postalinfo($c,\%cd);
   } elsif ($name eq 'contact:authInfo')
   {
    my $pw=($c->getElementsByTagNameNS($mes->ns('contact'),'pw'))[0]->firstChild->getData();
@@ -226,6 +227,14 @@ sub info_parse
   }
   $c=$c->getNextSibling();
  }
+
+ $contact->name(@{$cd{name}});
+ $contact->org(@{$cd{org}});
+ $contact->street(@{$cd{street}});
+ $contact->city(@{$cd{city}});
+ $contact->sp(@{$cd{sp}});
+ $contact->pc(@{$cd{pc}});
+ $contact->cc(@{$cd{cc}});
 
  $rinfo->{contact}->{$oname}->{status}=Net::DRI::Protocol::EPP::Core::Status->new(\@s);
  $rinfo->{contact}->{$oname}->{self}=$contact;
@@ -248,9 +257,10 @@ sub get_data
 
 sub parse_postalinfo
 {
- my ($c,$contact)=@_;
- my $type=$c->getAttribute('type'); ## int or loc, but for now we do not take care of that
- return if (($type eq 'int') && ($contact->name())); ## we prefer loc over int
+ my ($c,$rcd)=@_;
+ my $type=$c->getAttribute('type'); ## int or loc
+ my $ti={loc=>0,int=>1}->{$type};
+
  my $n=$c->getFirstChild();
  while($n)
  {
@@ -258,10 +268,10 @@ sub parse_postalinfo
   next unless $name;
   if ($name eq 'contact:name')
   {
-   $contact->name(get_data($n));
+   $rcd->{name}->[$ti]=get_data($n);
   } elsif ($name eq 'contact:org')
   {
-   $contact->org(get_data($n));
+   $rcd->{org}->[$ti]=get_data($n);
   } elsif ($name eq 'contact:addr')
   {
    my $nn=$n->getFirstChild();
@@ -275,20 +285,20 @@ sub parse_postalinfo
      push @street,get_data($nn);
     } elsif ($name2 eq 'contact:city')
     {
-     $contact->city(get_data($nn));
+     $rcd->{city}->[$ti]=get_data($nn);
     } elsif ($name2 eq 'contact:sp')
     {
-     $contact->sp(get_data($nn));
+     $rcd->{sp}->[$ti]=get_data($nn);
     } elsif ($name2 eq 'contact:pc')
     {
-     $contact->pc(get_data($nn));
+     $rcd->{pc}->[$ti]=get_data($nn);
     } elsif ($name2 eq 'contact:cc')
     {
-     $contact->cc(get_data($nn));
+     $rcd->{cc}->[$ti]=get_data($nn);
     }
     $nn=$nn->getNextSibling();
    }
-   $contact->street(\@street);
+   $rcd->{street}->[$ti]=\@street;
   }
   $n=$n->getNextSibling();
  }
@@ -404,23 +414,44 @@ sub build_cdata
 {
  my $contact=shift;
  my @d;
- my @post;
- push @post,['contact:name',$contact->name()] if defined($contact->name());
- push @post,['contact:org',$contact->org()] if defined($contact->org());
- my @addr;
- if (defined($contact->street())) { foreach (@{$contact->street()}) { push @addr,['contact:street',$_]; } }
- push @addr,['contact:city',$contact->city()] if defined($contact->city());
- push @addr,['contact:sp',$contact->sp()] if defined($contact->sp());
- push @addr,['contact:pc',$contact->pc()] if defined($contact->pc());
- push @addr,['contact:cc',$contact->cc()] if defined($contact->cc());
- push @post,['contact:addr',@addr] if @addr;
- push @d,['contact:postalInfo',@post,{type=>'loc'}] if @post;
+
+ my (@postl,@posti,@addrl,@addri);
+ _do_locint(\@postl,\@posti,$contact,'name');
+ _do_locint(\@postl,\@posti,$contact,'org');
+ _do_locint(\@addrl,\@addri,$contact,'street');
+ _do_locint(\@addrl,\@addri,$contact,'city');
+ _do_locint(\@addrl,\@addri,$contact,'sp');
+ _do_locint(\@addrl,\@addri,$contact,'pc');
+ _do_locint(\@addrl,\@addri,$contact,'cc');
+ push @postl,['contact:addr',@addrl] if @addrl;
+ push @posti,['contact:addr',@addri] if @addri;
+ push @d,['contact:postalInfo',@postl,{type=>'loc'}] if @postl;
+ push @d,['contact:postalInfo',@posti,{type=>'int'}] if @posti;
+
+
  push @d,build_tel('contact:voice',$contact->voice()) if defined($contact->voice());
  push @d,build_tel('contact:fax',$contact->fax()) if defined($contact->fax());
  push @d,['contact:email',$contact->email()] if defined($contact->email());
  push @d,build_authinfo($contact);
  push @d,build_disclose($contact);
  return @d;
+
+
+ sub _do_locint
+ {
+  my ($rl,$ri,$contact,$what)=@_;
+  my @tmp=$contact->$what();
+  return unless @tmp;
+  if ($what eq 'street')
+  {
+   if (defined($tmp[0])) { foreach (@{$tmp[0]}) { push @$rl,['contact:street',$_]; } };
+   if (defined($tmp[1])) { foreach (@{$tmp[1]}) { push @$ri,['contact:street',$_]; } };
+  } else
+  {
+   if (defined($tmp[0])) { push @$rl,['contact:'.$what,$tmp[0]]; }
+   if (defined($tmp[1])) { push @$ri,['contact:'.$what,$tmp[1]]; }
+  }
+ }
 }
 
 sub create

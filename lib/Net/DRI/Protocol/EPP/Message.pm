@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Message
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -19,7 +19,8 @@ package Net::DRI::Protocol::EPP::Message;
 
 use strict;
 
-use XML::LibXML;
+use XML::LibXML ();
+use Encode ();
 
 use Net::DRI::Protocol::ResultStatus;
 use Net::DRI::Exception;
@@ -28,7 +29,7 @@ use Net::DRI::Util;
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version errcode errmsg errlang command command_body cltrid svtrid queue_count queue_headid message_qdate message_content message_lang node_resdata node_extension result_greeting result_extra_info));
 
-our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -58,7 +59,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -82,7 +83,6 @@ sub new
 
  my $self={
            errcode => 2999,
-           ns => { _main => ['urn:ietf:params:xml:ns:epp-1.0','epp-1.0.xsd'] },
           };
 
  bless($self,$class);
@@ -143,16 +143,16 @@ sub as_string
  my $rns=$self->ns();
  my $topns=$rns->{_main};
  my $ens=sprintf('xmlns="%s" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="%s %s"',$topns->[0],$topns->[0],$topns->[1]);
- ## need_ns
  my @d;
  push @d,'<?xml version="1.0" encoding="UTF-8" standalone="no"?>';
  push @d,'<epp '.$ens.'>';
- push @d,'<command>';
  my ($cmd,$ocmd,$ons)=@{$self->command()};
+ my $nocommand=(!ref($cmd) && ($cmd eq 'hello'));
+ push @d,'<command>' unless $nocommand;
  my $attr;
  if (ref($cmd))
  {
-  ($cmd,$attr)=($cmd->[0]," ".join(" ",map { $_.'="'.$cmd->[1]->{$_}.'"' } keys(%{$cmd->[1]})));
+  ($cmd,$attr)=($cmd->[0],' '.join(' ',map { $_.'="'.$cmd->[1]->{$_}.'"' } keys(%{$cmd->[1]})));
  } else
  {
   $attr='';
@@ -196,13 +196,12 @@ sub as_string
 
  ## OPTIONAL clTRID
  my $cltrid=$self->cltrid();
- push @d,"<clTRID>${cltrid}</clTRID>" if (defined($cltrid) && $cltrid && Net::DRI::Util::xml_is_token($cltrid,3,64));
- push @d,'</command>';
+ push @d,"<clTRID>${cltrid}</clTRID>" if (defined($cltrid) && $cltrid && Net::DRI::Util::xml_is_token($cltrid,3,64) && !$nocommand);
+ push @d,'</command>' unless $nocommand;
  push @d,'</epp>';
 
- my $m=join('',@d);
+ my $m=Encode::encode('utf8',join('',@d));
  my $l=pack('N',4+length($m)); ## RFC 3734 §4
- use bytes;
  return (defined($to) && ($to eq 'tcp'))? $l.$m : $m;
 }
 

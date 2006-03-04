@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Registry object
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -27,9 +27,13 @@ use Net::DRI::Util;
 use Net::DRI::Protocol::ResultStatus;
 use Net::DRI::Data::RegistryObject;
 
+use Net::DRI::Data::Changes;
+use Net::DRI::Data::ContactSet;
+use Net::DRI::Data::Hosts;
+
 our $AUTOLOAD;
 
-our $VERSION=do { my @r=(q$Revision: 1.16 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.18 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -59,7 +63,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -140,11 +144,19 @@ sub transport { return shift->_current('transport'); }
 sub protocol  { return shift->_current('protocol');  }
 sub status    { return shift->_current('status',@_); }
 
+sub protocol_transport { my $self=shift; return ($self->protocol(),$self->transport()); }
 sub create_status { return shift->_current('protocol')->create_local_object('status',@_); }
 
-sub local_object { return shift->_current('protocol')->create_local_object(@_); }
-
-sub protocol_transport { my $self=shift; return ($self->protocol(),$self->transport()); }
+sub local_object 
+{
+ my $self=shift;
+ my $f=shift;
+ return unless $self && $f;
+ return Net::DRI::Data::Changes->new(@_)    if $f eq 'changes';
+ return Net::DRI::Data::ContactSet->new(@_) if $f eq 'contactset';
+ return Net::DRI::Data::Hosts->new(@_)      if $f eq 'hosts'; 
+ return $self->_current('protocol')->create_local_object($f,@_);
+}
 
 
 sub _result
@@ -268,9 +280,9 @@ sub new_profile
  $protocol ='Net::DRI::Protocol::'.$protocol   unless ($protocol=~m/::/);
 
  eval "require $transport";
- Net::DRI::Exception->die(1,'DRI',8,"Failed to load Perl module $transport") if $@;
+ Net::DRI::Exception->die(1,'DRI',8,"Failed to load Perl module $transport : ".(ref($@)? $@->as_string() : $@)) if $@;
  eval "require $protocol";
- Net::DRI::Exception->die(1,'DRI',8,"Failed to load Perl module $protocol") if $@;
+ Net::DRI::Exception->die(1,'DRI',8,"Failed to load Perl module $protocol : ".(ref($@)? $@->as_string() : $@)) if $@;
 
  my $drd=$self->{driver};
  my $po=$protocol->new($drd,@{$p_params}); ## Protocol must come first, as it may be needed during transport setup

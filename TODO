@@ -26,3 +26,8 @@ Net::DRI::Protocol::EPP::Core::*
 Net::DRI::Protocol::EPP::Message
 	* handle case of multiple <result> block
 	* better parse for value/extValue blocks ?
+
+Net::DRI::Transport::Socket
+	* implement ping() (warning: <hello> instead of <poll> for EURid)
+          have a user-defined delay that must pass from the last sent message,
+          before really trying to send something else to registry

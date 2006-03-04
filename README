@@ -2,7 +2,7 @@ Net::DRI
 ========
 
 A Perl library to access Domain Name Registries/Registrars
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>
+Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>
 
 DRI stands for Domain Registry Interface and aims to be,
 for domain name registries/registrars/resellers
@@ -43,6 +43,7 @@ Currently Net::DRI ships with
    .INFO/.NAME/.BE
      (only domain_update for nameservers through web site)
 - a Net::DRI::DRD::WS covering .WS registry
+- a Net::DRI::DRD::SE covering .SE registry
 
 
 Work is underway to provide an email transport, as well as full support for
@@ -56,6 +57,11 @@ this framework to your clients (see license file).
 
 Perl modules needed
 -------------------
+
+Make sure to use at least Perl 5.8.4 as earlier versions have issues
+with utf8 handling which will cause errors for EPP.
+
+You also need the following modules:
 
 Carp (Perl internal)
 DateTime

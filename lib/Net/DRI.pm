@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Main entry point
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -21,20 +21,11 @@ use Net::DRI::Cache;
 use Net::DRI::Registry;
 use Net::DRI::Util;
 
-## These modules are not needed here, but we load them now,
-## since if you use Net::DRI, you will probably need them sooner or later
-use Net::DRI::Data::Changes;
-use Net::DRI::Data::Contact;
-use Net::DRI::Data::ContactSet;
-use Net::DRI::Data::Hosts;
-use Net::DRI::Data::StatusList;
-use Net::DRI::Protocol::ResultStatus;
-
 use strict;
 
 our $AUTOLOAD;
-our $VERSION='0.20';
-our $CVS_REVISION=do { my @r=(q$Revision: 1.17 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION='0.21';
+our $CVS_REVISION=do { my @r=(q$Revision: 1.21 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -64,7 +55,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -190,7 +181,7 @@ sub target
  return $self;
 }
 
-#####################################################################################################################
+####################################################################################################
 ## The meat of everything
 ## See Cookbook, page 468
 sub AUTOLOAD
@@ -221,5 +212,5 @@ sub end
 
 sub DESTROY { shift->end(); }
 
-##########################################################################################################
+####################################################################################################
 1;

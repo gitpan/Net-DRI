@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Handling of contact data
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -19,7 +19,7 @@
 package Net::DRI::Data::Contact;
 
 use strict;
-use base qw(Class::Accessor::Chained::Fast); ## provides a new() method
+use base qw(Class::Accessor::Chained); ## provides a new() method
 __PACKAGE__->mk_accessors(qw(name org street city sp pc cc email voice fax loid roid srid auth disclose));
 
 use Net::DRI::Exception;
@@ -27,7 +27,7 @@ use Net::DRI::Util;
 
 use Email::Valid;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -42,75 +42,84 @@ It can (and should) be subclassed for TLDs needing to store other data for a con
 All subclasses must have a validate() method that takes care of verifying contact data,
 and an id() method returning an opaque value, unique per contact (in a given registry).
 
-The following accessors/mutators can be called in chain, as they all return the object itself.
+The following methods are both accessors and mutators :
+as mutators, they can be called in chain, as they all return the object itself.
 
-=over
+Postal information through name() org() street() city() sp() pc() cc() can be provided twice.
+EPP allows a localized form (content is in unrestricted UTF-8) and internationalized form
+(content MUST be represented in a subset of UTF-8 that can be represented 
+in the 7-bit US-ASCII character set). Not all registries support both forms.
 
-=item *
+When setting values, you pass one element if both forms are equal or two elements
+as a list (first the localized form, then the internationalized one).
+When getting values, in list context you get back both values, in scalar context you get
+back the first one, that is the localized form.
 
-C<loid()> local object ID for this contact, never sent to registry (can be used to track the local db id of this object)
+=head1 METHODS
 
-=item *
+=head2 loid()
 
-C<srid()> server ID, ID of the object as known by the registry in which it was created
+local object ID for this contact, never sent to registry (can be used to track the local db id of this object)
 
-=item *
+=head2 srid()
 
-C<id()> an alias (needed for Net::DRI::Data::ContactSet) of the previous method
+server ID, ID of the object as known by the registry in which it was created
 
-=item *
+=head2 id() 
 
-C<roid()> registry/remote object id (internal to a registry)
+an alias (needed for Net::DRI::Data::ContactSet) of the previous method
 
-=item *
+=head2 roid() 
 
-C<name()> name of the contact
+registry/remote object id (internal to a registry)
 
-=item *
+=head2 name()
 
-C<org()> organization of the contact
+name of the contact
 
-=item *
+=head2 org()
 
-C<street()> street address of the contact (ref array of up to 3 elements)
+organization of the contact
 
-=item *
+=head2 street()
 
-C<city()> city of the contact
+street address of the contact (ref array of up to 3 elements)
 
-=item *
+=head2 city() 
 
-C<sp()> state/province of the contact
+city of the contact
 
-=item *
+=head2 sp()
 
-C<pc()> postal code of the contact
+state/province of the contact
 
-=item *
+=head2 pc()
 
-C<cc()> alpha2 country code of the contact (will be verified against list of valid country codes)
+postal code of the contact
 
-=item *
+=head2 cc() 
 
-C<email()> email address of the contact
+alpha2 country code of the contact (will be verified against list of valid country codes)
 
-=item *
+=head2 email()
 
-C<voice()> voice number of the contact (in the form +CC.NNNNNNNNxEEE)
+email address of the contact
 
-=item *
+=head2 voice()
 
-C<fax()> fax number of the contact (same form as above)
+voice number of the contact (in the form +CC.NNNNNNNNxEEE)
 
-=item *
+=head2 fax()
 
-C<auth()> authentification for this contact (hash ref with a key 'pw' and a value being the password)
+fax number of the contact (same form as above)
 
-=item *
+=head2 auth()
 
-C<disclose()> privacy settings related to this contact (see RFC)
+authentification for this contact (hash ref with a key 'pw' and a value being the password)
 
-=back
+=head2 disclose()
+
+privacy settings related to this contact (see RFC)
 
 =head1 SUPPORT
 
@@ -130,7 +139,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -146,6 +155,24 @@ See the LICENSE file that comes with this distribution for more details.
 ## Needed for ContactSet
 sub id { return shift->srid(@_); }
 
+## Overrides method in Class::Accessor, needed for int/loc data
+sub get
+{
+ my ($self,$what)=@_;
+ return unless defined($what) && $what && exists($self->{$what});
+ my $d=$self->{$what};
+ return $d unless ($what=~m/^(name|org|street|city|sp|pc|cc)$/);
+ if ($what eq 'street') ## special case because it is always a ref array
+ {
+  return $d if !ref($d); ## should not happen, since it is either a ref array of up to 3 elements, or a ref array of two such ref arrays
+  return $d if !ref($d->[0]);
+ } else
+ {
+  return $d if !ref($d);
+ }
+ return wantarray()? @$d : $d->[0];
+}
+
 sub validate ## See RFC3733,§4
 {
  my ($self,$change)=@_;
@@ -154,23 +181,27 @@ sub validate ## See RFC3733,§4
 
  if (!$change)
  {
-  Net::DRI::Exception::usererr_insufficient_parameters('Invalid contact information: name/city/cc/email/auth/srid mandatory') unless ($self->name() && $self->city() && $self->cc() && $self->email() && $self->auth() && $self->srid());
+  Net::DRI::Exception::usererr_insufficient_parameters('Invalid contact information: name/city/cc/email/auth/srid mandatory') unless (scalar($self->name()) && scalar($self->city()) && scalar($self->cc()) && $self->email() && $self->auth() && $self->srid());
   push @errs,'srid' unless Net::DRI::Util::xml_is_token($self->srid(),3,16);
  }
 
  push @errs,'roid' if ($self->roid() && $self->roid()!~m/^\w{1,80}-\w{1,8}$/); ## \w includes _ in Perl
  
- push @errs,'name' if ($self->name() && !Net::DRI::Util::xml_is_normalizedstring($self->name(),1,255));
- push @errs,'org'  if ($self->org()  && !Net::DRI::Util::xml_is_normalizedstring($self->org(),undef,255));
+ push @errs,'name' if ($self->name() && grep { !Net::DRI::Util::xml_is_normalizedstring($_,1,255) }     ($self->name()));
+ push @errs,'org'  if ($self->org()  && grep { !Net::DRI::Util::xml_is_normalizedstring($_,undef,255) } ($self->org()));
 
- my $rs=$self->street();
- push @errs,'street' if ($rs && (ref($rs) eq 'ARRAY') && (@$rs > 3) && (grep { !Net::DRI::Util::xml_is_normalizedstring($_,undef,255) } @$rs));
+ my @rs=($self->street());
+ foreach my $i (0,1)
+ {
+  next unless $rs[$i];
+  push @errs,'street' if ((ref($rs[$i]) ne 'ARRAY') || (@{$rs[$i]} > 3) || (grep { !Net::DRI::Util::xml_is_normalizedstring($_,undef,255) } @{$rs[$i]}));
+ }
 
- push @errs,'city' if ($self->city() && !Net::DRI::Util::xml_is_normalizedstring($self->city(),1,255));
- push @errs,'sp'   if ($self->sp()   && !Net::DRI::Util::xml_is_normalizedstring($self->sp(),undef,255));
- push @errs,'pc'   if ($self->pc()   && !Net::DRI::Util::xml_is_token($self->pc(),undef,16));
- push @errs,'cc'   if ($self->cc()   && !Net::DRI::Util::xml_is_token($self->cc(),2,2));
- push @errs,'cc'   if ($self->cc()   && !exists($Net::DRI::Util::CCA2{uc($self->cc())}));
+ push @errs,'city' if ($self->city() && grep { !Net::DRI::Util::xml_is_normalizedstring($_,1,255) }     ($self->city()));
+ push @errs,'sp'   if ($self->sp()   && grep { !Net::DRI::Util::xml_is_normalizedstring($_,undef,255) } ($self->sp()));
+ push @errs,'pc'   if ($self->pc()   && grep { !Net::DRI::Util::xml_is_token($_,undef,16) }             ($self->pc()));
+ push @errs,'cc'   if ($self->cc()   && grep { !Net::DRI::Util::xml_is_token($_,2,2) }                  ($self->cc()));
+ push @errs,'cc'   if ($self->cc()   && grep { !exists($Net::DRI::Util::CCA2{uc($_)}) }                 ($self->cc()));
 
  push @errs,'voice' if ($self->voice() && !Net::DRI::Util::xml_is_token($self->voice(),undef,17) && $self->voice()!~m/^\+[0-9]{1,3}\.[0-9]{1,14}(?:x\d+)?$/);
  push @errs,'fax'   if ($self->fax()   && !Net::DRI::Util::xml_is_token($self->fax(),undef,17)   && $self->fax()!~m/^\+[0-9]{1,3}\.[0-9]{1,14}(?:x\d+)?$/);

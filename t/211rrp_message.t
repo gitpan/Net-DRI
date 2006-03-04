@@ -1,8 +1,9 @@
 #!/usr/bin/perl -w
 
 use Net::DRI::Protocol::RRP::Message;
+use Encode;
 
-use Test::More tests=>29;
+use Test::More tests=>30;
 
 my $n;
 
@@ -61,7 +62,7 @@ is($n->as_string(),"transfer\r\nEntityName:Domain\r\nDomainName:example.com\r\n.
 
 $n=Net::DRI::Protocol::RRP::Message->new()->command('transfer')->entities('EntityName','Domain')->entities('DomainName','example.com')->options('Approve','Yes');
 is($n->as_string(),"transfer\r\n-Approve:Yes\r\nEntityName:Domain\r\nDomainName:example.com\r\n.\r\n",'RRP Message create domain transfer');
-
+ok(!Encode::is_utf8($n->as_string()),'Unicode : string sent on network is bytes not characters');
 
 ### Parse
 
@@ -99,5 +100,6 @@ is($n->errmsg(),'Command completed successfully','RRP Message empty, errmsg');
 eq_set([$n->entities()],[],'RRP Message parse empty, entities');
 is_deeply($n->options(),{},'RRP Message parse empty, options');
 is($n->is_success(),1,'RRP Message parse empty, is_success');
+
 
 exit 0;

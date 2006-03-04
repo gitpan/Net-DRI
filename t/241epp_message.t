@@ -3,7 +3,9 @@
 use Net::DRI::Protocol::EPP::Message;
 use Net::DRI::Data::Raw;
 
-use Test::More tests=> 27;
+use Encode;
+
+use Test::More tests=> 30;
 
 my $msg;
 my $s;
@@ -11,6 +13,7 @@ my $s;
 ###################################################################################
 
 $msg=Net::DRI::Protocol::EPP::Message->new();
+$msg->ns({ _main => ['urn:ietf:params:xml:ns:epp-1.0','epp-1.0.xsd'] });
 $s=Net::DRI::Data::Raw->new_from_string(<<EOF);
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <epp xmlns="urn:ietf:params:xml:ns:epp-1.0"
@@ -37,6 +40,7 @@ is($msg->cltrid(),'ABC-12345','parse (result,trid) cltrid');
 is($msg->svtrid(),'54321-XYZ','parse (result,trid) svtrid');
 
 $msg=Net::DRI::Protocol::EPP::Message->new();
+$msg->ns({ _main => ['urn:ietf:params:xml:ns:epp-1.0','epp-1.0.xsd'] });
 $s=Net::DRI::Data::Raw->new_from_string(<<EOF);
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <epp xmlns="urn:ietf:params:xml:ns:epp-1.0"
@@ -70,6 +74,8 @@ is_deeply($ri,['<value xmlns:obj="urn:ietf:params:xml:ns:obj"><obj:elem1>2525</o
 #################################################################################
 
 $msg=Net::DRI::Protocol::EPP::Message->new();
+$msg->ns({ _main => ['urn:ietf:params:xml:ns:epp-1.0','epp-1.0.xsd'] });
+
 $msg->command(['check','host:check','xmlns:host="urn:ietf:params:xml:ns:host-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:host-1.0 host-1.0.xsd"']);
 
 $msg->command_body([['host:name','ns1.example.com'],['host:name','ns2.example.com'],['host:name','ns3.example.com']]);
@@ -100,6 +106,7 @@ EOF
 is($msg->as_string(),_n($s),'build host check [RFC 3732 §3.1.1]');
 
 $msg=Net::DRI::Protocol::EPP::Message->new();
+$msg->ns({ _main => ['urn:ietf:params:xml:ns:epp-1.0','epp-1.0.xsd'] });
 $s=Net::DRI::Data::Raw->new_from_string(<<EOF);
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <epp xmlns="urn:ietf:params:xml:ns:epp-1.0"
@@ -163,6 +170,7 @@ is($o,undef,'parse host:chkData 15');
 ##############################################################################
 
 $msg=Net::DRI::Protocol::EPP::Message->new();
+$msg->ns({ _main => ['urn:ietf:params:xml:ns:epp-1.0','epp-1.0.xsd'] });
 $msg->command(['info','host:info','xmlns:host="urn:ietf:params:xml:ns:host-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:host-1.0 host-1.0.xsd"']);
 $msg->command_body([['host:name','ns1.example.com']]);
 $msg->cltrid('ABC-12345');
@@ -193,6 +201,7 @@ is($msg->as_string(),_n($s),'build host info [RFC 3732 §3.1.2]');
 ##############################################################################
 
 $msg=Net::DRI::Protocol::EPP::Message->new();
+$msg->ns({ _main => ['urn:ietf:params:xml:ns:epp-1.0','epp-1.0.xsd'] });
 $msg->command(['create','host:create','xmlns:host="urn:ietf:params:xml:ns:host-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:host-1.0 host-1.0.xsd"']);
 $msg->command_body([['host:name','ns1.example.com'],['host:addr','192.0.2.2',{ip=>'v4'}],['host:addr','192.0.2.29',{ip=>'v4'}],['host:addr','1080:0:0:0:8:800:200C:417A',{ip=>'v6'}]]);
 $msg->cltrid('ABC-12345');
@@ -226,6 +235,7 @@ is($msg->as_string(),_n($s),'build host create [RFC 3732 §3.2.1]');
 ##############################################################################
 
 $msg=Net::DRI::Protocol::EPP::Message->new();
+$msg->ns({ _main => ['urn:ietf:params:xml:ns:epp-1.0','epp-1.0.xsd'] });
 $msg->command(['delete','host:delete','xmlns:host="urn:ietf:params:xml:ns:host-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:host-1.0 host-1.0.xsd"']);
 $msg->command_body([['host:name','ns1.example.com']]);
 $msg->cltrid('ABC-12345');
@@ -256,6 +266,7 @@ is($msg->as_string(),_n($s),'build host delete [RFC 3732 §3.2.2]');
 ##############################################################################
 
 $msg=Net::DRI::Protocol::EPP::Message->new();
+$msg->ns({ _main => ['urn:ietf:params:xml:ns:epp-1.0','epp-1.0.xsd'] });
 $msg->command(['update','host:update','xmlns:host="urn:ietf:params:xml:ns:host-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:host-1.0 host-1.0.xsd"']);
 $msg->command_body([['host:name','ns1.example.com'],['host:add',['host:addr','192.0.2.22',{ip=>'v4'}],['host:status',undef,{s=>'clientUpdateProhibited'}]],['host:rem',['host:addr','1080:0:0:0:8:800:200C:417A',{ip=>'v6'}]],['host:chg',['host:name','ns2.example.com']]]);
 $msg->cltrid('ABC-12345');
@@ -293,6 +304,43 @@ EOF
 
 is($msg->as_string(),_n($s),'build host update [RFC 3732 §3.2.5]');
 
+
+
+$msg=Net::DRI::Protocol::EPP::Message->new();
+$msg->ns({ _main => ['urn:ietf:params:xml:ns:epp-1.0','epp-1.0.xsd'] });
+$msg->command(['check','host:check','xmlns:host="urn:ietf:params:xml:ns:host-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:host-1.0 host-1.0.xsd"']);
+
+$msg->command_body([['host:name','ns1.example.com'],['host:name','ns2.example.com'],['host:name','ns3.example.com']]);
+$msg->cltrid('ABC-12345');
+
+$s=<<EOF;
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<epp xmlns="urn:ietf:params:xml:ns:epp-1.0"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:schemaLocation="urn:ietf:params:xml:ns:epp-1.0
+     epp-1.0.xsd">
+  <command>
+    <check>
+      <host:check
+       xmlns:host="urn:ietf:params:xml:ns:host-1.0"
+       xsi:schemaLocation="urn:ietf:params:xml:ns:host-1.0
+       host-1.0.xsd">
+        <host:name>ns1.example.com</host:name>
+        <host:name>ns2.example.com</host:name>
+        <host:name>ns3.example.com</host:name>
+      </host:check>
+    </check>
+    <clTRID>ABC-12345</clTRID>
+  </command>
+</epp>
+EOF
+
+my $m=$msg->as_string('tcp');
+ok(!Encode::is_utf8($m),'Unicode : XML string sent on network is bytes not characters');
+my $l=unpack('N',substr($m,0,4));
+$m=substr($m,4);
+is($l,4+length(_n($s)),'Unicode : XML string length');
+is($m,_n($s),'Unicode : string is ok after removing length');
 
 exit 0;
 

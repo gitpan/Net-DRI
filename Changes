@@ -1,3 +1,23 @@
+0.21 2006-03-04
+
++ Support for .SE (based on EPP) thanks to Elias Sidenbladh and the NIC SE team
++ Support for .PL (based on EPP) except the Future object (interoperability with registry not tested)
++ Data/Contact,Protocol/EPP/Core/Contact : we now handle both internationalized and localized data,
+  for registries handling both. Changes are backwards compatible with previous version, but make
+  sure to test on your systems before installing in production.
++ Protocol/ResultStatus : new print_full() method to have all details from registry
++ Data/Hosts : new set() method
++ Transport : we keep time of last use (idea from Brian), with method time_used()
+= Transport/Socket : if sending fails, and retry > 1, we try to reconnect ; this is a crude way to handle registry timeouts
+= local_object() enables you to create any kind of local objects, including hosts, contacts, contactsets,
+  changes, etc... without having to load and directly call Net::DRI::Data::Hosts,Contact,ContactSet,Changes
+  Please see the modified t/606eurid_epp.t for examples
+= better error debugging in new_profile() when loading Transport and Protocol classes
+= Transport/Socket : do not use IO::Socket::SSL::context_init anymore, it is mark deprecated in module
+- Protocol/EPP/Message : correct creation of <hello/> commands (bug found by Elias Sidenbladh)
+- Protocol/{EPP,RRP}/Message : correct encoding of outgoing messages with Encode::encode()
+- eg/eurid_epp.pl : the filehandle used for logging must be closed after $dri->end() not before
+
 0.20 2005-12-02
 + EURid/Sunrise : we automatically reconnect after each apply command (successful or not), when needed,
                   since the connection is dropped by registry (bug reported by Lucas Vossberg)
@@ -5,7 +25,6 @@
                      better error message for SSL problems (suggested by Peter van Dijk)
 - Protocol/EPP/Extensions/EURid/Sunrise : various bugfixes for documentaryevidence=thirdparty (found by Yves Cartenstadt)
 = EURid : the sample provided (eurid_epp.pl) dumps all exchanges to a file
-
 
 0.19 2005-11-14
 + Updates for conformity with latest EURid specifications :

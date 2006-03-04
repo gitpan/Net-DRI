@@ -2,10 +2,6 @@
 
 use Net::DRI;
 use Net::DRI::Data::Raw;
-use Net::DRI::Data::Hosts;
-use Net::DRI::Data::ContactSet;
-use Net::DRI::Data::Contact;
-use Net::DRI::Data::Changes;
 
 use Test::More tests => 185;
 
@@ -123,13 +119,13 @@ is("".$d,'2002-09-08T22:00:00','domain_transfer_query get_info(exDate) value');
 
 
 $R2=$E1.'<response>'.r().'<resData><domain:creData xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example202.com</domain:name><domain:crDate>1999-04-03T22:00:00.0Z</domain:crDate><domain:exDate>2001-04-03T22:00:00.0Z</domain:exDate></domain:creData></resData>'.$TRID.'</response>'.$E2;
-my $cs=Net::DRI::Data::ContactSet->new();
-my $c1=Net::DRI::Data::Contact->new->srid('jd1234');
-my $c2=Net::DRI::Data::Contact->new->srid('sh8013');
+my $cs=$dri->local_object('contactset')->new();
+my $c1=$dri->local_object('contact')->srid('jd1234');
+my $c2=$dri->local_object('contact')->srid('sh8013');
 $cs->set($c1,'registrant');
 $cs->set($c2,'admin');
 $cs->set($c2,'tech');
-$rc=$dri->domain_create_only('example202.com',{duration=>DateTime::Duration->new(years=>2),ns=>Net::DRI::Data::Hosts->new_set(['ns1.example.com'],['ns1.example.net']),contact=>$cs,auth=>{pw=>'2fooBAR'}});
+$rc=$dri->domain_create_only('example202.com',{duration=>DateTime::Duration->new(years=>2),ns=>$dri->local_object('hosts')->set(['ns1.example.com'],['ns1.example.net']),contact=>$cs,auth=>{pw=>'2fooBAR'}});
 is($R1,$E1.'<command><create><domain:create xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example202.com</domain:name><domain:period unit="y">2</domain:period><domain:ns><domain:hostObj>ns1.example.com</domain:hostObj><domain:hostObj>ns1.example.net</domain:hostObj></domain:ns><domain:registrant>jd1234</domain:registrant><domain:contact type="admin">sh8013</domain:contact><domain:contact type="tech">sh8013</domain:contact><domain:authInfo><domain:pw>2fooBAR</domain:pw></domain:authInfo></domain:create></create><clTRID>ABC-12345</clTRID></command>'.$E2,'domain_create_only build');
 is($dri->get_info('exist'),1,'domain_create_only get_info(exist)');
 $d=$dri->get_info('crDate');
@@ -178,18 +174,18 @@ is("".$d,'2002-09-08T22:00:00','domain_transfer_start get_info(exDate) value');
 
 
 $R2='';
-$toc=Net::DRI::Data::Changes->new();
-$toc->add('ns',Net::DRI::Data::Hosts->new('ns2.example.com'));
-$cs=Net::DRI::Data::ContactSet->new();
-$cs->set(Net::DRI::Data::Contact->new->srid('mak21'),'tech');
+$toc=$dri->local_object('changes')->new();
+$toc->add('ns',$dri->local_object('hosts')->set('ns2.example.com'));
+$cs=$dri->local_object('contactset');
+$cs->set($dri->local_object('contact')->srid('mak21'),'tech');
 $toc->add('contact',$cs);
-$toc->add('status',$dri->create_status()->no('publish','Payment overdue.'));
-$toc->del('ns',Net::DRI::Data::Hosts->new('ns1.example.com'));
-$cs=Net::DRI::Data::ContactSet->new();
-$cs->set(Net::DRI::Data::Contact->new->srid('sh8013'),'tech');
+$toc->add('status',$dri->local_object('status')->no('publish','Payment overdue.'));
+$toc->del('ns',$dri->local_object('hosts')->set('ns1.example.com'));
+$cs=$dri->local_object('contactset');
+$cs->set($dri->local_object('contact')->srid('sh8013'),'tech');
 $toc->del('contact',$cs);
-$toc->del('status',$dri->create_status()->no('update'));
-$toc->set('registrant',Net::DRI::Data::Contact->new->srid('sh8013'));
+$toc->del('status',$dri->local_object('status')->no('update'));
+$toc->set('registrant',$dri->local_object('contact')->srid('sh8013'));
 $toc->set('auth',{pw=>'2BARfoo'});
 $rc=$dri->domain_update('example206.com',$toc);
 is($R1,$E1.'<command><update><domain:update xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example206.com</domain:name><domain:add><domain:ns><domain:hostObj>ns2.example.com</domain:hostObj></domain:ns><domain:contact type="tech">mak21</domain:contact><domain:status lang="en" s="clientHold">Payment overdue.</domain:status></domain:add><domain:rem><domain:ns><domain:hostObj>ns1.example.com</domain:hostObj></domain:ns><domain:contact type="tech">sh8013</domain:contact><domain:status s="clientUpdateProhibited"/></domain:rem><domain:chg><domain:registrant>sh8013</domain:registrant><domain:authInfo><domain:pw>2BARfoo</domain:pw></domain:authInfo></domain:chg></domain:update></update><clTRID>ABC-12345</clTRID></command>'.$E2,'domain_update build');
@@ -247,7 +243,7 @@ is($d.'','2000-04-08T09:00:00','host_info get_info(trDate) value');
 
 
 $R2=$E1.'<response>'.r().'<resData><host:creData xmlns:host="urn:ietf:params:xml:ns:host-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:host-1.0 host-1.0.xsd"><host:name>ns101.example1.com</host:name><host:crDate>1999-04-03T22:00:00.0Z</host:crDate></host:creData></resData>'.$TRID.'</response>'.$E2;
-$rc=$dri->host_create(Net::DRI::Data::Hosts->new('ns101.example1.com',['193.0.2.2','193.0.2.29'],['2000:0:0:0:8:800:200C:417A']));
+$rc=$dri->host_create($dri->local_object('hosts')->add('ns101.example1.com',['193.0.2.2','193.0.2.29'],['2000:0:0:0:8:800:200C:417A']));
 is($R1,$E1.'<command><create><host:create xmlns:host="urn:ietf:params:xml:ns:host-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:host-1.0 host-1.0.xsd"><host:name>ns101.example1.com</host:name><host:addr ip="v4">193.0.2.2</host:addr><host:addr ip="v4">193.0.2.29</host:addr><host:addr ip="v6">2000:0:0:0:8:800:200C:417A</host:addr></host:create></create><clTRID>ABC-12345</clTRID></command>'.$E2,'host_create build');
 $d=$dri->get_info('crDate');
 isa_ok($d,'DateTime','host_create get_info(crDate)');
@@ -261,10 +257,10 @@ is($rc->is_success(),1,'host_delete is_success');
 
 
 $R2=$E1.'<response>'.r().$TRID.'</response>'.$E2;
-my $toc=Net::DRI::Data::Changes->new();
-$toc->add('ip',Net::DRI::Data::Hosts->new('ns1.example1.com',['193.0.2.22'],[]));
-$toc->add('status',$dri->create_status()->no('update'));
-$toc->del('ip',Net::DRI::Data::Hosts->new('ns1.example1.com',[],['2000:0:0:0:8:800:200C:417A']));
+my $toc=$dri->local_object('changes');
+$toc->add('ip',$dri->local_object('hosts')->add('ns1.example1.com',['193.0.2.22'],[]));
+$toc->add('status',$dri->local_object('status')->no('update'));
+$toc->del('ip',$dri->local_object('hosts')->add('ns1.example1.com',[],['2000:0:0:0:8:800:200C:417A']));
 $toc->set('name','ns104.example2.com');
 $rc=$dri->host_update('ns103.example1.com',$toc);
 is($R1,$E1.'<command><update><host:update xmlns:host="urn:ietf:params:xml:ns:host-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:host-1.0 host-1.0.xsd"><host:name>ns103.example1.com</host:name><host:add><host:addr ip="v4">193.0.2.22</host:addr><host:status s="clientUpdateProhibited"/></host:add><host:rem><host:addr ip="v6">2000:0:0:0:8:800:200C:417A</host:addr></host:rem><host:chg><host:name>ns104.example2.com</host:name></host:chg></host:update></update><clTRID>ABC-12345</clTRID></command>'.$E2,'host_update build');
@@ -275,7 +271,7 @@ is($rc->is_success(),1,'host_update is_success');
 
 my $co;
 $R2=$E1.'<response>'.r().'<resData><contact:chkData xmlns:contact="urn:ietf:params:xml:ns:contact-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:contact-1.0 contact-1.0.xsd"><contact:cd><contact:id avail="1">sh8000</contact:id></contact:cd></contact:chkData></resData>'.$TRID.'</response>'.$E2;
-$co=Net::DRI::Data::Contact->new()->srid('sh8000'); #->auth({pw=>'2fooBAR'});
+$co=$dri->local_object('contact')->srid('sh8000'); #->auth({pw=>'2fooBAR'});
 $rc=$dri->contact_check($co);
 is($R1,$E1.'<command><check><contact:check xmlns:contact="urn:ietf:params:xml:ns:contact-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:contact-1.0 contact-1.0.xsd"><contact:id>sh8000</contact:id></contact:check></check><clTRID>ABC-12345</clTRID></command>'.$E2,'contact_check build'); 
 is($rc->is_success(),1,'contact_check is_success');
@@ -284,7 +280,7 @@ is($dri->get_info('exist','contact','sh8000'),0,'contact_check get_info(exist) f
 
 
 $R2=$E1.'<response>'.r().'<resData><contact:chkData xmlns:contact="urn:ietf:params:xml:ns:contact-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:contact-1.0 contact-1.0.xsd"><contact:cd><contact:id avail="1">sh8001</contact:id></contact:cd><contact:cd><contact:id avail="0">sh8002</contact:id><contact:reason>In use</contact:reason></contact:cd><contact:cd><contact:id avail="1">sh8003</contact:id></contact:cd></contact:chkData></resData>'.$TRID.'</response>'.$E2;
-$rc=$dri->contact_check_multi(map { Net::DRI::Data::Contact->new()->srid($_) } ('sh8001','sh8002','sh8003'));
+$rc=$dri->contact_check_multi(map { $dri->local_object('contact')->srid($_) } ('sh8001','sh8002','sh8003'));
 is($R1,$E1.'<command><check><contact:check xmlns:contact="urn:ietf:params:xml:ns:contact-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:contact-1.0 contact-1.0.xsd"><contact:id>sh8001</contact:id><contact:id>sh8002</contact:id><contact:id>sh8003</contact:id></contact:check></check><clTRID>ABC-12345</clTRID></command>'.$E2,'contact_check_multi build');
 is($rc->is_success(),1,'contact_check_multi is_success');
 is($dri->get_info('exist','contact','sh8001'),0,'contact_check_multi get_info(exist) 1/3');
@@ -294,7 +290,7 @@ is($dri->get_info('exist','contact','sh8003'),0,'contact_check_multi get_info(ex
 
 
 $R2=$E1.'<response>'.r().'<resData><contact:infData xmlns:contact="urn:ietf:params:xml:ns:contact-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:contact-1.0 contact-1.0.xsd"><contact:id>sh8013</contact:id><contact:roid>SH8013-REP</contact:roid><contact:status s="linked"/><contact:status s="clientDeleteProhibited"/><contact:postalInfo type="loc"><contact:name>John Doe</contact:name><contact:org>Example Inc.</contact:org><contact:addr><contact:street>123 Example Dr.</contact:street><contact:street>Suite 100</contact:street><contact:city>Dulles</contact:city><contact:sp>VA</contact:sp><contact:pc>20166-6503</contact:pc><contact:cc>US</contact:cc></contact:addr></contact:postalInfo><contact:voice x="1234">+1.7035555555</contact:voice><contact:fax>+1.7035555556</contact:fax><contact:email>jdoe@example.com</contact:email><contact:clID>ClientY</contact:clID><contact:crID>ClientX</contact:crID><contact:crDate>1999-04-03T22:00:00.0Z</contact:crDate><contact:upID>ClientX</contact:upID><contact:upDate>1999-12-03T09:00:00.0Z</contact:upDate><contact:trDate>2000-04-08T09:00:00.0Z</contact:trDate><contact:authInfo><contact:pw>2fooBAR</contact:pw></contact:authInfo><contact:disclose flag="0"><contact:voice/><contact:email/></contact:disclose></contact:infData></resData>'.$TRID.'</response>'.$E2;
-$co=Net::DRI::Data::Contact->new()->srid('sh8013')->auth({pw=>'2fooBAR'});
+$co=$dri->local_object('contact')->srid('sh8013')->auth({pw=>'2fooBAR'});
 $rc=$dri->contact_info($co);
 is($R1,$E1.'<command><info><contact:info xmlns:contact="urn:ietf:params:xml:ns:contact-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:contact-1.0 contact-1.0.xsd"><contact:id>sh8013</contact:id><contact:authInfo><contact:pw>2fooBAR</contact:pw></contact:authInfo></contact:info></info><clTRID>ABC-12345</clTRID></command>'.$E2,'contact_info build');
 is($rc->is_success(),1,'contact_info is_success');
@@ -334,7 +330,7 @@ is_deeply($co->disclose(),{voice=>0,email=>0},'contact_info get_info(self) discl
 
 
 $R2=$E1.'<response>'.r().'<resData><contact:trnData xmlns:contact="urn:ietf:params:xml:ns:contact-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:contact-1.0 contact-1.0.xsd"><contact:id>sh8013</contact:id><contact:trStatus>pending</contact:trStatus><contact:reID>ClientX</contact:reID><contact:reDate>2000-06-06T22:00:00.0Z</contact:reDate><contact:acID>ClientY</contact:acID><contact:acDate>2000-06-11T22:00:00.0Z</contact:acDate></contact:trnData></resData>'.$TRID.'</response>'.$E2;
-$co=Net::DRI::Data::Contact->new()->srid('sh8014')->auth({pw=>'2fooBAR'});
+$co=$dri->local_object('contact')->srid('sh8014')->auth({pw=>'2fooBAR'});
 $rc=$dri->contact_transfer_query($co);
 is($R1,$E1.'<command><transfer op="query"><contact:transfer xmlns:contact="urn:ietf:params:xml:ns:contact-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:contact-1.0 contact-1.0.xsd"><contact:id>sh8014</contact:id><contact:authInfo><contact:pw>2fooBAR</contact:pw></contact:authInfo></contact:transfer></transfer><clTRID>ABC-12345</clTRID></command>'.$E2,'contact_transfer_query build');
 is($rc->is_success(),1,'contact_transfer_query is_success');
@@ -350,7 +346,7 @@ is("".$d,'2000-06-11T22:00:00','contact_transfer_query get_info(acDate) value');
 
 
 $R2=$E1.'<response>'.r().'<resData><contact:creData xmlns:contact="urn:ietf:params:xml:ns:contact-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:contact-1.0 contact-1.0.xsd"><contact:id>sh8015</contact:id><contact:crDate>1999-04-03T22:00:00.0Z</contact:crDate></contact:creData></resData>'.$TRID.'</response>'.$E2;
-$co=Net::DRI::Data::Contact->new()->srid('sh8015');
+$co=$dri->local_object('contact')->srid('sh8015');
 $co->name('John Doe');
 $co->org('Example Inc.');
 $co->street(['123 Example Dr.','Suite 100']);
@@ -369,13 +365,13 @@ is($rc->is_success(),1,'contact_create is_success');
 
 
 $R2='';
-$co=Net::DRI::Data::Contact->new()->srid('sh8016')->auth({pw=>'2fooBAR'});
+$co=$dri->local_object('contact')->srid('sh8016')->auth({pw=>'2fooBAR'});
 $rc=$dri->contact_delete($co);
 is($R1,$E1.'<command><delete><contact:delete xmlns:contact="urn:ietf:params:xml:ns:contact-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:contact-1.0 contact-1.0.xsd"><contact:id>sh8016</contact:id></contact:delete></delete><clTRID>ABC-12345</clTRID></command>'.$E2,'contact_delete build');
 is($rc->is_success(),1,'contact_delete is_success');
 
 
-$co=Net::DRI::Data::Contact->new()->srid('sh8017')->auth({pw=>'2fooBAR'});
+$co=$dri->local_object('contact')->srid('sh8017')->auth({pw=>'2fooBAR'});
 $R2=$E1.'<response>'.r().'<resData><contact:trnData xmlns:contact="urn:ietf:params:xml:ns:contact-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:contact-1.0 contact-1.0.xsd"><contact:id>sh8017</contact:id><contact:trStatus>pending</contact:trStatus><contact:reID>ClientX</contact:reID><contact:reDate>2000-06-08T22:00:00.0Z</contact:reDate><contact:acID>ClientY</contact:acID><contact:acDate>2000-06-13T22:00:00.0Z</contact:acDate></contact:trnData></resData>'.$TRID.'</response>'.$E2;
 $rc=$dri->contact_transfer_start($co);
 is($R1,$E1.'<command><transfer op="request"><contact:transfer xmlns:contact="urn:ietf:params:xml:ns:contact-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:contact-1.0 contact-1.0.xsd"><contact:id>sh8017</contact:id><contact:authInfo><contact:pw>2fooBAR</contact:pw></contact:authInfo></contact:transfer></transfer><clTRID>ABC-12345</clTRID></command>'.$E2,'contact_transfer_start build');
@@ -392,10 +388,10 @@ is("".$d,'2000-06-13T22:00:00','contact_transfer_start get_info(acDate) value');
 
 
 $R2='';
-$co=Net::DRI::Data::Contact->new()->srid('sh8018')->auth({pw=>'2fooBAR'});
-$toc=Net::DRI::Data::Changes->new();
-$toc->add('status',$dri->create_status->no('delete'));
-my $co2=Net::DRI::Data::Contact->new();
+$co=$dri->local_object('contact')->srid('sh8018')->auth({pw=>'2fooBAR'});
+$toc=$dri->local_object('changes');
+$toc->add('status',$dri->local_object('status')->no('delete'));
+my $co2=$dri->local_object('contact');
 $co2->org('');
 $co2->street(['124 Example Dr.','Suite 200']);
 $co2->city('Dulles');
@@ -426,7 +422,7 @@ is($rc->is_success(),1,'session logout is_success');
 
 $R2=$E1.'<greeting><svID>Example EPP server epp.example.com</svID><svDate>2000-06-08T22:00:00.0Z</svDate><svcMenu><version>1.0</version><lang>en</lang><lang>fr</lang><objURI>urn:ietf:params:xml:ns:obj1</objURI><objURI>urn:ietf:params:xml:ns:obj2</objURI><objURI>urn:ietf:params:xml:ns:obj3</objURI><svcExtension><extURI>http://custom/obj1ext-1.0</extURI></svcExtension></svcMenu><dcp><access><all/></access><statement><purpose><admin/><prov/></purpose><recipient><ours/><public/></recipient><retention><stated/></retention></statement></dcp></greeting>'.$E2;
 $rc=$dri->process('session','connect',[]);
-is($R1,$E1.'<command><hello/><clTRID>ABC-12345</clTRID></command>'.$E2,'session connect build');
+is($R1,$E1.'<hello/>'.$E2,'session connect build (hello command)');
 is($rc->is_success(),1,'session connect is_success');
 is_deeply($dri->protocol->server_greeting(),{svID=>'Example EPP server epp.example.com',svDate=>'2000-06-08T22:00:00.0Z',version=>['1.0'],lang=>['en','fr'],svcext=>['http://custom/obj1ext-1.0'],svcs=>['urn:ietf:params:xml:ns:obj1','urn:ietf:params:xml:ns:obj2','urn:ietf:params:xml:ns:obj3']},'session connect server_greeting parse');
 

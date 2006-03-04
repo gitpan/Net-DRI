@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Encapsulating result status, standardized on EPP codes
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -22,7 +22,7 @@ use strict;
 use base qw(Class::Accessor::Chained::Fast);
 __PACKAGE__->mk_ro_accessors(qw(is_success native_code code message lang));
 
-our $VERSION=do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.15 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -32,40 +32,43 @@ Net::DRI::Protocol::ResultStatus - Encapsulate details of an operation result wi
 
 =head1 DESCRIPTION
 
-You have the following methods available:
+An object of this class represents all details of an operation result as given back from the registry,
+with standardization on EPP as much as possible, for error codes and list of fields available.
 
-=over
+=head1 METHODS
 
-=item is_success
+=head2 is_success()
 
 returns 1 if the operation was a success
 
-=item code
+=head2 code()
 
 returns the EPP code corresponding to the native code (registry dependent)
 for this operation (see RFC for full list or source of this file)
 
-=item native_code
+=head2 native_code()
 
 gives the true status code we got back from registry
 
-=item message
+=head2 message()
 
 gives the message attached to the the status code we got back from registry
 
-=item lang
+=head2 lang()
 
 gives the language in which the message above is written
 
-=item info
+=head2 info()
 
 gives back an array with additionnal data from registry, especially in case of errors. If no data, an empty array is returned
 
-=item print
+=head2 print()
 
-will print all details (except the info part) as a single line
+print all details (except the info part) as a single line
 
-=back
+=head2 print_full()
+
+print all details (including the infor part)
 
 =head1 SUPPORT
 
@@ -85,7 +88,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -155,6 +158,14 @@ sub print
 {
  my $self=shift;
  printf("%s (%s/%s) %s",$self->message(),$self->code(),$self->native_code(),$self->is_success()? 'SUCCESS' : 'ERROR' );
+}
+
+sub print_full
+{
+ my $self=shift;
+ $self->print();
+ my @i=$self->info();
+ print "\n".join("\n",@i) if @i;
 }
 
 ###################################################################################################################

@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-use Test::More tests => 59;
+use Test::More tests => 68;
 
 BEGIN { 
 use_ok('Net::DRI');
@@ -17,6 +17,8 @@ use_ok('Net::DRI::DRD::AFNIC');
 use_ok('Net::DRI::DRD::Gandi');
 use_ok('Net::DRI::DRD::WS');
 use_ok('Net::DRI::DRD::EURid');
+use_ok('Net::DRI::DRD::SE');
+use_ok('Net::DRI::DRD::PL');
 use_ok('Net::DRI::Data::Raw');
 use_ok('Net::DRI::Data::Hosts');
 use_ok('Net::DRI::Data::Changes');
@@ -25,6 +27,8 @@ use_ok('Net::DRI::Data::RegistryObject');
 use_ok('Net::DRI::Data::Contact');
 use_ok('Net::DRI::Data::ContactSet');
 use_ok('Net::DRI::Data::Contact::EURid');
+use_ok('Net::DRI::Data::Contact::SE');
+use_ok('Net::DRI::Data::Contact::PL');
 use_ok('Net::DRI::Transport::Socket');
 use_ok('Net::DRI::Transport::Dummy');
 use_ok('Net::DRI::Transport::SOAP');
@@ -62,6 +66,11 @@ use_ok('Net::DRI::Protocol::EPP::Extensions::EURid::Sunrise');
 use_ok('Net::DRI::Protocol::EPP::Extensions::EURid::Domain');
 use_ok('Net::DRI::Protocol::EPP::Extensions::EURid::Contact');
 use_ok('Net::DRI::Protocol::EPP::Extensions::EURid::Message');
+use_ok('Net::DRI::Protocol::EPP::Extensions::SE');
+use_ok('Net::DRI::Protocol::EPP::Extensions::SE::Extensions');
+use_ok('Net::DRI::Protocol::EPP::Extensions::PL');
+use_ok('Net::DRI::Protocol::EPP::Extensions::PL::Domain');
+use_ok('Net::DRI::Protocol::EPP::Extensions::PL::Contact');
 }
 
 exit 0;

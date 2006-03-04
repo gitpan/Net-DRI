@@ -24,7 +24,7 @@ __PACKAGE__->mk_accessors(qw(type vat lang));
 use Net::DRI::DRD::EURid;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -37,23 +37,21 @@ Net::DRI::Data::Contact::EURid - Handle EURid contact data for Net::DRI
 This subclass of Net::DRI::Data::Contact adds accessors and validation for
 EURid specific data.
 
+=head1 METHODS
+
 The following accessors/mutators can be called in chain, as they all return the object itself.
 
-=over
+=head2 type() 
 
-=item *
+type of contact : billing, tech, registrant or onsite (mandatory)
 
-C<type()> type of contact : billing, tech, registrant or onsite (mandatory)
+=head2 vat()
 
-=item *
+vat number of contact
 
-C<vat()> vat number of contact
+=head2 lang()
 
-=item *
-
-C<lang()> language of contact, must be in Europe (mandatory)
-
-=back
+language of contact, must be in Europe (mandatory)
 
 =head1 SUPPORT
 

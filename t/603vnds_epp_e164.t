@@ -2,9 +2,6 @@
 
 use Net::DRI;
 use Net::DRI::Data::Raw;
-use Net::DRI::Data::Changes;
-use Net::DRI::Data::ContactSet;
-use Net::DRI::Data::Contact;
 
 use Test::More tests => 4;
 
@@ -54,17 +51,17 @@ $e=$dri->get_info('e164');
 is_deeply($e,[{order=>10,pref=>100,flags=>'u',svc=>'E2U+sip',regex=>'"!^.*$!sip:info@example.com!"'},{order=>10,pref=>102,flags=>'u',svc=>'E2U+msg',regex=>'"!^.*$!mailto:info@example.com!"'}],'domain_info get_info(e164) +E164');
 
 $R2='';
-my $cs=Net::DRI::Data::ContactSet->new();
-my $c1=Net::DRI::Data::Contact->new->srid('jd1234');
-my $c2=Net::DRI::Data::Contact->new->srid('sh8013');
+my $cs=$dri->local_object('contactset');
+my $c1=$dri->local_object('contact')->srid('jd1234');
+my $c2=$dri->local_object('contact')->srid('sh8013');
 $cs->set($c1,'registrant');
 $cs->set($c2,'admin');
 $cs->set($c2,'tech');
-$rc=$dri->domain_create_only('3.8.0.0.6.9.2.3.6.1.4.4.e164.arpa',{duration=>DateTime::Duration->new(years=>2),ns=>Net::DRI::Data::Hosts->new_set(['ns1.example.com'],['ns2.example.com']),contact=>$cs,auth=>{pw=>'2fooBAR'},e164=>[{order=>10,pref=>100,flags=>'u',svc=>'E2U+sip',regex=>'"!^.*$!sip:info@example.com!"'},{order=>10,pref=>102,flags=>'u',svc=>'E2U+msg',regex=>'"!^.*$!mailto:info@example.com!"'}]});
+$rc=$dri->domain_create_only('3.8.0.0.6.9.2.3.6.1.4.4.e164.arpa',{duration=>DateTime::Duration->new(years=>2),ns=>$dri->local_object('hosts')->set(['ns1.example.com'],['ns2.example.com']),contact=>$cs,auth=>{pw=>'2fooBAR'},e164=>[{order=>10,pref=>100,flags=>'u',svc=>'E2U+sip',regex=>'"!^.*$!sip:info@example.com!"'},{order=>10,pref=>102,flags=>'u',svc=>'E2U+msg',regex=>'"!^.*$!mailto:info@example.com!"'}]});
 is($R1,$E1.'<command><create><domain:create xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>3.8.0.0.6.9.2.3.6.1.4.4.e164.arpa</domain:name><domain:period unit="y">2</domain:period><domain:ns><domain:hostObj>ns1.example.com</domain:hostObj><domain:hostObj>ns2.example.com</domain:hostObj></domain:ns><domain:registrant>jd1234</domain:registrant><domain:contact type="admin">sh8013</domain:contact><domain:contact type="tech">sh8013</domain:contact><domain:authInfo><domain:pw>2fooBAR</domain:pw></domain:authInfo></domain:create></create><extension><e164:create xmlns:e164="urn:ietf:params:xml:ns:e164epp-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:e164epp-1.0 e164epp-1.0.xsd"><e164:naptr><e164:order>10</e164:order><e164:pref>100</e164:pref><e164:flags>u</e164:flags><e164:svc>E2U+sip</e164:svc><e164:regex>"!^.*$!sip:info@example.com!"</e164:regex></e164:naptr><e164:naptr><e164:order>10</e164:order><e164:pref>102</e164:pref><e164:flags>u</e164:flags><e164:svc>E2U+msg</e164:svc><e164:regex>"!^.*$!mailto:info@example.com!"</e164:regex></e164:naptr></e164:create></extension><clTRID>ABC-12345</clTRID></command>'.$E2,'domain_create build +E164');
 
 $R2='';
-$toc=Net::DRI::Data::Changes->new();
+$toc=$dri->local_object('changes');
 $toc->del('e164',[{order=>10,pref=>102,flags=>'u',svc=>'E2U+msg',regex=>'"!^.*$!mailto:info@example.com!"'}]);
 $rc=$dri->domain_update('3.8.0.0.6.9.2.3.6.1.4.4.e164.arpa',$toc);
 is($R1,$E1.'<command><update><domain:update xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>3.8.0.0.6.9.2.3.6.1.4.4.e164.arpa</domain:name></domain:update></update><extension><e164:update xmlns:e164="urn:ietf:params:xml:ns:e164epp-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:e164epp-1.0 e164epp-1.0.xsd"><e164:rem><e164:naptr><e164:order>10</e164:order><e164:pref>102</e164:pref><e164:flags>u</e164:flags><e164:svc>E2U+msg</e164:svc><e164:regex>"!^.*$!mailto:info@example.com!"</e164:regex></e164:naptr></e164:rem></e164:update></extension><clTRID>ABC-12345</clTRID></command>'.$E2,'domain_update build +E164');

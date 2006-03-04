@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Implements a list of host (names+ip) with order preserved
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -23,7 +23,7 @@ __PACKAGE__->mk_accessors(qw(name loid));
 
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -57,11 +57,59 @@ Net::DRI::Data::Hosts - Handle ordered list of nameservers (name, IPv4 addresses
 Order of nameservers is preserved. Order of IP addresses is preserved, but no duplicate IP is allowed.
 
 If you try to add a nameserver that is already in the list, the IP
-adresses provided will be added to the existing IP addresses (without duplicates)
+addresses provided will be added to the existing IP addresses (without duplicates)
 
 Hostnames are verified before being used with Net::DRI::Util::is_hostname().
 
 IP addresses are verified with Net::DRI::Util::is_ipv4() and Net::DRI::Util::is_ipv6().
+
+=head1 METHODS
+
+=head2 new(...)
+
+creates a new instance ; if parameters are given, add() is called with them all at once
+
+=head2 new_set(...)
+
+creates a new instance ; if parameters are given, add() is called once for each parameter
+
+=head2 set(...)
+
+clears the current list of nameservers, and call add() once for each parameter passed
+
+=head2 add(name,[ipv4],[ipv6])
+
+adds a new nameserver with the given name and lists of IPv4 and IPv6 addresses
+
+=head2 name()
+
+name of this object (for example for registries having the notion of host groups) ;
+this has nothing to do with the name(s) of the nameservers inside this object
+
+=head2 loid()
+
+local id of this object
+
+=head2 get_names(limit)
+
+returns a list of nameservers' names included in this object ; if limit is provided
+we return only the number of names asked
+
+=head2 count()
+
+returns the number of nameservers currently stored in this object
+
+=head2 is_empty()
+
+returns 0 if this object has nameservers, 1 otherwise
+
+=head2 get_details(pos_or_name)
+
+given an integer (position in the list, we start to count at 1) or a name,
+we return all details as a 3 element array in list context or only the first
+element (the name) in scalar context for the nameserver stored at
+the given position or with the given name ; returns false if nothing found
+at the position/with the name given.
 
 =head1 SUPPORT
 
@@ -81,7 +129,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -112,6 +160,14 @@ sub new
 sub new_set
 {
  my $s=shift->new();
+ foreach (@_) { $s->add($_); }
+ return $s;
+}
+
+sub set
+{
+ my $s=shift;
+ $s->{list}=[];
  foreach (@_) { $s->add($_); }
  return $s;
 }

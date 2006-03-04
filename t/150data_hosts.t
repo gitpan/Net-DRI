@@ -2,7 +2,7 @@
 
 use Net::DRI::Data::Hosts;
 
-use Test::More tests => 20;
+use Test::More tests => 22;
 
 my $d=Net::DRI::Data::Hosts->new();
 isa_ok($d,'Net::DRI::Data::Hosts');
@@ -46,6 +46,11 @@ is_deeply(\@c,['ns.example.foo','ns2.example.foo'],'get_names() after add');
 is_deeply(\@c,['ns.example.foo','ns2.example.foo'],'get_names(2) after add');
 @c=$d->get_names(1);
 is_deeply(\@c,['ns.example.foo'],'get_names(1) after add');
+
+$d->set(['ns.example.foo',['1.2.3.4','1.2.3.5']]);
+is($d->count(),1,'count() after set()');
+@c=$d->get_details(1);
+is_deeply($c[1],['1.2.3.4','1.2.3.5'],'get_details(integer) ip address after set()');
 
 
 TODO: {

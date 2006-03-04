@@ -1,6 +1,6 @@
 ## Domain Registry Interface, TCP/SSL Socket Transport
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -29,7 +29,7 @@ use Net::DRI::Exception;
 use Net::DRI::Util;
 use Net::DRI::Data::Raw;
 
-our $VERSION=do { my @r=(q$Revision: 1.15 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.17 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -100,7 +100,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -160,12 +160,11 @@ sub new
    $s{"SSL_$s"}=$opts{"ssl_$s"};
   }
   $s{SSL_use_cert}=1 if exists($s{SSL_cert_file});
-  
-  $t{ssl_context}=IO::Socket::SSL::context_init(\%s);
-  Net::DRI::Exception->die(1,"transport/socket",6,"Unable to setup ssl context") unless (defined($t{ssl_context}));
 
   ## Library default: ALL:!ADH:RC4+RSA:+HIGH:+MEDIUM:+LOW:+SSLv2:+EXP
-  $t{ssl_cipher_list}=(exists($opts{ssl_cipher_list}))? $opts{ssl_cipher_list} : 'ALL:!ADH:!LOW:+HIGH:+MEDIUM:+SSLv3'; ## 
+  $s{SSL_cipher_list}=(exists($opts{ssl_cipher_list}))? $opts{ssl_cipher_list} : 'ALL:!ADH:!LOW:+HIGH:+MEDIUM:+SSLv3'; ##
+
+  $t{ssl_context}=\%s;
  }
 
  $self->{transport}=\%t;
@@ -194,10 +193,10 @@ sub open_socket
 
  if ($type eq 'ssl')
  {
-  $sock=IO::Socket::SSL->new(PeerAddr => $t->{remote_host},
+  $sock=IO::Socket::SSL->new(%{$t->{ssl_context}},
+                             PeerAddr => $t->{remote_host},
                              PeerPort => $t->{remote_port},
                              Proto    => 'tcp',
-                             SSL_cipher_list => $t->{ssl_cipher_list},
 			     Blocking => 1,
                             );
  }
@@ -263,6 +262,7 @@ sub open_connection
  $self->send_login();
  $self->current_state(1);
  $self->time_open(time());
+ $self->time_used(time());
  $self->{transport}->{exchanges_done}=0;
 }
 
@@ -290,12 +290,14 @@ sub end
  }
 }
 
-##########################################################################################
+####################################################################################################
 
 sub send
 {
  my ($self,$tosend)=@_;
- $self->SUPER::send($tosend,\&_print,sub {});
+ ## We do a very crude error handling : if first send fails, we reset connection.
+ ## Thus if you put retry=>2 when creating this object, the connection will be re-established and the message resent
+ $self->SUPER::send($tosend,\&_print,sub { shift->current_state(0) });
 }
 
 sub _print ## here we are sure open_connection() was called before

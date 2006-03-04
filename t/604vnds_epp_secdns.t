@@ -2,9 +2,6 @@
 
 use Net::DRI;
 use Net::DRI::Data::Raw;
-use Net::DRI::Data::Changes;
-use Net::DRI::Data::ContactSet;
-use Net::DRI::Data::Contact;
 
 use Test::More tests => 10;
 
@@ -52,33 +49,33 @@ $e=$dri->get_info('secdns');
 is_deeply($e,[{keyTag=>'12345',alg=>3,digestType=>1,digest=>'49FD46E6C4B45C55D4AC',maxSigLife=>604800,key_flags=>256,key_protocol=>3,key_alg=>1,key_pubKey=>'AQPJ////4Q=='}],'domain_info get_info(secdns) +SecDNS 2');
 
 $R2='';
-my $cs=Net::DRI::Data::ContactSet->new();
-my $c1=Net::DRI::Data::Contact->new->srid('jd1234');
-my $c2=Net::DRI::Data::Contact->new->srid('sh8013');
+my $cs=$dri->local_object('contactset');
+my $c1=$dri->local_object('contact')->srid('jd1234');
+my $c2=$dri->local_object('contact')->srid('sh8013');
 $cs->set($c1,'registrant');
 $cs->set($c2,'admin');
 $cs->set($c2,'tech');
-$rc=$dri->domain_create_only('example4.com',{duration=>DateTime::Duration->new(years=>2),ns=>Net::DRI::Data::Hosts->new_set(['ns1.example.com'],['ns2.example.com']),contact=>$cs,auth=>{pw=>'2fooBAR'},secdns=>[{keyTag=>'12345',alg=>3,digestType=>1,digest=>'49FD46E6C4B45C55D4AC'}]});
+$rc=$dri->domain_create_only('example4.com',{duration=>DateTime::Duration->new(years=>2),ns=>$dri->local_object('hosts')->set(['ns1.example.com'],['ns2.example.com']),contact=>$cs,auth=>{pw=>'2fooBAR'},secdns=>[{keyTag=>'12345',alg=>3,digestType=>1,digest=>'49FD46E6C4B45C55D4AC'}]});
 is($R1,$E1.'<command><create><domain:create xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example4.com</domain:name><domain:period unit="y">2</domain:period><domain:ns><domain:hostObj>ns1.example.com</domain:hostObj><domain:hostObj>ns2.example.com</domain:hostObj></domain:ns><domain:registrant>jd1234</domain:registrant><domain:contact type="admin">sh8013</domain:contact><domain:contact type="tech">sh8013</domain:contact><domain:authInfo><domain:pw>2fooBAR</domain:pw></domain:authInfo></domain:create></create><extension><secDNS:create xmlns:secDNS="urn:ietf:params:xml:ns:secDNS-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:secDNS-1.0 secDNS-1.0.xsd"><secDNS:dsData><secDNS:keyTag>12345</secDNS:keyTag><secDNS:alg>3</secDNS:alg><secDNS:digestType>1</secDNS:digestType><secDNS:digest>49FD46E6C4B45C55D4AC</secDNS:digest></secDNS:dsData></secDNS:create></extension><clTRID>ABC-12345</clTRID></command>'.$E2,'domain_create build +SecDNS 1');
 
-$rc=$dri->domain_create_only('example5.com',{duration=>DateTime::Duration->new(years=>2),ns=>Net::DRI::Data::Hosts->new_set(['ns1.example.com'],['ns2.example.com']),contact=>$cs,auth=>{pw=>'2fooBAR'},secdns=>[{keyTag=>'12345',alg=>3,digestType=>1,digest=>'49FD46E6C4B45C55D4AC',maxSigLife=>604800,key_flags=>256,key_protocol=>3,key_alg=>1,key_pubKey=>'AQPJ////4Q=='}]});
+$rc=$dri->domain_create_only('example5.com',{duration=>DateTime::Duration->new(years=>2),ns=>$dri->local_object('hosts')->set(['ns1.example.com'],['ns2.example.com']),contact=>$cs,auth=>{pw=>'2fooBAR'},secdns=>[{keyTag=>'12345',alg=>3,digestType=>1,digest=>'49FD46E6C4B45C55D4AC',maxSigLife=>604800,key_flags=>256,key_protocol=>3,key_alg=>1,key_pubKey=>'AQPJ////4Q=='}]});
 is($R1,$E1.'<command><create><domain:create xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example5.com</domain:name><domain:period unit="y">2</domain:period><domain:ns><domain:hostObj>ns1.example.com</domain:hostObj><domain:hostObj>ns2.example.com</domain:hostObj></domain:ns><domain:registrant>jd1234</domain:registrant><domain:contact type="admin">sh8013</domain:contact><domain:contact type="tech">sh8013</domain:contact><domain:authInfo><domain:pw>2fooBAR</domain:pw></domain:authInfo></domain:create></create><extension><secDNS:create xmlns:secDNS="urn:ietf:params:xml:ns:secDNS-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:secDNS-1.0 secDNS-1.0.xsd"><secDNS:dsData><secDNS:keyTag>12345</secDNS:keyTag><secDNS:alg>3</secDNS:alg><secDNS:digestType>1</secDNS:digestType><secDNS:digest>49FD46E6C4B45C55D4AC</secDNS:digest><secDNS:maxSigLife>604800</secDNS:maxSigLife><secDNS:keyData><secDNS:flags>256</secDNS:flags><secDNS:protocol>3</secDNS:protocol><secDNS:alg>1</secDNS:alg><secDNS:pubKey>AQPJ////4Q==</secDNS:pubKey></secDNS:keyData></secDNS:dsData></secDNS:create></extension><clTRID>ABC-12345</clTRID></command>'.$E2,'domain_create build +SecDNS 2');
 
 
 $R2='';
-$toc=Net::DRI::Data::Changes->new();
+$toc=$dri->local_object('changes');
 $toc->add('secdns',[{keyTag=>'12346',alg=>3,digestType=>1,digest=>'38EC35D5B3A34B44C39B'}]);
 $rc=$dri->domain_update('example10.com',$toc);
 is($R1,$E1.'<command><update><domain:update xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example10.com</domain:name></domain:update></update><extension><secDNS:update xmlns:secDNS="urn:ietf:params:xml:ns:secDNS-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:secDNS-1.0 secDNS-1.0.xsd"><secDNS:add><secDNS:dsData><secDNS:keyTag>12346</secDNS:keyTag><secDNS:alg>3</secDNS:alg><secDNS:digestType>1</secDNS:digestType><secDNS:digest>38EC35D5B3A34B44C39B</secDNS:digest></secDNS:dsData></secDNS:add></secDNS:update></extension><clTRID>ABC-12345</clTRID></command>'.$E2,'domain_update build +SecDNS 1');
 
 
-$toc=Net::DRI::Data::Changes->new();
+$toc=$dri->local_object('changes');
 $toc->del('secdns',[{keyTag=>'12345'}]);
 $rc=$dri->domain_update('example11.com',$toc);
 is($R1,$E1.'<command><update><domain:update xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example11.com</domain:name></domain:update></update><extension><secDNS:update xmlns:secDNS="urn:ietf:params:xml:ns:secDNS-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:secDNS-1.0 secDNS-1.0.xsd"><secDNS:rem><secDNS:keyTag>12345</secDNS:keyTag></secDNS:rem></secDNS:update></extension><clTRID>ABC-12345</clTRID></command>'.$E2,'domain_update build +SecDNS 2');
 
 
-$toc=Net::DRI::Data::Changes->new();
+$toc=$dri->local_object('changes');
 $toc->set('secdns',[{keyTag=>'12345',alg=>3,digestType=>1,digest=>'49FD46E6C4B45C55D4AC'}]);
 $toc->set('secdns_urgent',1);
 $rc=$dri->domain_update('example12.com',$toc);
@@ -86,7 +83,7 @@ is($R1,$E1.'<command><update><domain:update xmlns:domain="urn:ietf:params:xml:ns
 
 
 
-$toc=Net::DRI::Data::Changes->new();
+$toc=$dri->local_object('changes');
 $toc->set('secdns',[{keyTag=>'12345',alg=>3,digestType=>1,digest=>'49FD46E6C4B45C55D4AC',maxSigLife=>604800,key_flags=>256,key_protocol=>3,key_alg=>1,key_pubKey=>'AQPJ////4Q=='}]);
 $rc=$dri->domain_update('example13.com',$toc);
 is($R1,$E1.'<command><update><domain:update xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example13.com</domain:name></domain:update></update><extension><secDNS:update xmlns:secDNS="urn:ietf:params:xml:ns:secDNS-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:secDNS-1.0 secDNS-1.0.xsd"><secDNS:chg><secDNS:dsData><secDNS:keyTag>12345</secDNS:keyTag><secDNS:alg>3</secDNS:alg><secDNS:digestType>1</secDNS:digestType><secDNS:digest>49FD46E6C4B45C55D4AC</secDNS:digest><secDNS:maxSigLife>604800</secDNS:maxSigLife><secDNS:keyData><secDNS:flags>256</secDNS:flags><secDNS:protocol>3</secDNS:protocol><secDNS:alg>1</secDNS:alg><secDNS:pubKey>AQPJ////4Q==</secDNS:pubKey></secDNS:keyData></secDNS:dsData></secDNS:chg></secDNS:update></extension><clTRID>ABC-12345</clTRID></command>'.$E2,'domain_update build +SecDNS 4');

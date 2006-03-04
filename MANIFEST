@@ -11,6 +11,8 @@ lib/Net/DRI/Cache.pm
 lib/Net/DRI/Data/Changes.pm
 lib/Net/DRI/Data/Contact.pm
 lib/Net/DRI/Data/Contact/EURid.pm
+lib/Net/DRI/Data/Contact/PL.pm
+lib/Net/DRI/Data/Contact/SE.pm
 lib/Net/DRI/Data/ContactSet.pm
 lib/Net/DRI/Data/Hosts.pm
 lib/Net/DRI/Data/Raw.pm
@@ -21,6 +23,8 @@ lib/Net/DRI/DRD/AFNIC.pm
 lib/Net/DRI/DRD/EURid.pm
 lib/Net/DRI/DRD/Gandi.pm
 lib/Net/DRI/DRD/ICANN.pm
+lib/Net/DRI/DRD/PL.pm
+lib/Net/DRI/DRD/SE.pm
 lib/Net/DRI/DRD/VNDS.pm
 lib/Net/DRI/DRD/WS.pm
 lib/Net/DRI/Exception.pm
@@ -43,6 +47,11 @@ lib/Net/DRI/Protocol/EPP/Extensions/EURid/Message.pm
 lib/Net/DRI/Protocol/EPP/Extensions/EURid/Sunrise.pm
 lib/Net/DRI/Protocol/EPP/Extensions/GracePeriod.pm
 lib/Net/DRI/Protocol/EPP/Extensions/NSgroup.pm
+lib/Net/DRI/Protocol/EPP/Extensions/PL.pm
+lib/Net/DRI/Protocol/EPP/Extensions/PL/Contact.pm
+lib/Net/DRI/Protocol/EPP/Extensions/PL/Domain.pm
+lib/Net/DRI/Protocol/EPP/Extensions/SE.pm
+lib/Net/DRI/Protocol/EPP/Extensions/SE/Extensions.pm
 lib/Net/DRI/Protocol/EPP/Extensions/SecDNS.pm
 lib/Net/DRI/Protocol/EPP/Message.pm
 lib/Net/DRI/Protocol/Gandi/Web.pm
@@ -99,5 +108,6 @@ t/603vnds_epp_e164.t
 t/604vnds_epp_secdns.t
 t/605vnds_epp_nsgroup.t
 t/606eurid_epp.t
+t/607pl_epp.t
 TODO
 META.yml                                 Module meta-data (added by MakeMaker)

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Superclass of all Transport/* modules (hence virtual class, never used directly)
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -20,12 +20,12 @@ package Net::DRI::Transport;
 use strict;
 
 use base qw(Class::Accessor::Chained::Fast);
-__PACKAGE__->mk_accessors(qw/name version retry pause trace timeout defer current_state has_state is_sync time_open/);
+__PACKAGE__->mk_accessors(qw/name version retry pause trace timeout defer current_state has_state is_sync time_open time_used/);
 
 use Net::DRI::Exception;
 use Time::HiRes;
 
-our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -55,7 +55,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -113,6 +113,7 @@ sub send
    $self->open_connection() if ($self->has_state() && !$self->current_state());
    $self->log('C=>S',$tosend);
    $ok=$self->$cb1($c,$tosend);
+   $self->time_used(time());
   }; ## end of try
 
   alarm(0) if ($timeout); ## removes our alarm

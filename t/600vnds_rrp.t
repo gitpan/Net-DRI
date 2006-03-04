@@ -64,11 +64,11 @@ is($rc->is_success(),0,'host_delete rc is_success');
 is($rc->code(),2305,'host_delete rc code');
 
 $R2=undef;
-$rc=$dri->domain_update_ns_add('example2.com',Net::DRI::Data::Hosts->new('ns3.registrarA.com'));
+$rc=$dri->domain_update_ns_add('example2.com',$dri->local_object('hosts')->set('ns3.registrarA.com'));
 is($R1,"mod\r\nEntityName:Domain\r\nDomainName:EXAMPLE2.COM\r\nNameServer:ns3.registrara.com\r\n.\r\n",'domain_update_ns_add send');
-$rc=$dri->domain_update_ns_del('example2.com',Net::DRI::Data::Hosts->new('ns1.registrarA.com'));
+$rc=$dri->domain_update_ns_del('example2.com',$dri->local_object('hosts')->set('ns1.registrarA.com'));
 is($R1,"mod\r\nEntityName:Domain\r\nDomainName:EXAMPLE2.COM\r\nNameServer:ns1.registrara.com=\r\n.\r\n",'domain_update_ns_del send');
-$rc=$dri->domain_update_ns('example2.com',Net::DRI::Data::Hosts->new('ns3.registrarA.com'),Net::DRI::Data::Hosts->new('ns1.registrarA.com'));
+$rc=$dri->domain_update_ns('example2.com',$dri->local_object('hosts')->set('ns3.registrarA.com'),$dri->local_object('hosts')->set('ns1.registrarA.com'));
 is($R1,"mod\r\nEntityName:Domain\r\nDomainName:EXAMPLE2.COM\r\nNameServer:ns3.registrara.com\r\nNameServer:ns1.registrara.com=\r\n.\r\n",'domain_update_ns send');
 
 $R2="200 Command completed successfully\r\nnameserver:ns2.registrarA.com\r\nnameserver:ns3.registrarA.com\r\nregistration expiration date:2010-09-22 10:27:00.0\r\nregistrar:registrarA\r\nregistrar transfer date:1999-09-22 10:27:00.0\r\nstatus:ACTIVE\r\ncreated date:1998-09-22 10:27:00.0\r\ncreated by:registrarA\r\nupdated date:2002-09-22 10:27:00.0\r\nupdated by:registrarA\r\n.\r\n";

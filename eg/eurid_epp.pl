@@ -111,6 +111,8 @@ print "Contact2 deleted successfully" if $rc->is_success();
 $rc=$dri->contact_delete($c3);
 print "Contact3 deleted successfully" if $rc->is_success();
 
+
+$dri->end();
 close($fh);
 };
 
@@ -130,7 +132,6 @@ if ($@)
 }
 
 print "\n";
-$dri->end();
 exit 0;
 
 ######################################################

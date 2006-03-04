@@ -1,6 +1,6 @@
 ## Domain Registry Interface, virtual superclass for all DRD modules
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -27,7 +27,7 @@ use Net::DRI::Data::Hosts;
 use Net::DRI::Data::StatusList;
 use Net::DRI::Data::ContactSet;
 
-our $VERSION=do { my @r=(q$Revision: 1.16 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.18 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -57,7 +57,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -368,7 +368,7 @@ sub domain_info
 
 sub domain_check
 {
- my ($self,$ndr,$domain)=@_;
+ my ($self,$ndr,$domain,$rd)=@_;
  err_invalid_domain_name($domain) if $self->verify_name_domain($domain);
 
  my $rc;
@@ -378,7 +378,7 @@ sub domain_check
   $rc=$ndr->get_info('rc');
  } else
  {
-  $rc=$ndr->process('domain','check',[$domain]);
+  $rc=$ndr->process('domain','check',[$domain,$rd]);
  }
  return $rc;
 }
@@ -880,7 +880,7 @@ sub contact_delete
 
 sub contact_info
 {
- my ($self,$ndr,$contact)=@_;
+ my ($self,$ndr,$contact,$ep)=@_;
  err_invalid_contact($contact) unless (defined($contact) && UNIVERSAL::isa($contact,'Net::DRI::Data::Contact') && $contact->srid());
  
  my $rc;
@@ -892,7 +892,7 @@ sub contact_info
   $rc=get_info('rc');
  } else
  {
-  $rc=$ndr->process('contact','info',[$contact]);
+  $rc=$ndr->process('contact','info',[$contact,$ep]);
  }
  return $rc;
 }

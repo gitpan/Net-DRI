@@ -2,9 +2,6 @@
 
 use Net::DRI;
 use Net::DRI::Data::Raw;
-use Net::DRI::Data::Changes;
-use Net::DRI::Data::ContactSet;
-use Net::DRI::Data::Contact;
 
 use Test::More tests => 15;
 
@@ -38,7 +35,7 @@ my $nsg1=$dri->remote_object('nsgroup');
 
 $dri->{registries}->{VNDS}->{trid}=sub { return 'clientref-123007'; };
 $R2='<?xml version="1.0" encoding="UTF-8"?><epp xmlns="urn:ietf:params:xml:ns:epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:contact="urn:ietf:params:xml:ns:contact-1.0" xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xmlns:dnsbe="http://www.dns.be/xml/epp/dnsbe-1.0" xmlns:nsgroup="http://www.dns.be/xml/epp/nsgroup-1.0" xmlns:agent="http://www.dns.be/xml/epp/agent-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:epp-1.0 epp-1.0.xsd urn:ietf:params:xml:ns:contact-1.0 contact-1.0.xsd urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd http://www.dns.be/xml/epp/dnsbe-1.0 dnsbe-1.0.xsd http://www.dns.be/xml/epp/nsgroup-1.0 nsgroup-1.0.xsd http://www.dns.be/xml/epp/agent-1.0 agent-1.0.xsd"><response><result code="1000"><msg>Command completed successfully</msg><value><nsgroup:name>mynsgroup1</nsgroup:name></value></result><extension><dnsbe:ext><dnsbe:result><dnsbe:msg>Content check ok</dnsbe:msg></dnsbe:result></dnsbe:ext></extension><trID><clTRID>clientref-123007</clTRID><svTRID>dnsbe-1543</svTRID></trID></response></epp>';
-my $c1=Net::DRI::Data::Hosts->new();
+my $c1=$dri->local_object('hosts');
 $c1->name('mynsgroup1');
 $c1->add('ns1.nameserver.be');
 $c1->add('ns2.nameserver.be');
@@ -48,12 +45,12 @@ is($rc->is_success(),1,'nsgroup create is_success');
 
 
 $R2='<?xml version="1.0" encoding="UTF-8"?><epp xmlns="urn:ietf:params:xml:ns:epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:contact="urn:ietf:params:xml:ns:contact-1.0" xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xmlns:dnsbe="http://www.dns.be/xml/epp/dnsbe-1.0" xmlns:nsgroup="http://www.dns.be/xml/epp/nsgroup-1.0" xmlns:agent="http://www.dns.be/xml/epp/agent-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:epp-1.0 epp-1.0.xsd urn:ietf:params:xml:ns:contact-1.0 contact-1.0.xsd urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd http://www.dns.be/xml/epp/dnsbe-1.0 dnsbe-1.0.xsd http://www.dns.be/xml/epp/nsgroup-1.0 nsgroup-1.0.xsd http://www.dns.be/xml/epp/agent-1.0 agent-1.0.xsd"><response><result code="1000"><msg>Command completed successfully</msg><value><nsgroup:name>mynsgroup1</nsgroup:name></value></result><extension><dnsbe:ext><dnsbe:result><dnsbe:msg>Content check ok</dnsbe:msg></dnsbe:result></dnsbe:ext></extension><trID><clTRID>clientref-123007</clTRID><svTRID>dnsbe-1545</svTRID></trID></response></epp>';
-my $c2=Net::DRI::Data::Hosts->new();
+my $c2=$dri->local_object('hosts');
 $c2->name('mynsgroup1');
 $c2->add('ns1.nameserver.be');
 $c2->add('ns2.nameserver.be');
 $c2->add('ns3.nameserver.be');
-$toc=Net::DRI::Data::Changes->new();
+$toc=$dri->local_object('changes');
 $toc->set('ns',$c2);
 $rc=$nsg1->update($c1,$toc);
 is($R1,$E1.'<command><update><nsgroup:update xmlns:nsgroup="http://www.dns.be/xml/epp/nsgroup-1.0" xsi:schemaLocation="http://www.dns.be/xml/epp/nsgroup-1.0 nsgroup-1.0.xsd"><nsgroup:name>mynsgroup1</nsgroup:name><nsgroup:ns>ns1.nameserver.be</nsgroup:ns><nsgroup:ns>ns2.nameserver.be</nsgroup:ns><nsgroup:ns>ns3.nameserver.be</nsgroup:ns></nsgroup:update></update><clTRID>clientref-123007</clTRID></command>'.$E2,'nsgroup update build');
