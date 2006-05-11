@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Protocol (RFC 3730,3731,3732,3733,3734,3735)
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -27,7 +27,7 @@ use Net::DRI::Protocol::EPP::Message;
 use Net::DRI::Protocol::EPP::Core::Status;
 use Net::DRI::Data::Contact;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -57,7 +57,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -111,7 +111,7 @@ sub _load
 {
  my ($self,$extrah)=@_;
 
- my @core=('Session','Domain','Contact');
+ my @core=('Session','RegistryMessage','Domain','Contact');
  push @core,'Host' unless $self->{hostasattr};
  my @class=map { "Net::DRI::Protocol::EPP::Core::".$_ } @core;
  if (defined($extrah) && $extrah)

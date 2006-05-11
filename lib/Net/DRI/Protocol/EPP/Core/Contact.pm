@@ -26,7 +26,7 @@ use Net::DRI::Protocol::EPP::Core::Status;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -244,7 +244,7 @@ sub parse_tel
 {
  my $node=shift;
  my $ext=$node->getAttribute('x') || '';
- my $num=$node->firstChild()->getData();
+ my $num=get_data($node);
  $num.="x${ext}" if $ext;
  return $num;
 }

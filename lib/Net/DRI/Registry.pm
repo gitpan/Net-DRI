@@ -33,7 +33,7 @@ use Net::DRI::Data::Hosts;
 
 our $AUTOLOAD;
 
-our $VERSION=do { my @r=(q$Revision: 1.18 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.20 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -385,8 +385,12 @@ sub process
   die($@);
  }
 
- return unless $to->is_sync();
- $self->process_back($trid,$po,$to,$otype,$oaction);
+ return $self->process_back($trid,$po,$to,$otype,$oaction) if $to->is_sync();
+
+ my $rc=Net::DRI::Protocol::ResultStatus->new_success($Net::DRI::Protocol::ResultStatus::EPP_CODES{COMMAND_SUCCESSFUL_PENDING});
+ $rc->_set_trid($trid);
+ $self->status($rc);
+ return $rc;
 }
 
 ## also called directly , when we found something to do for asynchronous case, through TRID
@@ -404,6 +408,7 @@ sub process_back
   ###  return $self->protocol()->new_from_reply($tosend,$gotback);
   ###  ## $tosend needed to propagate EPP version, for example
   ($rc,$ri,$oname)=$po->reaction($otype,$oaction,$res,$self->{ops}->{$trid}->[1]);
+  $rc->_set_trid($trid);
  };
 
  if ($@) ## some kind of error happened
@@ -432,16 +437,18 @@ sub process_back
  {
   foreach my $key (keys(%{$ri->{$type}}))
   {
-   next if (($type eq $otype) && ($key eq $oname));
+   next if ($oname && ($type eq $otype) && ($key eq $oname));
    $self->set_info($type,$key,$ri->{$type}->{$key});
   }
  }
 
  ## Now set the last info, the one regarding directly the object
- my $rli={};
- $rli=$ri->{$otype}->{$oname} if (exists($ri->{$otype}) && exists($ri->{$otype}->{$oname}));
- $rli->{rc}=$rc;
- $self->set_info($otype,$oname,$rli);
+ if ($oname && $otype)
+ {
+  my $rli={ result_status => $rc };
+  $rli=$ri->{$otype}->{$oname} if (exists($ri->{$otype}) && exists($ri->{$otype}->{$oname})); ## result_status already done in Protocol
+  $self->set_info($otype,$oname,$rli);
+ }
 
  delete($self->{ops}->{$trid});
  return $rc;

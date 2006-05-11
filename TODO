@@ -20,9 +20,6 @@ Net::DRI::DRD
           - verify not same info in add & del
           - verify final change is not empty ?
 
-Net::DRI::Protocol::EPP::Core::*
-	* handle poll & offline review of requested actions
-
 Net::DRI::Protocol::EPP::Message
 	* handle case of multiple <result> block
 	* better parse for value/extValue blocks ?

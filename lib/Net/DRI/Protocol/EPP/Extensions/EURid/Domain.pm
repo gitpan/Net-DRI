@@ -1,7 +1,7 @@
 ## Domain Registry Interface, EURid Domain EPP extension commands
 ## (based on EURid registration_guidelines_v1_0E-epp.pdf)
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -25,7 +25,7 @@ use Net::DRI::Exception;
 use Net::DRI::Protocol::EPP::Core::Domain;
 use Net::DRI::Data::Hosts;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -55,7 +55,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -83,6 +83,8 @@ sub register_commands
           trade             => [ \&trade, undef ],
           reactivate        => [ \&reactivate, undef ],
          );
+## EURid also adds extensions for domain:check if domains in sunrise
+## We do not parse them
 
  return { 'domain' => \%tmp };
 }
@@ -203,7 +205,14 @@ sub add_transfer
 
  push @n,add_contact('tech',$cs,9) if $cs->has_type('tech');
  push @n,add_contact('onsite',$cs,5) if $cs->has_type('onsite');
- push @n,Net::DRI::Protocol::EPP::Core::Domain::build_ns($epp,$rd->{ns},$domain,'eurid') if (exists($rd->{ns}) && (UNIVERSAL::isa($rd->{ns},'Net::DRI::Data::Hosts')));
+
+ if (exists($rd->{ns}) && (UNIVERSAL::isa($rd->{ns},'Net::DRI::Data::Hosts')) && !$rd->{ns}->is_empty())
+ {
+  my $n=Net::DRI::Protocol::EPP::Core::Domain::build_ns($epp,$rd->{ns},$domain,'eurid');
+  my @ns=@{$mes->ns->{domain}};
+  push @$n,{'xmlns:domain'=>$ns[0],'xsi:schemaLocation'=>sprintf('%s %s',@ns)};
+  push @n,$n;
+ }
 
  push @n,add_nsgroup($rd->{nsgroup}) if (exists($rd->{nsgroup}));
  return @n;

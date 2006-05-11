@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Stores ordered list of contacts + type (registrant, admin, tech, bill, etc...)
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -20,9 +20,7 @@ package Net::DRI::Data::ContactSet;
 
 use strict;
 
-#our @TYPES=('registrant','admin','tech','billing'); ## default list of types
-
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -36,44 +34,42 @@ This class encapsulates a set of contacts, with associated types. For each type,
 Contacts are compared among themselves by calling the id() method on them. Thus all Contact classes
 must define such a method, which returns a string.
 
-=over
+=head1 METHODS
 
-=item *
+=head2 new()
 
-C<new()> creates a new object
+creates a new object
 
-=item *
+=head2 types()
 
-C<types()> returns the list of current types stored in this class
+returns the list of current types stored in this class
 
-=item *
+=head2 has_type()
 
-C<has_type()> returns 1 if the given type as first argument has some contacts in this object, 0 otherwise
+returns 1 if the given type as first argument has some contacts in this object, 0 otherwise
 
-=item *
+=head2 add()
 
-C<add()> with the first argument being a contact, and the second (optional) a type, adds the contact
+with the first argument being a contact, and the second (optional) a type, adds the contact
 to the list of contacts for this type or all types (if no second argument). If the contact already exists
 (same id()), it will be replaced when found
 
-=item *
+=head2 del() 
 
-C<del()> the opposite of add()
+the opposite of add()
 
-=item *
+=head2 clear() 
 
-C<clear()> removes all contact currently associated to all types
+removes all contact currently associated to all types
 
-=item *
+=head2 set() 
 
-C<set()> with an array ref as first argument, and a type (optional) as second, set the current list
+with an array ref as first argument, and a type (optional) as second, set the current list
 of the given type (or all types) to be the list of contacts in first argument
 
-=item *
+=head2 get() 
 
-C<get()> returns list (in list context) or first element of list (in scalar context) for the type given as argument
-
-=back
+returns list (in list context) or first element of list (in scalar context) for the type given as argument
 
 =head1 SUPPORT
 
@@ -93,7 +89,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -111,9 +107,7 @@ sub new
  my $proto=shift;
  my $class=ref($proto) || $proto;
 
- my $self={};
-# $self->{c}={ map { $_ => [] } @TYPES };
- $self->{c}={};
+ my $self={ c => {} };
  bless($self,$class);
 }
 

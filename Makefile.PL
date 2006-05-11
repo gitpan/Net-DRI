@@ -24,6 +24,8 @@ WriteMakefile(
         'DateTime::Format::ISO8601' => 0,
 	'Email::Valid' => 0,
 	'XML::LibXML' => 0,
+	'Net::SMTP' => 0,
+	'MIME::Entity' => 0,
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean               => { FILES => 'Net-DRI-*' },

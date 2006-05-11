@@ -3,7 +3,7 @@
 use Net::DRI;
 use Net::DRI::Data::Raw;
 
-use Test::More tests => 185;
+use Test::More tests => 198;
 
 our $E1='<?xml version="1.0" encoding="UTF-8" standalone="no"?><epp xmlns="urn:ietf:params:xml:ns:epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="urn:ietf:params:xml:ns:epp-1.0 epp-1.0.xsd">';
 our $E2='</epp>';
@@ -431,6 +431,31 @@ $R2='';
 $rc=$dri->process('session','login',['ClientX','foo-BAR2','bar-FOO2']);
 is($R1,$E1.'<command><login><clID>ClientX</clID><pw>foo-BAR2</pw><newPW>bar-FOO2</newPW><options><version>1.0</version><lang>en</lang></options><svcs><objURI>urn:ietf:params:xml:ns:obj1</objURI><objURI>urn:ietf:params:xml:ns:obj2</objURI><objURI>urn:ietf:params:xml:ns:obj3</objURI><svcExtension><extURI>http://custom/obj1ext-1.0</extURI></svcExtension></svcs></login><clTRID>ABC-12345</clTRID></command>'.$E2,'session login build');
 is($rc->is_success(),1,'session login is_success');
+
+
+$R2=$E1.'<response>'.r().'<msgQ count="5" id="12345"/>'.$TRID.'</response>'.$E2;
+$rc=$dri->process('session','noop',[]);
+is($dri->get_info('count','message','info'),5,'message count');
+is($dri->get_info('first_id','message','info'),12345,'message first_id');
+
+
+$R2=$E1.'<response>'.r(1301,'Command completed successfully; ack to dequeue').'<msgQ count="5" id="12345"><qDate>1999-04-04T22:01:00.0Z</qDate><msg>Pending action completed successfully.</msg></msgQ><resData><domain:panData xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name paResult="1">example.com</domain:name><domain:paTRID><clTRID>ABC-12345</clTRID><svTRID>54321-XYZ</svTRID></domain:paTRID><domain:paDate>1999-04-04T22:00:00.0Z</domain:paDate></domain:panData></resData>'.$TRID.'</response>'.$E2;
+$rc=$dri->message_retrieve();
+is($dri->get_info('id','message',12345),12345,'message get_info id');
+is(''.$dri->get_info('qdate','message',12345),'1999-04-04T22:01:00','message get_info qdate');
+is($dri->get_info('content','message',12345),'Pending action completed successfully.','message get_info msg');
+is($dri->get_info('lang','message',12345),'en','message get_info lang');
+
+is($dri->get_info('object_type','message','12345'),'domain','message get_info object_type');
+is($dri->get_info('object_id','message','12345'),'example.com','message get_info id');
+is($dri->get_info('result','message','12345'),1,'message get_info result');
+is($dri->get_info('trid','message','12345'),'ABC-12345','message get_info trid');
+is($dri->get_info('svtrid','message','12345'),'54321-XYZ','message get_info svtrid');
+is(''.$dri->get_info('date','message','12345'),'1999-04-04T22:00:00','message get_info date');
+
+
+
+is($dri->message_waiting(),1,'message_exist');
 
 exit 0;
 

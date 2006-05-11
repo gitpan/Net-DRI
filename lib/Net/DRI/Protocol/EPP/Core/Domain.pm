@@ -28,7 +28,7 @@ use Net::DRI::Protocol::EPP::Core::Status;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -362,7 +362,7 @@ sub create
  }
 
  ## Nameservers, OPTIONAL
- push @d,build_ns($epp,$rd->{ns},$domain) if (verify_rd($rd,'ns') && UNIVERSAL::isa($rd->{ns},'Net::DRI::Data::Hosts'));
+ push @d,build_ns($epp,$rd->{ns},$domain) if (verify_rd($rd,'ns') && UNIVERSAL::isa($rd->{ns},'Net::DRI::Data::Hosts') && !$rd->{ns}->is_empty());
 
  ## Contacts, all OPTIONAL
  if (verify_rd($rd,'contact') && UNIVERSAL::isa($rd->{contact},'Net::DRI::Data::ContactSet'))
@@ -560,10 +560,10 @@ sub update
  my $cdel=$todo->del('contact');
  my (@add,@del);
 
- push @add,build_ns($epp,$nsadd,$domain)     if $nsadd;
+ push @add,build_ns($epp,$nsadd,$domain)     if $nsadd && !$nsadd->is_empty();
  push @add,build_contact_noregistrant($cadd) if $cadd;
  push @add,$sadd->build_xml('domain:status') if $sadd;
- push @del,build_ns($epp,$nsdel,$domain)     if $nsdel;
+ push @del,build_ns($epp,$nsdel,$domain)     if $nsdel && !$nsdel->is_empty();
  push @del,build_contact_noregistrant($cdel) if $cdel;
  push @del,$sdel->build_xml('domain:status') if $sdel;
 

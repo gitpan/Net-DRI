@@ -7,8 +7,6 @@
 use strict;
 
 use Net::DRI;
-use Net::DRI::Data::Hosts;
-use Net::DRI::Data::ContactSet;
 
 use DateTime::Duration;
  
@@ -26,7 +24,7 @@ open(my $fh,'>>',$file) || die $!;
 print "Dumping XML exchange to $file\n";
 
 ## This connects to .EU server for tests
-my $rc=$dri->target('EURid')->new_current_profile('profile1','Net::DRI::Transport::Socket',[{log_fh=>$fh,defer=>0,socktype=>'ssl',remote_host=>'epp.registry.tryout.eu',remote_port=>33123,ssl_cipher_list=>'TLSv1',protocol_connection=>'Net::DRI::Protocol::EPP::Connection',protocol_version=>1,client_login=>$CLID,client_password=>$PASS}],'Net::DRI::Protocol::EPP::Extensions::EURid',['1.0',['Net::DRI::Protocol::EPP::Extensions::EURid::Sunrise']]);
+my $rc=$dri->target('EURid')->new_current_profile('profile1','Net::DRI::Transport::Socket',[{log_fh=>$fh,defer=>0,socktype=>'ssl',remote_host=>'epp.registry.tryout.eu',remote_port=>33128,ssl_cipher_list=>'TLSv1',protocol_connection=>'Net::DRI::Protocol::EPP::Connection',protocol_version=>1,client_login=>$CLID,client_password=>$PASS}],'Net::DRI::Protocol::EPP::Extensions::EURid',['1.0',['Net::DRI::Protocol::EPP::Extensions::EURid::Sunrise']]);
 
 die($rc) unless $rc->is_success(); ## Here we catch all errors during setup of transport, such as authentication errors
 
@@ -53,12 +51,12 @@ $c3->srid($id);
 my $dom='toto-'.time().'.eu';
 $rc=$dri->domain_check($dom);
 print "$dom does not exist\n" unless $dri->get_info('exist');
-my $cs=Net::DRI::Data::ContactSet->new();
+my $cs=$dri->local_object('contactset');
 $cs->set($c1,'registrant');
 $cs->set($c2,'billing');
 $cs->set($c3,'tech');
 print "Attempting to create domain $dom\n";
-$rc=$dri->domain_create_only($dom,{duration=>DateTime::Duration->new(years =>1),ns=>Net::DRI::Data::Hosts->new->add('ns.example.com'),contact=>$cs});
+$rc=$dri->domain_create_only($dom,{duration=>DateTime::Duration->new(years =>1),ns=>$dri->local_object('hosts')->add('ns.example.com'),contact=>$cs});
 print "$dom created\n" if $rc->is_success();
 
 ## After the domain:create, the connection is dropped by the server
@@ -70,7 +68,7 @@ $rc=$dri->domain_info($dom);
 print "domain_info OK\n" if $rc->is_success();
 
 my $ns='ns.titi-'.time().'.fr';
-my $nso=Net::DRI::Data::Hosts->new($ns);
+my $nso=$dri->local_object('hosts')->new($ns);
 print "NS=$ns\n";
 
 if ($dri->has_object('host')) ## Should be false for EURid

@@ -24,7 +24,7 @@ use Net::DRI::Protocol::RRP::Core::Status;
 use Net::DRI::Protocol::RRP;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -110,7 +110,7 @@ sub add
   $mes->options('Period',$period);
  }
  ## (MAY) 1 to 13 nameservers
- if (exists($rd->{ns}) && defined($rd->{ns}) && (ref($rd->{ns}) eq 'Net::DRI::Data::Hosts')) 
+ if (exists($rd->{ns}) && defined($rd->{ns}) && (ref($rd->{ns}) eq 'Net::DRI::Data::Hosts') && !$rd->{ns}->is_empty()) 
  {
   foreach ($rd->{ns}->get_names(13)) { $mes->entities('NameServer',$_); }
  }
@@ -214,8 +214,8 @@ sub mod
  
  ## $nsadd/$nsdel are Net::DRI::Data::Hosts objects
  ## Up to 13 nameservers only
- if (defined($nsadd)) { foreach ($nsadd->get_names(13)) { $mes->entities('NameServer',$_) } }
- if (defined($nsdel)) { foreach ($nsdel->get_names(13)) { $mes->entities('NameServer',$_.'=') } }
+ if (defined($nsadd) && !$nsadd->is_empty()) { foreach ($nsadd->get_names(13)) { $mes->entities('NameServer',$_) } }
+ if (defined($nsdel) && !$nsdel->is_empty()) { foreach ($nsdel->get_names(13)) { $mes->entities('NameServer',$_.'=') } }
 
  ## $statadd/$statdel are Net::DRI::Protocol::RRP::Core::Status objects
  if (defined($statadd)) { foreach ($statadd->list_status()) { $mes->entities('Status',$_)     } }

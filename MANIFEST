@@ -1,4 +1,5 @@
 Changes
+eg/afnic_email.pl
 eg/afnic_ws.pl
 eg/epp_server.pl
 eg/eurid_epp.pl
@@ -10,6 +11,7 @@ lib/Net/DRI.pm
 lib/Net/DRI/Cache.pm
 lib/Net/DRI/Data/Changes.pm
 lib/Net/DRI/Data/Contact.pm
+lib/Net/DRI/Data/Contact/AFNIC.pm
 lib/Net/DRI/Data/Contact/EURid.pm
 lib/Net/DRI/Data/Contact/PL.pm
 lib/Net/DRI/Data/Contact/SE.pm
@@ -29,6 +31,9 @@ lib/Net/DRI/DRD/VNDS.pm
 lib/Net/DRI/DRD/WS.pm
 lib/Net/DRI/Exception.pm
 lib/Net/DRI/Protocol.pm
+lib/Net/DRI/Protocol/AFNIC/Email.pm
+lib/Net/DRI/Protocol/AFNIC/Email/Domain.pm
+lib/Net/DRI/Protocol/AFNIC/Email/Message.pm
 lib/Net/DRI/Protocol/AFNIC/WS.pm
 lib/Net/DRI/Protocol/AFNIC/WS/Domain.pm
 lib/Net/DRI/Protocol/AFNIC/WS/Message.pm
@@ -37,6 +42,7 @@ lib/Net/DRI/Protocol/EPP/Connection.pm
 lib/Net/DRI/Protocol/EPP/Core/Contact.pm
 lib/Net/DRI/Protocol/EPP/Core/Domain.pm
 lib/Net/DRI/Protocol/EPP/Core/Host.pm
+lib/Net/DRI/Protocol/EPP/Core/RegistryMessage.pm
 lib/Net/DRI/Protocol/EPP/Core/Session.pm
 lib/Net/DRI/Protocol/EPP/Core/Status.pm
 lib/Net/DRI/Protocol/EPP/Extensions/E164.pm
@@ -70,6 +76,7 @@ lib/Net/DRI/Protocol/RRP/Message.pm
 lib/Net/DRI/Registry.pm
 lib/Net/DRI/Transport.pm
 lib/Net/DRI/Transport/Dummy.pm
+lib/Net/DRI/Transport/SMTP.pm
 lib/Net/DRI/Transport/SOAP.pm
 lib/Net/DRI/Transport/Socket.pm
 lib/Net/DRI/Transport/Web.pm
@@ -109,5 +116,6 @@ t/604vnds_epp_secdns.t
 t/605vnds_epp_nsgroup.t
 t/606eurid_epp.t
 t/607pl_epp.t
+t/608afnic_email.t
 TODO
 META.yml                                 Module meta-data (added by MakeMaker)

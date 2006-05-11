@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Encapsulating raw data
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -19,7 +19,9 @@ package Net::DRI::Data::Raw;
 
 use strict;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+use Net::DRI::Exception;
+
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -49,7 +51,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -74,7 +76,7 @@ sub new
 ## type=2, data=string
 ## type=3, data=ref to string NOTIMPL
 ## type=4, data=path to local file NOTIMPL
-## type=5, data=object with a as_string method NOTIMPL
+## type=5, data=object with a as_string method
 
  my $self={type => $type,
            data => $data,
@@ -93,6 +95,7 @@ sub new_from_array
 }
 
 sub new_from_string { return shift->new(2,shift); }
+sub new_from_object { return shift->new(5,shift); }
 
 ##########################################################################
 
@@ -114,6 +117,11 @@ sub as_string
  {
   $data=~s/\r\n/\n/g;
   return $data;
+ }
+ if ($self->type()==5)
+ {
+  Net::DRI::Exception::err_method_not_implemented('as_string in '.ref($data)) unless $data->can('as_string');
+  return $data->as_string();
  }
 }
 

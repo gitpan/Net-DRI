@@ -23,7 +23,7 @@ __PACKAGE__->mk_accessors(qw(name loid));
 
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -108,7 +108,7 @@ returns 0 if this object has nameservers, 1 otherwise
 given an integer (position in the list, we start to count at 1) or a name,
 we return all details as a 3 element array in list context or only the first
 element (the name) in scalar context for the nameserver stored at
-the given position or with the given name ; returns false if nothing found
+the given position or with the given name ; returns undef if nothing found
 at the position/with the name given.
 
 =head1 SUPPORT

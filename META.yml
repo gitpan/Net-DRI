@@ -1,7 +1,7 @@
 # http://module-build.sourceforge.net/META-spec.html
 #XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
 name:         Net-DRI
-version:      0.21
+version:      0.22
 version_from: lib/Net/DRI.pm
 installdirs:  site
 requires:
@@ -15,6 +15,8 @@ requires:
     Email::Valid:                  0
     IO::Socket::INET:              0
     IO::Socket::SSL:               0.90
+    MIME::Entity:                  0
+    Net::SMTP:                     0
     SOAP::Lite:                    0
     Test::More:                    0
     Time::HiRes:                   0

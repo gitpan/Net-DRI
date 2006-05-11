@@ -13,7 +13,7 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::DRD;
 
@@ -22,12 +22,8 @@ use strict;
 use DateTime;
 use Net::DRI::Exception;
 use Net::DRI::Util;
-use Net::DRI::Data::Changes;
-use Net::DRI::Data::Hosts;
-use Net::DRI::Data::StatusList;
-use Net::DRI::Data::ContactSet;
 
-our $VERSION=do { my @r=(q$Revision: 1.18 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.19 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -70,7 +66,7 @@ See the LICENSE file that comes with this distribution for more details.
 =cut
 
 
-#####################################################################
+####################################################################################################
 
 sub new
 {
@@ -124,7 +120,7 @@ sub has_object
  return (grep { lc($_) eq $type } ($self->object_types()))? 1 : 0;
 }
 
-##############################################################################################################
+####################################################################################################
 sub verify_name_host
 {
  my ($self,$ndr,$host,$checktld)=@_;
@@ -202,7 +198,7 @@ sub verify_duration_transfer
  return 0; ## everything ok
 }
 
-#####################################################################################################
+####################################################################################################
 sub err_invalid_domain_name
 {
  my $domain=shift;
@@ -222,9 +218,9 @@ sub err_invalid_contact
  Net::DRI::Exception->die(0,'DRD',6,'Invalid contact : '.((defined($c) && $c && UNIVERSAL::can($c,'srid'))? $c->srid() : '?'));
 }
 
-########################################################################################################################
+####################################################################################################
 ## Operations on DOMAINS
-########################################################################################################################
+####################################################################################################
 
 sub domain_create_only
 {
@@ -250,12 +246,10 @@ sub domain_create
  err_invalid_domain_name($domain) if $self->verify_name_domain($domain);
  my %rd=(defined($rd) && (ref($rd) eq 'HASH'))? %$rd : ();
 
- ## TODO : if contacts  && has_object('contact'), make sure they exist, or create them
-
  my @rc;
- my $nsin=Net::DRI::Data::Hosts->new();
- my $nsout=Net::DRI::Data::Hosts->new();
- if (exists($rd{ns})) ## Separate nameserver (inside & outside of domain) + Create outside nameservers if needed
+ my $nsin=$ndr->local_object('hosts');
+ my $nsout=$ndr->local_object('hosts');
+ if (exists($rd{ns}) && $self->has_object('ns')) ## Separate nameserver (inside & outside of domain) + Create outside nameservers if needed
  {
   Net::DRI::Util::check_isa($rd{ns},'Net::DRI::Data::Hosts');
   $rc[0]=[];
@@ -267,7 +261,7 @@ sub domain_create
     $nsin->add(@a);
    } else
    {
-    my $ns=Net::DRI::Data::Hosts->new_set(@a);
+    my $ns=$ndr->local_object('hosts')->set(@a);
     unless ($self->host_exist($ndr,$ns))
     {
      my $rc0=$self->host_create($ndr,$ns);
@@ -292,7 +286,7 @@ sub domain_create
   $rc[3]=[];
   foreach (1..$nsin->count())
   {
-   my $ns=Net::DRI::Data::Hosts->new_set($nsin->get_details($_));
+   my $ns=$ndr->local_object('hosts')->set($nsin->get_details($_));
    my $rc3=$self->host_create($ndr,$ns);
    push @{$rc[3]},$rc3;
    return wantarray? @rc : $rc3 unless $rc3->is_success();
@@ -310,9 +304,14 @@ sub domain_create
   return wantarray? @rc : $rc5 unless $rc5->is_success();
  }
 
- my $rc6=$self->domain_info($ndr,$domain);
- $rc[6]=$rc6;
- return wantarray? @rc : $rc6;
+ if ($ndr->protocol()->has_action('domain','info'))
+ {
+  my $rc6=$self->domain_info($ndr,$domain);
+  $rc[6]=$rc6;
+  return wantarray? @rc : $rc6;
+ }
+
+ return wantarray? @rc : $rc2; ## result code of domain_create_only
 }
 
 sub domain_delete_only
@@ -464,8 +463,8 @@ sub domain_update
  return $rc;
 }
 
-sub domain_update_ns_add { my ($self,$ndr,$domain,$ns)=@_; return $self->domain_update_ns($ndr,$domain,$ns,Net::DRI::Data::Hosts->new()); }
-sub domain_update_ns_del { my ($self,$ndr,$domain,$ns)=@_; return $self->domain_update_ns($ndr,$domain,Net::DRI::Data::Hosts->new(),$ns); }
+sub domain_update_ns_add { my ($self,$ndr,$domain,$ns)=@_; return $self->domain_update_ns($ndr,$domain,$ns,$ndr->local_object('hosts')); }
+sub domain_update_ns_del { my ($self,$ndr,$domain,$ns)=@_; return $self->domain_update_ns($ndr,$domain,$ndr->local_object('hosts'),$ns); }
 sub domain_update_ns_set { my ($self,$ndr,$domain,$ns)=@_; return $self->domain_update_ns($ndr,$domain,$ns); }
 
 sub domain_update_ns
@@ -475,18 +474,18 @@ sub domain_update_ns
  if (defined($nsdel)) ## add + del
  {
   Net::DRI::Util::check_isa($nsdel,'Net::DRI::Data::Hosts');
-  my $c=Net::DRI::Data::Changes->new();
+  my $c=$ndr->local_object('changes');
   $c->add('ns',$nsadd) unless ($nsadd->is_empty());
   $c->del('ns',$nsdel) unless ($nsdel->is_empty());
   return $self->domain_update($ndr,$domain,$c);
  } else
  {
-  return $self->domain_update($ndr,$domain,Net::DRI::Data::Changes->new_set('ns',$nsadd));
+  return $self->domain_update($ndr,$domain,$ndr->local_object('changes')->set('ns',$nsadd));
  }
 }
 
-sub domain_update_status_add { my ($self,$ndr,$domain,$s)=@_; return $self->domain_update_status($ndr,$domain,$s,Net::DRI::Data::StatusList->new()); }
-sub domain_update_status_del { my ($self,$ndr,$domain,$s)=@_; return $self->domain_update_status($ndr,$domain,Net::DRI::Data::StatusList->new(),$s); }
+sub domain_update_status_add { my ($self,$ndr,$domain,$s)=@_; return $self->domain_update_status($ndr,$domain,$s,$ndr->local_object('status')); }
+sub domain_update_status_del { my ($self,$ndr,$domain,$s)=@_; return $self->domain_update_status($ndr,$domain,$ndr->local_object('status'),$s); }
 sub domain_update_status_set { my ($self,$ndr,$domain,$s)=@_; return $self->domain_update_status($ndr,$domain,$s); }
 
 sub domain_update_status
@@ -496,18 +495,18 @@ sub domain_update_status
  if (defined($sdel)) ## add + del
  {
   Net::DRI::Util::check_isa($sdel,'Net::DRI::Data::StatusList');
-  my $c=Net::DRI::Data::Changes->new();
+  my $c=$ndr->local_object('changes');
   $c->add('status',$sadd) unless ($sadd->is_empty());
   $c->del('status',$sdel) unless ($sdel->is_empty());
   return $self->domain_update($ndr,$domain,$c);
  } else
  {
-  return $self->domain_update($ndr,$domain,Net::DRI::Data::Changes->new_set('status',$sadd));
+  return $self->domain_update($ndr,$domain,$ndr->local_object('changes')->set('status',$sadd));
  }
 }
 
-sub domain_update_contact_add { my ($self,$ndr,$domain,$c)=@_; return $self->domain_update_contact($ndr,$domain,$c,Net::DRI::Data::ContactSet->new()); }
-sub domain_update_contact_del { my ($self,$ndr,$domain,$c)=@_; return $self->domain_update_contact($ndr,$domain,Net::DRI::Data::ContactSet->new(),$c); }
+sub domain_update_contact_add { my ($self,$ndr,$domain,$c)=@_; return $self->domain_update_contact($ndr,$domain,$c,$ndr->local_object('contactset')); }
+sub domain_update_contact_del { my ($self,$ndr,$domain,$c)=@_; return $self->domain_update_contact($ndr,$domain,$ndr->local_object('contactset'),$c); }
 sub domain_update_contact_set { my ($self,$ndr,$domain,$c)=@_; return $self->domain_update_contact($ndr,$domain,$c); }
 
 sub domain_update_contact
@@ -517,13 +516,13 @@ sub domain_update_contact
  if (defined($cdel)) ## add + del
  {
   Net::DRI::Util::check_isa($cdel,'Net::DRI::Data::ContactSet');
-  my $c=Net::DRI::Data::Changes->new();
+  my $c=$ndr->local_object('changes');
   $c->add('contact',$cadd) unless ($cadd->is_empty());
   $c->del('contact',$cdel) unless ($cdel->is_empty());
   return $self->domain_update($ndr,$domain,$c);
  } else
  {
-  return $self->domain_update($ndr,$domain,Net::DRI::Data::Changes->new_set('contact',$cadd));
+  return $self->domain_update($ndr,$domain,$ndr->local_object('changes')->set('contact',$cadd));
  }
 } 
 
@@ -634,9 +633,9 @@ sub domain_is_mine
  return ($clid=~m/^${id}$/)? 1 : 0;
 }
 
-########################################################################################################################
+####################################################################################################
 ## Operations on HOSTS
-########################################################################################################################
+####################################################################################################
 
 sub host_create
 {
@@ -781,8 +780,8 @@ sub host_update
  return $rc;
 }
 
-sub host_update_ip_add { my ($self,$ndr,$dh,$ip)=@_; return $self->host_update_ip($ndr,$ip,Net::DRI::Data::Hosts->new()); }
-sub host_update_ip_del { my ($self,$ndr,$dh,$ip)=@_; return $self->host_update_ip($ndr,Net::DRI::Data::Hosts->new(),$ip); }
+sub host_update_ip_add { my ($self,$ndr,$dh,$ip)=@_; return $self->host_update_ip($ndr,$ip,$ndr->local_object('hosts')); }
+sub host_update_ip_del { my ($self,$ndr,$dh,$ip)=@_; return $self->host_update_ip($ndr,$ndr->local_object('hosts'),$ip); }
 sub host_update_ip_set { my ($self,$ndr,$dh,$ip)=@_; return $self->host_update_ip($ndr,$ip); }
 
 sub host_update_ip
@@ -792,18 +791,18 @@ sub host_update_ip
  if (defined($ipdel)) ## add + del
  {
   Net::DRI::Util::check_isa($ipdel,'Net::DRI::Data::Hosts');
-  my $c=Net::DRI::Data::Changes->new();
+  my $c=$ndr->local_object('changes');
   $c->add('ip',$ipadd) unless ($ipadd->is_empty());
   $c->del('ip',$ipdel) unless ($ipdel->is_empty());
   return $self->host_update($ndr,$dh,$c);
  } else ## just set
  {
-  return $self->host_update($ndr,$dh,Net::DRI::Data::Changes->new_set('ip',$ipadd));
+  return $self->host_update($ndr,$dh,$ndr->local_object('changes')->set('ip',$ipadd));
  }
 }
 
-sub host_update_status_add { my ($self,$ndr,$dh,$s)=@_; return $self->host_update_status($ndr,$dh,$s,Net::DRI::Data::StatusList->new()); }
-sub host_update_status_del { my ($self,$ndr,$dh,$s)=@_; return $self->host_update_status($ndr,$dh,Net::DRI::Data::StatusList->new(),$s); }
+sub host_update_status_add { my ($self,$ndr,$dh,$s)=@_; return $self->host_update_status($ndr,$dh,$s,$ndr->local_object('status')); }
+sub host_update_status_del { my ($self,$ndr,$dh,$s)=@_; return $self->host_update_status($ndr,$dh,$ndr->local_object('status'),$s); }
 sub host_update_status_set { my ($self,$ndr,$dh,$s)=@_; return $self->host_update_status($ndr,$dh,$s); }
 
 sub host_update_status
@@ -813,13 +812,13 @@ sub host_update_status
  if (defined($sdel)) ## add + del
  {
   Net::DRI::Util::check_isa($sdel,'Net::DRI::Data::StatusList');
-  my $c=Net::DRI::Data::Changes->new();
+  my $c=$ndr->local_object('changes');
   $c->add('status',$sadd) unless ($sadd->is_empty());
   $c->del('status',$sdel) unless ($sdel->is_empty());
   return $self->host_update($ndr,$dh,$c);
  } ## just set
  {
-  return $self->host_update($ndr,$dh,Net::DRI::Data::Changes->new_set('status',$sadd));
+  return $self->host_update($ndr,$dh,$ndr->local_object('changes')->set('status',$sadd));
  }
 }
 
@@ -828,7 +827,7 @@ sub host_update_name_set
  my ($self,$ndr,$newname)=@_;
  $newname=$newname->get_names(1) if ($newname && UNIVERSAL::isa($newname,'Net::DRI::Data::Hosts'));
  err_invalid_host_name($newname) if $self->verify_name_host($newname);
- return $self->host_update($ndr,Net::DRI::Data::Changes->new_set('name',$newname));
+ return $self->host_update($ndr,$ndr->local_object('changes')->set('name',$newname));
 }
 
 sub host_current_status
@@ -856,9 +855,9 @@ sub host_is_mine
  return ($clid=~m/^${id}$/)? 1 : 0;
 }
 
-##########################################################################################################################
+####################################################################################################
 ## Operations on CONTACTS
-##########################################################################################################################
+####################################################################################################
 
 sub contact_create
 {
@@ -980,8 +979,8 @@ sub contact_update
  return $rc;
 }
 
-sub contact_update_status_add { my ($self,$ndr,$contact,$s)=@_; return $self->contact_update_status($ndr,$contact,$s,Net::DRI::Data::StatusList->new()); }
-sub contact_update_status_del { my ($self,$ndr,$contact,$s)=@_; return $self->contact_update_status($ndr,$contact,Net::DRI::Data::StatusList->new(),$s); }
+sub contact_update_status_add { my ($self,$ndr,$contact,$s)=@_; return $self->contact_update_status($ndr,$contact,$s,$ndr->local_object('status')); }
+sub contact_update_status_del { my ($self,$ndr,$contact,$s)=@_; return $self->contact_update_status($ndr,$contact,$ndr->local_object('status'),$s); }
 sub contact_update_status_set { my ($self,$ndr,$contact,$s)=@_; return $self->contact_update_status($ndr,$contact,$s); }
 
 sub contact_update_status
@@ -991,13 +990,13 @@ sub contact_update_status
  if (defined($sdel)) ## add + del
  {
   Net::DRI::Util::check_isa($sdel,'Net::DRI::Data::StatusList');
-  my $c=Net::DRI::Data::Changes->new();
+  my $c=$ndr->local_object('changes');
   $c->add('status',$sadd) unless ($sadd->is_empty());
   $c->del('status',$sdel) unless ($sdel->is_empty());
   return $self->contact_update($ndr,$contact,$c);
  } else
  {
-  return $self->contact_update($ndr,$contact,Net::DRI::Data::Changes->new_set('status',$sadd));
+  return $self->contact_update($ndr,$contact,$ndr->local_object('changes')->set('status',$sadd));
  }
 }
 
@@ -1057,5 +1056,32 @@ sub contact_is_mine
  return ($clid=~m/^${id}$/)? 1 : 0;
 }
 
-############################################################################################
+####################################################################################################
+## Message commands (like POLL in EPP)
+####################################################################################################
+
+sub message_retrieve
+{
+ my ($self,$ndr,$id)=@_;
+ my $rc=$ndr->process('message','retrieve',[$id]);
+ return $rc;
+}
+
+sub message_delete
+{
+ my ($self,$ndr,$id)=@_;
+ my $rc=$ndr->process('message','delete',[$id]);
+ return $rc;
+}
+
+sub message_waiting
+{
+ my ($self,$ndr)=@_;
+ my $rc=$ndr->process('message','retrieve');
+ return unless $rc->is_success();
+ my $count=$ndr->get_info('count','message','info');
+ return (defined($count) && $count)? 1 : 0;
+}
+
+####################################################################################################
 1;

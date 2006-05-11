@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Handling of contact data for EURid
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -24,7 +24,7 @@ __PACKAGE__->mk_accessors(qw(type vat lang));
 use Net::DRI::DRD::EURid;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -71,7 +71,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -97,6 +97,11 @@ sub validate
  {
   Net::DRI::Exception::usererr_insufficient_parameters('Invalid contact information: voice/type/lang mandatory') unless ($self->voice() && $self->type() && $self->lang());
  }
+
+ ## Lower limits than in EPP (other checks already done in superclass)
+ push @errs,'name' if ($self->name() && grep { length($_) > 50 }  ($self->name()));
+ push @errs,'org'  if ($self->org()  && grep { length($_) > 100 } ($self->org())); ## docs says only that it will be truncated if more than 100 characters
+
 
  push @errs,'type' if ($self->type() && $self->type()!~m/^(?:billing|tech|registrant|onsite)$/);
  push @errs,'vat'  if ($self->vat()  && !Net::DRI::Util::xml_is_token($self->vat(),1,20));

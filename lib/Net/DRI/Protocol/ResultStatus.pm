@@ -20,9 +20,9 @@ package Net::DRI::Protocol::ResultStatus;
 use strict;
 
 use base qw(Class::Accessor::Chained::Fast);
-__PACKAGE__->mk_ro_accessors(qw(is_success native_code code message lang));
+__PACKAGE__->mk_ro_accessors(qw(is_success native_code code message lang trid));
 
-our $VERSION=do { my @r=(q$Revision: 1.15 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.16 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -70,6 +70,10 @@ print all details (except the info part) as a single line
 
 print all details (including the infor part)
 
+=head2 trid()
+
+gives the transaction id (our transaction id, that is the client part in EPP) which has generated this result
+
 =head1 SUPPORT
 
 For now, support questions should be sent to:
@@ -103,6 +107,7 @@ See the LICENSE file that comes with this distribution for more details.
 ## We give symbolic names only to codes that are used in some modules
 our %EPP_CODES=(
                 COMMAND_SUCCESSFUL => 1000,
+		COMMAND_SUCCESSFUL_PENDING => 1001, ## needed for async registries when action done correctly on our side
                 COMMAND_SUCCESSFUL_END => 1500, ## after logout
 
                 COMMAND_SYNTAX_ERROR => 2001,
@@ -132,6 +137,7 @@ sub new
  return \%s;
 }
 
+sub _set_trid { my ($self,$v)=@_; $self->{trid}=$v; }
 sub _eppcode
 {
  my ($type,$code,$eppcode,$is_success)=@_;
@@ -166,6 +172,12 @@ sub print_full
  $self->print();
  my @i=$self->info();
  print "\n".join("\n",@i) if @i;
+}
+
+sub is_pending
+{
+ my $self=shift;
+ return ($self->code()==$EPP_CODES{COMMAND_SUCCESSFUL_PENDING});
 }
 
 ###################################################################################################################

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Protocol superclass
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -25,7 +25,7 @@ __PACKAGE__->mk_accessors(qw(name version factories commands message capabilitie
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.14 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -55,7 +55,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -150,7 +150,7 @@ sub action
 
  ## Create a new message from scratch and loop through all functions registered for given action & type
  my $f=$self->factories();
- my $msg=$f->{message}->($trid);
+ my $msg=$f->{message}->($trid,$otype,$oaction);
  Net::DRI::Exception->die(0,'protocol',1,'Unsuccessfull message creation') unless ($msg && ref($msg) && $msg->isa('Net::DRI::Protocol::Message'));
  $self->message($msg); ## store it for later use (in loop below)
  
@@ -172,11 +172,12 @@ sub reaction
  my $f=$self->factories();
  my $msg=$f->{message}->();
  Net::DRI::Exception->die(0,'protocol',1,'Unsuccessfull message creation') unless ($msg && ref($msg) && $msg->isa('Net::DRI::Protocol::Message'));
- $msg->parse($dr); ## will trigger an Exception by itself if problem
- $self->message($msg); ## store it for later use (in loop below)
 
  my %info;
- my $oname; ## Should be done by retrieving information from sent object (will be with LocalStorage)
+ $msg->parse($dr,\%info); ## will trigger an Exception by itself if problem
+ $self->message($msg); ## store it for later use (in loop below)
+
+ my $oname; ## Should be done by retrieving information from sent object (will be with LocalStorage) ## WARNING : what about messages for multiple names, like check_multi ?
  $oname=$sent->get_name_from_message() if $sent->can('get_name_from_message');
  $info{$otype}->{$oname}->{name}=$oname if (defined($oname) && $oname);
 
@@ -188,6 +189,7 @@ sub reaction
  }
 
  my $rc=$msg->result_status();
+ $info{$otype}->{$oname}->{result_status}=$rc if (defined($oname) && $oname);
  $self->message(undef); ## needed ? useful ?
 
  return ($rc,\%info,$oname);

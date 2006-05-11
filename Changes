@@ -1,3 +1,23 @@
+0.22 2006-05-12
++ EPP Poll from prototype by Elias Sidenbladh (Protocol/EPP/Core/RegistryMessage) : new methods message_retrieve() (=poll request)
+  message_delete() (=poll ack) and message_waiting() in Net::DRI
+  Please see examples at the end of t/601vnds_epp.t on how to retrieve info on a message, and info on all messages (count & first id).
++ Preliminary support for .FR/.RE by email : only domain creation for now, without parsing of registry emails coming back
+  (Net::DRI::Data::Contact::AFNIC Net::DRI::Protocol::AFNIC::Email Net::DRI::Protocol::AFNIC::Email::Message
+  Net::DRI::Protocol::AFNIC::Email::Domain Net::DRI::Transport::SMTP)
+  For all asynchronous operations, the result status is command successful but pending.
++ In all result status, new method trid() that stores the (local/client) transaction identifier of the operation
+  that generated this result status, and new method is_pending() to know if the operation has been done
+  or is pending review, which will be the case for all asynchronous registries (Protocol/ResultStatus)
+= EPP + RRP : we use the nameserver list provided in domain operations only if it is not empty
+= Data/Contact/EURid : lower limits for name/org length than in EPP
+- Transport/Socket : correctly shut down alarms in end() (thanks to Sten Spans)
+- Protocol/EPP/Extensions/EURid/Domain : bugfix for transfer/transferq/trade requests when specifying nameservers,
+                                         from bug report by Andreas Wittkemper
+- Protocol/EPP/Connection : bugfix when there is no svcExtension (found by Michael Braunoeder)
+- Protocol/EPP/Core/Contact : correctly handle all cases of empty fax (and tel for that matter),
+                              bug report from Brian
+
 0.21 2006-03-04
 
 + Support for .SE (based on EPP) thanks to Elias Sidenbladh and the NIC SE team
@@ -13,7 +33,7 @@
   changes, etc... without having to load and directly call Net::DRI::Data::Hosts,Contact,ContactSet,Changes
   Please see the modified t/606eurid_epp.t for examples
 = better error debugging in new_profile() when loading Transport and Protocol classes
-= Transport/Socket : do not use IO::Socket::SSL::context_init anymore, it is mark deprecated in module
+= Transport/Socket : do not use IO::Socket::SSL::context_init anymore, it is marked as deprecated in module
 - Protocol/EPP/Message : correct creation of <hello/> commands (bug found by Elias Sidenbladh)
 - Protocol/{EPP,RRP}/Message : correct encoding of outgoing messages with Encode::encode()
 - eg/eurid_epp.pl : the filehandle used for logging must be closed after $dri->end() not before

@@ -34,20 +34,22 @@ Currently Net::DRI ships with
 - a TCP/TLS transport
 - a SOAP transport (HTTP/HTTPS)
 - a Web scraping ``transport''
+- an SMTP transport
 - a Net::DRI::DRD::EURid covering EURid for .EU (with EPP & EPP extensions)
 - a Net::DRI::DRD::VNDS covering Verisign Naming & Directory Services for
   .COM & .NET (with RRP or EPP)
 - a Net::DRI::DRD::AFNIC covering AFNIC registry for .FR
-     (only domain_check through web services)
+     (only domain_check through web services and domain_create by email)
 - a Net::DRI::DRD::Gandi covering Gandi registrar for .COM/.NET/.ORG/.BIZ/
    .INFO/.NAME/.BE
      (only domain_update for nameservers through web site)
 - a Net::DRI::DRD::WS covering .WS registry
 - a Net::DRI::DRD::SE covering .SE registry
+- a Net::DRI::DRD::PL covering .PL registry
 
 
-Work is underway to provide an email transport, as well as full support for
-asynchronous registries.
+Work is underway to provide full support for asynchronous registries,
+as well as advanced features such as defered send.
 
 If you are a registry/registrar/reseller, we would welcome
 the opportunity to be able to test Net::DRI against your system. Please
@@ -80,6 +82,8 @@ IO::Socket::SSL (>=0.90)
 SOAP::Lite
 WWW::Mechanize
 XML::LibXML
+MIME::Entity
+Net::SMTP
 
 
 Install
@@ -97,6 +101,7 @@ How to use
 You can find examples in the eg subdirectory:
 vnds_rrp.pl : as registrar, to connect to Verisign systems using RRP
 afnic_ws.pl : as AFNIC member, to use AFNIC web services
+afnic_email.pl : as AFNIC member, to use the email robot
 gandi_web.pl : as Gandi client, to change nameservers for your domain, 
                through the web interface
 ws_rrp.pl    : as registrar, to connect to .WS using RRP
@@ -174,7 +179,8 @@ Typical use of this library would go along those lines:
  It is an instance of Net::DRI::Protocol::ResultStatus, please see its documentation.
 
  You can also always use:
- result_is_success() result_code() result_native_code() result_message() result_lang() methods
+ result_is_success() result_code() result_native_code() result_message() result_lang() 
+ result_is_pending() result_trid() methods
  to get back the same information (if not given by the methods or if you want to discard output)
 
  Information that has been sent by registry will be available through $dri->get_info(...)
@@ -508,6 +514,7 @@ See corresponding domain_* methods.
 
 See above methods.
 
+* message_retrieve() message_delete() message_waiting() : to handle registry messages
 
 * all other operations
 

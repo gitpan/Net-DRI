@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-use Test::More tests => 68;
+use Test::More tests => 74;
 
 BEGIN { 
 use_ok('Net::DRI');
@@ -29,10 +29,12 @@ use_ok('Net::DRI::Data::ContactSet');
 use_ok('Net::DRI::Data::Contact::EURid');
 use_ok('Net::DRI::Data::Contact::SE');
 use_ok('Net::DRI::Data::Contact::PL');
+use_ok('Net::DRI::Data::Contact::AFNIC');
 use_ok('Net::DRI::Transport::Socket');
 use_ok('Net::DRI::Transport::Dummy');
 use_ok('Net::DRI::Transport::SOAP');
 use_ok('Net::DRI::Transport::Web');
+use_ok('Net::DRI::Transport::SMTP');
 use_ok('Net::DRI::Protocol::ResultStatus');
 use_ok('Net::DRI::Protocol::Message');
 use_ok('Net::DRI::Protocol::RRP::Message');
@@ -45,6 +47,9 @@ use_ok('Net::DRI::Protocol::RRP');
 use_ok('Net::DRI::Protocol::AFNIC::WS::Domain');
 use_ok('Net::DRI::Protocol::AFNIC::WS::Message');
 use_ok('Net::DRI::Protocol::AFNIC::WS');
+use_ok('Net::DRI::Protocol::AFNIC::Email::Domain');
+use_ok('Net::DRI::Protocol::AFNIC::Email::Message');
+use_ok('Net::DRI::Protocol::AFNIC::Email');
 use_ok('Net::DRI::Protocol::Gandi::Web::Connection');
 use_ok('Net::DRI::Protocol::Gandi::Web::Domain');
 use_ok('Net::DRI::Protocol::Gandi::Web::Message');
@@ -57,6 +62,7 @@ use_ok('Net::DRI::Protocol::EPP::Core::Contact');
 use_ok('Net::DRI::Protocol::EPP::Core::Domain');
 use_ok('Net::DRI::Protocol::EPP::Core::Host');
 use_ok('Net::DRI::Protocol::EPP::Core::Session');
+use_ok('Net::DRI::Protocol::EPP::Core::RegistryMessage');
 use_ok('Net::DRI::Protocol::EPP::Extensions::GracePeriod');
 use_ok('Net::DRI::Protocol::EPP::Extensions::E164');
 use_ok('Net::DRI::Protocol::EPP::Extensions::SecDNS');

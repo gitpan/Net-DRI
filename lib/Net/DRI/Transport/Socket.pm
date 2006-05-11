@@ -29,7 +29,7 @@ use Net::DRI::Exception;
 use Net::DRI::Util;
 use Net::DRI::Data::Raw;
 
-our $VERSION=do { my @r=(q$Revision: 1.17 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.18 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -285,8 +285,8 @@ sub end
    local $SIG{ALRM}=sub { die "timeout" };
    alarm(10);
    $self->close_connection();
-   alarm(0);
   };
+  alarm(0); ## since close_connection may die, this must be outside of eval to be executed in all cases
  }
 }
 

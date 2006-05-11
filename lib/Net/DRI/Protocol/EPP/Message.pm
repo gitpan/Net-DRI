@@ -19,6 +19,7 @@ package Net::DRI::Protocol::EPP::Message;
 
 use strict;
 
+use DateTime::Format::ISO8601 ();
 use XML::LibXML ();
 use Encode ();
 
@@ -27,9 +28,9 @@ use Net::DRI::Exception;
 use Net::DRI::Util;
 
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
-__PACKAGE__->mk_accessors(qw(version errcode errmsg errlang command command_body cltrid svtrid queue_count queue_headid message_qdate message_content message_lang node_resdata node_extension result_greeting result_extra_info));
+__PACKAGE__->mk_accessors(qw(version errcode errmsg errlang command command_body cltrid svtrid msg_id node_resdata node_extension result_greeting result_extra_info));
 
-our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -274,7 +275,7 @@ sub get_content
 
 sub parse
 {
- my ($self,$dc)=@_; ## DataRaw
+ my ($self,$dc,$rinfo)=@_;
 
  my $NS=$self->topns();
  my $parser=XML::LibXML->new();
@@ -303,19 +304,20 @@ sub parse
   $self->errlang($errl);
  }
 
- ## TO FIX : in ServiceMessages ?
  if ($res->getElementsByTagNameNS($NS,'msgQ')) ## OPTIONAL
  {
   my $msgq=($res->getElementsByTagNameNS($NS,'msgQ'))[0];
-  $self->queue_count($msgq->getAttribute('count'));
-  $self->queue_headid($msgq->getAttribute('id'));
-  ## if we have done a poll request, we may have childs
-  if ($msgq->hasChildNodes())
+  my $id=$msgq->getAttribute('id');
+  $rinfo->{message}->{info}={ count => $msgq->getAttribute('count'), first_id => $id };
+  if ($msgq->hasChildNodes()) ## We will have childs only as a result of a poll request
   {
-   $self->message_qdate(($msgq->getElementsByTagNameNS($NS,'qDate'))[0]->getData());
+   my %d=( id => $id );
+   $self->msg_id($id);
+   $d{qdate}=DateTime::Format::ISO8601->new()->parse_datetime(($msgq->getElementsByTagNameNS($NS,'qDate'))[0]->firstChild()->getData());
    my $msgc=($msgq->getElementsByTagNameNS($NS,'msg'))[0];
-   $self->message_content($msgc->toString()); ## TO FIX
-   $self->message_lang($msgc->getAttribute('lang') || 'en');
+   $d{content}=$msgc->firstChild()->getData();
+   $d{lang}=$msgc->getAttribute('lang') || 'en';
+   $rinfo->{message}->{$id}=\%d;
   }
  }
 
@@ -352,7 +354,7 @@ sub parse_result
  
   if ($name eq 'extValue') ## OPTIONAL
   {
-   push @{$self->{result_extra_info}},substr(substr($c->toString(),10),0,-11);
+   push @{$self->{result_extra_info}},substr(substr($c->toString(),10),0,-11); ## grab everything as a string, without <extValue> and </extValue>
   } elsif ($name eq 'value') ## OPTIONAL
   {
    push @{$self->{result_extra_info}},$c->toString();

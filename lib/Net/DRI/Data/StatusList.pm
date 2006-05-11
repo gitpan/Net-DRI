@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Handling of statuses list (order is irrelevant) (base class)
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -21,7 +21,7 @@ use strict;
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -35,75 +35,69 @@ You should never have to use this class directly, but you may get back objects t
 are instances of subclasses of this class. An object of this class can store the statuses' names,
 with a message for each and a language tag, and any other stuff, depending on registry.
 
-You can call the following methods:
+=head1 METHODS
 
-=over
+=head2 is_active() 
 
-=item *
+returns 1 if these statuses enable an object to be active
 
-C<is_active()> returns 1 if these statuses enable an object to be active
+=head2 is_published() 
 
-=item *
+returns 1 if these statuses enable the object to be published on registry DNS servers
 
-C<is_published()> returns 1 if these statuses enable the object to be published on registry DNS servers
+=head2 is_pending() 
 
-=item *
+returns 1 if theses statuses are for an object that is pending some action at registry
 
-C<is_pending()> returns 1 if theses statuses are for an object that is pending some action at registry
+=head2 is_linked() 
 
-=item *
+returns 1 if theses statuses are for an object that is linked to another one at registry
 
-C<is_linked()> returns 1 if theses statuses are for an object that is linked to another one at registry
+=head2 can_update() 
 
-=item *
+returns 1 if theses statuses allow to update the object at registry
 
-C<can_update()> returns 1 if theses statuses allow to update the object at registry
+=head2 can_transfer() 
 
-=item *
+returns 1 if theses statuses allow to transfer the object at registry
 
-C<can_transfer()> returns 1 if theses statuses allow to transfer the object at registry
+=head2 can_delete() 
 
-=item *
+returns 1 if theses statuses allow to delete the object at registry
 
-C<can_delete()> returns 1 if theses statuses allow to delete the object at registry
+=head2 can_renew()
 
-=item *
+returns 1 if theses statuses allow to renew the object at registry
 
-C<can_renew()> returns 1 if theses statuses allow to renew the object at registry
+=head2 possible_no() 
 
-=item *
+returns an array with the list of available status to use in the no() call
 
-C<possible_no()> returns an array with the list of available status to use in the no() call
+=head2 no()
 
-=item *
-
-C<no()> can be used to build a status, which will be added to the list. Must be given three parameters:
+can be used to build a status, which will be added to the list. Must be given three parameters:
   a status (from list given by C<possible_no()>), a message (optional), a lang (optional, default to 'en')
 
-=back
+=head1 INTERNAL METHODS
 
 You may also use the following methods, but they should be less useful as
 the purpose of the module is to give an abstract view of the underlying statuses.
 
-=over
+=head2 list_status() 
 
-=item *
+to get only the statuses' names
 
-C<list_status()> to get only the statuses' names
+=head2 status_details() 
 
-=item *
+to get an hash ref with all status information
 
-C<status_details()> to get an hash ref with all status information
+=head2 has_any() 
 
-=item *
+returns 1 if the object has any of the statuses given as arguments
 
-C<has_any()> returns 1 if the object has any of the statuses given as arguments
+=head2 has_not() 
 
-=item *
-
-C<has_not()> returns 1 if the object has none of the statuses given as arguments
-
-=back
+returns 1 if the object has none of the statuses given as arguments
 
 =head1 SUPPORT
 
@@ -123,7 +117,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -247,14 +241,14 @@ sub no
 ###########################################################################################################
 ## Methods that must be defined in subclasses
 
-sub is_active    { Net::DRI::Exception::err_method_not_implemented("is_active in ".ref($_[0])); }
-sub is_published { Net::DRI::Exception::err_method_not_implemented("is_published in ".ref($_[0])); } 
-sub is_pending   { Net::DRI::Exception::err_method_not_implemented("is_pending in ".ref($_[0])); }
-sub is_linked    { Net::DRI::Exception::err_method_not_implemented("is_linked in ".ref($_[0])); }
-sub can_update   { Net::DRI::Exception::err_method_not_implemented("can_update in ".ref($_[0])); }
-sub can_transfer { Net::DRI::Exception::err_method_not_implemented("can_transfer in ".ref($_[0])); }
-sub can_delete   { Net::DRI::Exception::err_method_not_implemented("can_delete in ".ref($_[0])); }
-sub can_renew    { Net::DRI::Exception::err_method_not_implemented("can_renew in ".ref($_[0])); }
+sub is_active    { Net::DRI::Exception::err_method_not_implemented('is_active in '.ref($_[0])); }
+sub is_published { Net::DRI::Exception::err_method_not_implemented('is_published in '.ref($_[0])); } 
+sub is_pending   { Net::DRI::Exception::err_method_not_implemented('is_pending in '.ref($_[0])); }
+sub is_linked    { Net::DRI::Exception::err_method_not_implemented('is_linked in '.ref($_[0])); }
+sub can_update   { Net::DRI::Exception::err_method_not_implemented('can_update in '.ref($_[0])); }
+sub can_transfer { Net::DRI::Exception::err_method_not_implemented('can_transfer in '.ref($_[0])); }
+sub can_delete   { Net::DRI::Exception::err_method_not_implemented('can_delete in '.ref($_[0])); }
+sub can_renew    { Net::DRI::Exception::err_method_not_implemented('can_renew in '.ref($_[0])); }
 
 ###########################################################################################################
 1;
