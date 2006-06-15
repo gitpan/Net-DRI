@@ -26,7 +26,7 @@ use Net::DRI::Protocol::EPP::Core::Status;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -143,19 +143,19 @@ sub check_parse
  return unless $chkdata;
  foreach my $cd ($chkdata->getElementsByTagNameNS($mes->ns('contact'),'cd'))
  {
-  my $c=$cd->firstChild;
+  my $c=$cd->getFirstChild();
   my $contact;
   while($c)
   {
-   my $n=$c->nodeName();
-   if ($n eq 'contact:id')
+   my $n=$c->localname() || $c->nodeName();
+   if ($n eq 'id')
    {
-    $contact=$c->firstChild->getData();
+    $contact=$c->getFirstChild()->getData();
     $rinfo->{contact}->{$contact}->{exist}=1-Net::DRI::Util::xml_parse_boolean($c->getAttribute('avail'));
    }
-   if ($n eq 'contact:reason')
+   if ($n eq 'reason')
    {
-    $rinfo->{contact}->{$contact}->{exist_reason}=$c->firstChild->getData();
+    $rinfo->{contact}->{$contact}->{exist_reason}=$c->getFirstChild()->getData();
    }
    $c=$c->getNextSibling();
   }
@@ -184,44 +184,44 @@ sub info_parse
  my %cd=map { $_ => [] } qw/name org street city sp pc cc/;
  my $contact=$po->factories()->{contact}->();
  my @s;
- my $c=$infdata->firstChild();
+ my $c=$infdata->getFirstChild();
  while ($c)
  {
-  my $name=$c->nodeName();
+  my $name=$c->localname() || $c->nodeName();
   next unless $name;
-  if ($name eq 'contact:id')
+  if ($name eq 'id')
   {
-   $contact->srid($c->firstChild->getData());
-  } elsif ($name eq 'contact:roid')
+   $contact->srid($c->getFirstChild()->getData());
+  } elsif ($name eq 'roid')
   {
-   $contact->roid($c->firstChild->getData());
+   $contact->roid($c->getFirstChild()->getData());
    $rinfo->{contact}->{$oname}->{roid}=$contact->roid();
-  } elsif ($name eq 'contact:status')
+  } elsif ($name eq 'status')
   {
    push @s,Net::DRI::Protocol::EPP::parse_status($c);
-  } elsif ($name=~m/^contact:(clID|crID|upID)$/)
+  } elsif ($name=~m/^(clID|crID|upID)$/)
   {
-   $rinfo->{contact}->{$oname}->{$1}=$c->firstChild->getData();
-  } elsif ($name=~m/^contact:(crDate|upDate|trDate)$/)
+   $rinfo->{contact}->{$oname}->{$1}=$c->getFirstChild()->getData();
+  } elsif ($name=~m/^(crDate|upDate|trDate)$/)
   {
-   $rinfo->{contact}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->firstChild->getData());
-  } elsif ($name eq 'contact:email')
+   $rinfo->{contact}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
+  } elsif ($name eq 'email')
   {
-   $contact->email($c->firstChild->getData());
-  } elsif ($name eq 'contact:voice')
+   $contact->email($c->getFirstChild()->getData());
+  } elsif ($name eq 'voice')
   {
    $contact->voice(parse_tel($c));
-  } elsif ($name eq 'contact:fax')
+  } elsif ($name eq 'fax')
   {
    $contact->fax(parse_tel($c));
-  } elsif ($name eq 'contact:postalInfo')
+  } elsif ($name eq 'postalInfo')
   {
    parse_postalinfo($c,\%cd);
-  } elsif ($name eq 'contact:authInfo')
+  } elsif ($name eq 'authInfo')
   {
-   my $pw=($c->getElementsByTagNameNS($mes->ns('contact'),'pw'))[0]->firstChild->getData();
+   my $pw=($c->getElementsByTagNameNS($mes->ns('contact'),'pw'))[0]->getFirstChild()->getData();
    $contact->auth({pw => $pw});
-  } elsif ($name eq 'contact:disclose')
+  } elsif ($name eq 'disclose')
   {
    $contact->disclose(parse_disclose($c));
   }
@@ -264,35 +264,35 @@ sub parse_postalinfo
  my $n=$c->getFirstChild();
  while($n)
  {
-  my $name=$n->nodeName();
+  my $name=$n->localname() || $n->nodeName();
   next unless $name;
-  if ($name eq 'contact:name')
+  if ($name eq 'name')
   {
    $rcd->{name}->[$ti]=get_data($n);
-  } elsif ($name eq 'contact:org')
+  } elsif ($name eq 'org')
   {
    $rcd->{org}->[$ti]=get_data($n);
-  } elsif ($name eq 'contact:addr')
+  } elsif ($name eq 'addr')
   {
    my $nn=$n->getFirstChild();
    my @street;
    while($nn)
    {
-    my $name2=$nn->nodeName();
+    my $name2=$nn->localname() || $nn->nodeName();
     next unless $name2;
-    if ($name2 eq 'contact:street')
+    if ($name2 eq 'street')
     {
      push @street,get_data($nn);
-    } elsif ($name2 eq 'contact:city')
+    } elsif ($name2 eq 'city')
     {
      $rcd->{city}->[$ti]=get_data($nn);
-    } elsif ($name2 eq 'contact:sp')
+    } elsif ($name2 eq 'sp')
     {
      $rcd->{sp}->[$ti]=get_data($nn);
-    } elsif ($name2 eq 'contact:pc')
+    } elsif ($name2 eq 'pc')
     {
      $rcd->{pc}->[$ti]=get_data($nn);
-    } elsif ($name2 eq 'contact:cc')
+    } elsif ($name2 eq 'cc')
     {
      $rcd->{cc}->[$ti]=get_data($nn);
     }
@@ -309,17 +309,17 @@ sub parse_disclose ## RFC 3733 §2.9
  my $c=shift;
  my $flag=Net::DRI::Util::xml_parse_boolean($c->getAttribute('flag'));
  my %tmp;
- my $n=$c->firstChild;
+ my $n=$c->getFirstChild();
  while($n)
  {
-  my $name=$n->nodeName();
+  my $name=$n->localname() || $n->nodeName();
   next unless $name;
-  if ($name=~m/^contact:(name|org|addr)$/)
+  if ($name=~m/^(name|org|addr)$/)
   {
    my $t=$n->getAttribute('type');
    $tmp{$1}=$flag;
    $tmp{"${1}_${t}"}=$flag;
-  } elsif ($name=~m/^contact:(voice|fax|email)$/)
+  } elsif ($name=~m/^(voice|fax|email)$/)
   {
    $tmp{$1}=$flag;
   }
@@ -348,18 +348,18 @@ sub transfer_parse
 
  $rinfo->{contact}->{$oname}->{exist}=1;
 
- my $c=$trndata->firstChild();
+ my $c=$trndata->getFirstChild();
  while ($c)
  {
-  my $name=$c->nodeName();
+  my $name=$c->localname() || $c->nodeName();
   next unless $name;
 
-  if ($name=~m/^contact:(trStatus|reID|acID)$/) ## we do not use contact:id
+  if ($name=~m/^(trStatus|reID|acID)$/) ## we do not use contact:id
   {
-   $rinfo->{contact}->{$oname}->{$1}=$c->getFirstChild->getData();
-  } elsif ($name=~m/^contact:(reDate|acDate)$/)
+   $rinfo->{contact}->{$oname}->{$1}=$c->getFirstChild()->getData();
+  } elsif ($name=~m/^(reDate|acDate)$/)
   {
-   $rinfo->{contact}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild->getData());
+   $rinfo->{contact}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
   }
   $c=$c->getNextSibling();
  }
@@ -476,16 +476,16 @@ sub create_parse
  return unless $credata;
 
  $rinfo->{contact}->{$oname}->{exist}=1;
- my $c=$credata->firstChild();
+ my $c=$credata->getFirstChild();
  while ($c)
  {
-  my $name=$c->nodeName();
-  if ($name=~m/^contact:(crDate)$/)
+  my $name=$c->localname() || $c->nodeName();
+  if ($name=~m/^(crDate)$/)
   {
-   $rinfo->{contact}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->firstChild->getData());
-  } elsif ($name eq 'contact:id')
+   $rinfo->{contact}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
+  } elsif ($name eq 'id')
   {
-   $rinfo->{contact}->{$oname}->{id}=$c->firstChild->getData();
+   $rinfo->{contact}->{$oname}->{id}=$c->getFirstChild()->getData();
   }
   $c=$c->getNextSibling();
  }

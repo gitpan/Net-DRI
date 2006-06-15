@@ -24,7 +24,7 @@ __PACKAGE__->mk_accessors(qw(legal_form legal_form_other legal_id jo trademark k
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -182,7 +182,7 @@ sub validate
  {
   if ((ref($birth) eq 'HASH') && exists($birth->{date}) && exists($birth->{place}))
   {
-   push @errs,'birth' unless $birth->{date}=~m!^[0-9]{2}/[0-9]{2}/[0-9]{4}$!;
+   push @errs,'birth' unless ((ref($birth->{date}) eq 'DateTime') || $birth->{date}=~m!^[0-9]{2}/[0-9]{2}/[0-9]{4}$!);
    push @errs,'birth' unless $birth->{place}=~m!^(?:[A-Za-z]{2}|[0-9]{2}(?:[0-9]{3})* *, *${NOM_PROPRE})$!;
   } else
   {

@@ -3,6 +3,8 @@
 use Net::DRI;
 
 use Test::More tests => 8;
+eval { use Test::LongString max => 100; $Test::LongString::Context=50; };
+*{'main::is_string'}=\&main::is if $@;
 
 our $R1='';
 sub mysend
@@ -66,7 +68,7 @@ Content-Type: text/plain; charset="iso-8859-15"
 Content-Disposition: inline
 Content-Transfer-Encoding: 8bit
 MIME-Version: 1.0
-X-Mailer: Net::DRI 0.22/1.01 via MIME-tools 5.417 (Entity 5.417)
+X-Mailer: Net::DRI 0.30/1.01 via MIME-tools 5.417 (Entity 5.417)
 From: test@localhost
 To: domain@nic.fr
 Subject: CLIENTID domain_create [TRID-12345]
@@ -96,7 +98,7 @@ Subject: CLIENTID domain_create [TRID-12345]
 7a..: ns.toto.com
 EOF
 
-is(munge_xmailer($R1),munge_xmailer($E1),'domain_create_only build');
+is_string(munge_xmailer($R1),munge_xmailer($E1),'domain_create_only build');
 
 ## REDUCED PP
 $co=$dri->local_object('contact');
@@ -115,7 +117,7 @@ Content-Type: text/plain; charset="iso-8859-15"
 Content-Disposition: inline
 Content-Transfer-Encoding: 8bit
 MIME-Version: 1.0
-X-Mailer: Net::DRI 0.22/1.01 via MIME-tools 5.417 (Entity 5.417)
+X-Mailer: Net::DRI 0.30/1.01 via MIME-tools 5.417 (Entity 5.417)
 From: test@localhost
 To: domain@nic.fr
 Subject: CLIENTID domain_create [TRID-12345]
@@ -135,6 +137,6 @@ Subject: CLIENTID domain_create [TRID-12345]
 7a..: ns.toto.com
 EOF
 
-is(munge_xmailer($R1),munge_xmailer($E2),'domain_create_only PPreduced build');
+is_string(munge_xmailer($R1),munge_xmailer($E2),'domain_create_only PPreduced build');
 
 exit 0;

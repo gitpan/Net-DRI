@@ -156,7 +156,7 @@ $R2=$E1.'<response>'.r().'<resData><domain:trnData xmlns:domain="urn:ietf:params
  no warnings;
  *Net::DRI::DRD::VNDS::verify_duration_transfer=sub { return 0; };
 }
-$rc=$dri->domain_transfer_start('example205.com',{auth=>{pw=>'2fooBAR',roid=>"JD1234-REP"},period=>DateTime::Duration->new(years=>1)});
+$rc=$dri->domain_transfer_start('example205.com',{auth=>{pw=>'2fooBAR',roid=>"JD1234-REP"},duration=>DateTime::Duration->new(years=>1)});
 is($R1,$E1.'<command><transfer op="request"><domain:transfer xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example205.com</domain:name><domain:period unit="y">1</domain:period><domain:authInfo><domain:pw roid="JD1234-REP">2fooBAR</domain:pw></domain:authInfo></domain:transfer></transfer><clTRID>ABC-12345</clTRID></command>'.$E2,'domain_transfer_request build');
 is($dri->get_info('exist'),1,'domain_transfer_start get_info(exist)');
 is($dri->get_info('trStatus'),'pending','domain_transfer_start get_info(trStatus)');

@@ -33,7 +33,7 @@ use Net::DRI::Data::Hosts;
 
 our $AUTOLOAD;
 
-our $VERSION=do { my @r=(q$Revision: 1.20 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.22 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -272,9 +272,16 @@ sub get_auto_target
 sub new_profile
 {
  my ($self,$name,$transport,$t_params,$protocol,$p_params)=@_;
+ Net::DRI::Exception->die(0,'DRI',12,"New profile name already in use") if $self->exist_profile($name);
+
+ if (!defined($protocol) && !defined($p_params) && $self->can('transport_protocol_default'))
+ {
+  $p_params=defined($t_params)? $t_params : [];
+  $t_params=defined($transport)? $transport : [];
+  ($transport,$protocol)=$self->transport_protocol_default();
+ }
  Net::DRI::Exception::err_insufficient_parameters() unless (Net::DRI::Util::all_valid($transport,$t_params,$protocol,$p_params));
  Net::DRI::Exception::err_invalid_parameters() unless ((ref($t_params) eq 'ARRAY') && (ref($p_params) eq 'ARRAY'));
- Net::DRI::Exception->die(0,'DRI',12,"New profile name already in use") if $self->exist_profile($name);
 
  $transport='Net::DRI::Transport::'.$transport unless ($transport=~m/::/);
  $protocol ='Net::DRI::Protocol::'.$protocol   unless ($protocol=~m/::/);
@@ -388,7 +395,7 @@ sub process
  return $self->process_back($trid,$po,$to,$otype,$oaction) if $to->is_sync();
 
  my $rc=Net::DRI::Protocol::ResultStatus->new_success($Net::DRI::Protocol::ResultStatus::EPP_CODES{COMMAND_SUCCESSFUL_PENDING});
- $rc->_set_trid($trid);
+ $rc->_set_trid([ $trid ]);
  $self->status($rc);
  return $rc;
 }
@@ -408,7 +415,7 @@ sub process_back
   ###  return $self->protocol()->new_from_reply($tosend,$gotback);
   ###  ## $tosend needed to propagate EPP version, for example
   ($rc,$ri,$oname)=$po->reaction($otype,$oaction,$res,$self->{ops}->{$trid}->[1]);
-  $rc->_set_trid($trid);
+  $rc->_set_trid([ $trid ]) unless $rc->trid(); ## if not done inside Protocol::*::Message::result_status, make sure we save at least our transaction id
  };
 
  if ($@) ## some kind of error happened

@@ -30,7 +30,7 @@ use Net::DRI::Util;
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version errcode errmsg errlang command command_body cltrid svtrid msg_id node_resdata node_extension result_greeting result_extra_info));
 
-our $VERSION=do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -102,8 +102,8 @@ sub ns
   $self->{ns}=$what;
   return $what;
  }
- return $self->{ns}->{$what}->[0] if exists($self->{ns}->{$what});
- return;
+ return unless exists($self->{ns}->{$what});
+ return $self->{ns}->{$what}->[0];
 }
 
 sub is_success { return (shift->errcode()=~m/^1/)? 1 : 0; } ## 1XXX is for success, 2XXX for failures
@@ -112,7 +112,9 @@ sub result_status
 {
  my $self=shift;
  my $code=$self->errcode();
- return Net::DRI::Protocol::ResultStatus->new('epp',$self->errcode(),undef,$self->is_success(),$self->errmsg(),$self->errlang(),$self->result_extra_info());
+ my $rs=Net::DRI::Protocol::ResultStatus->new('epp',$self->errcode(),undef,$self->is_success(),$self->errmsg(),$self->errlang(),$self->result_extra_info());
+ $rs->_set_trid([ $self->cltrid(),$self->svtrid() ]);
+ return $rs;
 }
 
 sub command_extension_register
@@ -129,9 +131,9 @@ sub command_extension
 {
  my ($self,$eid,$rdata)=@_;
 
- if (defined($eid) && ($eid >= 0) && ($eid <= $#{$self->{extension}}) && defined($rdata) && (ref($rdata) eq 'ARRAY') && @$rdata)
+ if (defined($eid) && ($eid >= 0) && ($eid <= $#{$self->{extension}}) && defined($rdata) && (((ref($rdata) eq 'ARRAY') && @$rdata) || ($rdata ne '')))
  {
-  $self->{extension}->[$eid]->[2]=[ @{$self->{extension}->[$eid]->[2]}, @$rdata ];
+  $self->{extension}->[$eid]->[2]=(ref($rdata) eq 'ARRAY')? [ @{$self->{extension}->[$eid]->[2]}, @$rdata ] : $rdata;
  } else
  {
   return $self->{extension};
@@ -188,9 +190,15 @@ sub as_string
   foreach my $e (@$ext)
   {
    my ($ecmd,$ens,$rdata)=@$e;
-   push @d,"<${ecmd} ${ens}>";
-   push @d,_toxml($rdata);
-   push @d,"</${ecmd}>";
+   if ($ecmd && $ens)
+   {
+    push @d,"<${ecmd} ${ens}>";
+    push @d,ref($rdata)? _toxml($rdata) : xml_escape($rdata);
+    push @d,"</${ecmd}>";
+   } else
+   {
+    push @d,xml_escape(@$rdata);
+   }
   }
   push @d,'</extension>';
  }
@@ -415,7 +423,7 @@ sub get_name_from_message
  foreach my $e (@$cb)
  {
   return $e->[1] if ($e->[0]=~m/^(?:domain|host|nsgroup):name$/); ## TO FIX (notably in case of check_multi)
-  return $e->[1] if ($e->[0]=~m/^contact:id$/); ## TO FIX
+  return $e->[1] if ($e->[0]=~m/^(?:contact|defreg):id$/); ## TO FIX
  }
  return 'session'; ## TO FIX
 }

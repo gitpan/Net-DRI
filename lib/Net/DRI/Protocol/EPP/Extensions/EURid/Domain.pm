@@ -25,7 +25,7 @@ use Net::DRI::Exception;
 use Net::DRI::Protocol::EPP::Core::Domain;
 use Net::DRI::Data::Hosts;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -150,7 +150,7 @@ sub info_parse
  my @c;
  foreach my $el ($infdata->getElementsByTagNameNS($mes->ns('eurid'),'nsgroup'))
  {
-  push @c,Net::DRI::Data::Hosts->new()->name($el->firstChild->getData());
+  push @c,Net::DRI::Data::Hosts->new()->name($el->getFirstChild()->getData());
  }
 
  $rinfo->{domain}->{$oname}->{nsgroup}=\@c;
@@ -221,7 +221,8 @@ sub add_transfer
 sub add_nsgroup
 {
  my ($nsg)=@_;
- my @a=grep { Net::DRI::Util::xml_is_normalizedstring($_,1,100) } (UNIVERSAL::isa($nsg,'Net::DRI::Data::Hosts')? $nsg->name() : ($nsg));
+ return unless (defined($nsg) && $nsg);
+ my @a=grep { defined($_) && Net::DRI::Util::xml_is_normalizedstring($_,1,100) } map { UNIVERSAL::isa($_,'Net::DRI::Data::Hosts')? $_->name() : $_ } (ref($nsg) eq 'ARRAY')? @$nsg : ($nsg);
  return map { ['eurid:nsgroup',$_] } grep {defined} @a[0..8];
 }
 

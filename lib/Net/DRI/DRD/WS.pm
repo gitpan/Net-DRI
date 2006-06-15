@@ -24,7 +24,7 @@ use DateTime::Duration;
 use DateTime;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -83,6 +83,11 @@ sub transport_protocol_compatible
 
  return 1 if (($pn eq 'RRP') && ($tn eq 'socket_inet'));
  return;
+}
+
+sub transport_protocol_default
+{
+ return ('Net::DRI::Transport::Socket','Net::DRI::Protocol::RRP');
 }
 
 ######################################################################################

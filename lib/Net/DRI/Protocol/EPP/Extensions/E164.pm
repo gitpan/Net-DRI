@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP E.164 Number Mapping (RFC4114)
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -22,7 +22,7 @@ use strict;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 our $NS='urn:ietf:params:xml:ns:e164epp-1.0';
 
 =pod
@@ -53,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -135,15 +135,15 @@ sub info_parse
  my @naptr;
  foreach my $el ($infdata->getElementsByTagNameNS($NS,'naptr'))
  {
-  my $c=$el->firstChild();
+  my $c=$el->getFirstChild();
   my %n;
   while ($c)
   {
-   my $name=$c->nodeName();
+   my $name=$c->localname() || $c->nodeName();
    next unless $name;
-   if ($name=~m/^e164:(order|pref|flags|svc|regex|replacement)$/)
+   if ($name=~m/^(order|pref|flags|svc|regex|replacement)$/)
    {
-    $n{$1}=$c->firstChild->getData();
+    $n{$1}=$c->getFirstChild()->getData();
    }
    $c=$c->getNextSibling();
   }
@@ -160,7 +160,14 @@ sub create
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
 
- Net::DRI::Exception::usererr_insufficient_parameters('One or more E164 data block must be provided') unless (exists($rd->{e164}) && (ref($rd->{e164}) eq 'ARRAY') && @{$rd->{e164}});
+ my $def=$epp->default_parameters();
+
+ ## IENUMAT works without the e164 extension part
+ unless (exists($rd->{e164}) && (ref($rd->{e164}) eq 'ARRAY') && @{$rd->{e164}})
+ {
+  Net::DRI::Exception::usererr_insufficient_parameters('One or more E164 data block must be provided') unless (defined($def) && exists($def->{rfc4114_relax}) && $def->{rfc4114_relax});
+  return;
+ }
 
  my $eid=$mes->command_extension_register('e164:create','xmlns:e164="urn:ietf:params:xml:ns:e164epp-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:e164epp-1.0 e164epp-1.0.xsd"');
  my @n=map { ['e164:naptr',format_naptr($_)] } (@{$rd->{e164}});

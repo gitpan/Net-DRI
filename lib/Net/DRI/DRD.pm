@@ -23,7 +23,7 @@ use DateTime;
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.19 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.20 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -387,6 +387,8 @@ sub domain_check_multi
  my $self=shift;
  my $ndr=shift;
 
+ my $rd;
+ $rd=pop(@_) if ($_[-1] && (ref($_[-1]) eq 'HASH'));
  my $rc;
  my @d;
  foreach my $domain (@_)
@@ -402,23 +404,23 @@ sub domain_check_multi
   }
  }
 
- $rc=$ndr->process('domain','check_multi',[\@d]) if @d;
+ $rc=$ndr->process('domain','check_multi',[\@d,$rd]) if @d;
  return $rc;
 }
 
 sub domain_exist ## 1/0/undef
 {
- my ($self,$ndr,$domain)=@_;
+ my ($self,$ndr,$domain,$rd)=@_;
  err_invalid_domain_name($domain) if $self->verify_name_domain($domain);
 
- my $rc=$ndr->domain_check($domain);
+ my $rc=$ndr->domain_check($domain,$rd);
  return unless $rc->is_success();
  return $ndr->get_info('exist');
 }
 
 sub domain_update
 {
- my ($self,$ndr,$domain,$tochange)=@_;
+ my ($self,$ndr,$domain,$tochange,$rd)=@_;
  my $fp=$ndr->protocol->nameversion();
 
  err_invalid_domain_name($domain) if $self->verify_name_domain($domain);
@@ -459,17 +461,17 @@ sub domain_update
   Net::DRI::Exception->die(0,'DRD',6,"Change domain_update/${w} with simultaneous set and add or del not supported") if (defined($set) && (defined($add) || defined($del)));
  }
 
- my $rc=$ndr->process('domain','update',[$domain,$tochange]);
+ my $rc=$ndr->process('domain','update',[$domain,$tochange,$rd]);
  return $rc;
 }
 
-sub domain_update_ns_add { my ($self,$ndr,$domain,$ns)=@_; return $self->domain_update_ns($ndr,$domain,$ns,$ndr->local_object('hosts')); }
-sub domain_update_ns_del { my ($self,$ndr,$domain,$ns)=@_; return $self->domain_update_ns($ndr,$domain,$ndr->local_object('hosts'),$ns); }
-sub domain_update_ns_set { my ($self,$ndr,$domain,$ns)=@_; return $self->domain_update_ns($ndr,$domain,$ns); }
+sub domain_update_ns_add { my ($self,$ndr,$domain,$ns,$rd)=@_; return $self->domain_update_ns($ndr,$domain,$ns,$ndr->local_object('hosts'),$rd); }
+sub domain_update_ns_del { my ($self,$ndr,$domain,$ns,$rd)=@_; return $self->domain_update_ns($ndr,$domain,$ndr->local_object('hosts'),$ns,$rd); }
+sub domain_update_ns_set { my ($self,$ndr,$domain,$ns,$rd)=@_; return $self->domain_update_ns($ndr,$domain,$ns,undef,$rd); }
 
 sub domain_update_ns
 {
- my ($self,$ndr,$domain,$nsadd,$nsdel)=@_;
+ my ($self,$ndr,$domain,$nsadd,$nsdel,$rd)=@_;
  Net::DRI::Util::check_isa($nsadd,'Net::DRI::Data::Hosts');
  if (defined($nsdel)) ## add + del
  {
@@ -477,20 +479,20 @@ sub domain_update_ns
   my $c=$ndr->local_object('changes');
   $c->add('ns',$nsadd) unless ($nsadd->is_empty());
   $c->del('ns',$nsdel) unless ($nsdel->is_empty());
-  return $self->domain_update($ndr,$domain,$c);
+  return $self->domain_update($ndr,$domain,$c,$rd);
  } else
  {
-  return $self->domain_update($ndr,$domain,$ndr->local_object('changes')->set('ns',$nsadd));
+  return $self->domain_update($ndr,$domain,$ndr->local_object('changes')->set('ns',$nsadd),$rd);
  }
 }
 
-sub domain_update_status_add { my ($self,$ndr,$domain,$s)=@_; return $self->domain_update_status($ndr,$domain,$s,$ndr->local_object('status')); }
-sub domain_update_status_del { my ($self,$ndr,$domain,$s)=@_; return $self->domain_update_status($ndr,$domain,$ndr->local_object('status'),$s); }
-sub domain_update_status_set { my ($self,$ndr,$domain,$s)=@_; return $self->domain_update_status($ndr,$domain,$s); }
+sub domain_update_status_add { my ($self,$ndr,$domain,$s,$rd)=@_; return $self->domain_update_status($ndr,$domain,$s,$ndr->local_object('status'),$rd); }
+sub domain_update_status_del { my ($self,$ndr,$domain,$s,$rd)=@_; return $self->domain_update_status($ndr,$domain,$ndr->local_object('status'),$s,$rd); }
+sub domain_update_status_set { my ($self,$ndr,$domain,$s,$rd)=@_; return $self->domain_update_status($ndr,$domain,$s,undef,$rd); }
 
 sub domain_update_status
 {
- my ($self,$ndr,$domain,$sadd,$sdel)=@_;
+ my ($self,$ndr,$domain,$sadd,$sdel,$rd)=@_;
  Net::DRI::Util::check_isa($sadd,'Net::DRI::Data::StatusList');
  if (defined($sdel)) ## add + del
  {
@@ -498,20 +500,20 @@ sub domain_update_status
   my $c=$ndr->local_object('changes');
   $c->add('status',$sadd) unless ($sadd->is_empty());
   $c->del('status',$sdel) unless ($sdel->is_empty());
-  return $self->domain_update($ndr,$domain,$c);
+  return $self->domain_update($ndr,$domain,$c,$rd);
  } else
  {
-  return $self->domain_update($ndr,$domain,$ndr->local_object('changes')->set('status',$sadd));
+  return $self->domain_update($ndr,$domain,$ndr->local_object('changes')->set('status',$sadd),$rd);
  }
 }
 
-sub domain_update_contact_add { my ($self,$ndr,$domain,$c)=@_; return $self->domain_update_contact($ndr,$domain,$c,$ndr->local_object('contactset')); }
-sub domain_update_contact_del { my ($self,$ndr,$domain,$c)=@_; return $self->domain_update_contact($ndr,$domain,$ndr->local_object('contactset'),$c); }
-sub domain_update_contact_set { my ($self,$ndr,$domain,$c)=@_; return $self->domain_update_contact($ndr,$domain,$c); }
+sub domain_update_contact_add { my ($self,$ndr,$domain,$c,$rd)=@_; return $self->domain_update_contact($ndr,$domain,$c,$ndr->local_object('contactset'),$rd); }
+sub domain_update_contact_del { my ($self,$ndr,$domain,$c,$rd)=@_; return $self->domain_update_contact($ndr,$domain,$ndr->local_object('contactset'),$c,$rd); }
+sub domain_update_contact_set { my ($self,$ndr,$domain,$c,$rd)=@_; return $self->domain_update_contact($ndr,$domain,$c,undef,$rd); }
 
 sub domain_update_contact
 {
- my ($self,$ndr,$domain,$cadd,$cdel)=@_;
+ my ($self,$ndr,$domain,$cadd,$cdel,$rd)=@_;
  Net::DRI::Util::check_isa($cadd,'Net::DRI::Data::ContactSet');
  if (defined($cdel)) ## add + del
  {
@@ -519,16 +521,16 @@ sub domain_update_contact
   my $c=$ndr->local_object('changes');
   $c->add('contact',$cadd) unless ($cadd->is_empty());
   $c->del('contact',$cdel) unless ($cdel->is_empty());
-  return $self->domain_update($ndr,$domain,$c);
+  return $self->domain_update($ndr,$domain,$c,$rd);
  } else
  {
-  return $self->domain_update($ndr,$domain,$ndr->local_object('changes')->set('contact',$cadd));
+  return $self->domain_update($ndr,$domain,$ndr->local_object('changes')->set('contact',$cadd),$rd);
  }
 } 
 
 sub domain_renew
 {
- my ($self,$ndr,$domain,$duration,$curexp,$deletedate)=@_;
+ my ($self,$ndr,$domain,$duration,$curexp,$deletedate,$rd)=@_;
  err_invalid_domain_name($domain) if $self->verify_name_domain($domain);
 
  Net::DRI::Util::check_isa($duration,'DateTime::Duration') if defined($duration);
@@ -536,7 +538,7 @@ sub domain_renew
 
  Net::DRI::Exception->die(0,'DRD',3,'Invalid duration') if $self->verify_duration_renew($duration,$domain,$curexp);
 
- my $rc=$ndr->process('domain','renew',[$domain,$duration,$curexp,$deletedate]);
+ my $rc=$ndr->process('domain','renew',[$domain,$duration,$curexp,$deletedate,$rd]);
  return $rc;
 }
 
@@ -546,7 +548,7 @@ sub domain_transfer
  err_invalid_domain_name($domain) if $self->verify_name_domain($domain);
  Net::DRI::Exception::usererr_invalid_parameters("Transfer operation must be start,stop,accept,refuse or query") unless ($op=~m/^(?:start|stop|query|accept|refuse)$/);
 
- Net::DRI::Exception->die(0,'DRD',3,'Invalid duration') if $self->verify_duration_transfer(undef,$domain,$op);
+ Net::DRI::Exception->die(0,'DRD',3,'Invalid duration') if $self->verify_duration_transfer($ndr,(defined($rd) && (ref($rd) eq 'HASH') && exists($rd->{duration}))? $rd->{duration} : undef,$domain,$op);
 
  my $rc;
  if ($op eq 'start')
@@ -577,28 +579,28 @@ sub domain_transfer_refuse  { my ($self,$ndr,$domain,$rd)=@_; return $self->doma
 
 sub domain_can
 {
- my ($self,$ndr,$domain,$what)=@_;
+ my ($self,$ndr,$domain,$what,$rd)=@_;
 
- my $sok=$self->domain_status_allow($ndr,$domain,$what);
+ my $sok=$self->domain_status_allow($ndr,$domain,$what,$rd);
  return 0 unless ($sok);
 
- my $ismine=$self->domain_is_mine($ndr,$domain);
+ my $ismine=$self->domain_is_mine($ndr,$domain,$rd);
  my $n=$self->domain_operation_needs_is_mine($domain,$what);
  return unless (defined($n));
  return ($ismine xor $n)? 0 : 1;
 }
 
-sub domain_status_allows_delete   { my ($self,$ndr,$domain)=@_; return $self->domain_status_allows($ndr,$domain,'delete'); }
-sub domain_status_allows_update   { my ($self,$ndr,$domain)=@_; return $self->domain_status_allows($ndr,$domain,'update'); }
-sub domain_status_allows_transfer { my ($self,$ndr,$domain)=@_; return $self->domain_status_allows($ndr,$domain,'transfer'); }
-sub domain_status_allows_renew    { my ($self,$ndr,$domain)=@_; return $self->domain_status_allows($ndr,$domain,'renew'); }
+sub domain_status_allows_delete   { my ($self,$ndr,$domain,$rd)=@_; return $self->domain_status_allows($ndr,$domain,'delete',$rd); }
+sub domain_status_allows_update   { my ($self,$ndr,$domain,$rd)=@_; return $self->domain_status_allows($ndr,$domain,'update',$rd); }
+sub domain_status_allows_transfer { my ($self,$ndr,$domain,$rd)=@_; return $self->domain_status_allows($ndr,$domain,'transfer',$rd); }
+sub domain_status_allows_renew    { my ($self,$ndr,$domain,$rd)=@_; return $self->domain_status_allows($ndr,$domain,'renew',$rd); }
 
 sub domain_status_allows
 {
- my ($self,$ndr,$domain,$what)=@_;
+ my ($self,$ndr,$domain,$what,$rd)=@_;
 
  return 0 unless ($what=~m/^(?:delete|update|transfer|renew)$/);
- my $s=$self->domain_current_status($ndr,$domain);
+ my $s=$self->domain_current_status($ndr,$domain,$rd);
  return 0 unless (defined($s));
 
  return $s->can_delete()   if ($what eq 'delete');
@@ -610,8 +612,8 @@ sub domain_status_allows
 
 sub domain_current_status
 {
- my ($self,$ndr,$domain)=@_;
- my $rc=$self->domain_info($ndr,$domain);
+ my ($self,$ndr,$domain,$rd)=@_;
+ my $rc=$self->domain_info($ndr,$domain,$rd);
  return unless $rc->is_success();
  my $s=$ndr->get_info('status');
  return unless (defined($s) && UNIVERSAL::isa($s,'Net::DRI::Data::StatusList'));
@@ -620,13 +622,13 @@ sub domain_current_status
 
 sub domain_is_mine
 {
- my ($self,$ndr,$domain)=@_;
+ my ($self,$ndr,$domain,$rd)=@_;
  my $clid=$self->info('clid');
  return 0 unless defined($clid);
  my $id;
  eval
  {
-  my $rc=$self->domain_info($ndr,$domain);
+  my $rc=$self->domain_info($ndr,$domain,$rd);
   $id=$ndr->get_info('clID') if ($rc->is_success());
  };
  return 0 unless (!$@ && defined($id));
@@ -639,29 +641,29 @@ sub domain_is_mine
 
 sub host_create
 {
- my ($self,$ndr,$dh)=@_;
+ my ($self,$ndr,$dh,$rh)=@_;
 
  my $name=(UNIVERSAL::isa($dh,'Net::DRI::Data::Hosts'))? $dh->get_details(1) : $dh;
  err_invalid_host_name($name) if $self->verify_name_host($name,1);
- my $rc=$ndr->process('host','create',[$dh]);
+ my $rc=$ndr->process('host','create',[$dh,$rh]);
 
  return $rc;
 }
 
 sub host_delete
 {
- my ($self,$ndr,$dh)=@_;
+ my ($self,$ndr,$dh,$rh)=@_;
 
  my $name=(UNIVERSAL::isa($dh,'Net::DRI::Data::Hosts'))? $dh->get_details(1) : $dh;
  err_invalid_host_name($name) if $self->verify_name_host($name);
- my $rc=$ndr->process('host','delete',[$dh]);
+ my $rc=$ndr->process('host','delete',[$dh,$rh]);
 
  return $rc;
 }
 
 sub host_info
 {
- my ($self,$ndr,$dh)=@_;
+ my ($self,$ndr,$dh,$rh)=@_;
 
  my $name=(UNIVERSAL::isa($dh,'Net::DRI::Data::Hosts'))? $dh->get_details(1) : $dh;
  err_invalid_host_name($name) if $self->verify_name_host($name);
@@ -673,7 +675,7 @@ sub host_info
   $rc=$ndr->get_info('rc');
  } else
  {
-  $rc=$ndr->process('host','info',[$dh]); ## cache was empty, go to registry
+  $rc=$ndr->process('host','info',[$dh,$rh]); ## cache was empty, go to registry
  }
 
  return $rc unless $rc->is_success();
@@ -682,7 +684,7 @@ sub host_info
 
 sub host_check
 {
- my ($self,$ndr,$dh)=@_;
+ my ($self,$ndr,$dh,$rh)=@_;
 
  my $name=UNIVERSAL::isa($dh,'Net::DRI::Data::Hosts')? $dh->get_details(1) : $dh;
  err_invalid_host_name($name) if $self->verify_name_host($name);
@@ -694,7 +696,7 @@ sub host_check
   $rc=$ndr->get_info('rc');
  } else
  {
-  $rc=$ndr->process('host','check',[$dh]); ## go to registry
+  $rc=$ndr->process('host','check',[$dh,$rh]); ## go to registry
  }
  return $rc;
 }
@@ -704,6 +706,8 @@ sub host_check_multi
  my $self=shift;
  my $ndr=shift;
 
+ my $rh;
+ $rh=pop(@_) if ($_[-1] && (ref($_[-1]) eq 'HASH'));
  my ($rc,@h);
  foreach my $host (map {UNIVERSAL::isa($_,'Net::DRI::Data::Hosts')? $_->get_names() : $_ } @_)
  {
@@ -718,25 +722,25 @@ sub host_check_multi
   }
  }
 
- $rc=$ndr->process('host','check_multi',[\@h]) if @h;
+ $rc=$ndr->process('host','check_multi',[\@h,$rh]) if @h;
  return $rc;
 }
 
 sub host_exist ## 1/0/undef
 {
- my ($self,$ndr,$dh)=@_;
+ my ($self,$ndr,$dh,$rh)=@_;
 
  my $name=(UNIVERSAL::isa($dh,'Net::DRI::Data::Hosts'))? $dh->get_details(1) : $dh;
  err_invalid_host_name($name) if $self->verify_name_host($name);
 
- my $rc=$ndr->host_check($name);
+ my $rc=$ndr->host_check($name,$rh);
  return unless $rc->is_success();
  return $ndr->get_info('exist');
 }
 
 sub host_update
 {
- my ($self,$ndr,$dh,$tochange)=@_;
+ my ($self,$ndr,$dh,$tochange,$rh)=@_;
  my $fp=$ndr->protocol->nameversion();
 
  my $name=(UNIVERSAL::isa($dh,'Net::DRI::Data::Hosts'))? $dh->get_details(1) : $dh;
@@ -776,17 +780,17 @@ sub host_update
   Net::DRI::Exception->die(0,'DRD',6,"Change host_update/${w} with simultaneous set and add or del not supported") if (defined($set) && (defined($add) || defined($del)));
  }
 
- my $rc=$ndr->process('host','update',[$dh,$tochange]);
+ my $rc=$ndr->process('host','update',[$dh,$tochange,$rh]);
  return $rc;
 }
 
-sub host_update_ip_add { my ($self,$ndr,$dh,$ip)=@_; return $self->host_update_ip($ndr,$ip,$ndr->local_object('hosts')); }
-sub host_update_ip_del { my ($self,$ndr,$dh,$ip)=@_; return $self->host_update_ip($ndr,$ndr->local_object('hosts'),$ip); }
-sub host_update_ip_set { my ($self,$ndr,$dh,$ip)=@_; return $self->host_update_ip($ndr,$ip); }
+sub host_update_ip_add { my ($self,$ndr,$dh,$ip,$rh)=@_; return $self->host_update_ip($ndr,$dh,$ip,$ndr->local_object('hosts'),$rh); }
+sub host_update_ip_del { my ($self,$ndr,$dh,$ip,$rh)=@_; return $self->host_update_ip($ndr,$dh,$ndr->local_object('hosts'),$ip,$rh); }
+sub host_update_ip_set { my ($self,$ndr,$dh,$ip,$rh)=@_; return $self->host_update_ip($ndr,$dh,$ip,undef,$rh); }
 
 sub host_update_ip
 {
- my ($self,$ndr,$dh,$ipadd,$ipdel)=@_;
+ my ($self,$ndr,$dh,$ipadd,$ipdel,$rh)=@_;
  Net::DRI::Util::check_isa($ipadd,'Net::DRI::Data::Hosts');
  if (defined($ipdel)) ## add + del
  {
@@ -794,20 +798,20 @@ sub host_update_ip
   my $c=$ndr->local_object('changes');
   $c->add('ip',$ipadd) unless ($ipadd->is_empty());
   $c->del('ip',$ipdel) unless ($ipdel->is_empty());
-  return $self->host_update($ndr,$dh,$c);
+  return $self->host_update($ndr,$dh,$c,$rh);
  } else ## just set
  {
-  return $self->host_update($ndr,$dh,$ndr->local_object('changes')->set('ip',$ipadd));
+  return $self->host_update($ndr,$dh,$ndr->local_object('changes')->set('ip',$ipadd),$rh);
  }
 }
 
-sub host_update_status_add { my ($self,$ndr,$dh,$s)=@_; return $self->host_update_status($ndr,$dh,$s,$ndr->local_object('status')); }
-sub host_update_status_del { my ($self,$ndr,$dh,$s)=@_; return $self->host_update_status($ndr,$dh,$ndr->local_object('status'),$s); }
-sub host_update_status_set { my ($self,$ndr,$dh,$s)=@_; return $self->host_update_status($ndr,$dh,$s); }
+sub host_update_status_add { my ($self,$ndr,$dh,$s,$rh)=@_; return $self->host_update_status($ndr,$dh,$s,$ndr->local_object('status'),$rh); }
+sub host_update_status_del { my ($self,$ndr,$dh,$s,$rh)=@_; return $self->host_update_status($ndr,$dh,$ndr->local_object('status'),$s,$rh); }
+sub host_update_status_set { my ($self,$ndr,$dh,$s,$rh)=@_; return $self->host_update_status($ndr,$dh,$s,undef,$rh); }
 
 sub host_update_status
 {
- my ($self,$ndr,$dh,$sadd,$sdel)=@_;
+ my ($self,$ndr,$dh,$sadd,$sdel,$rh)=@_;
  Net::DRI::Util::check_isa($sadd,'Net::DRI::Data::StatusList');
  if (defined($sdel)) ## add + del
  {
@@ -815,25 +819,25 @@ sub host_update_status
   my $c=$ndr->local_object('changes');
   $c->add('status',$sadd) unless ($sadd->is_empty());
   $c->del('status',$sdel) unless ($sdel->is_empty());
-  return $self->host_update($ndr,$dh,$c);
+  return $self->host_update($ndr,$dh,$c,$rh);
  } ## just set
  {
-  return $self->host_update($ndr,$dh,$ndr->local_object('changes')->set('status',$sadd));
+  return $self->host_update($ndr,$dh,$ndr->local_object('changes')->set('status',$sadd),$rh);
  }
 }
 
 sub host_update_name_set
 {
- my ($self,$ndr,$newname)=@_;
+ my ($self,$ndr,$newname,$rh)=@_;
  $newname=$newname->get_names(1) if ($newname && UNIVERSAL::isa($newname,'Net::DRI::Data::Hosts'));
  err_invalid_host_name($newname) if $self->verify_name_host($newname);
- return $self->host_update($ndr,$ndr->local_object('changes')->set('name',$newname));
+ return $self->host_update($ndr,$ndr->local_object('changes')->set('name',$newname),$rh);
 }
 
 sub host_current_status
 {
- my ($self,$ndr,$dh)=@_;
- my $rc=$self->host_info($ndr,$dh);
+ my ($self,$ndr,$dh,$rh)=@_;
+ my $rc=$self->host_info($ndr,$dh,$rh);
  return unless $rc->is_success();
  my $s=$ndr->get_info('status');
  return unless (defined($s) && UNIVERSAL::isa($s,'Net::DRI::Data::StatusList'));
@@ -842,13 +846,13 @@ sub host_current_status
 
 sub host_is_mine
 {
- my ($self,$ndr,$dh)=@_;
+ my ($self,$ndr,$dh,$rh)=@_;
  my $clid=$self->info('clid');
  return 0 unless defined($clid);
  my $id;
  eval
  {
-  my $rc=$self->host_info($ndr,$dh);
+  my $rc=$self->host_info($ndr,$dh,$rh);
   $id=$ndr->get_info('clID') if ($rc->is_success());
  };
  return 0 unless (!$@ && defined($id));

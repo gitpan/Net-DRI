@@ -24,7 +24,7 @@ use DateTime::Format::ISO8601;
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -126,23 +126,23 @@ sub parse_poll
 
  my $rd=$rinfo->{message}->{$msgid};
  $rd->{object_type}=$type;
- my $c=$n->firstChild();
+ my $c=$n->getFirstChild();
  while ($c)
  {
-  my $name=$c->nodeName();
+  my $name=$c->localname() || $c->nodeName();
   next unless $name;
 
-  if ($name=~m/^(?:(?:domain|host):name|contact:id)$/)
+  if ($name=~m/^(?:name|id)$/) ## domain+host:name & contact:id
   {
-   $rd->{object_id}=$c->getFirstChild->getData(); ## for domain/host this will be their name
+   $rd->{object_id}=$c->getFirstChild()->getData(); ## for domain/host this will be their name
    $rd->{result}=Net::DRI::Util::xml_parse_boolean($c->getAttribute('paResult'));
-  } elsif ($name=~m/:paTRID$/)
+  } elsif ($name eq 'paTRID')
   {
-   $rd->{trid}=($c->getElementsByTagNameNS($mes->ns('_main'),'clTRID'))[0]->getFirstChild->getData();
-   $rd->{svtrid}=($c->getElementsByTagNameNS($mes->ns('_main'),'svTRID'))[0]->getFirstChild->getData();
-  } elsif ($name=~m/:paDate/)
+   $rd->{trid}=($c->getElementsByTagNameNS($mes->ns('_main'),'clTRID'))[0]->getFirstChild()->getData();
+   $rd->{svtrid}=($c->getElementsByTagNameNS($mes->ns('_main'),'svTRID'))[0]->getFirstChild()->getData();
+  } elsif ($name eq 'paDate')
   {
-   $rd->{date}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild->getData());
+   $rd->{date}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
   }
   $c=$c->getNextSibling();
  }

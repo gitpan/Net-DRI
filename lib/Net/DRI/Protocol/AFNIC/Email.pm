@@ -27,7 +27,7 @@ use Net::DRI::Exception;
 use Net::DRI::Protocol::AFNIC::Email::Message;
 use Net::DRI::Data::Contact::AFNIC;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -87,7 +87,7 @@ sub new
  $self->name('afnic_email');
  $self->version($VERSION);
 
- $self->capabilities({});
+ $self->capabilities({ domain_update => { ns => ['set'], contact => ['set'] } }); ## no registrant, as there is a separate trade() call
 
  $self->factories({ message => sub { my $m=Net::DRI::Protocol::AFNIC::Email::Message->new(@_); $m->client_auth({id => $clientid, pw => $clientpw}); $m->email_from($emailfrom); return $m; },
                     contact => sub { return Net::DRI::Data::Contact::AFNIC->new(); },

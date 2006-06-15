@@ -1,7 +1,7 @@
 ## Domain Registry Interface, EPP NSgroup extension commands
 ## (based on .BE Registration_guidelines_v4_7_1)
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -24,7 +24,7 @@ use Net::DRI::Util;
 use Net::DRI::Exception;
 use Net::DRI::Data::Hosts;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -54,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -164,14 +164,14 @@ sub check_parse
  return unless $chkdata;
  foreach my $cd ($chkdata->getElementsByTagNameNS($ns,'cd'))
  {
-  my $c=$cd->firstChild;
+  my $c=$cd->getFirstChild();
   my $nsgroup;
   while($c)
   {
-   my $n=$c->nodeName();
-   if ($n eq 'nsgroup:name')
+   my $n=$c->localname() || $c->nodeName();
+   if ($n eq 'name')
    {
-    $nsgroup=$c->firstChild->getData();
+    $nsgroup=$c->getFirstChild()->getData();
     $rinfo->{nsgroup}->{$nsgroup}->{exist}=1-Net::DRI::Util::xml_parse_boolean($c->getAttribute('avail'));
    }
    $c=$c->getNextSibling();
@@ -198,19 +198,19 @@ sub info_parse
 
  my $ns=Net::DRI::Data::Hosts->new();
 
- my $c=$infdata->firstChild();
+ my $c=$infdata->getFirstChild();
  while ($c)
  {
-  my $name=$c->nodeName();
+  my $name=$c->localname() || $c->nodeName();
   next unless $name;
-  if ($name eq 'nsgroup:name')
+  if ($name eq 'name')
   {
-   my $nsgroup=$c->firstChild->getData();
+   my $nsgroup=$c->getFirstChild()->getData();
    $ns->name($nsgroup);
    $rinfo->{nsgroup}->{$nsgroup}->{exist}=1; ## $oname='session' here, will be fixed later (in fact not, because of change in Message, but this is temporary)
-  } elsif ($name eq 'nsgroup:ns')
+  } elsif ($name eq 'ns')
   {
-   $ns->add($c->firstChild->getData());
+   $ns->add($c->getFirstChild()->getData());
   }
   $c=$c->getNextSibling();
  }

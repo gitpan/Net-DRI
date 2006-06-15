@@ -24,13 +24,13 @@ __PACKAGE__->mk_accessors(qw(orgno));
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Data::Contact::SE - Handling of contact data for .SE
+Net::DRI::Data::Contact::SE - Handle .SE contact data for Net::DRI
 
 =head1 DESCRIPTION
 

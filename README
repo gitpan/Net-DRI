@@ -3,6 +3,8 @@ Net::DRI
 
 A Perl library to access Domain Name Registries/Registrars
 Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>
+with help and bugfix from various individuals
+(see Changes file)
 
 DRI stands for Domain Registry Interface and aims to be,
 for domain name registries/registrars/resellers
@@ -28,9 +30,14 @@ standard for domain name activities, for example for status codes.
 Currently Net::DRI ships with
 - a full RRP implementation (RFC 2832 & 3632)
 - a full EPP implementation (RFC 3730/3731/3732/3733/3734/3735)
-- 5 EPP extensions: GracePeriods (RFC 3915), E164 for ENUM (RFC4114),
-  SecDNS for DNSSEC (draft-hollenbeck-epp-secdns-08), NSgroup (used by .BE and .EU),
-  EURid extensions (for .EU).
+- many EPP extensions:
+  * GracePeriod (RFC 3915)
+  * E164 for ENUM (RFC 4114)
+  * SecDNS for DNSSEC (RFC 4310)
+  * Infrastructure ENUM in Austria
+  * NSgroup (used by .BE and .EU)
+  * Domain/Contact/Host extensions needed for extra services in various TLD:
+    .EU .COM .NET .MOBI .AERO .CAT .US .PL .SE
 - a TCP/TLS transport
 - a SOAP transport (HTTP/HTTPS)
 - a Web scraping ``transport''
@@ -39,13 +46,14 @@ Currently Net::DRI ships with
 - a Net::DRI::DRD::VNDS covering Verisign Naming & Directory Services for
   .COM & .NET (with RRP or EPP)
 - a Net::DRI::DRD::AFNIC covering AFNIC registry for .FR
-     (only domain_check through web services and domain_create by email)
+     (only domain_check through web services and all operations by email)
 - a Net::DRI::DRD::Gandi covering Gandi registrar for .COM/.NET/.ORG/.BIZ/
    .INFO/.NAME/.BE
      (only domain_update for nameservers through web site)
 - a Net::DRI::DRD::WS covering .WS registry
 - a Net::DRI::DRD::SE covering .SE registry
 - a Net::DRI::DRD::PL covering .PL registry
+- a Net::DRI::DRD::CAT covering .CAT registry
 
 
 Work is underway to provide full support for asynchronous registries,
@@ -66,8 +74,8 @@ with utf8 handling which will cause errors for EPP.
 You also need the following modules:
 
 Carp (Perl internal)
-DateTime
-DateTime::Duration
+DateTime (*)
+DateTime::Duration (*)
 DateTime::Format::Strptime
 DateTime::Format::ISO8601
 DateTime::TimeZone
@@ -85,6 +93,9 @@ XML::LibXML
 MIME::Entity
 Net::SMTP
 
+
+(*) all dates and durations exchanged with Net::DRI should be
+DateTime or DateTime::Duration objects
 
 Install
 -------
@@ -106,6 +117,7 @@ gandi_web.pl : as Gandi client, to change nameservers for your domain,
                through the web interface
 ws_rrp.pl    : as registrar, to connect to .WS using RRP
 eurid_epp.pl : as registrar, connect to EURid test systems
+cat_epp.pl   : as registrar, connect to .CAT test systems
 
 In the t subdirectory, the test files can also be studied for insight
 of all the API available.
@@ -142,6 +154,12 @@ Typical use of this library would go along those lines:
 - $dri->new_profile('profilename','transport class',[transport params],'protocol class',[protocol params])
  (or new_current_profile with same parameters as in new_profile and it will also
    set the default profile to the one being created)
+  OR
+  $dri->new_profile('profilename',[transport params],[protocol params])
+  to use registry driver default (see transport_protocol_default in each DRD)
+  for transport & protocol classes, in which case the
+  two params can also be empty.
+
   Each registry driver is used through a specific profile. Each driver can have at the same time
   as many profiles as needed.
   A profile is:

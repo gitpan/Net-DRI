@@ -29,7 +29,7 @@ use Net::DRI::Exception;
 use Net::DRI::Util;
 use Net::DRI::Data::Raw;
 
-our $VERSION=do { my @r=(q$Revision: 1.18 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.19 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -79,6 +79,10 @@ C<close_after> : number of protocol commands to send to server (we will automati
 
 C<log_fh> : either a reference to something that have a print() method or a filehandle (ex: \*STDERR or an anonymous filehandle) on something already opened for write ;
 if defined, all exchanges (messages sent to server, messages received from server) will be printed to this filehandle
+
+=item *
+
+C<local_host> (optional) : the local address (hostname or IP) you want to use to connect
 
 =back
 
@@ -167,6 +171,8 @@ sub new
   $t{ssl_context}=\%s;
  }
 
+ $t{local_host}=$opts{local_host} if (exists($opts{local_host}) && $opts{local_host});
+
  $self->{transport}=\%t;
  bless($self,$class); ## rebless in my class
  
@@ -190,23 +196,23 @@ sub open_socket
  my $t=$self->{transport};
  my $type=$t->{socktype};
  my $sock;
+ 
+ my %n=( PeerAddr => $t->{remote_host},
+         PeerPort => $t->{remote_port},
+         Proto    => 'tcp',
+         Blocking => 1,
+       );
+ $n{LocalAddr}=$t->{local_host} if exists($t->{local_host});
 
  if ($type eq 'ssl')
  {
   $sock=IO::Socket::SSL->new(%{$t->{ssl_context}},
-                             PeerAddr => $t->{remote_host},
-                             PeerPort => $t->{remote_port},
-                             Proto    => 'tcp',
-			     Blocking => 1,
+                             %n,
                             );
  }
  if ($type eq 'tcp')
  {
-  $sock=IO::Socket::INET->new(PeerAddr => $t->{remote_host},
-                              PeerPort => $t->{remote_port},
-                              Proto    => 'tcp',
-                              Blocking => 1,
-                             );
+  $sock=IO::Socket::INET->new(%n);
  }
 
  Net::DRI::Exception->die(1,'transport/socket',6,"Unable to setup the ${type} socket".($type eq 'ssl'? ' with SSL error: '.IO::Socket::SSL::errstr() : '')) unless defined($sock);

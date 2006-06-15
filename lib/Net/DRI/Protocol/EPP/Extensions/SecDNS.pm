@@ -1,6 +1,6 @@
-## Domain Registry Interface, EPP DNS Security Extensions (draft-hollenbeck-epp-secdns-08)
+## Domain Registry Interface, EPP DNS Security Extensions (RFC4310)
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -13,7 +13,7 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::Protocol::EPP::Extensions::SecDNS;
 
@@ -22,14 +22,14 @@ use strict;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 our $NS='urn:ietf:params:xml:ns:secDNS-1.0';
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Protocol::EPP::Extensions::SecDNS - EPP DNS Security Extensions (draft-hollenbeck-epp-secdns-08) for Net::DRI
+Net::DRI::Protocol::EPP::Extensions::SecDNS - EPP DNS Security Extensions (RFC4310) for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -53,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -65,7 +65,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
-###################################################################################################
+####################################################################################################
 
 sub register_commands
 {
@@ -84,7 +84,7 @@ sub capabilities_add
  return { 'domain_update' => { 'secdns' => [ 'add','del','set' ], 'secdns_urgent' => ['set'] }};
 }
 
-###################################################################################################
+####################################################################################################
 
 sub format_secdns
 {
@@ -126,7 +126,7 @@ sub format_secdns
  return @c;
 }
 
-##################################################################################################
+####################################################################################################
 
 ########### Query commands
 
@@ -142,25 +142,25 @@ sub info_parse
  my @ds;
  foreach my $el ($infdata->getElementsByTagNameNS($NS,'dsData'))
  {
-  my $c=$el->firstChild();
+  my $c=$el->getFirstChild();
   my %n;
   while ($c)
   {
-   my $name=$c->nodeName();
+   my $name=$c->localname() || $c->nodeName();
    next unless $name;
-   if ($name=~m/^secDNS:(keyTag|alg|digestType|digest|maxSigLife)$/)
+   if ($name=~m/^(keyTag|alg|digestType|digest|maxSigLife)$/)
    {
-    $n{$1}=$c->firstChild->getData();
-   } elsif ($name eq 'secDNS:keyData')
+    $n{$1}=$c->getFirstChild()->getData();
+   } elsif ($name eq 'keyData')
    {
-    my $cc=$c->firstChild();
+    my $cc=$c->getFirstChild();
     while ($cc)
     {
-     my $name2=$cc->nodeName();
+     my $name2=$cc->localname() || $cc->nodeName();
      next unless $name2;
-     if ($name2=~m/^secDNS:(flags|protocol|alg|pubKey)$/)
+     if ($name2=~m/^(flags|protocol|alg|pubKey)$/)
      {
-      $n{"key_$1"}=$cc->firstChild->getData();    
+      $n{"key_$1"}=$cc->getFirstChild()->getData();    
      }
      $cc=$cc->getNextSibling();
     }

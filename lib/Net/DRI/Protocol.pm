@@ -25,7 +25,7 @@ __PACKAGE__->mk_accessors(qw(name version factories commands message capabilitie
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.14 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.15 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -100,8 +100,10 @@ sub _load
  my $rcapa=$self->capabilities();
 
  my %c;
+ my %done;
  foreach my $class (@_)
  {
+  next if exists($done{$class});
   ## eval needed to make sure the variable is taken into account correctly;
   eval "require $class";
   Net::DRI::Exception->die(1,$etype,6,"Failed to load Perl module ${class}") if $@;
@@ -113,6 +115,7 @@ sub _load
    my $rca=$class->capabilities_add();
    Net::DRI::Util::hash_merge($rcapa,$rca);
   }
+  $done{$class}=1;
  }
 
  $self->commands(\%c);

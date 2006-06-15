@@ -27,7 +27,7 @@ use Net::DRI::Protocol::EPP::Message;
 use Net::DRI::Protocol::EPP::Core::Status;
 use Net::DRI::Data::Contact;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -116,7 +116,7 @@ sub _load
  my @class=map { "Net::DRI::Protocol::EPP::Core::".$_ } @core;
  if (defined($extrah) && $extrah)
  {
-  push @class,map { /::/? $_ : "Net::DRI::Protocol::EPP::Extensions::".$_ } (ref($extrah)? @$extrah : ($extrah));
+  push @class,map { s!/!::!g; $_; } map { /::/? $_ : 'Net::DRI::Protocol::EPP::Extensions::'.$_ } (ref($extrah)? @$extrah : ($extrah));
  }
 
  $self->SUPER::_load(@class);

@@ -1,3 +1,33 @@
+0.30 2006-06-15
++ .FR full support : all operations by email (form version 2.0.0 for both organizations & individuals)
++ .COM .NET full support in EPP with multiple VeriSign extensions:
+           Sync (see t/610vnds_epp_sync.t)
+           IDN Language (see t/611vnds_epp_idnlang.t)
+           Whois Info (see t/612vnds_epp_whoisinfo.t)
+           NameStore from original patch by Rony Meyer (see t/616vnds_epp_namestore.t)
+     Use Protocol/EPP/Extensions/VeriSign as protocol class to have needed extensions loaded automatically
++ .MOBI full support : Domain extension for maintainer url (see t/615mobi_epp.t)
++ .US full support : Contact extension for NEXUS handling (see t/609vnds_epp_us.t)
++ .AERO full support : Domain & Contact extensions for ENS (see t/614aero_epp.t)
++ .CAT full support : Domain & Contact extensions, and all operations on Defensive Registrations (see t/613cat_epp.t and eg/cat_epp.pl)
+             thanks to Klaus Malorny & the .CAT registry
++ Infrastructure ENUM.AT (contributed by Michael Braunoeder from ENUM.AT)
++ Protocol/EPP/Extensions/SecDNS updated to RFC4310
++ .PL updated to latest draft
++ new_profile / new_current_profile : additional API with only 3 parameters (profile name + 2 ref arrays for parameters, both can be empty)
+                   using registry default transport & protocol classes (see transport_protocol_default)
++ ResultStatus->trid() can also be called in list context to get back for EPP the svTRID along with the clTRID (suggestion by Elias Sidenbladh)
+= DRD : for transfers, like for creations, the duration is in the duration attribute not period
+= Protocol/EPP/Extensions/EURid/Domain : multiple nsgroup can be given (patch from Christian Kratzer)
+= DRD/ICANN : taking care of some lifted restrictions for newest gTLDs (starting with .TRAVEL)
+= Protocol/EPP/Core/Domain : for domain_info, hosts=all is the default, but you can pass another value (sub, del or none) in the hosts attribute (bugfix from Rony Meyer)
+= Protocol/EPP/Extensions/E164 : small update to work with IENUMAT relaxed rules from RFC4114
+= Util : update in list of country codes, add JE GG IM per http://www.iso.org/iso/en/prods-services/iso3166ma/03updates-on-iso-3166/nlv11-div.html
+= Transport/Socket : you can optionnally set the local hostname when connecting (suggestion from Brian Drysdale)
+= Protocol/Gandi : currently deactivated since change of website
+- Protocol/EPP/Core/Domain : domain:pw may be empty after domain:info for an object we do not own (bugfix from Rony Meyer)
+- Protocol/EPP : better handling of registries various XML namespaces
+
 0.22 2006-05-12
 + EPP Poll from prototype by Elias Sidenbladh (Protocol/EPP/Core/RegistryMessage) : new methods message_retrieve() (=poll request)
   message_delete() (=poll ack) and message_waiting() in Net::DRI

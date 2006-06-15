@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Domain commands (RFC3731)
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -28,7 +28,7 @@ use Net::DRI::Protocol::EPP::Core::Status;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -58,7 +58,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -146,7 +146,7 @@ sub build_period
 
 sub check
 {
- my ($epp,$domain)=@_;
+ my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
  my @d=build_command($mes,'check',$domain);
  $mes->command_body(\@d);
@@ -163,19 +163,19 @@ sub check_parse
  return unless $chkdata;
  foreach my $cd ($chkdata->getElementsByTagNameNS($mes->ns('domain'),'cd'))
  {
-  my $c=$cd->firstChild;
+  my $c=$cd->getFirstChild();
   my $domain;
   while($c)
   {
-   my $n=$c->nodeName();
-   if ($n eq 'domain:name')
+   my $n=$c->localname() || $c->nodeName();
+   if ($n eq 'name')
    {
-    $domain=$c->firstChild->getData();
+    $domain=$c->getFirstChild()->getData();
     $rinfo->{domain}->{$domain}->{exist}=1-Net::DRI::Util::xml_parse_boolean($c->getAttribute('avail'));
    }
-   if ($n eq 'domain:reason')
+   if ($n eq 'reason')
    {
-    $rinfo->{domain}->{$domain}->{exist_reason}=$c->firstChild->getData();
+    $rinfo->{domain}->{$domain}->{exist_reason}=$c->getFirstChild()->getData();
    }
    $c=$c->getNextSibling();
   }
@@ -194,7 +194,9 @@ sub info
 {
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
- my @d=build_command($mes,'info',$domain,{'hosts'=>'all'});
+ my $hosts='all';
+ $hosts=$rd->{hosts} if (defined($rd) && (ref($rd) eq 'HASH') && exists($rd->{hosts}) && ($rd->{hosts}=~m/^(?:all|del|sub|none)$/));
+ my @d=build_command($mes,'info',$domain,{'hosts'=> $hosts});
  push @d,build_authinfo($rd->{auth}) if (verify_rd($rd,'auth') && (ref($rd->{auth}) eq 'HASH'));
  $mes->command_body(\@d);
 }
@@ -212,38 +214,39 @@ sub info_parse
  my (@s,@host);
  my $cs=Net::DRI::Data::ContactSet->new();
  my $cf=$po->factories->{contact};
- my $c=$infdata->firstChild();
+ my $c=$infdata->getFirstChild();
  while ($c)
  {
-  my $name=$c->nodeName();
+  my $name=$c->localname() || $c->nodeName();
   next unless $name;
-  if ($name eq 'domain:roid')
+  if ($name eq 'roid')
   {
-   $rinfo->{domain}->{$oname}->{roid}=$c->firstChild->getData();
-  } elsif ($name eq 'domain:status')
+   $rinfo->{domain}->{$oname}->{roid}=$c->getFirstChild()->getData();
+  } elsif ($name eq 'status')
   {
    push @s,Net::DRI::Protocol::EPP::parse_status($c);
-  } elsif ($name eq 'domain:registrant')
+  } elsif ($name eq 'registrant')
   {
-   $cs->set($cf->()->srid($c->firstChild->getData()),'registrant');
-  } elsif ($name eq 'domain:contact')
+   $cs->set($cf->()->srid($c->getFirstChild()->getData()),'registrant');
+  } elsif ($name eq 'contact')
   {
-   $cs->add($cf->()->srid($c->firstChild->getData()),$c->getAttribute('type'));
-  } elsif ($name eq 'domain:ns')
+   $cs->add($cf->()->srid($c->getFirstChild()->getData()),$c->getAttribute('type'));
+  } elsif ($name eq 'ns')
   {
    $rinfo->{domain}->{$oname}->{ns}=parse_ns($c);
-  } elsif ($name eq 'domain:host')
+  } elsif ($name eq 'host')
   {
-   push @host,$c->firstChild->getData();
-  } elsif ($name=~m/^domain:(clID|crID|upID)$/)
+   push @host,$c->getFirstChild()->getData();
+  } elsif ($name=~m/^(clID|crID|upID)$/)
   {
-   $rinfo->{domain}->{$oname}->{$1}=$c->firstChild->getData();
-  } elsif ($name=~m/^domain:(crDate|upDate|trDate|exDate)$/)
+   $rinfo->{domain}->{$oname}->{$1}=$c->getFirstChild()->getData();
+  } elsif ($name=~m/^(crDate|upDate|trDate|exDate)$/)
   {
-   $rinfo->{domain}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->firstChild->getData());
-  } elsif ($name eq 'domain:authInfo')
+   $rinfo->{domain}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
+  } elsif ($name eq 'authInfo')
   {
-   $rinfo->{domain}->{$oname}->{auth}={pw=>($c->getElementsByTagNameNS($mes->ns('domain'),'pw'))[0]->firstChild->getData()};
+   my $pw=($c->getElementsByTagNameNS($mes->ns('domain'),'pw'))[0]; ## will be empty on domain:info request for objects we do not own
+   $rinfo->{domain}->{$oname}->{auth}={pw => ($pw->hasChildNodes())? $pw->getFirstChild()->getData() : undef };
   }
   $c=$c->getNextSibling();
  }
@@ -261,31 +264,31 @@ sub parse_ns ## RFC 3731 §1.1
  my $n=$node->getFirstChild();
  while($n)
  {
-  my $name=$n->nodeName();
+  my $name=$n->localname() || $n->nodeName();
   next unless $name;
-  if ($name eq 'domain:hostObj')
+  if ($name eq 'hostObj')
   {
-   $ns->add($n->getFirstChild->getData());
-  } elsif ($name eq 'domain:hostAttr')
+   $ns->add($n->getFirstChild()->getData());
+  } elsif ($name eq 'hostAttr')
   {
    my ($hostname,@ip4,@ip6);
    my $nn=$n->getFirstChild();
    while($nn)
    {
-    my $name2=$nn->nodeName();
+    my $name2=$nn->localname() || $nn->nodeName();
     next unless $name2;
-    if ($name2 eq 'domain:hostName')
+    if ($name2 eq 'hostName')
     {
-     $hostname=$nn->getFirstChild->getData();
-    } elsif ($name2 eq 'domain:hostAddr')
+     $hostname=$nn->getFirstChild()->getData();
+    } elsif ($name2 eq 'hostAddr')
     {
      my $ip=$nn->getAttribute('ip') || 'v4';
      if ($ip eq 'v6')
      {
-      push @ip6,$nn->getFirstChild->getData();
+      push @ip6,$nn->getFirstChild()->getData();
      } else
      {
-      push @ip4,$nn->getFirstChild->getData();
+      push @ip4,$nn->getFirstChild()->getData();
      }
     }
     $nn=$nn->getNextSibling();
@@ -317,18 +320,18 @@ sub transfer_parse
 
  $rinfo->{domain}->{$oname}->{exist}=1;
 
- my $c=$trndata->firstChild();
+ my $c=$trndata->getFirstChild();
  while ($c)
  {
-  my $name=$c->nodeName();
+  my $name=$c->localname() || $c->nodeName();
   next unless $name;
 
-  if ($name=~m/^domain:(trStatus|reID|acID)$/) ## we do not use domain:name
+  if ($name=~m/^(trStatus|reID|acID)$/) ## we do not use domain:name
   {
-   $rinfo->{domain}->{$oname}->{$1}=$c->getFirstChild->getData();
-  } elsif ($name=~m/^domain:(reDate|acDate|exDate)$/)
+   $rinfo->{domain}->{$oname}->{$1}=$c->getFirstChild()->getData();
+  } elsif ($name=~m/^(reDate|acDate|exDate)$/)
   {
-   $rinfo->{domain}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->firstChild->getData());
+   $rinfo->{domain}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
   }
   $c=$c->getNextSibling();
  }
@@ -354,7 +357,7 @@ sub create
  }
 
  ## Period, OPTIONAL
- if (verify_rd($rd,'duration') && (ref($rd->{duration}) eq 'DateTime::Duration'))
+ if (verify_rd($rd,'duration'))
  {
   my $period=$rd->{duration};
   Net::DRI::Util::check_isa($period,'DateTime::Duration');
@@ -383,7 +386,7 @@ sub build_contact_noregistrant
 {
  my $cs=shift;
  my @d;
- foreach my $t ($cs->types())
+ foreach my $t (sort($cs->types()))
  {
   next if ($t eq 'registrant');
   my @o=$cs->get($t);
@@ -433,15 +436,15 @@ sub create_parse
 
  $rinfo->{domain}->{$oname}->{exist}=1;
 
- my $c=$credata->firstChild();
+ my $c=$credata->getFirstChild();
  while ($c)
  {
-  my $name=$c->nodeName();
+  my $name=$c->localname() || $c->nodeName();
   next unless $name;
 
-  if ($name=~m/^domain:(crDate|exDate)$/) ## we do not use domain:name
+  if ($name=~m/^(crDate|exDate)$/) ## we do not use domain:name
   {
-   $rinfo->{domain}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->firstChild->getData());
+   $rinfo->{domain}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
   }
   $c=$c->getNextSibling();
  }
@@ -449,7 +452,7 @@ sub create_parse
 
 sub delete
 {
- my ($epp,$domain)=@_;
+ my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
  my @d=build_command($mes,'delete',$domain);
  $mes->command_body(\@d);
@@ -457,7 +460,7 @@ sub delete
 
 sub renew
 {
- my ($epp,$domain,$period,$curexp)=@_;
+ my ($epp,$domain,$period,$curexp,$rd)=@_;
  Net::DRI::Exception::usererr_insufficient_parameters("current expiration year") unless defined($curexp);
  $curexp=$curexp->set_time_zone('UTC')->strftime("%Y-%m-%d") if (ref($curexp) && UNIVERSAL::isa($curexp,'DateTime'));
  Net::DRI::Exception::usererr_invalid_parameters("current expiration year must be YYYY-MM-DD") unless $curexp=~m/^\d{4}-\d{2}-\d{2}$/;
@@ -485,15 +488,15 @@ sub renew_parse
 
  $rinfo->{domain}->{$oname}->{exist}=1;
 
- my $c=$rendata->firstChild();
+ my $c=$rendata->getFirstChild();
  while ($c)
  {
-  my $name=$c->nodeName();
+  my $name=$c->localname() || $c->nodeName();
   next unless $name;
 
-  if ($name=~m/^domain:(exDate)$/) ## we do not use domain:name
+  if ($name=~m/^(exDate)$/) ## we do not use domain:name
   {
-   $rinfo->{domain}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->firstChild->getData());
+   $rinfo->{domain}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
   }
   $c=$c->getNextSibling();
  }
@@ -505,10 +508,10 @@ sub transfer_request
  my $mes=$epp->message();
  my @d=build_command($mes,['transfer',{'op'=>'request'}],$domain);
 
- if (verify_rd($rd,'period'))
+ if (verify_rd($rd,'duration'))
  {
-  Net::DRI::Util::check_isa($rd->{period},'DateTime::Duration');
-  push @d,build_period($rd->{period});
+  Net::DRI::Util::check_isa($rd->{duration},'DateTime::Duration');
+  push @d,build_period($rd->{duration});
  }
 
  push @d,build_authinfo($rd->{auth}) if (verify_rd($rd,'auth') && (ref($rd->{auth}) eq 'HASH'));

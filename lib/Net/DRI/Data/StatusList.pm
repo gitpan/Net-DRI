@@ -21,7 +21,7 @@ use strict;
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -47,27 +47,27 @@ returns 1 if these statuses enable the object to be published on registry DNS se
 
 =head2 is_pending() 
 
-returns 1 if theses statuses are for an object that is pending some action at registry
+returns 1 if these statuses are for an object that is pending some action at registry
 
 =head2 is_linked() 
 
-returns 1 if theses statuses are for an object that is linked to another one at registry
+returns 1 if these statuses are for an object that is linked to another one at registry
 
 =head2 can_update() 
 
-returns 1 if theses statuses allow to update the object at registry
+returns 1 if these statuses allow to update the object at registry
 
 =head2 can_transfer() 
 
-returns 1 if theses statuses allow to transfer the object at registry
+returns 1 if these statuses allow to transfer the object at registry
 
 =head2 can_delete() 
 
-returns 1 if theses statuses allow to delete the object at registry
+returns 1 if these statuses allow to delete the object at registry
 
 =head2 can_renew()
 
-returns 1 if theses statuses allow to renew the object at registry
+returns 1 if these statuses allow to renew the object at registry
 
 =head2 possible_no() 
 
@@ -85,7 +85,7 @@ the purpose of the module is to give an abstract view of the underlying statuses
 
 =head2 list_status() 
 
-to get only the statuses' names
+to get only the statuses' names, as an array
 
 =head2 status_details() 
 
@@ -238,7 +238,7 @@ sub no
  return $self;
 }
 
-###########################################################################################################
+####################################################################################################
 ## Methods that must be defined in subclasses
 
 sub is_active    { Net::DRI::Exception::err_method_not_implemented('is_active in '.ref($_[0])); }
@@ -250,5 +250,5 @@ sub can_transfer { Net::DRI::Exception::err_method_not_implemented('can_transfer
 sub can_delete   { Net::DRI::Exception::err_method_not_implemented('can_delete in '.ref($_[0])); }
 sub can_renew    { Net::DRI::Exception::err_method_not_implemented('can_renew in '.ref($_[0])); }
 
-###########################################################################################################
+####################################################################################################
 1;

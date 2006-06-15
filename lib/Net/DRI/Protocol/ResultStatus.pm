@@ -20,9 +20,9 @@ package Net::DRI::Protocol::ResultStatus;
 use strict;
 
 use base qw(Class::Accessor::Chained::Fast);
-__PACKAGE__->mk_ro_accessors(qw(is_success native_code code message lang trid));
+__PACKAGE__->mk_ro_accessors(qw(is_success native_code code message lang));
 
-our $VERSION=do { my @r=(q$Revision: 1.16 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.17 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -72,7 +72,8 @@ print all details (including the infor part)
 
 =head2 trid()
 
-gives the transaction id (our transaction id, that is the client part in EPP) which has generated this result
+in scalar context, gives the transaction id (our transaction id, that is the client part in EPP) which has generated this result,
+in array context, gives the transaction id followed by other ids given by registry (example in EPP : server transaction id)
 
 =head1 SUPPORT
 
@@ -135,6 +136,13 @@ sub new
  $s{info}=(defined($info))? $info : [];
  bless(\%s,$class);
  return \%s;
+}
+
+sub trid
+{
+ my $self=shift;
+ return unless (exists($self->{trid}) && (ref($self->{trid}) eq 'ARRAY'));
+ return wantarray()? @{$self->{trid}} : $self->{trid}->[0];
 }
 
 sub _set_trid { my ($self,$v)=@_; $self->{trid}=$v; }

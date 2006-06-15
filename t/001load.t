@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-use Test::More tests => 74;
+use Test::More tests => 100;
 
 BEGIN { 
 use_ok('Net::DRI');
@@ -19,6 +19,10 @@ use_ok('Net::DRI::DRD::WS');
 use_ok('Net::DRI::DRD::EURid');
 use_ok('Net::DRI::DRD::SE');
 use_ok('Net::DRI::DRD::PL');
+use_ok('Net::DRI::DRD::IENUMAT');
+use_ok('Net::DRI::DRD::CAT');
+use_ok('Net::DRI::DRD::AERO');
+use_ok('Net::DRI::DRD::MOBI');
 use_ok('Net::DRI::Data::Raw');
 use_ok('Net::DRI::Data::Hosts');
 use_ok('Net::DRI::Data::Changes');
@@ -30,6 +34,9 @@ use_ok('Net::DRI::Data::Contact::EURid');
 use_ok('Net::DRI::Data::Contact::SE');
 use_ok('Net::DRI::Data::Contact::PL');
 use_ok('Net::DRI::Data::Contact::AFNIC');
+use_ok('Net::DRI::Data::Contact::US');
+use_ok('Net::DRI::Data::Contact::CAT');
+use_ok('Net::DRI::Data::Contact::AERO');
 use_ok('Net::DRI::Transport::Socket');
 use_ok('Net::DRI::Transport::Dummy');
 use_ok('Net::DRI::Transport::SOAP');
@@ -77,6 +84,25 @@ use_ok('Net::DRI::Protocol::EPP::Extensions::SE::Extensions');
 use_ok('Net::DRI::Protocol::EPP::Extensions::PL');
 use_ok('Net::DRI::Protocol::EPP::Extensions::PL::Domain');
 use_ok('Net::DRI::Protocol::EPP::Extensions::PL::Contact');
+use_ok('Net::DRI::Protocol::EPP::Extensions::US');
+use_ok('Net::DRI::Protocol::EPP::Extensions::US::Contact');
+use_ok('Net::DRI::Protocol::EPP::Extensions::VeriSign');
+use_ok('Net::DRI::Protocol::EPP::Extensions::VeriSign::Sync');
+use_ok('Net::DRI::Protocol::EPP::Extensions::VeriSign::IDNLanguage');
+use_ok('Net::DRI::Protocol::EPP::Extensions::VeriSign::WhoisInfo');
+use_ok('Net::DRI::Protocol::EPP::Extensions::VeriSign::NameStore');
+use_ok('Net::DRI::Protocol::EPP::Extensions::AT::Result');
+use_ok('Net::DRI::Protocol::EPP::Extensions::AT::IOptions');
+use_ok('Net::DRI::Protocol::EPP::Extensions::IENUMAT');
+use_ok('Net::DRI::Protocol::EPP::Extensions::CAT');
+use_ok('Net::DRI::Protocol::EPP::Extensions::CAT::Contact');
+use_ok('Net::DRI::Protocol::EPP::Extensions::CAT::Domain');
+use_ok('Net::DRI::Protocol::EPP::Extensions::CAT::DefensiveRegistration');
+use_ok('Net::DRI::Protocol::EPP::Extensions::AERO');
+use_ok('Net::DRI::Protocol::EPP::Extensions::AERO::Contact');
+use_ok('Net::DRI::Protocol::EPP::Extensions::AERO::Domain');
+use_ok('Net::DRI::Protocol::EPP::Extensions::MOBI');
+use_ok('Net::DRI::Protocol::EPP::Extensions::MOBI::Domain');
 }
 
 exit 0;

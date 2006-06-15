@@ -25,7 +25,7 @@ use Net::DRI::Util;
 
 use Net::DRI::Data::Contact::SE;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -94,6 +94,11 @@ sub transport_protocol_compatible
 
  return 1 if (($pn eq 'EPP') && ($tn eq 'socket_inet'));
  return;
+}
+
+sub transport_protocol_default
+{
+ return ('Net::DRI::Transport::Socket','Net::DRI::Protocol::EPP::Extensions::SE');
 }
 
 ######################################################################################

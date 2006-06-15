@@ -1,12 +1,12 @@
 #!/usr/bin/perl -w
 
-use Test::More tests => 331;
+use Test::More tests => 340;
 
 use Net::DRI::Util;
 
 is(defined(%Net::DRI::Util::CCA2),1,'%CCA2 defined');
 isa_ok(\%Net::DRI::Util::CCA2,'HASH','%CCA2 hash');
-is(keys(%Net::DRI::Util::CCA2),240,'%CCA2 number of elements');
+is(keys(%Net::DRI::Util::CCA2),243,'%CCA2 number of elements');
 is_deeply([grep { ! /^[A-Z]{2}$/ } keys(%Net::DRI::Util::CCA2)],[],'%CCA2 keys');
 is(exists($Net::DRI::Util::CCA2{'FR'}),1,'%CCA2 FR exists');
 is(!exists($Net::DRI::Util::CCA2{'ZZ'}),1,'%CCA2 ZZ not exists');                  
@@ -168,6 +168,20 @@ is(Net::DRI::Util::verify_base64('AAAABBBB',undef,10),1,'verify_base64() 28');
 is(Net::DRI::Util::verify_base64('AAAABBBB',10,12),0,'verify_base64() 29');
 is(Net::DRI::Util::verify_base64('AAAABBBB',4,13),1,'verify_base64() 30');
 is(Net::DRI::Util::verify_base64('AAAABBBB',15,20),0,'verify_base64() 31');
+
+is(Net::DRI::Util::xml_is_boolean('0'),1,'xml_is_boolean() 1');
+is(Net::DRI::Util::xml_is_boolean('1'),1,'xml_is_boolean() 2');
+is(Net::DRI::Util::xml_is_boolean('true'),1,'xml_is_boolean() 3');
+is(Net::DRI::Util::xml_is_boolean('false'),1,'xml_is_boolean() 4');
+is(Net::DRI::Util::xml_is_boolean('t'),0,'xml_is_boolean() 5');
+is(Net::DRI::Util::xml_is_boolean('f'),0,'xml_is_boolean() 6');
+
+is(Net::DRI::Util::xml_is_language('fr'),1,'xml_is_language() 1');
+is(Net::DRI::Util::xml_is_language('0fr'),0,'xml_is_language() 2');
+is(Net::DRI::Util::xml_is_language('fr-FR'),1,'xml_is_language() 3');
+
+
+
 
 TODO: {
         local $TODO="tests on hash_merge()";

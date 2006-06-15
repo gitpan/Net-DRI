@@ -23,7 +23,7 @@ use base qw(Net::DRI::Protocol);
 
 use Net::DRI::Protocol::Gandi::Web::Message;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -69,6 +69,8 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
+ use Net::DRI::Exception;
+ Net::DRI::Exception->die(1,'internal',1,'Gandi web site scraping transport currently disabled');
  my $h=shift;
  my $c=ref($h) || $h;
 

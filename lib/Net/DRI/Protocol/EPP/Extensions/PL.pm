@@ -1,5 +1,4 @@
-## Domain Registry Interface, NASK (.PL) EPP extensions
-## http://www.dns.pl/porozumienie/draft-zygmuntowicz-epp-pltld-02.txt
+## Domain Registry Interface, NASK (.PL) EPP extensions (draft-zygmuntowicz-epp-pltld-03)
 ##
 ## Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
@@ -24,13 +23,13 @@ use base qw/Net::DRI::Protocol::EPP/;
 
 use Net::DRI::Data::Contact::PL;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Protocol::EPP::Extensions::PL - .PL EPP extensions for Net::DRI
+Net::DRI::Protocol::EPP::Extensions::PL - .PL EPP extensions (draft-zygmuntowicz-epp-pltld-03) for Net::DRI
 
 =head1 DESCRIPTION
 
