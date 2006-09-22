@@ -3,7 +3,7 @@
 use Net::DRI;
 use Net::DRI::Data::Raw;
 
-use Test::More tests => 15;
+use Test::More tests => 18;
 
 our $E1='<?xml version="1.0" encoding="UTF-8" standalone="no"?><epp xmlns="urn:ietf:params:xml:ns:epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="urn:ietf:params:xml:ns:epp-1.0 epp-1.0.xsd">';
 our $E2='</epp>';
@@ -71,6 +71,8 @@ is($R1,$E1.'<command><check><nsgroup:check xmlns:nsgroup="http://www.dns.be/xml/
 is($rc->is_success(),1,'nsgroup check_multi is_success');
 is($dri->get_info('exist','nsgroup','mynsgroup1'),1,'nsgroup check_multi get_info(exist) 1/2');
 is($dri->get_info('exist','nsgroup','mynsgroup2'),0,'nsgroup check_multi get_info(exist) 2/2');
+is($dri->get_info('action','nsgroup','mynsgroup1'),'check','nsgroup check_multi get_info(action) 1/2');
+is($dri->get_info('action','nsgroup','mynsgroup2'),'check','nsgroup check_multi get_info(action) 2/2');
 
 
 $R2='<?xml version="1.0" encoding="UTF-8"?><epp xmlns="urn:ietf:params:xml:ns:epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:contact="urn:ietf:params:xml:ns:contact-1.0" xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xmlns:dnsbe="http://www.dns.be/xml/epp/dnsbe-1.0" xmlns:nsgroup="http://www.dns.be/xml/epp/nsgroup-1.0" xmlns:agent="http://www.dns.be/xml/epp/agent-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:epp-1.0 epp-1.0.xsd urn:ietf:params:xml:ns:contact-1.0 contact-1.0.xsd urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd http://www.dns.be/xml/epp/dnsbe-1.0 dnsbe-1.0.xsd http://www.dns.be/xml/epp/nsgroup-1.0 nsgroup-1.0.xsd http://www.dns.be/xml/epp/agent-1.0 agent-1.0.xsd"><response><result code="1000"><msg>Command completed successfully</msg></result><resData><nsgroup:infData><nsgroup:name>mynsgroup1</nsgroup:name><nsgroup:ns>ns1.nameserver.be</nsgroup:ns><nsgroup:ns>ns2.nameserver.be</nsgroup:ns></nsgroup:infData></resData><trID><clTRID>clientref-123007</clTRID><svTRID>dnsbe-1545</svTRID></trID></response></epp>';
@@ -78,6 +80,7 @@ $rc=$nsg1->info($c1);
 is($R1,$E1.'<command><info><nsgroup:info xmlns:nsgroup="http://www.dns.be/xml/epp/nsgroup-1.0" xsi:schemaLocation="http://www.dns.be/xml/epp/nsgroup-1.0 nsgroup-1.0.xsd"><nsgroup:name>mynsgroup1</nsgroup:name></nsgroup:info></info><clTRID>clientref-123007</clTRID></command>'.$E2,'nsgroup info build');
 is($rc->is_success(),1,'nsgroup info is_success');
 is_deeply($dri->get_info('self'),$c1,'nsgroup info get_info(self)');
+is($dri->get_info('action'),'info','nsgroup info get_info(action)');
 is($dri->get_info('exist'),1,'nsgroup info get_info(exist)');
 is($dri->get_info('exist','nsgroup','mynsgroup1'),1,'nsgroup info get_info(exist) +cache');
 

@@ -24,7 +24,7 @@ use DateTime::Format::ISO8601;
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -95,58 +95,52 @@ sub pollreq
  $mes->command([['poll',{op=>'req'}]]);
 }
 
+## We take into account all parse functions, to be able to parse any result
 sub parse_poll
 {
  my ($po,$otype,$oaction,$oname,$rinfo)=@_;
  my $mes=$po->message();
  return unless $mes->is_success();
 
- ## For now we only parse (domain|host|contact):panData child of <resData> as it is the only thing present in RFC3731/3732/3733
- ## even if RFC3730 gives another example
  my $msgid=$mes->msg_id();
+ $rinfo->{message}->{session}->{last_id}=$msgid;
+ my $rd=$rinfo->{message}->{$msgid}; ## already partially filled by Message::parse()
 
- my ($type,$n);
- $n=$mes->get_content('panData',$mes->ns('domain'));
- if ($n)
+ my ($totype,$toaction,$toname); ## $toaction will remain undef, but could be $haction if only one
+ my %info;
+ my $h=$po->commands();
+
+ while (my ($htype,$hv)=each(%$h))
  {
-  $type='domain';
- } else
- {
-  $n=$mes->get_content('panData',$mes->ns('host'));
-  if ($n)
+  while (my ($haction,$hv2)=each(%$hv))
   {
-   $type='host';
-  } else
-  {
-   $n=$mes->get_content('panData',$mes->ns('contact'));
-   return unless $n;
-   $type='contact';
+   next if (($htype eq 'message') && ($haction eq 'retrieve')); ## calling myself here would be a very bad idea !
+   foreach my $t (@$hv2)
+   {
+    my $pf=$t->[1];
+    next unless (defined($pf) && (ref($pf) eq 'CODE'));
+    $pf->($po,$totype,$toaction,$toname,\%info);
+    next unless keys(%info);
+    next if defined($toname);
+    Net::DRI::Exception::err_assert('EPP::parse_poll can not handle multiple types !') unless (keys(%info)==1);
+    $totype=(keys(%info))[0];
+    Net::DRI::Exception::err_assert('EPP::parse_poll can not handle multiple names !') unless (keys(%{$info{$totype}})==1); ## this may happen for check_multi !
+    $toname=(keys(%{$info{$totype}}))[0];
+    $info{$totype}->{$toname}->{name}=$toname;
+   }
   }
  }
+ Net::DRI::Exception::err_assert('EPP::parse_poll was not able to parse anything, please report !') unless $toname;
 
- my $rd=$rinfo->{message}->{$msgid};
- $rd->{object_type}=$type;
- my $c=$n->getFirstChild();
- while ($c)
+ ## Copy %info into $rd someway
+ $rd->{object_type}=$totype;
+ $rd->{object_id}=$toname; ## this has to be taken broadly, it is in fact a name for domains and hosts
+ while(my ($k,$v)=each(%{$info{$totype}->{$toname}}))
  {
-  my $name=$c->localname() || $c->nodeName();
-  next unless $name;
-
-  if ($name=~m/^(?:name|id)$/) ## domain+host:name & contact:id
-  {
-   $rd->{object_id}=$c->getFirstChild()->getData(); ## for domain/host this will be their name
-   $rd->{result}=Net::DRI::Util::xml_parse_boolean($c->getAttribute('paResult'));
-  } elsif ($name eq 'paTRID')
-  {
-   $rd->{trid}=($c->getElementsByTagNameNS($mes->ns('_main'),'clTRID'))[0]->getFirstChild()->getData();
-   $rd->{svtrid}=($c->getElementsByTagNameNS($mes->ns('_main'),'svTRID'))[0]->getFirstChild()->getData();
-  } elsif ($name eq 'paDate')
-  {
-   $rd->{date}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
-  }
-  $c=$c->getNextSibling();
+  $rd->{$k}=$v;
  }
 
+ ## TODO : optionnally, offer to merge this new information with already existing cache information
 }
 
 ####################################################################################################

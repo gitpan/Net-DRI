@@ -1,4 +1,4 @@
-## Domain Registry Interface, VeriSign EPP extensions
+## Domain Registry Interface, DNSBE EPP extensions
 ##
 ## Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
@@ -13,13 +13,16 @@
 #
 # 
 #
-####################################################################################################
+#########################################################################################
 
-package Net::DRI::Protocol::EPP::Extensions::VeriSign;
+package Net::DRI::Protocol::EPP::Extensions::DNSBE;
 
 use strict;
 
 use base qw/Net::DRI::Protocol::EPP/;
+
+use Net::DRI::Data::Contact::BE;
+use Net::DRI::Protocol::EPP::Extensions::DNSBE::Message;
 
 our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
@@ -27,7 +30,7 @@ our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r,
 
 =head1 NAME
 
-Net::DRI::Protocol::EPP::Extensions::VeriSign - VeriSign EPP extensions for Net::DRI
+Net::DRI::Protocol::EPP::Extensions::DNSBE - DNSBE EPP extensions for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -69,27 +72,31 @@ sub new
  my $h=shift;
  my $c=ref($h) || $h;
 
- my ($drd,$version,$extrah,$defproduct)=@_;
+ my ($drd,$version,$extrah)=@_;
  my %e=map { $_ => 1 } (defined($extrah)? (ref($extrah)? @$extrah : ($extrah)) : ());
 
- $e{'Net::DRI::Protocol::EPP::Extensions::VeriSign::NameStore'}=1;
- $e{'Net::DRI::Protocol::EPP::Extensions::VeriSign::Sync'}=1;
- $e{'Net::DRI::Protocol::EPP::Extensions::VeriSign::PollLowBalance'}=1;
- $e{'Net::DRI::Protocol::EPP::Extensions::VeriSign::PollRGP'}=1;
- ## We do no load automatically IDNLanguage & WhoisInfo as we do not know if they are mandatory
- ## NameStore seems mandatory, and Sync is just another operation, hence optional in all cases
- if (exists($e{':full'})) ## useful shortcut, modeled after Perl itself
- {
-  delete($e{':full'});
-  $e{'Net::DRI::Protocol::EPP::Extensions::VeriSign::IDNLanguage'}=1;
-  $e{'Net::DRI::Protocol::EPP::Extensions::VeriSign::WhoisInfo'}=1;
-  $e{'Net::DRI::Protocol::EPP::Extensions::GracePeriod'}=1;
- }
+ $e{'Net::DRI::Protocol::EPP::Extensions::DNSBE::Domain'}=1;
+ $e{'Net::DRI::Protocol::EPP::Extensions::DNSBE::Contact'}=1;
+ $e{'Net::DRI::Protocol::EPP::Extensions::NSgroup'}=1;
 
  my $self=$c->SUPER::new($drd,$version,[keys(%e)]); ## we are now officially a Net::DRI::Protocol::EPP object
- $self->default_parameters()->{subproductid}=$defproduct || '_auto_';
- $self->default_parameters()->{whois_info}=0;
- $self->default_parameters()->{breaks_rfc3915}=1;
+
+ ## We currently do not handle agent update/info
+ foreach my $w ('dnsbe','nsgroup')
+ {
+  $self->{ns}->{$w}=['http://www.dns.be/xml/epp/'.$w.'-1.0',$w.'-1.0.xsd'];
+ }
+
+ my $rcapa=$self->capabilities();
+ delete($rcapa->{contact_update}->{status}); ## No changes in status possible for .BE domains/contacts
+ delete($rcapa->{domain_update}->{status});
+ delete($rcapa->{domain_update}->{auth}); ## No change in authinfo (since it is not used from the beginning)
+
+ my $rfact=$self->factories();
+ $rfact->{contact}=sub { return Net::DRI::Data::Contact::BE->new()->srid('ABCD') };
+ $rfact->{message}=sub { my $m=Net::DRI::Protocol::EPP::Extensions::DNSBE::Message->new(@_); $m->ns($self->{ns}); $m->version($version); return $m;};
+
+ $self->default_parameters({domain_create => { auth => { pw => '' } } });
 
  bless($self,$c); ## rebless
  return $self;

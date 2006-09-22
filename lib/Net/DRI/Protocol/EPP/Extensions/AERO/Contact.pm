@@ -19,9 +19,10 @@ package Net::DRI::Protocol::EPP::Extensions::AERO::Contact;
 
 use strict;
 
+use Net::DRI::Util;
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -98,8 +99,7 @@ sub info_parse
 
   if (my ($tag)=($name=~m/^(\S+)$/))
   {
-   $tag=~s/([A-Z])/_$1/g;
-   $ens{lc($tag)}=$c->getFirstChild()->getData();
+   $ens{Net::DRI::Util::remcam($tag)}=$c->getFirstChild()->getData();
   }
 
   $c=$c->getNextSibling();

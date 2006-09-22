@@ -1,4 +1,4 @@
-## Domain Registry Interface, EPP Whois Info (EPP-Whois-Info-Ext.pdf)
+## Domain Registry Interface, EPP Low Balance (EPP-LowBalance-Mapping.pdf)
 ##
 ## Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
@@ -15,20 +15,19 @@
 #
 ####################################################################################################
 
-package Net::DRI::Protocol::EPP::Extensions::VeriSign::WhoisInfo;
+package Net::DRI::Protocol::EPP::Extensions::VeriSign::PollLowBalance;
 
 use strict;
 
 use Net::DRI::Util;
-use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Protocol::EPP::Extensions::VeriSign::WhoisInfo - EPP Whois Info (EPP-Whois-Info-Ext.pdf) for Net::DRI
+Net::DRI::Protocol::EPP::Extensions::VeriSign::PollLowBalance - EPP Low Balance Mapping (EPP-LowBalance-Mapping.pdf) for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -71,72 +70,42 @@ sub register_commands
 {
  my ($class,$version)=@_;
  my %tmp=(
-           info => [ \&info, \&info_parse ],
+           lowbalance => [ undef, \&parse ],
          );
 
- return { 'domain' => \%tmp };
+ return { 'message' => \%tmp };
 }
 
 ####################################################################################################
 
-sub info
-{
- my ($epp,$domain,$rd)=@_;
- my $mes=$epp->message();
-
- my $wi;
- if (defined($rd) && (ref($rd) && 'HASH') && exists($rd->{whois_info}))
- {
-  $wi=$rd->{whois_info};
- } else
- {
-  my $def=$epp->default_parameters();
-  if ($def && (ref($def) eq 'HASH') && exists($def->{whois_info}))
-  {
-   $wi=$def->{whois_info};
-  } else
-  {
-   Net::DRI::Exception::usererr_insufficient_parameters('Whois Info must be provided');
-  }
- }
- Net::DRI::Exception::usererr_invalid_parameters('Whois Info must be true/false/1/0') unless Net::DRI::Util::xml_is_boolean($wi);
- 
- my $eid=$mes->command_extension_register('whoisInf:whoisInf','xmlns:whoisInf="http://www.verisign.com/epp/whoisInf-1.0" xsi:schemaLocation="http://www.verisign.com/epp/whoisInf-1.0 whoisInf-1.0.xsd"');
- $mes->command_extension($eid,['whoisInf:flag',$wi]);
-}
-
-sub info_parse
+sub parse
 {
  my ($po,$otype,$oaction,$oname,$rinfo)=@_;
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $infdata=$mes->get_content('whoisInfData','http://www.verisign.com/epp/whoisInf-1.0',1);
+ my $infdata=$mes->get_content('pollData','http://www.verisign.com/epp/lowbalance-poll-1.0',0);
  return unless $infdata;
 
- my %w;
+ my %w=(action => 'lowbalance_notification');
  my $c=$infdata->getFirstChild();
  while ($c)
  {
   my $name=$c->localname() || $c->nodeName();
   next unless $name;
-  if ($name eq 'registrar')
+
+  if ($name=~m/^(registrarName|creditLimit|availableCredit)$/)
   {
-   $w{registrar}=$c->getFirstChild()->getData();
-  } elsif ($name eq 'whoisServer')
+   $w{Net::DRI::Util::remcam($name)}=$c->getFirstChild()->getData();
+  } elsif ($name eq 'creditThreshold')
   {
-   $w{whois_server}=$c->getFirstChild()->getData();
-  } elsif ($name eq 'url')
-  {
-   $w{url}=$c->getFirstChild()->getData();
-  } elsif ($name eq 'irisServer')
-  {
-   $w{iris_server}=$c->getFirstChild()->getData();
+   $w{Net::DRI::Util::remcam($name)}=$c->getFirstChild()->getData();
+   $w{'credit_threshold_type'}=$c->getAttribute('type');
   }
   $c=$c->getNextSibling();
  }
 
- $rinfo->{domain}->{$oname}->{whois_info}=\%w;
+ $rinfo->{session}->{lowbalance}=\%w;
 }
 
 ####################################################################################################

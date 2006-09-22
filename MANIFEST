@@ -14,6 +14,7 @@ lib/Net/DRI/Data/Changes.pm
 lib/Net/DRI/Data/Contact.pm
 lib/Net/DRI/Data/Contact/AERO.pm
 lib/Net/DRI/Data/Contact/AFNIC.pm
+lib/Net/DRI/Data/Contact/BE.pm
 lib/Net/DRI/Data/Contact/CAT.pm
 lib/Net/DRI/Data/Contact/EURid.pm
 lib/Net/DRI/Data/Contact/PL.pm
@@ -27,6 +28,7 @@ lib/Net/DRI/Data/StatusList.pm
 lib/Net/DRI/DRD.pm
 lib/Net/DRI/DRD/AERO.pm
 lib/Net/DRI/DRD/AFNIC.pm
+lib/Net/DRI/DRD/BE.pm
 lib/Net/DRI/DRD/CAT.pm
 lib/Net/DRI/DRD/EURid.pm
 lib/Net/DRI/DRD/Gandi.pm
@@ -62,6 +64,10 @@ lib/Net/DRI/Protocol/EPP/Extensions/CAT.pm
 lib/Net/DRI/Protocol/EPP/Extensions/CAT/Contact.pm
 lib/Net/DRI/Protocol/EPP/Extensions/CAT/DefensiveRegistration.pm
 lib/Net/DRI/Protocol/EPP/Extensions/CAT/Domain.pm
+lib/Net/DRI/Protocol/EPP/Extensions/DNSBE.pm
+lib/Net/DRI/Protocol/EPP/Extensions/DNSBE/Contact.pm
+lib/Net/DRI/Protocol/EPP/Extensions/DNSBE/Domain.pm
+lib/Net/DRI/Protocol/EPP/Extensions/DNSBE/Message.pm
 lib/Net/DRI/Protocol/EPP/Extensions/E164.pm
 lib/Net/DRI/Protocol/EPP/Extensions/EURid.pm
 lib/Net/DRI/Protocol/EPP/Extensions/EURid/Contact.pm
@@ -84,6 +90,8 @@ lib/Net/DRI/Protocol/EPP/Extensions/US/Contact.pm
 lib/Net/DRI/Protocol/EPP/Extensions/VeriSign.pm
 lib/Net/DRI/Protocol/EPP/Extensions/VeriSign/IDNLanguage.pm
 lib/Net/DRI/Protocol/EPP/Extensions/VeriSign/NameStore.pm
+lib/Net/DRI/Protocol/EPP/Extensions/VeriSign/PollLowBalance.pm
+lib/Net/DRI/Protocol/EPP/Extensions/VeriSign/PollRGP.pm
 lib/Net/DRI/Protocol/EPP/Extensions/VeriSign/Sync.pm
 lib/Net/DRI/Protocol/EPP/Extensions/VeriSign/WhoisInfo.pm
 lib/Net/DRI/Protocol/EPP/Message.pm
@@ -152,5 +160,7 @@ t/613cat_epp.t
 t/614aero_epp.t
 t/615mobi_epp.t
 t/616vnds_epp_namestore.t
+t/617vnds_epp_polllowbalance.t
+t/618vnds_epp_pollrgp.t
 TODO
 META.yml                                 Module meta-data (added by MakeMaker)

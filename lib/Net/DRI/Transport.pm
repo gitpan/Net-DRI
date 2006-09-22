@@ -20,12 +20,12 @@ package Net::DRI::Transport;
 use strict;
 
 use base qw(Class::Accessor::Chained::Fast);
-__PACKAGE__->mk_accessors(qw/name version retry pause trace timeout defer current_state has_state is_sync time_open time_used/);
+__PACKAGE__->mk_accessors(qw/name version retry pause trace timeout defer current_state has_state is_sync time_creation time_open time_used/);
 
 use Net::DRI::Exception;
 use Time::HiRes;
 
-our $VERSION=do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -85,7 +85,7 @@ sub new
            current_state => undef, ## for stateless transport, otherwise 0=close, 1=open
            has_state     => undef, ## do we need to open a session before sending commands ?
            transport     => undef, ## will be defined in subclasses
-           creation      => time(),
+           time_creation => time(),
           };
 
  bless($self,$class);
@@ -189,7 +189,7 @@ sub log
  $tp=~s/> </></g;
  my ($t,$v)=Time::HiRes::gettimeofday();
  my @t=localtime($t);
- my $when=sprintf('%d-%02d-%02d %02d:%02d:%02d.%06d',1900+$t[5],$t[4],$t[3],$t[2],1+$t[1],$t[0],$v);
+ my $when=sprintf('%d-%02d-%02d %02d:%02d:%02d.%06d',1900+$t[5],1+$t[4],$t[3],$t[2],$t[1],$t[0],$v);
  $tp=$when.' '.$tp."\n";
  if (UNIVERSAL::can($fh,'print'))
  {
@@ -202,6 +202,7 @@ sub log
 
 ####################################################################################################
 ## Returns 1 if we are still connected, 0 otherwise (and sets current_state to 0)
+## Pass a true value if you want the connection to be automatically redone if the ping failed
 sub ping
 {
  my $self=shift;

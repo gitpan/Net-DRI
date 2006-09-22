@@ -6,7 +6,7 @@ use DateTime;
 use DateTime::Duration;
 
 use Encode ();
-use Test::More tests => 107;
+use Test::More tests => 110;
 eval { use Test::LongString max => 100; $Test::LongString::Context=50; };
 if ($@)
 {
@@ -259,11 +259,13 @@ is_string($R1,$E1.'<command><renew><defreg:renew xmlns:defreg="http://xmlns.domi
 
 # p.76
 $R2=$E1.'<response>'.r().'<resData><defreg:infData xmlns:defreg="http://xmlns.domini.cat/epp/defreg-1.0"><defreg:id>A29483</defreg:id><defreg:roid>39483-A</defreg:roid><defreg:pattern>coca-cola</defreg:pattern><defreg:status s="serverUpdateProhibited"/><defreg:status s="serverDeleteProhibited"/><defreg:registrant>jd1234</defreg:registrant><defreg:contact type="admin">sh8013</defreg:contact><defreg:contact type="billing">sh8013</defreg:contact><defreg:authInfo><defreg:pw>2fooBAR</defreg:pw></defreg:authInfo><defreg:maintainer>myDomains.cat</defreg:maintainer><defreg:trademark><defreg:name>ACMED</defreg:name><defreg:issueDate>2005-12-31</defreg:issueDate><defreg:country>DE</defreg:country><defreg:number>123456</defreg:number></defreg:trademark><defreg:clID>R-123</defreg:clID><defreg:crID>R-123</defreg:crID><defreg:crDate>2006-04-03T22:00:00.0Z</defreg:crDate></defreg:infData></resData><trID><clTRID>ABC-12345</clTRID><svTRID>54322-XYZ</svTRID></trID></response>'.$E2;
-$ro=$dri->remote_object('defreg','DR3922');
+$ro=$dri->remote_object('defreg','A29483');
 $rc=$ro->info({auth=>{pw=>'mySecret',roid=>'DR-5932'}});
-is_string($R1,$E1.'<command><info><defreg:info xmlns:defreg="http://xmlns.domini.cat/epp/defreg-1.0" xsi:schemaLocation="http://xmlns.domini.cat/epp/defreg-1.0 puntcat-defreg-1.0.xsd"><defreg:id>DR3922</defreg:id><defreg:authInfo><defreg:pw roid="DR-5932">mySecret</defreg:pw></defreg:authInfo></defreg:info></info><clTRID>ABC-12345</clTRID></command>'.$E2,'defreg_info build');
+is_string($R1,$E1.'<command><info><defreg:info xmlns:defreg="http://xmlns.domini.cat/epp/defreg-1.0" xsi:schemaLocation="http://xmlns.domini.cat/epp/defreg-1.0 puntcat-defreg-1.0.xsd"><defreg:id>A29483</defreg:id><defreg:authInfo><defreg:pw roid="DR-5932">mySecret</defreg:pw></defreg:authInfo></defreg:info></info><clTRID>ABC-12345</clTRID></command>'.$E2,'defreg_info build');
 is($rc->is_success(),1,'defreg_info is_success');
+is($dri->get_info('action'),'info','defreg_info get_info(action)');
 is($dri->get_info('exist'),1,'defreg_info get_info(exist)');
+is($dri->get_info('id'),'A29483','defreg_info get_info(id)');
 is($dri->get_info('roid'),'39483-A','defreg_info get_info(roid)');
 is($dri->get_info('pattern'),'coca-cola','defreg_info get_info(pattern)');
 $s=$dri->get_info('status');
@@ -298,6 +300,7 @@ $ro=$dri->remote_object('defreg');
 $rc=$ro->check('DR3958','DR3959','REG-38245');
 is_string($R1,$E1.'<command><check><defreg:check xmlns:defreg="http://xmlns.domini.cat/epp/defreg-1.0" xsi:schemaLocation="http://xmlns.domini.cat/epp/defreg-1.0 puntcat-defreg-1.0.xsd"><defreg:id>DR3958</defreg:id><defreg:id>DR3959</defreg:id><defreg:id>REG-38245</defreg:id></defreg:check></check><clTRID>ABC-12345</clTRID></command>'.$E2,'defreg_check build');
 is($rc->is_success(),1,'defreg_check is_success');
+is($dri->get_info('action','defreg','DR3958'),'check','defreg_check get_info(action)');
 is($dri->get_info('exist','defreg','DR3958'),0,'defreg_check get_info(exist) 1');
 is($dri->get_info('exist','defreg','DR3959'),1,'defreg_check get_info(exist) 2');
 is($dri->get_info('exist_reason','defreg','DR3959'),'In use','defreg_check get_info(exist_reason) 1');

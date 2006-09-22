@@ -1,6 +1,6 @@
 ## Domain Registry Interface, RRP Host commands
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -21,7 +21,7 @@ use strict;
 use Net::DRI::Protocol::RRP;
 use Net::DRI::Data::Hosts;
 
-our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -51,7 +51,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -115,6 +115,7 @@ sub check_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
+ $rinfo->{host}->{$oname}->{action}='check';
  if ($mes->errcode() == 213) ## nameserver exists
  {
   my @ip=$mes->entities('ipaddress');
@@ -133,6 +134,7 @@ sub status_parse
  return unless $mes->is_success(); ## if operation succeeds, information should be there
 
  $rinfo->{host}->{$oname}->{exist}=1;
+ $rinfo->{host}->{$oname}->{action}='info';
  while(my ($k,$v)=each(%Net::DRI::Protocol::RRP::DATES))
  {
   my $d=$mes->entities($k);

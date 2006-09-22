@@ -29,7 +29,7 @@ standard for domain name activities, for example for status codes.
 
 Currently Net::DRI ships with
 - a full RRP implementation (RFC 2832 & 3632)
-- a full EPP implementation (RFC 3730/3731/3732/3733/3734/3735)
+- a full EPP implementation (RFC 3730/3731/3732/3733/3734/3735), including poll messages
 - many EPP extensions:
   * GracePeriod (RFC 3915)
   * E164 for ENUM (RFC 4114)
@@ -37,7 +37,7 @@ Currently Net::DRI ships with
   * Infrastructure ENUM in Austria
   * NSgroup (used by .BE and .EU)
   * Domain/Contact/Host extensions needed for extra services in various TLD:
-    .EU .COM .NET .MOBI .AERO .CAT .US .PL .SE
+    .EU .COM .NET .MOBI .AERO .CAT .US .PL .SE .BE
 - a TCP/TLS transport
 - a SOAP transport (HTTP/HTTPS)
 - a Web scraping ``transport''
@@ -54,6 +54,7 @@ Currently Net::DRI ships with
 - a Net::DRI::DRD::SE covering .SE registry
 - a Net::DRI::DRD::PL covering .PL registry
 - a Net::DRI::DRD::CAT covering .CAT registry
+- a Net::DRI::DRD::BE covering .BE registry
 
 
 Work is underway to provide full support for asynchronous registries,
@@ -211,6 +212,11 @@ Typical use of this library would go along those lines:
 
 - when you are finished, call $dri->end() to deallocate ressources and close any open connections.
 
+
+If using the Socket transport, you can make sure the connection is still open by using the
+ping() method, such as : $dri->transport()->ping()
+It will return 1 if the connection is still there, 0 otherwise.
+If you pass a true value to ping(), it will automatically reconnect if the connection is broken.
 
 Available API
 -------------
@@ -532,7 +538,7 @@ See corresponding domain_* methods.
 
 See above methods.
 
-* message_retrieve() message_delete() message_waiting() : to handle registry messages
+* message_retrieve() message_delete() message_waiting() message_count() : to handle registry messages (see t/601vnds_epp.t)
 
 * all other operations
 

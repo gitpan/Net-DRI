@@ -22,7 +22,7 @@ use strict;
 use Time::HiRes ();
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.14 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -311,6 +311,12 @@ sub xml_parse_boolean
  return {'true'=>1,1=>1,0=>0,'false'=>0}->{$in};
 }
 
+sub remcam
+{
+ my $in=shift;
+ $in=~s/([A-Z])/_$1/g;
+ return lc($in);
+}
 
 #############################################################################################
 1;

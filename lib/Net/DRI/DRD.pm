@@ -23,7 +23,7 @@ use DateTime;
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.20 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.21 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -357,7 +357,7 @@ sub domain_info
  if (defined($exist=$ndr->get_info('exist','domain',$domain)) && $exist && defined($ndr->get_info('ns','domain',$domain)))
  {
   $ndr->set_info_from_cache('domain',$domain);
-  $rc=$ndr->get_info('rc');
+  $rc=$ndr->get_info('result_status');
  } else
  {
   $rc=$ndr->process('domain','info',[$domain,$rd]);
@@ -374,7 +374,7 @@ sub domain_check
  if (defined($ndr->get_info('exist','domain',$domain)))
  {
   $ndr->set_info_from_cache('domain',$domain);
-  $rc=$ndr->get_info('rc');
+  $rc=$ndr->get_info('result_status');
  } else
  {
   $rc=$ndr->process('domain','check',[$domain,$rd]);
@@ -397,7 +397,7 @@ sub domain_check_multi
   if (defined($ndr->get_info('exist','domain',$domain)))
   {
    $ndr->set_info_from_cache('domain',$domain);
-   $rc=$ndr->get_info('rc');
+   $rc=$ndr->get_info('result_status');
   } else
   {
    push @d,$domain;
@@ -672,7 +672,7 @@ sub host_info
  if (defined($exist=$ndr->get_info('exist','host',$name)) && $exist && defined($ndr->get_info('self','host',$name)))
  {
   $ndr->set_info_from_cache('host',$name);
-  $rc=$ndr->get_info('rc');
+  $rc=$ndr->get_info('result_status');
  } else
  {
   $rc=$ndr->process('host','info',[$dh,$rh]); ## cache was empty, go to registry
@@ -693,7 +693,7 @@ sub host_check
  if (defined($ndr->get_info('exist','host',$name))) ## check cache
  {
   $ndr->set_info_from_cache('host',$name);
-  $rc=$ndr->get_info('rc');
+  $rc=$ndr->get_info('result_status');
  } else
  {
   $rc=$ndr->process('host','check',[$dh,$rh]); ## go to registry
@@ -715,7 +715,7 @@ sub host_check_multi
   if (defined($ndr->get_info('exist','host',$host)))
   {
    $ndr->set_info_from_cache('host',$host);
-   $rc=$ndr->get_info('rc');
+   $rc=$ndr->get_info('result_status');
   } else
   {
    push @h,$host;
@@ -892,7 +892,7 @@ sub contact_info
  if (defined($exist=$ndr->get_info('exist','contact',$contact->srid())) && $exist && defined($ndr->get_info('self','contact',$contact->srid())))
  {
   $ndr->set_info_from_cache('domain',$contact->srid());
-  $rc=get_info('rc');
+  $rc=get_info('result_status');
  } else
  {
   $rc=$ndr->process('contact','info',[$contact,$ep]);
@@ -909,7 +909,7 @@ sub contact_check
  if (defined($ndr->get_info('exist','contact',$contact->srid())))
  {
   $ndr->set_info_from_cache('contact',$contact->srid());
-  $rc=$ndr->get_info('rc');
+  $rc=$ndr->get_info('result_status');
  } else
  {
   $rc=$ndr->process('contact','check',[$contact]);
@@ -929,7 +929,7 @@ sub contact_check_multi
   if (defined($ndr->get_info('exist','contact',$contact->srid())))
   {
    $ndr->set_info_from_cache('contact',$contact->srid());
-   $rc=$ndr->get_info('rc');
+   $rc=$ndr->get_info('result_status');
   } else
   {
    push @c,$contact;
@@ -1081,10 +1081,17 @@ sub message_delete
 sub message_waiting
 {
  my ($self,$ndr)=@_;
+ my $c=$self->message_count($ndr);
+ return (defined($c) && $c)? 1 : 0;
+}
+
+sub message_count
+{
+ my ($self,$ndr)=@_;
  my $rc=$ndr->process('message','retrieve');
  return unless $rc->is_success();
  my $count=$ndr->get_info('count','message','info');
- return (defined($count) && $count)? 1 : 0;
+ return (defined($count) && $count)? $count : 0;
 }
 
 ####################################################################################################

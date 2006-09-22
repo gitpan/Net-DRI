@@ -3,7 +3,7 @@
 use Net::DRI;
 use Net::DRI::Data::Raw;
 
-use Test::More tests => 198;
+use Test::More tests => 224;
 
 our $E1='<?xml version="1.0" encoding="UTF-8" standalone="no"?><epp xmlns="urn:ietf:params:xml:ns:epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="urn:ietf:params:xml:ns:epp-1.0 epp-1.0.xsd">';
 our $E2='</epp>';
@@ -38,6 +38,7 @@ $R2=$E1.'<response>'.r().'<resData><domain:chkData xmlns:domain="urn:ietf:params
 $rc=$dri->domain_check('example3.com');
 is($R1,$E1.'<command><check><domain:check xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example3.com</domain:name></domain:check></check><clTRID>ABC-12345</clTRID></command>'.$E2,'domain_check build');
 is($rc->is_success(),1,'domain_check is_success');
+is($dri->get_info('action'),'check','domain_check get_info(action)');
 is($dri->get_info('exist'),0,'domain_check get_info(exist)');
 is($dri->get_info('exist','domain','example3.com'),0,'domain_check get_info(exist) from cache');
 
@@ -54,6 +55,7 @@ is($dri->get_info('exist_reason','domain','example2.net'),'In use','domain_check
 $R2=$E1.'<response>'.r().'<resData><domain:infData xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example2.com</domain:name><domain:roid>EXAMPLE1-REP</domain:roid><domain:status s="ok"/><domain:registrant>jd1234</domain:registrant><domain:contact type="admin">sh8013</domain:contact><domain:contact type="tech">sh8013</domain:contact><domain:ns><domain:hostObj>ns1.example.com</domain:hostObj><domain:hostObj>ns1.example.net</domain:hostObj></domain:ns><domain:host>ns1.example.com</domain:host><domain:host>ns2.example.com</domain:host><domain:clID>ClientX</domain:clID><domain:crID>ClientY</domain:crID><domain:crDate>1999-04-03T22:00:00.0Z</domain:crDate><domain:upID>ClientX</domain:upID><domain:upDate>1999-12-03T09:00:00.0Z</domain:upDate><domain:exDate>2005-04-03T22:00:00.0Z</domain:exDate><domain:trDate>2000-04-08T09:00:00.0Z</domain:trDate><domain:authInfo><domain:pw>2fooBAR</domain:pw></domain:authInfo></domain:infData></resData>'.$TRID.'</response>'.$E2;
 $rc=$dri->domain_info('example2.com',{auth=>{pw=>'2fooBAR'}});
 is($R1,$E1.'<command><info><domain:info xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name hosts="all">example2.com</domain:name><domain:authInfo><domain:pw>2fooBAR</domain:pw></domain:authInfo></domain:info></info><clTRID>ABC-12345</clTRID></command>'.$E2,'domain_info build with auth');
+is($dri->get_info('action'),'info','domain_info get_info(action)');
 is($dri->get_info('exist'),1,'domain_info get_info(exist)');
 is($dri->get_info('roid'),'EXAMPLE1-REP','domain_info get_info(roid)');
 $s=$dri->get_info('status');
@@ -103,6 +105,7 @@ is($dri->get_info('clID'),'ClientX','domain_info get_info(clID)');
 $R2=$E1.'<response>'.r().'<resData><domain:trnData xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example201.com</domain:name><domain:trStatus>pending</domain:trStatus><domain:reID>ClientX</domain:reID><domain:reDate>2000-06-06T22:00:00.0Z</domain:reDate><domain:acID>ClientY</domain:acID><domain:acDate>2000-06-11T22:00:00.0Z</domain:acDate><domain:exDate>2002-09-08T22:00:00.0Z</domain:exDate></domain:trnData></resData>'.$TRID.'</response>'.$E2; 
 $rc=$dri->domain_transfer_query('example201.com',{auth=>{pw=>'2fooBAR',roid=>'JD1234-REP'}});
 is($R1,$E1.'<command><transfer op="query"><domain:transfer xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example201.com</domain:name><domain:authInfo><domain:pw roid="JD1234-REP">2fooBAR</domain:pw></domain:authInfo></domain:transfer></transfer><clTRID>ABC-12345</clTRID></command>'.$E2,'domain_transfer_query build');
+is($dri->get_info('action'),'transfer','domain_transfer_query get_info(action)');
 is($dri->get_info('exist'),1,'domain_transfer_query get_info(exist)');
 is($dri->get_info('trStatus'),'pending','domain_transfer_query get_info(trStatus)');
 is($dri->get_info('reID'),'ClientX','domain_transfer_query get_info(reID)');
@@ -127,6 +130,7 @@ $cs->set($c2,'admin');
 $cs->set($c2,'tech');
 $rc=$dri->domain_create_only('example202.com',{duration=>DateTime::Duration->new(years=>2),ns=>$dri->local_object('hosts')->set(['ns1.example.com'],['ns1.example.net']),contact=>$cs,auth=>{pw=>'2fooBAR'}});
 is($R1,$E1.'<command><create><domain:create xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example202.com</domain:name><domain:period unit="y">2</domain:period><domain:ns><domain:hostObj>ns1.example.com</domain:hostObj><domain:hostObj>ns1.example.net</domain:hostObj></domain:ns><domain:registrant>jd1234</domain:registrant><domain:contact type="admin">sh8013</domain:contact><domain:contact type="tech">sh8013</domain:contact><domain:authInfo><domain:pw>2fooBAR</domain:pw></domain:authInfo></domain:create></create><clTRID>ABC-12345</clTRID></command>'.$E2,'domain_create_only build');
+is($dri->get_info('action'),'create','domain_create_only get_info(action)');
 is($dri->get_info('exist'),1,'domain_create_only get_info(exist)');
 $d=$dri->get_info('crDate');
 isa_ok($d,'DateTime','domain_create_only get_info(crDate)');
@@ -145,6 +149,7 @@ is($rc->is_success(),1,'domain_delete_only is_success');
 $R2=$E1.'<response>'.r().'<resData><domain:renData xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example204.com</domain:name><domain:exDate>2005-04-03T22:00:00.0Z</domain:exDate></domain:renData></resData>'.$TRID.'</response>'.$E2;
 $rc=$dri->domain_renew('example204.com',DateTime::Duration->new(years=>5),DateTime->new(year=>2000,month=>4,day=>3));
 is($R1,$E1.'<command><renew><domain:renew xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example204.com</domain:name><domain:curExpDate>2000-04-03</domain:curExpDate><domain:period unit="y">5</domain:period></domain:renew></renew><clTRID>ABC-12345</clTRID></command>'.$E2,'domain_renew build');
+is($dri->get_info('action'),'renew','domain_renew get_info(action)');
 is($dri->get_info('exist'),1,'domain_renew get_info(exist)');
 $d=$dri->get_info('exDate');
 isa_ok($d,'DateTime','domain_renew get_info(exDate)');
@@ -158,6 +163,7 @@ $R2=$E1.'<response>'.r().'<resData><domain:trnData xmlns:domain="urn:ietf:params
 }
 $rc=$dri->domain_transfer_start('example205.com',{auth=>{pw=>'2fooBAR',roid=>"JD1234-REP"},duration=>DateTime::Duration->new(years=>1)});
 is($R1,$E1.'<command><transfer op="request"><domain:transfer xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example205.com</domain:name><domain:period unit="y">1</domain:period><domain:authInfo><domain:pw roid="JD1234-REP">2fooBAR</domain:pw></domain:authInfo></domain:transfer></transfer><clTRID>ABC-12345</clTRID></command>'.$E2,'domain_transfer_request build');
+is($dri->get_info('action'),'transfer','domain_transfer_start get_info(action)');
 is($dri->get_info('exist'),1,'domain_transfer_start get_info(exist)');
 is($dri->get_info('trStatus'),'pending','domain_transfer_start get_info(trStatus)');
 is($dri->get_info('reID'),'ClientX','domain_transfer_start get_info(reID)');
@@ -198,6 +204,7 @@ is($rc->is_success(),1,'domain_update is_success');
 $R2=$E1.'<response>'.r().'<resData><host:chkData xmlns:host="urn:ietf:params:xml:ns:host-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:host-1.0 host-1.0.xsd"><host:cd><host:name avail="0">ns2.example2.com</host:name><host:reason>In use</host:reason></host:cd></host:chkData></resData>'.$TRID.'</response>'.$E2;
 $rc=$dri->host_check('ns2.example2.com');
 is($R1,$E1.'<command><check><host:check xmlns:host="urn:ietf:params:xml:ns:host-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:host-1.0 host-1.0.xsd"><host:name>ns2.example2.com</host:name></host:check></check><clTRID>ABC-12345</clTRID></command>'.$E2,'host_check build');
+is($dri->get_info('action'),'check','host_check get_info(action)');
 is($dri->get_info('exist'),1,'host_check get_info(exist)');
 is($dri->get_info('exist','host','ns2.example2.com'),1,'host_check get_info(exist) from cache');
 is($dri->get_info('exist_reason'),'In use','host_check reason');
@@ -216,6 +223,8 @@ is($dri->get_info('exist','host','ns30.example2.com'),0,'host_check_multi get_in
 $R2=$E1.'<response>'.r().'<resData><host:infData xmlns:host="urn:ietf:params:xml:ns:host-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:host-1.0 host-1.0.xsd"><host:name>ns100.example2.com</host:name><host:roid>NS1_EXAMPLE1-REP</host:roid><host:status s="linked"/><host:status s="clientUpdateProhibited"/><host:addr ip="v4">193.0.2.2</host:addr><host:addr ip="v4">193.0.2.29</host:addr><host:addr ip="v6">2000:0:0:0:8:800:200C:417A</host:addr><host:clID>ClientY</host:clID><host:crID>ClientX</host:crID><host:crDate>1999-04-03T22:00:00.0Z</host:crDate><host:upID>ClientX</host:upID><host:upDate>1999-12-03T09:00:00.0Z</host:upDate><host:trDate>2000-04-08T09:00:00.0Z</host:trDate></host:infData></resData>'.$TRID.'</response>'.$E2;
 $rc=$dri->host_info('ns100.example2.com');
 is($R1,$E1.'<command><info><host:info xmlns:host="urn:ietf:params:xml:ns:host-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:host-1.0 host-1.0.xsd"><host:name>ns100.example2.com</host:name></host:info></info><clTRID>ABC-12345</clTRID></command>'.$E2,'host_info build');
+is($dri->get_info('action'),'info','host_info get_info(action)');
+is($dri->get_info('exist'),1,'host_info get_info(exist)');
 is($dri->get_info('roid'),'NS1_EXAMPLE1-REP','host_info get_info(roid)');
 $s=$dri->get_info('status');
 isa_ok($s,'Net::DRI::Data::StatusList','host_info get_info(status)');
@@ -245,6 +254,8 @@ is($d.'','2000-04-08T09:00:00','host_info get_info(trDate) value');
 $R2=$E1.'<response>'.r().'<resData><host:creData xmlns:host="urn:ietf:params:xml:ns:host-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:host-1.0 host-1.0.xsd"><host:name>ns101.example1.com</host:name><host:crDate>1999-04-03T22:00:00.0Z</host:crDate></host:creData></resData>'.$TRID.'</response>'.$E2;
 $rc=$dri->host_create($dri->local_object('hosts')->add('ns101.example1.com',['193.0.2.2','193.0.2.29'],['2000:0:0:0:8:800:200C:417A']));
 is($R1,$E1.'<command><create><host:create xmlns:host="urn:ietf:params:xml:ns:host-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:host-1.0 host-1.0.xsd"><host:name>ns101.example1.com</host:name><host:addr ip="v4">193.0.2.2</host:addr><host:addr ip="v4">193.0.2.29</host:addr><host:addr ip="v6">2000:0:0:0:8:800:200C:417A</host:addr></host:create></create><clTRID>ABC-12345</clTRID></command>'.$E2,'host_create build');
+is($dri->get_info('action'),'create','host_create get_info(action)');
+is($dri->get_info('exist'),1,'host_create get_info(exist)');
 $d=$dri->get_info('crDate');
 isa_ok($d,'DateTime','host_create get_info(crDate)');
 is($d.'','1999-04-03T22:00:00','host_create get_info(crDate) value');
@@ -275,6 +286,7 @@ $co=$dri->local_object('contact')->srid('sh8000'); #->auth({pw=>'2fooBAR'});
 $rc=$dri->contact_check($co);
 is($R1,$E1.'<command><check><contact:check xmlns:contact="urn:ietf:params:xml:ns:contact-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:contact-1.0 contact-1.0.xsd"><contact:id>sh8000</contact:id></contact:check></check><clTRID>ABC-12345</clTRID></command>'.$E2,'contact_check build'); 
 is($rc->is_success(),1,'contact_check is_success');
+is($dri->get_info('action'),'check','contact_check get_info(action)');
 is($dri->get_info('exist'),0,'contact_check get_info(exist)');
 is($dri->get_info('exist','contact','sh8000'),0,'contact_check get_info(exist) from cache');
 
@@ -294,6 +306,7 @@ $co=$dri->local_object('contact')->srid('sh8013')->auth({pw=>'2fooBAR'});
 $rc=$dri->contact_info($co);
 is($R1,$E1.'<command><info><contact:info xmlns:contact="urn:ietf:params:xml:ns:contact-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:contact-1.0 contact-1.0.xsd"><contact:id>sh8013</contact:id><contact:authInfo><contact:pw>2fooBAR</contact:pw></contact:authInfo></contact:info></info><clTRID>ABC-12345</clTRID></command>'.$E2,'contact_info build');
 is($rc->is_success(),1,'contact_info is_success');
+is($dri->get_info('action'),'info','contact_info get_info(action)');
 is($dri->get_info('exist'),1,'contact_info get_info(exist)');
 $co=$dri->get_info('self');
 isa_ok($co,'Net::DRI::Data::Contact','contact_info get_info(self)');
@@ -329,11 +342,13 @@ is_deeply($co->auth(),{pw=>'2fooBAR'},'contact_info get_info(self) auth');
 is_deeply($co->disclose(),{voice=>0,email=>0},'contact_info get_info(self) disclose');
 
 
-$R2=$E1.'<response>'.r().'<resData><contact:trnData xmlns:contact="urn:ietf:params:xml:ns:contact-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:contact-1.0 contact-1.0.xsd"><contact:id>sh8013</contact:id><contact:trStatus>pending</contact:trStatus><contact:reID>ClientX</contact:reID><contact:reDate>2000-06-06T22:00:00.0Z</contact:reDate><contact:acID>ClientY</contact:acID><contact:acDate>2000-06-11T22:00:00.0Z</contact:acDate></contact:trnData></resData>'.$TRID.'</response>'.$E2;
+$R2=$E1.'<response>'.r().'<resData><contact:trnData xmlns:contact="urn:ietf:params:xml:ns:contact-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:contact-1.0 contact-1.0.xsd"><contact:id>sh8014</contact:id><contact:trStatus>pending</contact:trStatus><contact:reID>ClientX</contact:reID><contact:reDate>2000-06-06T22:00:00.0Z</contact:reDate><contact:acID>ClientY</contact:acID><contact:acDate>2000-06-11T22:00:00.0Z</contact:acDate></contact:trnData></resData>'.$TRID.'</response>'.$E2;
 $co=$dri->local_object('contact')->srid('sh8014')->auth({pw=>'2fooBAR'});
 $rc=$dri->contact_transfer_query($co);
 is($R1,$E1.'<command><transfer op="query"><contact:transfer xmlns:contact="urn:ietf:params:xml:ns:contact-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:contact-1.0 contact-1.0.xsd"><contact:id>sh8014</contact:id><contact:authInfo><contact:pw>2fooBAR</contact:pw></contact:authInfo></contact:transfer></transfer><clTRID>ABC-12345</clTRID></command>'.$E2,'contact_transfer_query build');
 is($rc->is_success(),1,'contact_transfer_query is_success');
+is($dri->get_info('action'),'transfer','contact_transfer_query get_info(action)');
+is($dri->get_info('exist'),1,'contact_transfer_query get_info(action)');
 is($dri->get_info('trStatus'),'pending','contact_transfer_query get_info(trStatus)');
 is($dri->get_info('reID'),'ClientX','contact_transfer_query get_info(reID)');
 $d=$dri->get_info('reDate');
@@ -362,6 +377,20 @@ $co->disclose({voice=>0,email=>0});
 $rc=$dri->contact_create($co);
 is($R1,$E1.'<command><create><contact:create xmlns:contact="urn:ietf:params:xml:ns:contact-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:contact-1.0 contact-1.0.xsd"><contact:id>sh8015</contact:id><contact:postalInfo type="loc"><contact:name>John Doe</contact:name><contact:org>Example Inc.</contact:org><contact:addr><contact:street>123 Example Dr.</contact:street><contact:street>Suite 100</contact:street><contact:city>Dulles</contact:city><contact:sp>VA</contact:sp><contact:pc>20166-6503</contact:pc><contact:cc>US</contact:cc></contact:addr></contact:postalInfo><contact:voice x="1234">+1.7035555555</contact:voice><contact:fax>+1.7035555556</contact:fax><contact:email>jdoe@example.com</contact:email><contact:authInfo><contact:pw>2fooBAR</contact:pw></contact:authInfo><contact:disclose flag="0"><contact:voice/><contact:email/></contact:disclose></contact:create></create><clTRID>ABC-12345</clTRID></command>'.$E2,'contact_create build');
 is($rc->is_success(),1,'contact_create is_success');
+is($dri->get_info('action'),'create','contact_create get_info(action)');
+is($dri->get_info('exist'),1,'contact_create get_info(exist)');
+
+## Some registries do not permit the registrar to set the contact:id, and will just set one
+## Here is how to deal with this case
+## Note that contact:id is mandatory in EPP, and hence we will always send one 
+## (handled transparently by Contact::*::init()
+$R2=$E1.'<response>'.r().'<resData><contact:creData xmlns:contact="urn:ietf:params:xml:ns:contact-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:contact-1.0 contact-1.0.xsd"><contact:id>NEWREGID</contact:id><contact:crDate>1999-04-03T22:00:00.0Z</contact:crDate></contact:creData></resData>'.$TRID.'</response>'.$E2;
+$co->srid('sh8015');
+$rc=$dri->contact_create($co);
+is($dri->get_info('id'),'NEWREGID','contact_create with registry contact:id get_info(id)');
+is($dri->get_info('exist'),undef,'contact_create with registry contact:id get_info(exist)');
+is($dri->get_info('id','contact','NEWREGID'),'NEWREGID','contact_create with registry contact:id get_info(NEWREGID,id)');
+is($dri->get_info('exist','contact','NEWREGID'),1,'contact_create with registry contact:id get_info(NEWREGID,exist)');
 
 
 $R2='';
@@ -376,6 +405,8 @@ $R2=$E1.'<response>'.r().'<resData><contact:trnData xmlns:contact="urn:ietf:para
 $rc=$dri->contact_transfer_start($co);
 is($R1,$E1.'<command><transfer op="request"><contact:transfer xmlns:contact="urn:ietf:params:xml:ns:contact-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:contact-1.0 contact-1.0.xsd"><contact:id>sh8017</contact:id><contact:authInfo><contact:pw>2fooBAR</contact:pw></contact:authInfo></contact:transfer></transfer><clTRID>ABC-12345</clTRID></command>'.$E2,'contact_transfer_start build');
 is($rc->is_success(),1,'contact_transfer_start is_success');
+is($dri->get_info('action'),'transfer','contact_transfer_start get_info(action)');
+is($dri->get_info('exist'),1,'contact_transfer_start get_info(exist)');
 is($dri->get_info('trStatus'),'pending','contact_transfer_start get_info(trStatus)');
 is($dri->get_info('reID'),'ClientX','contact_transfer_start get_info(reID)');
 $d=$dri->get_info('reDate');
@@ -410,7 +441,7 @@ is($rc->is_success(),1,'contact_update is_success');
 ## Session commands
 $R2='';
 $rc=$dri->process('session','noop',[]);
-is($R1,$E1.'<command><poll op="req"/><clTRID>ABC-12345</clTRID></command>'.$E2,'session noop build');
+is($R1,$E1.'<hello/>'.$E2,'session noop build');
 is($rc->is_success(),1,'session noop is_success');
 
 
@@ -436,26 +467,26 @@ is($rc->is_success(),1,'session login is_success');
 $R2=$E1.'<response>'.r().'<msgQ count="5" id="12345"/>'.$TRID.'</response>'.$E2;
 $rc=$dri->process('session','noop',[]);
 is($dri->get_info('count','message','info'),5,'message count');
-is($dri->get_info('first_id','message','info'),12345,'message first_id');
-
+#is($dri->get_info('first_id','message','info'),12345,'message first_id');
 
 $R2=$E1.'<response>'.r(1301,'Command completed successfully; ack to dequeue').'<msgQ count="5" id="12345"><qDate>1999-04-04T22:01:00.0Z</qDate><msg>Pending action completed successfully.</msg></msgQ><resData><domain:panData xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name paResult="1">example.com</domain:name><domain:paTRID><clTRID>ABC-12345</clTRID><svTRID>54321-XYZ</svTRID></domain:paTRID><domain:paDate>1999-04-04T22:00:00.0Z</domain:paDate></domain:panData></resData>'.$TRID.'</response>'.$E2;
 $rc=$dri->message_retrieve();
+is($dri->get_info('last_id'),12345,'message get_info last_id 1');
+is($dri->get_info('last_id','message','session'),12345,'message get_info last_id 2');
 is($dri->get_info('id','message',12345),12345,'message get_info id');
 is(''.$dri->get_info('qdate','message',12345),'1999-04-04T22:01:00','message get_info qdate');
 is($dri->get_info('content','message',12345),'Pending action completed successfully.','message get_info msg');
 is($dri->get_info('lang','message',12345),'en','message get_info lang');
-
 is($dri->get_info('object_type','message','12345'),'domain','message get_info object_type');
 is($dri->get_info('object_id','message','12345'),'example.com','message get_info id');
+is($dri->get_info('action','message','12345'),'create_review','message get_info action'); ## with this, we know what action has triggered this delayed message
 is($dri->get_info('result','message','12345'),1,'message get_info result');
 is($dri->get_info('trid','message','12345'),'ABC-12345','message get_info trid');
 is($dri->get_info('svtrid','message','12345'),'54321-XYZ','message get_info svtrid');
 is(''.$dri->get_info('date','message','12345'),'1999-04-04T22:00:00','message get_info date');
 
-
-
-is($dri->message_waiting(),1,'message_exist');
+is($dri->message_waiting(),1,'message_waiting');
+is($dri->message_count(),5,'message_count');
 
 exit 0;
 

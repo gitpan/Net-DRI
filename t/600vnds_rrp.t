@@ -3,7 +3,7 @@
 use Net::DRI;
 use Net::DRI::Data::Raw;
 
-use Test::More tests => 40;
+use Test::More tests => 48;
 
 our $R1;
 sub mysend
@@ -27,6 +27,8 @@ $R2="200 Command completed successfully\r\nregistration expiration date:2009-09-
 my $rc=$dri->domain_create_only('example2.com',{duration => DateTime::Duration->new(years => 10)});
 is($R1,"add\r\nEntityName:Domain\r\nDomainName:EXAMPLE2.COM\r\n-Period:10\r\n.\r\n",'domain_create_only send');
 is($rc->is_success(),1,'domain_create_only rc is_success');
+is($dri->get_info('action'),'create','domain_create_only get_info(action)');
+is($dri->get_info('exist'),1,'domain_create_only get_info(exist)');
 is($rc->code(),1000,'domain_create_only rc code');
 is($rc->native_code(),200,'domain_create_only rc native_code');
 is($rc->message(),'Command completed successfully','domain_create_only rc message');
@@ -44,6 +46,8 @@ $R2="211 Domain name not available\r\n.\r\n";
 $rc=$dri->domain_check('example2.com');
 is($R1,"check\r\nEntityName:Domain\r\nDomainName:EXAMPLE2.COM\r\n.\r\n",'domain_check send');
 is($rc->is_success(),1,'domain_check rc is_success');
+is($dri->get_info('action'),'check','domain_check get_info(action)');
+is($dri->get_info('exist'),1,'domain_check get_info(exist)');
 is($rc->code(),2302,'domain_check rc code');
 is($rc->native_code(),211,'domain_check rc native_code');
 is($rc->message(),'Domain name not available','domain_check rc message');
@@ -53,6 +57,8 @@ $R2="213 Name server not available\r\nipAddress:192.10.10.10\r\n.\r\n";
 $rc=$dri->host_check('ns1.example2.com');
 is($R1,"check\r\nEntityName:NameServer\r\nNameServer:NS1.EXAMPLE2.COM\r\n.\r\n",'host_check send');
 is($dri->host_exist('ns1.example2.com'),1,'host_exist');
+is($dri->get_info('action'),'check','host_check get_info(action)');
+is($dri->get_info('exist'),1,'host_check get_info(exist)');
 my $dh=$dri->get_info('self');
 my @c=$dh->get_names(1);
 is_deeply(\@c,['ns1.example2.com'],'host_check get_info(self) get_names');
@@ -78,6 +84,8 @@ is($rc->is_success(),1,'domain_info rc is_success');
 is($dri->result_is_success(),1,'result_is_success');
 is($dri->result_code(),1000,'result_code');
 is($dri->result_native_code(),200,'result_native_code');
+is($dri->get_info('action'),'info','domain_info get_info(action)');
+is($dri->get_info('exist'),1,'domain_info get_info(exist)');
 $dh=$dri->get_info('ns');
 @c=$dh->get_names();
 is_deeply(\@c,['ns2.registrara.com','ns3.registrara.com'],'domain_info get_info(host) get_names');

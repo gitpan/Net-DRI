@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Grace Period commands (RFC3915)
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -22,7 +22,7 @@ use strict;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 our $NS='urn:ietf:params:xml:ns:rgp-1.0';
 
 =pod
@@ -53,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -127,9 +127,11 @@ sub update
  } else
  {
   my %r=%{$rgp->{report}};
+  my $def=$epp->default_parameters();
+  my $data=($def && (ref($def) eq 'HASH') && exists($def->{breaks_rfc3915}) && $def->{breaks_rfc3915})? 'Whois' : 'Data'; ## VeriSign does not respect its own RFC
   my @d;
-  push @d,['rgp:preData',$r{predata}]; ## XML data is possible in the RFC, but not here ?!
-  push @d,['rgp:postData',$r{postdata}]; ## ditto
+  push @d,['rgp:pre'.$data,$r{predata}]; ## XML data is possible in the RFC, but not here ?!
+  push @d,['rgp:post'.$data,$r{postdata}]; ## ditto
 
   Net::DRI::Util::check_isa($r{deltime},'DateTime');
   push @d,['rgp:delTime',$r{deltime}->strftime('%Y-%m-%dT%T.%1NZ')];

@@ -27,7 +27,7 @@ use Net::DRI::Protocol::EPP::Core::Status;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -80,6 +80,7 @@ sub register_commands
            info   => [ \&info, \&info_parse ],
            delete => [ \&delete ],
 	   update => [ \&update ],
+           review_complete => [ undef, \&pandata_parse ],
          );
 
  $tmp{check_multi}=$tmp{check};
@@ -135,6 +136,7 @@ sub check_parse
    if ($n eq 'name')
    {
     $host=$c->getFirstChild()->getData();
+    $rinfo->{host}->{$host}->{action}='check';
     $rinfo->{host}->{$host}->{exist}=1-Net::DRI::Util::xml_parse_boolean($c->getAttribute('avail'));
    }
    if ($n eq 'reason')
@@ -163,15 +165,19 @@ sub info_parse
  my $infdata=$mes->get_content('infData',$mes->ns('host'));
  return unless $infdata;
 
- $rinfo->{host}->{$oname}->{exist}=1;
  my (@s,@ip4,@ip6);
-
  my $c=$infdata->getFirstChild();
- while ($c) ## host:name is not used
+ while ($c)
  {
   my $name=$c->localname() || $c->nodeName();
   next unless $name;
-  if ($name=~m/^(clID|crID|upID)$/)
+
+  if ($name eq 'name')
+  {
+   $oname=$c->getFirstChild()->getData();
+   $rinfo->{host}->{$oname}->{action}='info';
+   $rinfo->{host}->{$oname}->{exist}=1;
+  } elsif ($name=~m/^(clID|crID|upID)$/)
   {
    $rinfo->{host}->{$oname}->{$1}=$c->getFirstChild()->getData();
   } elsif ($name=~m/^(crDate|upDate|trDate)$/)
@@ -217,12 +223,18 @@ sub create_parse
  my $infdata=$mes->get_content('creData',$mes->ns('host'));
  return unless $infdata;
 
- $rinfo->{host}->{$oname}->{exist}=1;
  my $c=$infdata->getFirstChild();
  while ($c) ## host:name is not used
  {
   my $name=$c->localname() || $c->nodeName();
-  if ($name=~m/^(crDate)$/)
+  next unless $name;
+ 
+  if ($name eq 'name')
+  {
+   $oname=$c->getFirstChild()->getData();
+   $rinfo->{host}->{$oname}->{action}='create';
+   $rinfo->{host}->{$oname}->{exist}=1;
+  } elsif ($name=~m/^(crDate)$/)
   {
    $rinfo->{host}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
   }
@@ -292,8 +304,42 @@ sub add_ip
  return @ip;
 }
 
-## TODO
-## RFC3732 §3.2.6.  Offline Review of Requested Actions
+####################################################################################################
+## RFC3732 §3.2.6  Offline Review of Requested Actions
 
-#########################################################################################################
+sub pandata_parse
+{
+ my ($po,$otype,$oaction,$oname,$rinfo)=@_;
+ my $mes=$po->message();
+ return unless $mes->is_success();
+
+ my $pandata=$mes->get_content('panData',$mes->ns('host'));
+ return unless $pandata;
+
+ my $c=$pandata->firstChild();
+ while ($c)
+ {
+  my $name=$c->localname() || $c->nodeName();
+  next unless $name;
+
+  if ($name eq 'name')
+  {
+   $oname=$c->getFirstChild()->getData();
+   $rinfo->{host}->{$oname}->{action}='create_review';
+   $rinfo->{host}->{$oname}->{result}=Net::DRI::Util::xml_parse_boolean($c->getAttribute('paResult'));
+   $rinfo->{host}->{$oname}->{exist}=$rinfo->{host}->{$oname}->{result};
+  } elsif ($name eq 'paTRID')
+  {
+   my @tmp=$c->getElementsByTagNameNS($mes->ns('_main'),'clTRID');
+   $rinfo->{host}->{$oname}->{trid}=$tmp[0]->getFirstChild()->getData() if (@tmp && $tmp[0]);
+   $rinfo->{host}->{$oname}->{svtrid}=($c->getElementsByTagNameNS($mes->ns('_main'),'svTRID'))[0]->getFirstChild()->getData();
+  } elsif ($name eq 'paDate')
+  {
+   $rinfo->{host}->{$oname}->{date}=DateTime::Format::ISO8601->new()->parse_datetime($c->firstChild->getData());
+  }
+  $c=$c->getNextSibling();
+ }
+}
+
+####################################################################################################
 1;

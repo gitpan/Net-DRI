@@ -24,7 +24,7 @@ use Net::DRI::DRD::ICANN;
 use DateTime::Duration;
 use DateTime;
 
-our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -114,7 +114,7 @@ sub verify_duration_transfer
  ($duration,$domain,$op)=($ndr,$duration,$domain) unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
 
  return 0 unless ($op eq 'start'); ## we are not interested by other cases, they are always OK
- my $rc=$self->domain_info($ndr,$domain);
+ my $rc=$self->domain_info($ndr,$domain,{hosts=>'none'});
  return 1 unless ($rc->is_success());
  my $trdate=$ndr->get_info('trDate');
  return 0 unless ($trdate && $trdate->isa('DateTime'));

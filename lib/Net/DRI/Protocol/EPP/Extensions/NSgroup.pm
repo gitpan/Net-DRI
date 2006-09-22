@@ -24,7 +24,7 @@ use Net::DRI::Util;
 use Net::DRI::Exception;
 use Net::DRI::Data::Hosts;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -173,6 +173,7 @@ sub check_parse
    {
     $nsgroup=$c->getFirstChild()->getData();
     $rinfo->{nsgroup}->{$nsgroup}->{exist}=1-Net::DRI::Util::xml_parse_boolean($c->getAttribute('avail'));
+    $rinfo->{nsgroup}->{$nsgroup}->{action}='check';
    }
    $c=$c->getNextSibling();
   }
@@ -205,9 +206,10 @@ sub info_parse
   next unless $name;
   if ($name eq 'name')
   {
-   my $nsgroup=$c->getFirstChild()->getData();
-   $ns->name($nsgroup);
-   $rinfo->{nsgroup}->{$nsgroup}->{exist}=1; ## $oname='session' here, will be fixed later (in fact not, because of change in Message, but this is temporary)
+   $oname=$c->getFirstChild()->getData();
+   $ns->name($oname);
+   $rinfo->{nsgroup}->{$oname}->{exist}=1;
+   $rinfo->{nsgroup}->{$oname}->{action}='info';
   } elsif ($name eq 'ns')
   {
    $ns->add($c->getFirstChild()->getData());

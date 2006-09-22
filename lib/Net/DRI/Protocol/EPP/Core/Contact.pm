@@ -26,7 +26,7 @@ use Net::DRI::Protocol::EPP::Core::Status;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -84,6 +84,7 @@ sub register_commands
            transfer_cancel  => [ \&transfer_cancel,\&transfer_parse ],
            transfer_answer  => [ \&transfer_answer,\&transfer_parse ],
 	   update => [ \&update ],
+           review_complete => [ undef, \&pandata_parse ],
          );
 
  $tmp{check_multi}=$tmp{check};
@@ -132,7 +133,6 @@ sub check
  $mes->command_body(\@d);
 }
 
-
 sub check_parse
 {
  my ($po,$otype,$oaction,$oname,$rinfo)=@_;
@@ -151,6 +151,7 @@ sub check_parse
    if ($n eq 'id')
    {
     $contact=$c->getFirstChild()->getData();
+    $rinfo->{contact}->{$contact}->{action}='check';
     $rinfo->{contact}->{$contact}->{exist}=1-Net::DRI::Util::xml_parse_boolean($c->getAttribute('avail'));
    }
    if ($n eq 'reason')
@@ -179,8 +180,6 @@ sub info_parse
  my $infdata=$mes->get_content('infData',$mes->ns('contact'));
  return unless $infdata;
 
- $rinfo->{contact}->{$oname}->{exist}=1;
- 
  my %cd=map { $_ => [] } qw/name org street city sp pc cc/;
  my $contact=$po->factories()->{contact}->();
  my @s;
@@ -191,7 +190,10 @@ sub info_parse
   next unless $name;
   if ($name eq 'id')
   {
-   $contact->srid($c->getFirstChild()->getData());
+   $oname=$c->getFirstChild()->getData();
+   $rinfo->{contact}->{$oname}->{action}='info';
+   $rinfo->{contact}->{$oname}->{exist}=1;
+   $contact->srid($oname);
   } elsif ($name eq 'roid')
   {
    $contact->roid($c->getFirstChild()->getData());
@@ -328,7 +330,6 @@ sub parse_disclose ## RFC 3733 §2.9
  return \%tmp;
 }
 
-
 sub transfer_query
 {
  my ($epp,$c)=@_;
@@ -346,15 +347,19 @@ sub transfer_parse
  my $trndata=$mes->get_content('trnData',$mes->ns('contact'));
  return unless $trndata;
 
- $rinfo->{contact}->{$oname}->{exist}=1;
-
  my $c=$trndata->getFirstChild();
  while ($c)
  {
   my $name=$c->localname() || $c->nodeName();
   next unless $name;
 
-  if ($name=~m/^(trStatus|reID|acID)$/) ## we do not use contact:id
+  if ($name eq 'id')
+  {
+   $oname=$c->getFirstChild()->getData();
+   $rinfo->{contact}->{$oname}->{id}=$oname;
+   $rinfo->{contact}->{$oname}->{action}='transfer';
+   $rinfo->{contact}->{$oname}->{exist}=1;
+  } elsif ($name=~m/^(trStatus|reID|acID)$/)
   {
    $rinfo->{contact}->{$oname}->{$1}=$c->getFirstChild()->getData();
   } elsif ($name=~m/^(reDate|acDate)$/)
@@ -475,17 +480,21 @@ sub create_parse
  my $credata=$mes->get_content('creData',$mes->ns('contact'));
  return unless $credata;
 
- $rinfo->{contact}->{$oname}->{exist}=1;
  my $c=$credata->getFirstChild();
  while ($c)
  {
   my $name=$c->localname() || $c->nodeName();
-  if ($name=~m/^(crDate)$/)
+  if ($name eq 'id')
+  {
+   my $new=$c->getFirstChild()->getData();
+   $rinfo->{contact}->{$oname}->{id}=$new if (defined($oname) && ($oname ne $new)); ## registry may give another id than the one we requested or not take ours into account at all !
+   $oname=$new;
+   $rinfo->{contact}->{$oname}->{id}=$oname;
+   $rinfo->{contact}->{$oname}->{action}='create';
+   $rinfo->{contact}->{$oname}->{exist}=1;
+  } elsif ($name=~m/^(crDate)$/)
   {
    $rinfo->{contact}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
-  } elsif ($name eq 'id')
-  {
-   $rinfo->{contact}->{$oname}->{id}=$c->getFirstChild()->getData();
   }
   $c=$c->getNextSibling();
  }
@@ -554,8 +563,42 @@ sub update
  $mes->command_body(\@d);
 }
 
-## TODO
-## RFC3733 §3.2.6.  Offline Review of Requested Actions
+####################################################################################################
+## RFC3733 §3.2.6  Offline Review of Requested Actions
 
-#########################################################################################################
+sub pandata_parse
+{
+ my ($po,$otype,$oaction,$oname,$rinfo)=@_;
+ my $mes=$po->message();
+ return unless $mes->is_success();
+
+ my $pandata=$mes->get_content('panData',$mes->ns('contact'));
+ return unless $pandata;
+
+ my $c=$pandata->firstChild();
+ while ($c)
+ {
+  my $name=$c->localname() || $c->nodeName();
+  next unless $name;
+
+  if ($name eq 'id')
+  {
+   $oname=$c->getFirstChild()->getData();
+   $rinfo->{contact}->{$oname}->{action}='create_review';
+   $rinfo->{contact}->{$oname}->{result}=Net::DRI::Util::xml_parse_boolean($c->getAttribute('paResult'));
+   $rinfo->{contact}->{$oname}->{exist}=$rinfo->{contact}->{$oname}->{result};
+  } elsif ($name eq 'paTRID')
+  {
+   my @tmp=$c->getElementsByTagNameNS($mes->ns('_main'),'clTRID');
+   $rinfo->{contact}->{$oname}->{trid}=$tmp[0]->getFirstChild()->getData() if (@tmp && $tmp[0]);
+   $rinfo->{contact}->{$oname}->{svtrid}=($c->getElementsByTagNameNS($mes->ns('_main'),'svTRID'))[0]->getFirstChild()->getData();
+  } elsif ($name eq 'paDate')
+  {
+   $rinfo->{contact}->{$oname}->{date}=DateTime::Format::ISO8601->new()->parse_datetime($c->firstChild->getData());
+  }
+  $c=$c->getNextSibling();
+ }
+}
+
+####################################################################################################
 1;

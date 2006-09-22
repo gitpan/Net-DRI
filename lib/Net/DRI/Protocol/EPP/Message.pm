@@ -30,7 +30,7 @@ use Net::DRI::Util;
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version errcode errmsg errlang command command_body cltrid svtrid msg_id node_resdata node_extension result_greeting result_extra_info));
 
-our $VERSION=do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.14 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -150,7 +150,7 @@ sub as_string
  push @d,'<?xml version="1.0" encoding="UTF-8" standalone="no"?>';
  push @d,'<epp '.$ens.'>';
  my ($cmd,$ocmd,$ons)=@{$self->command()};
- my $nocommand=(!ref($cmd) && ($cmd eq 'hello'));
+ my $nocommand=(!ref($cmd) && (($cmd eq 'hello') || ($cmd eq 'nocommand')));
  push @d,'<command>' unless $nocommand;
  my $attr;
  if (ref($cmd))
@@ -161,24 +161,27 @@ sub as_string
   $attr='';
  }
 
- my $body=$self->command_body();
- if (defined($ocmd) && $ocmd)
+ if ($cmd ne 'nocommand')
  {
-  push @d,"<${cmd}${attr}>";
-  push @d,"<${ocmd} ${ons}>";
-  push @d,_toxml($body);
-  push @d,"</${ocmd}>";
-  push @d,"</${cmd}>";
- } else
- {
-  if (defined($body) && $body)
+  my $body=$self->command_body();
+  if (defined($ocmd) && $ocmd)
   {
    push @d,"<${cmd}${attr}>";
+   push @d,"<${ocmd} ${ons}>";
    push @d,_toxml($body);
+   push @d,"</${ocmd}>";
    push @d,"</${cmd}>";
   } else
   {
-   push @d,"<${cmd}${attr}/>";
+   if (defined($body) && $body)
+   {
+    push @d,"<${cmd}${attr}>";
+    push @d,_toxml($body);
+    push @d,"</${cmd}>";
+   } else
+   {
+    push @d,"<${cmd}${attr}/>";
+   }
   }
  }
  
@@ -316,7 +319,7 @@ sub parse
  {
   my $msgq=($res->getElementsByTagNameNS($NS,'msgQ'))[0];
   my $id=$msgq->getAttribute('id');
-  $rinfo->{message}->{info}={ count => $msgq->getAttribute('count'), first_id => $id };
+  $rinfo->{message}->{info}={ count => $msgq->getAttribute('count') }; ## an ID is also given (previously stored here as first_id) : either id of next message or of dequeued message
   if ($msgq->hasChildNodes()) ## We will have childs only as a result of a poll request
   {
    my %d=( id => $id );
@@ -341,8 +344,18 @@ sub parse
 
  ## trID
  my $trid=($res->getElementsByTagNameNS($NS,'trID'))[0];
- $self->cltrid(($trid->getElementsByTagNameNS($NS,'clTRID'))[0]->firstChild->getData()) if $trid->getElementsByTagNameNS($NS,'clTRID');
- $self->svtrid(($trid->getElementsByTagNameNS($NS,'svTRID'))[0]->firstChild->getData()) if $trid->getElementsByTagNameNS($NS,'svTRID');
+ my $tmp=extract_trids($trid,$NS,'clTRID');
+ $self->cltrid($tmp) if defined($tmp);
+ $tmp=extract_trids($trid,$NS,'svTRID');
+ $self->svtrid($tmp) if defined($tmp);
+}
+
+sub extract_trids
+{
+ my ($trid,$NS,$what)=@_;
+ my @tmp=$trid->getElementsByTagNameNS($NS,$what);
+ return unless @tmp && defined($tmp[0]) && defined($tmp[0]->firstChild());
+ return $tmp[0]->firstChild()->getData();
 }
 
 sub parse_result

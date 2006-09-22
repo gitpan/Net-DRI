@@ -28,7 +28,7 @@ use Net::DRI::Protocol::EPP::Core::Status;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -87,6 +87,7 @@ sub register_commands
            transfer_cancel  => [ \&transfer_cancel,\&transfer_parse ],
            transfer_answer  => [ \&transfer_answer,\&transfer_parse ],
            update => [ \&update ],
+           review_complete => [ undef, \&pandata_parse ],
          );
 
  $tmp{check_multi}=$tmp{check};
@@ -171,6 +172,7 @@ sub check_parse
    if ($n eq 'name')
    {
     $domain=$c->getFirstChild()->getData();
+    $rinfo->{domain}->{$domain}->{action}='check';
     $rinfo->{domain}->{$domain}->{exist}=1-Net::DRI::Util::xml_parse_boolean($c->getAttribute('avail'));
    }
    if ($n eq 'reason')
@@ -209,7 +211,6 @@ sub info_parse
 
  my $infdata=$mes->get_content('infData',$mes->ns('domain'));
  return unless $infdata;
- $rinfo->{domain}->{$oname}->{exist}=1;
 
  my (@s,@host);
  my $cs=Net::DRI::Data::ContactSet->new();
@@ -219,7 +220,12 @@ sub info_parse
  {
   my $name=$c->localname() || $c->nodeName();
   next unless $name;
-  if ($name eq 'roid')
+  if ($name eq 'name')
+  {
+   $oname=$c->getFirstChild()->getData();
+   $rinfo->{domain}->{$oname}->{action}='info';
+   $rinfo->{domain}->{$oname}->{exist}=1;
+  } elsif ($name eq 'roid')
   {
    $rinfo->{domain}->{$oname}->{roid}=$c->getFirstChild()->getData();
   } elsif ($name eq 'status')
@@ -318,15 +324,18 @@ sub transfer_parse
  my $trndata=$mes->get_content('trnData',$mes->ns('domain'));
  return unless $trndata;
 
- $rinfo->{domain}->{$oname}->{exist}=1;
-
  my $c=$trndata->getFirstChild();
  while ($c)
  {
   my $name=$c->localname() || $c->nodeName();
   next unless $name;
 
-  if ($name=~m/^(trStatus|reID|acID)$/) ## we do not use domain:name
+  if ($name eq 'name')
+  {
+   $oname=$c->getFirstChild()->getData();
+   $rinfo->{domain}->{$oname}->{action}='transfer';
+   $rinfo->{domain}->{$oname}->{exist}=1;
+  } elsif ($name=~m/^(trStatus|reID|acID)$/)
   {
    $rinfo->{domain}->{$oname}->{$1}=$c->getFirstChild()->getData();
   } elsif ($name=~m/^(reDate|acDate|exDate)$/)
@@ -434,15 +443,18 @@ sub create_parse
  my $credata=$mes->get_content('creData',$mes->ns('domain'));
  return unless $credata;
 
- $rinfo->{domain}->{$oname}->{exist}=1;
-
  my $c=$credata->getFirstChild();
  while ($c)
  {
   my $name=$c->localname() || $c->nodeName();
   next unless $name;
 
-  if ($name=~m/^(crDate|exDate)$/) ## we do not use domain:name
+  if ($name eq 'name')
+  {
+   $oname=$c->getFirstChild()->getData();
+   $rinfo->{domain}->{$oname}->{action}='create';
+   $rinfo->{domain}->{$oname}->{exist}=1;
+  } elsif ($name=~m/^(crDate|exDate)$/)
   {
    $rinfo->{domain}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
   }
@@ -486,15 +498,18 @@ sub renew_parse
  my $rendata=$mes->get_content('renData',$mes->ns('domain'));
  return unless $rendata;
 
- $rinfo->{domain}->{$oname}->{exist}=1;
-
  my $c=$rendata->getFirstChild();
  while ($c)
  {
   my $name=$c->localname() || $c->nodeName();
   next unless $name;
 
-  if ($name=~m/^(exDate)$/) ## we do not use domain:name
+  if ($name eq 'name')
+  {
+   $oname=$c->getFirstChild()->getData();
+   $rinfo->{domain}->{$oname}->{action}='renew';
+   $rinfo->{domain}->{$oname}->{exist}=1;
+  } elsif ($name=~m/^(exDate)$/)
   {
    $rinfo->{domain}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
   }
@@ -592,8 +607,42 @@ sub update
  $mes->command_body(\@d);
 }
 
-## TODO
-## RFC3733 §3.2.6.  Offline Review of Requested Actions
+####################################################################################################
+## RFC3731 §3.2.6  Offline Review of Requested Actions
 
-#########################################################################################################
+sub pandata_parse
+{
+ my ($po,$otype,$oaction,$oname,$rinfo)=@_;
+ my $mes=$po->message();
+ return unless $mes->is_success();
+
+ my $pandata=$mes->get_content('panData',$mes->ns('domain'));
+ return unless $pandata;
+
+ my $c=$pandata->firstChild();
+ while ($c)
+ {
+  my $name=$c->localname() || $c->nodeName();
+  next unless $name;
+
+  if ($name eq 'name')
+  {
+   $oname=$c->getFirstChild()->getData();
+   $rinfo->{domain}->{$oname}->{action}='create_review';
+   $rinfo->{domain}->{$oname}->{result}=Net::DRI::Util::xml_parse_boolean($c->getAttribute('paResult'));
+   $rinfo->{domain}->{$oname}->{exist}=$rinfo->{domain}->{$oname}->{result};
+  } elsif ($name eq 'paTRID')
+  {
+   my @tmp=$c->getElementsByTagNameNS($mes->ns('_main'),'clTRID');
+   $rinfo->{domain}->{$oname}->{trid}=$tmp[0]->getFirstChild()->getData() if (@tmp && $tmp[0]);
+   $rinfo->{domain}->{$oname}->{svtrid}=($c->getElementsByTagNameNS($mes->ns('_main'),'svTRID'))[0]->getFirstChild()->getData();
+  } elsif ($name eq 'paDate')
+  {
+   $rinfo->{domain}->{$oname}->{date}=DateTime::Format::ISO8601->new()->parse_datetime($c->firstChild->getData());
+  }
+  $c=$c->getNextSibling();
+ }
+}
+
+####################################################################################################
 1;

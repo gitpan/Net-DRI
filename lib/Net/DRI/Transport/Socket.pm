@@ -29,7 +29,7 @@ use Net::DRI::Exception;
 use Net::DRI::Util;
 use Net::DRI::Data::Raw;
 
-our $VERSION=do { my @r=(q$Revision: 1.19 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.20 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -270,6 +270,43 @@ sub open_connection
  $self->time_open(time());
  $self->time_used(time());
  $self->{transport}->{exchanges_done}=0;
+}
+
+sub ping
+{
+ my ($self,$autorecon)=@_;
+ $autorecon||=0;
+ my $t=$self->{transport};
+ my $sock=$self->sock();
+ my $pc=$t->{pc};
+ Net::DRI::Exception::err_method_not_implemented() unless ($pc->can('keepalive') && $pc->can('parse_keepalive'));
+
+ my $cltrid=Net::DRI::Util::create_trid_1('transport');
+ eval
+ {
+  local $SIG{ALRM}=sub { die "timeout" };
+  alarm(10);
+  my $noop=$pc->keepalive($t->{message_factory},$cltrid);
+  $self->log('C=>S',$noop);
+  Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send ping message') unless ($sock->print($noop));
+  $self->time_used(time());
+  $t->{exchanges_done}++;
+  my $dr=$pc->get_data($self,$sock);
+  $self->log('C<=S',$dr);
+  my $rc=$pc->parse_keepalive($dr);
+  die($rc) unless $rc->is_success();
+ };
+ alarm(0);
+
+ if ($@)
+ {
+  $self->current_state(0);
+  $self->open_connection() if $autorecon;
+ } else
+ {
+  $self->current_state(1);
+ }
+ return $self->current_state();
 }
 
 sub close_connection

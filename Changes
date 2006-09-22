@@ -1,3 +1,22 @@
+0.40 2006-09-22
++ .BE full support : all operations with EPP except agent update & info (with help from Roger Heykoop)
++ EPP : better support for <poll> results, we parse all replies for which we already have a parse function registered
++ EPP/Extensions : RGP Notification & Low Balance Notification for VeriSign (poll messages)
++ DRD : new method message_count() to retrieve the number of messages available
++ Transport/Socket : added ping(), with autoreconnection if wanted and necessary
++ EPP & RRP : for all actions returning information, a key action is created whose value is the name of the action that has triggered this reply
+            (see 600vnds_rrp.t 601vnds_epp.t 605vnds_epp_nsgroup.t 613cat_epp.t)
+= EPP/Core/Contact : correctly handle case of contact:id being chosen by registry during contact:create (see 601vnds_epp.t)
+= EPP : uses <hello> instead of <poll> as keepalive message (explicitely allowed in draft-hollenbeck-epp-rfc3730bis-02.txt)
+= EPP/Extensions/CAT/DefensiveRegistration : better handling of XML namespace
+= Transport : creation time is available through time_creation() like time_open() and time_used()
+- Transport : correct month & minutes in logging (bugfix by Rony Meyer & Christian Kratzer)
+- DRD/VNDS : verify_domain_transfer does not need a full domain_info with hosts=all, none is enough (bugfix by Rony Meyer)
+- DRD : correct retrieval of result status from cache (bug report by Rony Meyer)
+- Protocol/EPP/Connection : take into account message language if given by registry (bug report by Rony Meyer)
+- Protocol/EPP/Extensions/VeriSign/WhoisInfo : handle default value for indirect domain_info calls (bug report by Rony Meyer)
+- Protocol/EPP/Extensions/GracePeriod : correctly takes into account VeriSign breaking its own RFC (bug report by Rony Meyer)
+
 0.30 2006-06-15
 + .FR full support : all operations by email (form version 2.0.0 for both organizations & individuals)
 + .COM .NET full support in EPP with multiple VeriSign extensions:
@@ -103,7 +122,7 @@
 + Full support for EURid (.EU) with Net::DRI::DRD::EURid, Net::DRI::Data::Contact::EURid,
   Net::DRI::Protocol::EPP::Extensions::EURid and Net::DRI::Protocol::EPP::Extensions::EURid::*
 + Query list of object types managed by registry (ex: domain, contact, etc...) with $dri->has_object()
-+ A copy of all exchanges can be sent to the filehandle of your choices 
++ A copy of all exchanges can be sent to the filehandle of your choice
   (see log_fh in Net::DRI::Transport)
 - BUGFIX in handling of dates in EPP : we switch to UTC before printing
 - BUGFIX in Net::DRI::Protocol::EPP::Connection : data may come in multiple chunks

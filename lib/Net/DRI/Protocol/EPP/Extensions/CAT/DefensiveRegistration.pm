@@ -25,7 +25,7 @@ use Net::DRI::Protocol::EPP::Core::Domain;
 use Net::DRI::Protocol::EPP::Core::Status;
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -224,12 +224,15 @@ sub check_parse
   my $id;
   while($c)
   {
-   my $n=$c->nodeName();
-   if ($n eq 'defreg:id')
+   my $n=$c->localname() || $c->nodeName();
+   next unless $n;
+
+   if ($n eq 'id')
    {
     $id=$c->getFirstChild()->getData();
+    $rinfo->{defreg}->{$id}->{action}='check';
     $rinfo->{defreg}->{$id}->{exist}=1-Net::DRI::Util::xml_parse_boolean($c->getAttribute('avail'));
-   } elsif ($n eq 'defreg:reason')
+   } elsif ($n eq 'reason')
    {
     $rinfo->{defreg}->{$id}->{exist_reason}=$c->getFirstChild()->getData();
    }
@@ -262,53 +265,57 @@ sub info_parse
  my $c=$infdata->getFirstChild();
  while ($c)
  {
-  my $name=$c->nodeName();
+  my $name=$c->localname() || $c->nodeName();
   next unless $name;
 
-  if ($name eq 'defreg:roid')
+  if ($name eq 'id')
+  {
+   $oname=$c->getFirstChild()->getData();
+   $rinfo->{defreg}->{$oname}->{id}=$oname;
+  } elsif ($name eq 'roid')
   {
    $rinfo->{defreg}->{$oname}->{roid}=$c->getFirstChild()->getData();
-  } elsif ($name eq 'defreg:pattern')
+  } elsif ($name eq 'pattern')
   {
    $rinfo->{defreg}->{$oname}->{pattern}=$c->getFirstChild()->getData();
-  } elsif ($name eq 'defreg:status')
+  } elsif ($name eq 'status')
   {
    push @s,Net::DRI::Protocol::EPP::parse_status($c);
-  } elsif ($name eq 'defreg:registrant')
+  } elsif ($name eq 'registrant')
   {
    $cs->set($cf->()->srid($c->getFirstChild()->getData()),'registrant');
-  } elsif ($name eq 'defreg:contact')
+  } elsif ($name eq 'contact')
   {
    $cs->add($cf->()->srid($c->getFirstChild()->getData()),$c->getAttribute('type'));
-  } elsif ($name=~m/^defreg:(clID|crID|upID)$/)
+  } elsif ($name=~m/^(clID|crID|upID)$/)
   {
    $rinfo->{defreg}->{$oname}->{$1}=$c->getFirstChild()->getData();
-  } elsif ($name=~m/^defreg:(crDate|upDate|exDate)$/)
+  } elsif ($name=~m/^(crDate|upDate|exDate)$/)
   {
    $rinfo->{defreg}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
-  } elsif ($name eq 'defreg:authInfo')
+  } elsif ($name eq 'authInfo')
   {
    $rinfo->{defreg}->{$oname}->{auth}={pw=>($c->getElementsByTagNameNS($ns,'pw'))[0]->getFirstChild()->getData()};
-  } elsif ($name eq 'defreg:maintainer')
+  } elsif ($name eq 'maintainer')
   {
    $rinfo->{defreg}->{$oname}->{maintainer}=$c->getFirstChild()->getData();
-  } elsif ($name eq 'defreg:trademark')
+  } elsif ($name eq 'trademark')
   {
    my $cc=$c->getFirstChild();
    while($cc)
    {
-    my $name2=$cc->nodeName();
+    my $name2=$cc->localname() || $cc->nodeName();
     next unless $name2;
-    if ($name2 eq 'defreg:name')
+    if ($name2 eq 'name')
     {
      $t{name}=$cc->getFirstChild()->getData();
-    } elsif ($name2 eq 'defreg:issueDate')
+    } elsif ($name2 eq 'issueDate')
     {
      $t{issue_date}=DateTime::Format::ISO8601->new()->parse_datetime($cc->getFirstChild()->getData());
-    } elsif ($name2 eq 'defreg:country')
+    } elsif ($name2 eq 'country')
     {
      $t{country}=$cc->getFirstChild()->getData();
-    } elsif ($name2 eq 'defreg:number')
+    } elsif ($name2 eq 'number')
     {
      $t{number}=$cc->getFirstChild()->getData();
     }
@@ -319,6 +326,7 @@ sub info_parse
   $c=$c->getNextSibling();
  }
 
+ $rinfo->{defreg}->{$oname}->{action}='info';
  $rinfo->{defreg}->{$oname}->{exist}=1;
  $rinfo->{defreg}->{$oname}->{contact}=$cs;
  $rinfo->{defreg}->{$oname}->{status}=Net::DRI::Protocol::EPP::Core::Status->new(\@s);

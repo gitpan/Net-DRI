@@ -21,7 +21,7 @@ use strict;
 use Net::DRI::Data::Raw;
 use Net::DRI::Protocol::ResultStatus;
 
-our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -107,8 +107,7 @@ sub keepalive
  shift if ($_[0] eq __PACKAGE__);
  my ($cm,$cltrid)=@_;
  my $mes=$cm->();
- $mes->command([['poll',{'op'=>'req'}]]); ## It should be ok, since ACK is necessary to really dequeue
- $mes->cltrid($cltrid) if $cltrid;
+ $mes->command(['hello']); ## Explicitely allowed since draft-hollenbeck-epp-rfc3730bis-02.txt
  return $mes->as_string('tcp');
 }
 
@@ -139,28 +138,34 @@ sub parse_greeting
 {
  shift if ($_[0] eq __PACKAGE__);
  my $dc=shift;
- my ($code,$msg)=find_code($dc);
+ my ($code,$msg,$lang)=find_code($dc);
  unless (defined($code) && ($code==1000))
  {
-  return Net::DRI::Protocol::ResultStatus->new_error('COMMAND_SYNTAX_ERROR','No greeting node','en');
+  return Net::DRI::Protocol::ResultStatus->new_error('COMMAND_SYNTAX_ERROR','No greeting node',$lang);
  } else
  {
-  return Net::DRI::Protocol::ResultStatus->new_success('COMMAND_SUCCESSFUL','Greeting OK','en');
+  return Net::DRI::Protocol::ResultStatus->new_success('COMMAND_SUCCESSFUL','Greeting OK',$lang);
  }
+}
+
+## Since <hello /> is used as keepalive, answer is a <greeting>
+sub parse_keepalive
+{
+ return shift->parse_greeting(@_);
 }
 
 sub parse_login
 {
  shift if ($_[0] eq __PACKAGE__);
  my $dc=shift;
- my ($code,$msg)=find_code($dc);
+ my ($code,$msg,$lang)=find_code($dc);
  unless (defined($code) && ($code==1000))
  {
   my $eppcode=(defined($code))? $code : 'COMMAND_SYNTAX_ERROR';
-  return Net::DRI::Protocol::ResultStatus->new_error($eppcode,$msg || 'Login failed','en');
+  return Net::DRI::Protocol::ResultStatus->new_error($eppcode,$msg || 'Login failed',$lang);
  } else
  {
-  return Net::DRI::Protocol::ResultStatus->new_success('COMMAND_SUCCESSFUL',$msg || 'Login OK','en');
+  return Net::DRI::Protocol::ResultStatus->new_success('COMMAND_SUCCESSFUL',$msg || 'Login OK',$lang);
  }
 }
 
@@ -168,14 +173,14 @@ sub parse_logout
 {
  shift if ($_[0] eq __PACKAGE__);
  my $dc=shift;
- my ($code,$msg)=find_code($dc);
+ my ($code,$msg,$lang)=find_code($dc);
  unless (defined($code) && ($code==1500))
  {
   my $eppcode=(defined($code))? $code : 'COMMAND_SYNTAX_ERROR';
-  return Net::DRI::Protocol::ResultStatus->new_error($eppcode,$msg || 'Logout failed','en');
+  return Net::DRI::Protocol::ResultStatus->new_error($eppcode,$msg || 'Logout failed',$lang);
  } else
  {
-  return Net::DRI::Protocol::ResultStatus->new_success('COMMAND_SUCCESSFUL_END ',$msg || 'Logout OK','en');
+  return Net::DRI::Protocol::ResultStatus->new_success('COMMAND_SUCCESSFUL_END ',$msg || 'Logout OK',$lang);
  }
 }
 
@@ -186,10 +191,10 @@ sub find_code
  return () unless ($a=~m!</epp>!);
  return (1000,'Greeting OK')  if ($a=~m!<greeting>!);
  $a=~s/>[\n\s\t]+/>/g;
- my ($code,$msg);
+ my ($code,$msg,$lang);
  return () unless (($code)=($a=~m!<response><result code=["'](\d+)["']>!));
- return () unless (($msg) =($a=~m!<msg>(.+)</msg>!));
- return (0+$code,$msg);
+ return () unless (($lang,$msg)=($a=~m!<msg(?: lang=["'](\S+)["'])?>(.+)</msg>!));
+ return (0+$code,$msg,$lang || 'en');
 }
 
 ###################################################################################################################:

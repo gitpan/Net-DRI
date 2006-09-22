@@ -46,7 +46,7 @@ my ($dh,@c);
 ## Contact
 ## p.22
 $R2=$E1.'<response>'.r().'<resData><contact:creData><contact:id>sb3249</contact:id><contact:crDate>2005-09-22T13:28:28.000Z</contact:crDate></contact:creData></resData><extension><eurid:ext><eurid:result><eurid:msg>OK</eurid:msg></eurid:result></eurid:ext></extension>'.$TRID.'</response>'.$E2;
-$co=$dri->local_object('contact')->srid('abc1');
+$co=$dri->local_object('contact')->srid('sb3249');
 $co->name('Smith Bill');
 $co->org('EPP Company');
 $co->street(['Blue Tower','Main street, 58']);
@@ -60,7 +60,7 @@ $co->type('registrant');
 $co->vat('FR3455345645');
 $co->lang('fr');
 $rc=$dri->contact_create($co);
-is($R1,'<?xml version="1.0" encoding="UTF-8" standalone="no"?><epp xmlns="http://www.eurid.eu/xml/epp/epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.eurid.eu/xml/epp/epp-1.0 epp-1.0.xsd"><command><create><contact:create xmlns:contact="http://www.eurid.eu/xml/epp/contact-1.0" xsi:schemaLocation="http://www.eurid.eu/xml/epp/contact-1.0 contact-1.0.xsd"><contact:id>abc1</contact:id><contact:postalInfo type="loc"><contact:name>Smith Bill</contact:name><contact:org>EPP Company</contact:org><contact:addr><contact:street>Blue Tower</contact:street><contact:street>Main street, 58</contact:street><contact:city>Paris</contact:city><contact:pc>571234</contact:pc><contact:cc>FR</contact:cc></contact:addr></contact:postalInfo><contact:voice>+33.16345656</contact:voice><contact:fax>+33.16345656</contact:fax><contact:email>noreply@eurid.eu</contact:email><contact:authInfo><contact:pw/></contact:authInfo></contact:create></create><extension><eurid:ext xmlns:eurid="http://www.eurid.eu/xml/epp/eurid-1.0" xsi:schemaLocation="http://www.eurid.eu/xml/epp/eurid-1.0 eurid-1.0.xsd"><eurid:create><eurid:contact><eurid:type>registrant</eurid:type><eurid:vat>FR3455345645</eurid:vat><eurid:lang>fr</eurid:lang></eurid:contact></eurid:create></eurid:ext></extension><clTRID>TRID-0001</clTRID></command></epp>','contact_create build 1');
+is($R1,'<?xml version="1.0" encoding="UTF-8" standalone="no"?><epp xmlns="http://www.eurid.eu/xml/epp/epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.eurid.eu/xml/epp/epp-1.0 epp-1.0.xsd"><command><create><contact:create xmlns:contact="http://www.eurid.eu/xml/epp/contact-1.0" xsi:schemaLocation="http://www.eurid.eu/xml/epp/contact-1.0 contact-1.0.xsd"><contact:id>sb3249</contact:id><contact:postalInfo type="loc"><contact:name>Smith Bill</contact:name><contact:org>EPP Company</contact:org><contact:addr><contact:street>Blue Tower</contact:street><contact:street>Main street, 58</contact:street><contact:city>Paris</contact:city><contact:pc>571234</contact:pc><contact:cc>FR</contact:cc></contact:addr></contact:postalInfo><contact:voice>+33.16345656</contact:voice><contact:fax>+33.16345656</contact:fax><contact:email>noreply@eurid.eu</contact:email><contact:authInfo><contact:pw/></contact:authInfo></contact:create></create><extension><eurid:ext xmlns:eurid="http://www.eurid.eu/xml/epp/eurid-1.0" xsi:schemaLocation="http://www.eurid.eu/xml/epp/eurid-1.0 eurid-1.0.xsd"><eurid:create><eurid:contact><eurid:type>registrant</eurid:type><eurid:vat>FR3455345645</eurid:vat><eurid:lang>fr</eurid:lang></eurid:contact></eurid:create></eurid:ext></extension><clTRID>TRID-0001</clTRID></command></epp>','contact_create build 1');
 is($rc->is_success(),1,'contact_create is_success 1');
 is($dri->get_info('exist'),1,'contact_create get_info(exist) 1');
 is($dri->get_info('id'),'sb3249','contact_create get_info(id) 1');
@@ -69,7 +69,7 @@ is(''.$dri->get_info('crDate'),'2005-09-22T13:28:28','contact_create get_info(cr
 
 ## p.23
 $R2=$E1.'<response>'.r().'<resData><contact:creData><contact:id>bg2022</contact:id><contact:crDate>2005-09-22T13:36:45.000Z</contact:crDate></contact:creData></resData><extension><eurid:ext><eurid:result><eurid:msg>OK</eurid:msg></eurid:result></eurid:ext></extension>'.$TRID.'</response>'.$E2;
-$co=$dri->local_object('contact')->srid('abc1');
+$co=$dri->local_object('contact')->srid('bg2022');
 $co->name('Banderas George');
 $co->street(['Yellow Tower','Main street, 85']);
 $co->city('Brussels');
@@ -81,7 +81,7 @@ $co->email('noreply@eurid.eu');
 $co->type('registrant');
 $co->lang('en');
 $rc=$dri->contact_create($co);
-is($R1,'<?xml version="1.0" encoding="UTF-8" standalone="no"?><epp xmlns="http://www.eurid.eu/xml/epp/epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.eurid.eu/xml/epp/epp-1.0 epp-1.0.xsd"><command><create><contact:create xmlns:contact="http://www.eurid.eu/xml/epp/contact-1.0" xsi:schemaLocation="http://www.eurid.eu/xml/epp/contact-1.0 contact-1.0.xsd"><contact:id>abc1</contact:id><contact:postalInfo type="loc"><contact:name>Banderas George</contact:name><contact:addr><contact:street>Yellow Tower</contact:street><contact:street>Main street, 85</contact:street><contact:city>Brussels</contact:city><contact:pc>1000</contact:pc><contact:cc>BE</contact:cc></contact:addr></contact:postalInfo><contact:voice>+32.16345656</contact:voice><contact:fax>+32.16345656</contact:fax><contact:email>noreply@eurid.eu</contact:email><contact:authInfo><contact:pw/></contact:authInfo></contact:create></create><extension><eurid:ext xmlns:eurid="http://www.eurid.eu/xml/epp/eurid-1.0" xsi:schemaLocation="http://www.eurid.eu/xml/epp/eurid-1.0 eurid-1.0.xsd"><eurid:create><eurid:contact><eurid:type>registrant</eurid:type><eurid:lang>en</eurid:lang></eurid:contact></eurid:create></eurid:ext></extension><clTRID>TRID-0001</clTRID></command></epp>','contact_create build 2');
+is($R1,'<?xml version="1.0" encoding="UTF-8" standalone="no"?><epp xmlns="http://www.eurid.eu/xml/epp/epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.eurid.eu/xml/epp/epp-1.0 epp-1.0.xsd"><command><create><contact:create xmlns:contact="http://www.eurid.eu/xml/epp/contact-1.0" xsi:schemaLocation="http://www.eurid.eu/xml/epp/contact-1.0 contact-1.0.xsd"><contact:id>bg2022</contact:id><contact:postalInfo type="loc"><contact:name>Banderas George</contact:name><contact:addr><contact:street>Yellow Tower</contact:street><contact:street>Main street, 85</contact:street><contact:city>Brussels</contact:city><contact:pc>1000</contact:pc><contact:cc>BE</contact:cc></contact:addr></contact:postalInfo><contact:voice>+32.16345656</contact:voice><contact:fax>+32.16345656</contact:fax><contact:email>noreply@eurid.eu</contact:email><contact:authInfo><contact:pw/></contact:authInfo></contact:create></create><extension><eurid:ext xmlns:eurid="http://www.eurid.eu/xml/epp/eurid-1.0" xsi:schemaLocation="http://www.eurid.eu/xml/epp/eurid-1.0 eurid-1.0.xsd"><eurid:create><eurid:contact><eurid:type>registrant</eurid:type><eurid:lang>en</eurid:lang></eurid:contact></eurid:create></eurid:ext></extension><clTRID>TRID-0001</clTRID></command></epp>','contact_create build 2');
 is($rc->is_success(),1,'contact_create is_success 2');
 is($dri->get_info('exist'),1,'contact_create get_info(exist) 2');
 is($dri->get_info('id'),'bg2022','contact_create get_info(id) 2');

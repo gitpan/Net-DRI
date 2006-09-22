@@ -1,6 +1,6 @@
-## Domain Registry Interface, EURid (.EU) policy on reserved names
+## Domain Registry Interface, .BE (DNSBE) policies for Net::DRI
 ##
-## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -15,20 +15,20 @@
 #
 #########################################################################################
 
-package Net::DRI::DRD::EURid;
+package Net::DRI::DRD::BE;
 
 use strict;
 use base qw/Net::DRI::DRD/;
 
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::DRD::EURid - EURid (.EU) policies for Net::DRI
+Net::DRI::DRD::BE - .BE (DNSBE) policies for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -52,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -65,9 +65,6 @@ See the LICENSE file that comes with this distribution for more details.
 =cut
 
 #####################################################################################
-
-our %CCA2_EU=map { $_ => 1 } qw/AT BE CZ CY DE DK ES EE FI FR GR GB HU IE IT LT LU LV MT NL PL PT SE SK SI AX GF GI GP MQ RE/;
-our %LANGA2_EU=map { $_ => 1 } qw/cs da de el en es et fi fr hu it lt lv mt nl pl pt sk sl sv/;
 
 sub new
 {
@@ -82,8 +79,8 @@ sub new
 }
 
 sub periods  { return map { DateTime::Duration->new(years => $_) } (1); }
-sub name     { return 'EURid'; }
-sub tlds     { return ('eu'); }
+sub name     { return 'DNSBE'; }
+sub tlds     { return ('be'); }
 sub object_types { return ('domain','contact','ns','nsgroup'); }
 
 sub transport_protocol_compatible
@@ -98,12 +95,11 @@ sub transport_protocol_compatible
 
 sub transport_protocol_default
 {
- return ('Net::DRI::Transport::Socket','Net::DRI::Protocol::EPP::Extensions::EURid');
+ return ('Net::DRI::Transport::Socket','Net::DRI::Protocol::EPP::Extensions::DNSBE');
 }
 
 ######################################################################################
-
-## See terms_and_conditions_v1_0_.pdf, Section 2.2.ii
+## From §2 of Enduser_Terms_And_Conditions_fr_v3.1.pdf
 sub verify_name_domain
 {
  my ($self,$ndr,$domain)=@_;
@@ -114,7 +110,6 @@ sub verify_name_domain
  return 10 unless $self->is_my_tld($domain);
 
  my @d=split(/\./,$domain);
- return 11 if exists($Net::DRI::Util::CCA2{uc($d[0])});
  return 12 if length($d[0]) < 2;
  return 13 if substr($d[0],2,2) eq '--';
 
@@ -143,18 +138,18 @@ sub domain_operation_needs_is_mine
 }
 
 ## Only transfer requests are possible
-sub domain_transfer_stop    { Net::DRI::Exception->die(0,'DRD',4,'No domain transfer cancel available in .EU'); }
-sub domain_transfer_query   { Net::DRI::Exception->die(0,'DRD',4,'No domain transfer query available in .EU'); }
-sub domain_transfer_accept  { Net::DRI::Exception->die(0,'DRD',4,'No domain transfer approve available in .EU'); }
-sub domain_transfer_refuse  { Net::DRI::Exception->die(0,'DRD',4,'No domain transfer reject in .EU'); }
-sub domain_renew        { Net::DRI::Exception->die(0,'DRD',4,'No domain renew available in .EU'); }
-sub contact_check       { Net::DRI::Exception->die(0,'DRD',4,'No contact check available in .EU'); }
-sub contact_check_multi { Net::DRI::Exception->die(0,'DRD',4,'No contact check available in .EU'); }
-sub contact_transfer    { Net::DRI::Exception->die(0,'DRD',4,'No contact transfer available in .EU'); }
-sub message_retrieve    { Net::DRI::Exception->die(0,'DRD',4,'No poll features available in .EU'); }
-sub message_delete      { Net::DRI::Exception->die(0,'DRD',4,'No poll features available in .EU'); }
-sub message_waiting     { Net::DRI::Exception->die(0,'DRD',4,'No poll features available in .EU'); }
-sub message_count       { Net::DRI::Exception->die(0,'DRD',4,'No poll features available in .EU'); }
+sub domain_transfer_stop    { Net::DRI::Exception->die(0,'DRD',4,'No domain transfer cancel available in .BE'); }
+sub domain_transfer_query   { Net::DRI::Exception->die(0,'DRD',4,'No domain transfer query available in .BE'); }
+sub domain_transfer_accept  { Net::DRI::Exception->die(0,'DRD',4,'No domain transfer approve available in .BE'); }
+sub domain_transfer_refuse  { Net::DRI::Exception->die(0,'DRD',4,'No domain transfer reject in .BE'); }
+sub domain_renew        { Net::DRI::Exception->die(0,'DRD',4,'No domain renew available in .BE'); }
+sub contact_check       { Net::DRI::Exception->die(0,'DRD',4,'No contact check available in .BE'); }
+sub contact_check_multi { Net::DRI::Exception->die(0,'DRD',4,'No contact check available in .BE'); }
+sub contact_transfer    { Net::DRI::Exception->die(0,'DRD',4,'No contact transfer available in .BE'); }
+sub message_retrieve    { Net::DRI::Exception->die(0,'DRD',4,'No poll features available in .BE'); }
+sub message_delete      { Net::DRI::Exception->die(0,'DRD',4,'No poll features available in .BE'); }
+sub message_waiting     { Net::DRI::Exception->die(0,'DRD',4,'No poll features available in .BE'); }
+sub message_count       { Net::DRI::Exception->die(0,'DRD',4,'No poll features available in .BE'); }
 
 #################################################################################################################
 1;

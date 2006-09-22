@@ -1,6 +1,6 @@
 ## Domain Registry Interface, RRP Domain commands
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -24,7 +24,7 @@ use Net::DRI::Protocol::RRP::Core::Status;
 use Net::DRI::Protocol::RRP;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -54,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -76,7 +76,7 @@ sub register_commands
            check  => [ \&check, \&check_parse ],
            info   => [ \&status, \&status_parse ],
            delete => [ \&del ],
-	   renew  => [ \&renew, \&add_parse ],
+	   renew  => [ \&renew, \&renew_parse ],
 	   update => [ \&mod ],
 	   transfer_request => [ \&transfer_request ],
 	   transfer_answer  => [ \&transfer_answer ],
@@ -126,6 +126,15 @@ sub add_parse
  my $d='registration expiration date';
  $rinfo->{domain}->{$oname}->{$Net::DRI::Protocol::RRP::DATES{$d}}=$po->{dt_parse}->parse_datetime($mes->entities($d));
  $rinfo->{domain}->{$oname}->{status}=Net::DRI::Protocol::RRP::Core::Status->new($mes);
+ $rinfo->{domain}->{$oname}->{exist}=1;
+ $rinfo->{domain}->{$oname}->{action}='create';
+}
+
+sub renew_parse
+{
+ my ($po,$otype,$oaction,$oname,$rinfo)=@_;
+ add_parse($po,$otype,$oaction,$oname,$rinfo);
+ $rinfo->{domain}->{$oname}->{action}='renew' if (exists($rinfo->{domain}->{$oname}->{action}));
 }
 
 sub _basic_command
@@ -153,6 +162,7 @@ sub check_parse
  {
   $rinfo->{domain}->{$oname}->{exist}=0;
  }
+ $rinfo->{domain}->{$oname}->{action}='check';
 }
 
 sub status_parse
@@ -162,6 +172,7 @@ sub status_parse
  return unless $mes->is_success();
 
  $rinfo->{domain}->{$oname}->{exist}=1;
+ $rinfo->{domain}->{$oname}->{action}='info';
 
  while(my ($k,$v)=each(%Net::DRI::Protocol::RRP::DATES))
  {
@@ -240,5 +251,5 @@ sub renew
  $mes->options({Period=>$period,CurrentExpirationYear=>$curexp}) if (defined($period) && defined($curexp));
 }
 
-#########################################################################################################
+####################################################################################################
 1;
