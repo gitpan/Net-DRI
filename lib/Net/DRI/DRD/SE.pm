@@ -1,7 +1,7 @@
 ## Domain Registry Interface, .SE policy on reserved names
 ## Contributed by Elias Sidenbladh from NIC SE
 ##
-## Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -25,7 +25,7 @@ use Net::DRI::Util;
 
 use Net::DRI::Data::Contact::SE;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -55,7 +55,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -108,7 +108,7 @@ sub verify_name_domain
  my ($self,$ndr,$domain)=@_;
  $domain=$ndr unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
 
- my $r=$self->SUPER::check_name($domain,1);
+ my $r=$self->SUPER::check_name($domain);
  return $r if ($r);
  return 10 unless $self->is_my_tld($domain);
 

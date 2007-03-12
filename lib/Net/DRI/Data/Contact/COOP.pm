@@ -1,4 +1,4 @@
-## Domain Registry Interface, Handling of contact data for .US
+## Domain Registry Interface, Handling of contact data for .COOP
 ##
 ## Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
@@ -15,40 +15,54 @@
 #
 #########################################################################################
 
-package Net::DRI::Data::Contact::US;
+package Net::DRI::Data::Contact::COOP;
 
 use strict;
 use base qw/Net::DRI::Data::Contact/;
-__PACKAGE__->mk_accessors(qw(application_purpose nexus_category));
+__PACKAGE__->mk_accessors(qw(sponsors state lang mailing_list));
 
-use Net::DRI::Util;
 use Net::DRI::Exception;
+use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Data::Contact::US - Handle .US contact data for Net::DRI
+Net::DRI::Data::Contact::COOP - Handle .COOP contact data for Net::DRI
 
 =head1 DESCRIPTION
 
 This subclass of Net::DRI::Data::Contact adds accessors and validation for
-.US specific data.
+.COOP specific data.
+
+Organizations must have names and phone numbers.
+
+Contact ids must begin with a prefix given by the registry (tied to the registrar account).
+If you specify a localized version for data, you need the internationalized version also
+(see documentation of Net::DRI::Data::Contact and its loc2int method) ; you can however
+specify just internationalized data, without a localized version.
 
 =head1 METHODS
 
 The following accessors/mutators can be called in chain, as they all return the object itself.
-They are needed only for registrant contacts.
 
-=head2 application_purpose()
+=head2 sponsors()
 
-intended usage for the domain name
+list of sponsors as registry contact ids (mandatory for registrants, at least 2)
 
-=head2 nexus_category()
+=head2 state()
 
-the nexus cateogry
+verification state : verified, pendingVerification, ableToApeal, underInvestigation, refused
+
+=head2 lang()
+
+language of contact
+
+=head2 mailing_list()
+
+boolean showing opt-in status of contact for .COOP newsletters
 
 =head1 SUPPORT
 
@@ -90,16 +104,17 @@ sub validate
 
  $self->SUPER::validate($change); ## will trigger an Exception if problem
 
- if (defined($self->application_purpose()))
+ if ($self->sponsors())
  {
-  push @errs,'application_purpose' unless ($self->application_purpose()=~m/^P[1-5]$/ || ($change && ($self->application_purpose() eq '')));
+  foreach my $id (ref($self->sponsors())? @{$self->sponsors()} : ($self->sponsors()))
+  {
+   next if Net::DRI::Util::xml_is_token($id,3,16); ## clIDType
+   push @errs,'sponsors';
+   last;
+  }
  }
-
- if (defined($self->nexus_category()))
- {
-  push @errs,'nexus_category' unless ($self->nexus_category()=~m!^C(?:1[12]|21|3[12]/([A-Z][A-Z]))$! || ($change && ($self->nexus_category() eq '')));
-  push @errs,'nexus_category' if ($1 && !exists($Net::DRI::Util::CCA2{$1}));
- }
+ push @errs,'lang' if ($self->lang() && !Net::DRI::Util::xml_is_language($self->lang()));
+ push @errs,'mailing_list' if ($self->mailing_list() && !Net::DRI::Util::xml_is_boolean($self->mailing_list()));
 
  Net::DRI::Exception::usererr_invalid_parameters('Invalid contact information: '.join('/',@errs)) if @errs;
 

@@ -1,6 +1,6 @@
-## Domain Registry Interface, ``Verisign Naming and Directory Services'' Registry Driver for .COM & .NET
+## Domain Registry Interface, .ORG policies
 ##
-## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006 Rony Meyer <perl@spot-light.ch>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -13,24 +13,20 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
-package Net::DRI::DRD::VNDS;
+package Net::DRI::DRD::ORG;
 
 use strict;
 use base qw/Net::DRI::DRD/;
 
-use Net::DRI::DRD::ICANN;
-use DateTime::Duration;
-use DateTime;
-
-our $VERSION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::DRD::VNDS - Verisign .COM/.NET Registry driver for Net::DRI
+Net::DRI::DRD::ORG - .ORG policies for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -54,7 +50,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006 Rony Meyer <perl@spot-light.ch>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -66,30 +62,39 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
+####################################################################################################
 
-#####################################################################################
+sub new
+{
+ my $proto=shift;
+ my $class=ref($proto) || $proto;
 
-sub root_servers { return wantarray()? map { $_.'.GTLD-SERVERS.NET' } ('a'..'m') : 'GTLD-SERVERS.NET'; } ## TO FIX: return a Hosts object ?
-sub periods      { return map { DateTime::Duration->new(years => $_) } (1..10); }
-sub name         { return 'VNDS'; }
-sub tlds         { return ('com','net'); } ## If this changes, VeriSign/NameStore will need to be updated also
-sub object_types { return ('domain','ns'); }
+ my $self=$class->SUPER::new(@_);
+ $self->{info}->{host_as_attr}=0;
 
-sub transport_protocol_compatible 
+ bless($self,$class);
+ return $self;
+}
+
+sub periods  { return map { DateTime::Duration->new(years => $_) } (1..10); }
+sub name     { return 'ORG'; }
+sub tlds     { return ('org'); }
+sub object_types { return ('domain','contact','ns'); }
+
+sub transport_protocol_compatible
 {
  my ($self,$to,$po)=@_;
  my $pn=$po->name();
  my $pv=$po->version();
  my $tn=$to->name();
 
- return 1 if (($pn eq 'RRP') && ($tn eq 'socket_inet'));
  return 1 if (($pn eq 'EPP') && ($tn eq 'socket_inet'));
  return;
 }
 
 sub transport_protocol_default
 {
- return ('Net::DRI::Transport::Socket','Net::DRI::Protocol::EPP::Extensions::VeriSign');
+ return ('Net::DRI::Transport::Socket','Net::DRI::Protocol::EPP');
 }
 
 ####################################################################################################
@@ -106,25 +111,6 @@ sub verify_name_domain
 
  return 0;
 }
-
-## We can not start a transfer, if domain name has already been transfered less than 15 days ago.
-sub verify_duration_transfer
-{
- my ($self,$ndr,$duration,$domain,$op)=@_;
- ($duration,$domain,$op)=($ndr,$duration,$domain) unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
-
- return 0 unless ($op eq 'start'); ## we are not interested by other cases, they are always OK
- my $rc=$self->domain_info($ndr,$domain,{hosts=>'none'});
- return 1 unless ($rc->is_success());
- my $trdate=$ndr->get_info('trDate');
- return 0 unless ($trdate && $trdate->isa('DateTime'));
- 
- my $now=DateTime->now(time_zone => $trdate->time_zone()->name());
- my $cmp=DateTime->compare($now,$trdate+DateTime::Duration->new(days => 15));
- return ($cmp == 1)? 0 : 1; ## we must have : now > transferdate + 15days
- ## we return 0 if OK, anything else if not
-}
-
 
 sub domain_operation_needs_is_mine
 {

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Message
 ##
-## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -30,7 +30,7 @@ use Net::DRI::Util;
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version errcode errmsg errlang command command_body cltrid svtrid msg_id node_resdata node_extension result_greeting result_extra_info));
 
-our $VERSION=do { my @r=(q$Revision: 1.14 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.16 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -60,7 +60,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -319,7 +319,10 @@ sub parse
  {
   my $msgq=($res->getElementsByTagNameNS($NS,'msgQ'))[0];
   my $id=$msgq->getAttribute('id');
-  $rinfo->{message}->{info}={ count => $msgq->getAttribute('count') }; ## an ID is also given (previously stored here as first_id) : either id of next message or of dequeued message
+  ## id : id of message that has just been retrieved and dequeued
+  ## Warning: in previous versions of EPP, its value was the id of the *next* available message (but useless since in EPP you do not need the ID to retrieve a message)
+  ## see draft-hollenbeck-epp-rfc3730bis-04.txt Appendix C.
+  $rinfo->{message}->{info}={ count => $msgq->getAttribute('count'), id => $id };
   if ($msgq->hasChildNodes()) ## We will have childs only as a result of a poll request
   {
    my %d=( id => $id );

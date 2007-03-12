@@ -2,6 +2,7 @@ Changes
 eg/afnic_email.pl
 eg/afnic_ws.pl
 eg/cat_epp.pl
+eg/coop_epp.pl
 eg/epp_server.pl
 eg/eurid_epp.pl
 eg/gandi_web.pl
@@ -14,8 +15,10 @@ lib/Net/DRI/Data/Changes.pm
 lib/Net/DRI/Data/Contact.pm
 lib/Net/DRI/Data/Contact/AERO.pm
 lib/Net/DRI/Data/Contact/AFNIC.pm
+lib/Net/DRI/Data/Contact/AT.pm
 lib/Net/DRI/Data/Contact/BE.pm
 lib/Net/DRI/Data/Contact/CAT.pm
+lib/Net/DRI/Data/Contact/COOP.pm
 lib/Net/DRI/Data/Contact/EURid.pm
 lib/Net/DRI/Data/Contact/PL.pm
 lib/Net/DRI/Data/Contact/SE.pm
@@ -28,13 +31,17 @@ lib/Net/DRI/Data/StatusList.pm
 lib/Net/DRI/DRD.pm
 lib/Net/DRI/DRD/AERO.pm
 lib/Net/DRI/DRD/AFNIC.pm
+lib/Net/DRI/DRD/AT.pm
 lib/Net/DRI/DRD/BE.pm
 lib/Net/DRI/DRD/CAT.pm
+lib/Net/DRI/DRD/COOP.pm
 lib/Net/DRI/DRD/EURid.pm
 lib/Net/DRI/DRD/Gandi.pm
 lib/Net/DRI/DRD/ICANN.pm
 lib/Net/DRI/DRD/IENUMAT.pm
+lib/Net/DRI/DRD/INFO.pm
 lib/Net/DRI/DRD/MOBI.pm
+lib/Net/DRI/DRD/ORG.pm
 lib/Net/DRI/DRD/PL.pm
 lib/Net/DRI/DRD/SE.pm
 lib/Net/DRI/DRD/VNDS.pm
@@ -58,12 +65,18 @@ lib/Net/DRI/Protocol/EPP/Core/Status.pm
 lib/Net/DRI/Protocol/EPP/Extensions/AERO.pm
 lib/Net/DRI/Protocol/EPP/Extensions/AERO/Contact.pm
 lib/Net/DRI/Protocol/EPP/Extensions/AERO/Domain.pm
+lib/Net/DRI/Protocol/EPP/Extensions/AT.pm
+lib/Net/DRI/Protocol/EPP/Extensions/AT/ATResult.pm
+lib/Net/DRI/Protocol/EPP/Extensions/AT/Contact.pm
+lib/Net/DRI/Protocol/EPP/Extensions/AT/Domain.pm
 lib/Net/DRI/Protocol/EPP/Extensions/AT/IOptions.pm
 lib/Net/DRI/Protocol/EPP/Extensions/AT/Result.pm
 lib/Net/DRI/Protocol/EPP/Extensions/CAT.pm
 lib/Net/DRI/Protocol/EPP/Extensions/CAT/Contact.pm
 lib/Net/DRI/Protocol/EPP/Extensions/CAT/DefensiveRegistration.pm
 lib/Net/DRI/Protocol/EPP/Extensions/CAT/Domain.pm
+lib/Net/DRI/Protocol/EPP/Extensions/COOP.pm
+lib/Net/DRI/Protocol/EPP/Extensions/COOP/Contact.pm
 lib/Net/DRI/Protocol/EPP/Extensions/DNSBE.pm
 lib/Net/DRI/Protocol/EPP/Extensions/DNSBE/Contact.pm
 lib/Net/DRI/Protocol/EPP/Extensions/DNSBE/Domain.pm
@@ -162,5 +175,6 @@ t/615mobi_epp.t
 t/616vnds_epp_namestore.t
 t/617vnds_epp_polllowbalance.t
 t/618vnds_epp_pollrgp.t
+t/619coop_epp.t
 TODO
 META.yml                                 Module meta-data (added by MakeMaker)

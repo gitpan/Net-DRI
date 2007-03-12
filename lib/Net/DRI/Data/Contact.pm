@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Handling of contact data
 ##
-## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -26,8 +26,9 @@ use Net::DRI::Exception;
 use Net::DRI::Util;
 
 use Email::Valid;
+use Encode ();
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -54,6 +55,8 @@ When setting values, you pass one element if both forms are equal or two element
 as a list (first the localized form, then the internationalized one).
 When getting values, in list context you get back both values, in scalar context you get
 back the first one, that is the localized form.
+
+You can also use methods int2loc() and loc2int() to create one version from the other.
 
 =head1 METHODS
 
@@ -121,6 +124,16 @@ authentification for this contact (hash ref with a key 'pw' and a value being th
 
 privacy settings related to this contact (see RFC)
 
+=head2 int2loc()
+
+create the localized part from the internationalized part ; existing internationalized data is overwritten
+
+=head2 loc2int()
+
+create the internationalized part from the localized part ; existing localized data is overwritten ;
+as the internationalized part must be a subset of UTF-8 when the localized one can be the full UTF-8,
+this operation may creates undefined characters (?) as result
+
 =head1 SUPPORT
 
 For now, support questions should be sent to:
@@ -139,7 +152,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -171,6 +184,33 @@ sub get
   return $d if !ref($d);
  }
  return wantarray()? @$d : $d->[0];
+}
+
+sub loc2int
+{
+ my $self=shift;
+ foreach my $f (qw/name org city sp pc cc/)
+ {
+  my @c=$self->$f();
+  $c[1]=defined($c[0])? Encode::encode('ascii',$c[0],0) : undef;
+  $self->$f(@c);
+ }
+ my @c=$self->street();
+ $c[1]=[ map { defined($_)? Encode::encode('ascii',$_,0) : undef } defined($c[0])? @{$c[0]} : () ];
+ $self->street(@c);
+ return $self;
+}
+
+sub int2loc
+{
+ my $self=shift;
+ foreach my $f (qw/name org street city sp pc cc/)
+ {
+  my @c=$self->$f();
+  $c[0]=$c[1]; ## internationalized form is a subset of UTF-8 and localized form is full UTF-8
+  $self->$f(@c);
+ }
+ return $self;
 }
 
 sub validate ## See RFC3733,§4
@@ -216,4 +256,5 @@ sub validate ## See RFC3733,§4
  return 1; ## everything ok.
 }
 
+####################################################################################################
 1;

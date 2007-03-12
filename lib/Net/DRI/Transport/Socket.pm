@@ -1,6 +1,6 @@
 ## Domain Registry Interface, TCP/SSL Socket Transport
 ##
-## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -29,7 +29,7 @@ use Net::DRI::Exception;
 use Net::DRI::Util;
 use Net::DRI::Data::Raw;
 
-our $VERSION=do { my @r=(q$Revision: 1.20 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.21 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -61,6 +61,10 @@ C<ssl_key_file> C<ssl_cert_file> C<ssl_ca_file> C<ssl_ca_path> C<ssl_cipher_list
 
 =item *
 
+C<ssl_verify> C<ssl_verify_callback> : see IO::Socket::SSL documentation about verify_mode (by default 0x00 here) and verify_callback (used only if provided)
+
+=item *
+
 C<remote_host> / C<remote_port> : hostname (or IP address) & port number of endpoint
 
 =item *
@@ -84,6 +88,10 @@ if defined, all exchanges (messages sent to server, messages received from serve
 
 C<local_host> (optional) : the local address (hostname or IP) you want to use to connect
 
+=item *
+
+C<trid> (optional) : code reference of a subroutine generating transaction id ; if not defined, Net::DRI::Util::create_trid_1 is used
+
 =back
 
 =head1 SUPPORT
@@ -104,7 +112,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -133,6 +141,7 @@ sub new
  $self->version('0.1');
 
  my %t=(message_factory => $po->factories()->{message});
+ $t{trid_factory}=(exists($opts{trid}) && (ref($opts{trid}) eq 'CODE'))? $opts{trid} : \&Net::DRI::Util::create_trid_1;
 
  Net::DRI::Exception::usererr_insufficient_parameters("socktype must be defined") unless (exists($opts{socktype}));
  Net::DRI::Exception::usererr_invalid_parameters("socktype must be ssl or tcp") unless ($opts{socktype}=~m/^(ssl|tcp)$/);
@@ -157,7 +166,8 @@ sub new
   $IO::Socket::SSL::DEBUG=$opts{ssl_debug} if exists($opts{ssl_debug});
 
   my %s=(SSL_use_cert => 0);
-  $s{SSL_verify_mod}=(exists($opts{ssl_verify}))? $opts{ssl_verify} : 0x00; ## by default, no authentication whatsoever
+  $s{SSL_verify_mode}=(exists($opts{ssl_verify}))? $opts{ssl_verify} : 0x00; ## by default, no authentication whatsoever
+  $s{SSL_verify_callback}=$opts{ssl_verify_callback} if (exists($opts{ssl_verify_callback}) && defined($opts{ssl_verify_callback}));
   foreach my $s ('key_file','cert_file','ca_file','ca_path')
   {
    next unless exists($opts{"ssl_$s"});
@@ -197,10 +207,11 @@ sub open_socket
  my $type=$t->{socktype};
  my $sock;
  
- my %n=( PeerAddr => $t->{remote_host},
-         PeerPort => $t->{remote_port},
-         Proto    => 'tcp',
-         Blocking => 1,
+ my %n=( PeerAddr   => $t->{remote_host},
+         PeerPort   => $t->{remote_port},
+         Proto      => 'tcp',
+         Blocking   => 1,
+	 MultiHomed => 1,
        );
  $n{LocalAddr}=$t->{local_host} if exists($t->{local_host});
 
@@ -226,7 +237,7 @@ sub send_login
  my $t=$self->{transport};
  my $sock=$self->sock();
  my $pc=$t->{pc};
- my $cltrid=Net::DRI::Util::create_trid_1('transport');
+ my $cltrid=$t->{trid_factory}->($self->name());
 
  ## Get registry greeting
  my $dr=$pc->get_data($self,$sock);
@@ -250,7 +261,7 @@ sub send_logout
  my $t=$self->{transport};
  my $sock=$self->sock();
  my $pc=$t->{pc};
- my $cltrid=Net::DRI::Util::create_trid_1('transport');
+ my $cltrid=$t->{trid_factory}->($self->name());
 
  my $logout=$pc->logout($t->{message_factory},$cltrid);
  $self->log('C=>S',$logout);
@@ -281,7 +292,7 @@ sub ping
  my $pc=$t->{pc};
  Net::DRI::Exception::err_method_not_implemented() unless ($pc->can('keepalive') && $pc->can('parse_keepalive'));
 
- my $cltrid=Net::DRI::Util::create_trid_1('transport');
+ my $cltrid=$t->{trid_factory}->($self->name());
  eval
  {
   local $SIG{ALRM}=sub { die "timeout" };

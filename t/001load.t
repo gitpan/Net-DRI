@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-use Test::More tests => 108;
+use Test::More tests => 120;
 
 BEGIN { 
 use_ok('Net::DRI');
@@ -24,6 +24,10 @@ use_ok('Net::DRI::DRD::CAT');
 use_ok('Net::DRI::DRD::AERO');
 use_ok('Net::DRI::DRD::MOBI');
 use_ok('Net::DRI::DRD::BE');
+use_ok('Net::DRI::DRD::AT');
+use_ok('Net::DRI::DRD::COOP');
+use_ok('Net::DRI::DRD::INFO');
+use_ok('Net::DRI::DRD::ORG');
 use_ok('Net::DRI::Data::Raw');
 use_ok('Net::DRI::Data::Hosts');
 use_ok('Net::DRI::Data::Changes');
@@ -39,6 +43,8 @@ use_ok('Net::DRI::Data::Contact::US');
 use_ok('Net::DRI::Data::Contact::CAT');
 use_ok('Net::DRI::Data::Contact::AERO');
 use_ok('Net::DRI::Data::Contact::BE');
+use_ok('Net::DRI::Data::Contact::AT');
+use_ok('Net::DRI::Data::Contact::COOP');
 use_ok('Net::DRI::Transport::Socket');
 use_ok('Net::DRI::Transport::Dummy');
 use_ok('Net::DRI::Transport::SOAP');
@@ -111,6 +117,12 @@ use_ok('Net::DRI::Protocol::EPP::Extensions::DNSBE');
 use_ok('Net::DRI::Protocol::EPP::Extensions::DNSBE::Domain');
 use_ok('Net::DRI::Protocol::EPP::Extensions::DNSBE::Contact');
 use_ok('Net::DRI::Protocol::EPP::Extensions::DNSBE::Message');
+use_ok('Net::DRI::Protocol::EPP::Extensions::AT');
+use_ok('Net::DRI::Protocol::EPP::Extensions::AT::Domain');
+use_ok('Net::DRI::Protocol::EPP::Extensions::AT::Contact');
+use_ok('Net::DRI::Protocol::EPP::Extensions::AT::ATResult');
+use_ok('Net::DRI::Protocol::EPP::Extensions::COOP');
+use_ok('Net::DRI::Protocol::EPP::Extensions::COOP::Contact');
 }
 
 exit 0;

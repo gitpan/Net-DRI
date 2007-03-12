@@ -3,7 +3,7 @@
 use Net::DRI;
 use Net::DRI::Data::Raw;
 
-use Test::More tests => 224;
+use Test::More tests => 231;
 
 our $E1='<?xml version="1.0" encoding="UTF-8" standalone="no"?><epp xmlns="urn:ietf:params:xml:ns:epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="urn:ietf:params:xml:ns:epp-1.0 epp-1.0.xsd">';
 our $E2='</epp>';
@@ -463,11 +463,13 @@ $rc=$dri->process('session','login',['ClientX','foo-BAR2','bar-FOO2']);
 is($R1,$E1.'<command><login><clID>ClientX</clID><pw>foo-BAR2</pw><newPW>bar-FOO2</newPW><options><version>1.0</version><lang>en</lang></options><svcs><objURI>urn:ietf:params:xml:ns:obj1</objURI><objURI>urn:ietf:params:xml:ns:obj2</objURI><objURI>urn:ietf:params:xml:ns:obj3</objURI><svcExtension><extURI>http://custom/obj1ext-1.0</extURI></svcExtension></svcs></login><clTRID>ABC-12345</clTRID></command>'.$E2,'session login build');
 is($rc->is_success(),1,'session login is_success');
 
+####################################################################################################
+## Registry Messages
 
 $R2=$E1.'<response>'.r().'<msgQ count="5" id="12345"/>'.$TRID.'</response>'.$E2;
 $rc=$dri->process('session','noop',[]);
 is($dri->get_info('count','message','info'),5,'message count');
-#is($dri->get_info('first_id','message','info'),12345,'message first_id');
+is($dri->get_info('id','message','info'),12345,'message id');
 
 $R2=$E1.'<response>'.r(1301,'Command completed successfully; ack to dequeue').'<msgQ count="5" id="12345"><qDate>1999-04-04T22:01:00.0Z</qDate><msg>Pending action completed successfully.</msg></msgQ><resData><domain:panData xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name paResult="1">example.com</domain:name><domain:paTRID><clTRID>ABC-12345</clTRID><svTRID>54321-XYZ</svTRID></domain:paTRID><domain:paDate>1999-04-04T22:00:00.0Z</domain:paDate></domain:panData></resData>'.$TRID.'</response>'.$E2;
 $rc=$dri->message_retrieve();
@@ -487,6 +489,20 @@ is(''.$dri->get_info('date','message','12345'),'1999-04-04T22:00:00','message ge
 
 is($dri->message_waiting(),1,'message_waiting');
 is($dri->message_count(),5,'message_count');
+
+$R2=$E1.'<response>'.r(1300,'Command completed successfully; no messages').$TRID.'</response>'.$E2;
+$rc=$dri->message_retrieve();
+is($dri->get_info('last_id'),undef,'message get_info last_id (no message)');
+
+$R2=$E1.'<response>'.r(1301,'Command completed successfully; ack to dequeue').'<msgQ count="1" id="2"><qDate>2006-09-25T09:09:11.0Z</qDate><msg>Come to the registry office for some beer on friday</msg></msgQ>'.$TRID.'</response>'.$E2;
+$rc=$dri->message_retrieve();
+is($dri->get_info('last_id'),2,'message get_info last_id (pure text message)');
+is($dri->message_count(),1,'message_count (pure text message)');
+is(''.$dri->get_info('qdate','message',2),'2006-09-25T09:09:11','message get_info qdate (pure text message)');
+is($dri->get_info('content','message',2),'Come to the registry office for some beer on friday','message get_info msg (pure text message)');
+is($dri->get_info('lang','message',2),'en','message get_info lang (pure text message)');
+
+
 
 exit 0;
 

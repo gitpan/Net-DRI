@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .MOBI Domain EPP extension commands
 ##
-## Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -21,7 +21,7 @@ use strict;
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -51,7 +51,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -98,8 +98,7 @@ sub create
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
 
- Net::DRI::Exception::usererr_insufficient_parameters('maintainer_url is mandatory') unless (defined($rd) && (ref($rd) eq 'HASH') && exists($rd->{maintainer_url}) && $rd->{maintainer_url});
-
+ return unless (defined($rd) && (ref($rd) eq 'HASH') && exists($rd->{maintainer_url}) && $rd->{maintainer_url});
  add_maintainer_url($mes,'mobi:create',$rd->{maintainer_url});
 }
 
@@ -113,7 +112,7 @@ sub update
   Net::DRI::Exception->die(0,'protocol/EPP',11,'Only maintainer_url set available for domain');
  }
 
- Net::DRI::Exception::usererr_insufficient_parameters('maintainer_url is mandatory') unless $todo->set('maintainer_url');
+ return unless $todo->set('maintainer_url');
  add_maintainer_url($mes,'mobi:update',$todo->set('maintainer_url'));
 }
 

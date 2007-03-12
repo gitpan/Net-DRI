@@ -1,6 +1,6 @@
 ## Domain Registry Interface, ICANN policy on reserved names
 ##
-## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -19,7 +19,7 @@ package Net::DRI::DRD::ICANN;
 
 use strict;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -49,7 +49,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -66,7 +66,7 @@ See the LICENSE file that comes with this distribution for more details.
 ## Updated to http://www.icann.org/tlds/agreements/tel/appendix-6-07apr06.htm
 sub is_reserved_name
 {
- my $domain=shift;
+ my ($domain,$op)=@_;
  my @d=split(/\./,$domain);
 
  ## Tests at all levels
@@ -79,10 +79,13 @@ sub is_reserved_name
   return 1 if (length($d)>3 && (substr($d,2,2) eq '--'));
  }
 
- ## §B.1 (additional second level)
- return 1 if (length($d[-2])==1);
- ## §B.2
- return 1 if (length($d[-2])==2);
+ if ($op eq 'create')
+ {
+  ## §B.1 (additional second level)
+  return 1 if (length($d[-2])==1);
+  ## §B.2
+  return 1 if (length($d[-2])==2);
+ }
  ## §B.3
  ## Restriction lifted in newer gTLD
  unless ($d[0]=~m/^(?:travel|mobi|cat|tel)$/io)

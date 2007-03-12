@@ -1,6 +1,6 @@
 ## Domain Registry Interface, virtual superclass for all DRD modules
 ##
-## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -23,7 +23,7 @@ use DateTime;
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.21 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.23 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -53,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -96,19 +96,19 @@ sub is_my_tld
 }
 
 ## Methods to be defined in subclasses:
-sub name     { Net::DRI::Exception::err_method_not_implemented("name in ".ref($_[0])); } ## No dot is allowed in name
-sub tlds     { Net::DRI::Exception::err_method_not_implemented("tlds in ".ref($_[0])); }
-sub object_types { Net::DRI::Exception::err_method_not_implemented("object_types in ".ref($_[0])); }
-sub periods  { Net::DRI::Exception::err_method_not_implemented("periods in ".ref($_[0])); } ## should return an array
-sub root_servers { Net::DRI::Exception::err_method_not_implemented("root_servers in ".ref($_[0])); }
+sub name     { Net::DRI::Exception::err_method_not_implemented('name in '.ref($_[0])); } ## No dot is allowed in name
+sub tlds     { Net::DRI::Exception::err_method_not_implemented('tlds in '.ref($_[0])); }
+sub object_types { Net::DRI::Exception::err_method_not_implemented('object_types in '.ref($_[0])); }
+sub periods  { Net::DRI::Exception::err_method_not_implemented('periods in '.ref($_[0])); } ## should return an array
+sub root_servers { Net::DRI::Exception::err_method_not_implemented('root_servers in '.ref($_[0])); }
 
-sub transport_protocol_compatible { Net::DRI::Exception::err_method_not_implemented("transport_protocol_compatible in ".ref($_[0])); }
+sub transport_protocol_compatible { Net::DRI::Exception::err_method_not_implemented('transport_protocol_compatible in '.ref($_[0])); }
 
 ## We will need to deal with specific characters allowed/specific languages allowed
 sub has_idn { Net::DRI::Exception::err_method_not_implemented("has_idn in ".ref($_[0])); }
 
-sub verify_name_domain { Net::DRI::Exception::err_method_not_implemented("verify_name_domain in ".ref($_[0])); }
-sub domain_operation_needs_is_mine { Net::DRI::Exception::err_method_not_implemented("domain_operation_needs_is_mine in ".ref($_[0])); }
+sub verify_name_domain { Net::DRI::Exception::err_method_not_implemented('verify_name_domain in '.ref($_[0])); }
+sub domain_operation_needs_is_mine { Net::DRI::Exception::err_method_not_implemented('domain_operation_needs_is_mine in '.ref($_[0])); }
 
 sub is_thick { return shift->has_object('contact'); } ## DEPRECATED
 
@@ -226,7 +226,7 @@ sub domain_create_only
 {
  my ($self,$ndr,$domain,$rd)=@_;
 
- err_invalid_domain_name($domain) if $self->verify_name_domain($domain);
+ err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'create');
  my %rd=(defined($rd) && (ref($rd) eq 'HASH'))? %$rd : ();
  
  if (defined($rd{duration}))
@@ -243,7 +243,7 @@ sub domain_create
 {
  my ($self,$ndr,$domain,$rd)=@_;
 
- err_invalid_domain_name($domain) if $self->verify_name_domain($domain);
+ err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'create');
  my %rd=(defined($rd) && (ref($rd) eq 'HASH'))? %$rd : ();
 
  my @rc;
@@ -317,7 +317,7 @@ sub domain_create
 sub domain_delete_only
 {
  my ($self,$ndr,$domain,$rd)=@_;
- err_invalid_domain_name($domain) if $self->verify_name_domain($domain);
+ err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'delete');
 
  my $rc=$ndr->process('domain','delete',[$domain,$rd]);
  return $rc;
@@ -326,7 +326,7 @@ sub domain_delete_only
 sub domain_delete
 {
  my ($self,$ndr,$domain,$rd)=@_;
- err_invalid_domain_name($domain) if $self->verify_name_domain($domain);
+ err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'delete');
 
  my @r;
  my $rc1=$self->domain_info($ndr,$domain);
@@ -349,7 +349,7 @@ sub domain_delete
 sub domain_info
 {
  my ($self,$ndr,$domain,$rd)=@_;
- err_invalid_domain_name($domain) if $self->verify_name_domain($domain);
+ err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'info');
 
  my $rc;
  my $exist;
@@ -368,7 +368,7 @@ sub domain_info
 sub domain_check
 {
  my ($self,$ndr,$domain,$rd)=@_;
- err_invalid_domain_name($domain) if $self->verify_name_domain($domain);
+ err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'check');
 
  my $rc;
  if (defined($ndr->get_info('exist','domain',$domain)))
@@ -393,7 +393,7 @@ sub domain_check_multi
  my @d;
  foreach my $domain (@_)
  {
-  err_invalid_domain_name($domain) if $self->verify_name_domain($domain);
+  err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'check');
   if (defined($ndr->get_info('exist','domain',$domain)))
   {
    $ndr->set_info_from_cache('domain',$domain);
@@ -411,7 +411,7 @@ sub domain_check_multi
 sub domain_exist ## 1/0/undef
 {
  my ($self,$ndr,$domain,$rd)=@_;
- err_invalid_domain_name($domain) if $self->verify_name_domain($domain);
+ err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'check');
 
  my $rc=$ndr->domain_check($domain,$rd);
  return unless $rc->is_success();
@@ -423,7 +423,7 @@ sub domain_update
  my ($self,$ndr,$domain,$tochange,$rd)=@_;
  my $fp=$ndr->protocol->nameversion();
 
- err_invalid_domain_name($domain) if $self->verify_name_domain($domain);
+ err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'update');
  Net::DRI::Util::check_isa($tochange,'Net::DRI::Data::Changes');
 
  Net::DRI::Exception->new(0,'DRD',4,'Registry does not handle contacts') if ($tochange->all_defined('contact') && ! $self->has_object('contact'));
@@ -531,7 +531,7 @@ sub domain_update_contact
 sub domain_renew
 {
  my ($self,$ndr,$domain,$duration,$curexp,$deletedate,$rd)=@_;
- err_invalid_domain_name($domain) if $self->verify_name_domain($domain);
+ err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'renew');
 
  Net::DRI::Util::check_isa($duration,'DateTime::Duration') if defined($duration);
  Net::DRI::Util::check_isa($curexp,'DateTime') if defined($curexp);
@@ -545,7 +545,7 @@ sub domain_renew
 sub domain_transfer
 {
  my ($self,$ndr,$domain,$op,$rd)=@_;
- err_invalid_domain_name($domain) if $self->verify_name_domain($domain);
+ err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'transfer');
  Net::DRI::Exception::usererr_invalid_parameters("Transfer operation must be start,stop,accept,refuse or query") unless ($op=~m/^(?:start|stop|query|accept|refuse)$/);
 
  Net::DRI::Exception->die(0,'DRD',3,'Invalid duration') if $self->verify_duration_transfer($ndr,(defined($rd) && (ref($rd) eq 'HASH') && exists($rd->{duration}))? $rd->{duration} : undef,$domain,$op);

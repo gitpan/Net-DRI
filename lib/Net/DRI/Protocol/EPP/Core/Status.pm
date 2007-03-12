@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Status
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -23,7 +23,7 @@ use strict;
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -53,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2007 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -122,27 +122,9 @@ sub is_published { return shift->has_not('clientHold','serverHold','inactive'); 
 sub is_pending   { return shift->has_any('pendingCreate','pendingDelete','pendingRenew','pendingTransfer','pendingUpdate'); }
 sub is_linked    { return shift->has_any('linked'); }
 
-sub can_delete
-{
- my $self=shift;
- my $ispending=$self->is_pending();
- return !$ispending && $self->has_not('clientDeleteProhibited','serverDeleteProhibited');
-}
-
-sub can_renew
-{
- my $self=shift;
- my $ispending=$self->is_pending();
- return !$ispending && $self->has_not('clientRenewProhibited','serverRenewProhibited');
-}
-
-sub can_update
-{
- my $self=shift;
- my $ispending=$self->is_pending();
- return !$ispending && $self->has_not('clientUpdateProhibited','serverUpdateProhibited');
-}
-
+sub can_delete   { return shift->has_not('clientDeleteProhibited','serverDeleteProhibited'); }
+sub can_renew    { return shift->has_not('clientRenewProhibited','serverRenewProhibited'); }
+sub can_update   { return shift->has_not('clientUpdateProhibited','serverUpdateProhibited'); }
 sub can_transfer { return shift->has_not('clientTransferProhibited','serverTransferProhibited'); }
 
 

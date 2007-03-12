@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Superclass of all Transport/* modules (hence virtual class, never used directly)
 ##
-## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -25,7 +25,7 @@ __PACKAGE__->mk_accessors(qw/name version retry pause trace timeout defer curren
 use Net::DRI::Exception;
 use Time::HiRes;
 
-our $VERSION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -55,7 +55,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -100,10 +100,11 @@ sub send
 
  my $timeout=$self->timeout();
  my $prevalarm=alarm(0); ## removes current alarm
- my $c=1;
+ my $c=0;
  my $ok=0;
- for (1)
+ while (++$c <= $self->retry())
  {
+  sleep($self->pause()) if ($self->pause() && ($c > 1));
   eval
   {
    local $SIG{ALRM}=sub { die "timeout" };
@@ -127,9 +128,7 @@ sub send
   }
 
   last if ($ok);
-  last if (++$c > $self->retry());
-  sleep($self->pause()) if $self->pause();
- } ## end of loop, no more retries
+ }
 
  ## Get inner error message ?
  Net::DRI::Exception->die(0,'transport',4,'Unable to send message to registry') unless $ok;
@@ -143,11 +142,12 @@ sub receive
  Net::DRI::Exception::err_insufficient_parameters() unless ($cb1 && (ref($cb1) eq 'CODE'));
  my $timeout=$self->timeout();
  my $prevalarm=alarm(0); ## removes current alarm
- my $c=1;
+ my $c=0;
  my $ans;
 
- for (1)
+ while (++$c <= $self->retry())
  {
+  sleep($self->pause()) if ($self->pause() && ($c > 1));
   eval
   {
    local $SIG{ALRM}=sub { die "timeout" };
@@ -166,9 +166,7 @@ sub receive
   }
 
   last if (defined($ans));
-  last if (++$c > $self->retry());
-  sleep($self->pause()) if $self->pause();
- } ## end of loop, no more retries
+ }
 
  Net::DRI::Exception->die(0,'transport',5,'Unable to receive message from registry') unless defined($ans);
 
@@ -196,7 +194,7 @@ sub log
   $fh->print($tp);
  } else
  {
-  print $fh $tp;
+  print {$fh} $tp;
  }
 }
 

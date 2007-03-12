@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP DNS Security Extensions (RFC4310)
 ##
-## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -22,7 +22,7 @@ use strict;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 our $NS='urn:ietf:params:xml:ns:secDNS-1.0';
 
 =pod
@@ -53,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -180,7 +180,9 @@ sub create
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
 
- Net::DRI::Exception::usererr_insufficient_parameters('One or more secDNS data block must be provided') unless (exists($rd->{secdns}) && (ref($rd->{secdns}) eq 'ARRAY') && @{$rd->{secdns}});
+## Deactivated by suggestion of Elias Sidenbladh 2006-09
+## Net::DRI::Exception::usererr_insufficient_parameters('One or more secDNS data block must be provided') unless (exists($rd->{secdns}) && (ref($rd->{secdns}) eq 'ARRAY') && @{$rd->{secdns}});
+ return unless (exists($rd->{secdns}) && (ref($rd->{secdns}) eq 'ARRAY') && @{$rd->{secdns}});
 
  my $eid=$mes->command_extension_register('secDNS:create','xmlns:secDNS="urn:ietf:params:xml:ns:secDNS-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:secDNS-1.0 secDNS-1.0.xsd"');
  my @n=map { ['secDNS:dsData',format_secdns($_)] } (@{$rd->{secdns}});

@@ -1,7 +1,7 @@
 ## Domain Registry Interface, Handling of contact data for .SE
 ## Contributed by Elias Sidenbladh from NIC SE
 ##
-## Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -24,7 +24,7 @@ __PACKAGE__->mk_accessors(qw(orgno));
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -66,7 +66,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -88,7 +88,7 @@ sub validate
 
  $self->SUPER::validate($change); ## will trigger an Exception if problem
 
- push @errs,'orgno' if ($self->orgno() && $self->orgno()!~m/^\[[A-Z]+\][^\s].+$/);
+ push @errs,'orgno' if ($self->orgno() && $self->orgno()!~m/^\[[A-Z]+\][^\s].*$/);
 
  Net::DRI::Exception::usererr_invalid_parameters('Invalid contact information: '.join('/',@errs)) if @errs;
 
