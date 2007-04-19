@@ -122,7 +122,7 @@ is("".$d,'2002-09-08T22:00:00','domain_transfer_query get_info(exDate) value');
 
 
 $R2=$E1.'<response>'.r().'<resData><domain:creData xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example202.com</domain:name><domain:crDate>1999-04-03T22:00:00.0Z</domain:crDate><domain:exDate>2001-04-03T22:00:00.0Z</domain:exDate></domain:creData></resData>'.$TRID.'</response>'.$E2;
-my $cs=$dri->local_object('contactset')->new();
+my $cs=$dri->local_object('contactset');
 my $c1=$dri->local_object('contact')->srid('jd1234');
 my $c2=$dri->local_object('contact')->srid('sh8013');
 $cs->set($c1,'registrant');
@@ -180,7 +180,7 @@ is("".$d,'2002-09-08T22:00:00','domain_transfer_start get_info(exDate) value');
 
 
 $R2='';
-$toc=$dri->local_object('changes')->new();
+$toc=$dri->local_object('changes');
 $toc->add('ns',$dri->local_object('hosts')->set('ns2.example.com'));
 $cs=$dri->local_object('contactset');
 $cs->set($dri->local_object('contact')->srid('mak21'),'tech');
@@ -501,8 +501,6 @@ is($dri->message_count(),1,'message_count (pure text message)');
 is(''.$dri->get_info('qdate','message',2),'2006-09-25T09:09:11','message get_info qdate (pure text message)');
 is($dri->get_info('content','message',2),'Come to the registry office for some beer on friday','message get_info msg (pure text message)');
 is($dri->get_info('lang','message',2),'en','message get_info lang (pure text message)');
-
-
 
 exit 0;
 

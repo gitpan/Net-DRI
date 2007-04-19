@@ -21,7 +21,7 @@ WriteMakefile(
         'IO::Socket::SSL' => '0.90',
         'SOAP::Lite' => 0,
         'WWW::Mechanize' => 0,
-        'DateTime::Format::ISO8601' => 0,
+        'DateTime::Format::ISO8601' => '0.06', ## version 0.0403 is also ok, version 0.05 IS NOT OK !
 	'Email::Valid' => 0,
 	'XML::LibXML' => 0,
 	'Net::SMTP' => 0,

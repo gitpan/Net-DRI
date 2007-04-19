@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .CAT Defensive Registration EPP extension commands
 ##
-## Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -22,10 +22,9 @@ use strict;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 use Net::DRI::Protocol::EPP::Core::Domain;
-use Net::DRI::Protocol::EPP::Core::Status;
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -55,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -261,7 +260,7 @@ sub info_parse
 
  my (@s,%t);
  my $cs=Net::DRI::Data::ContactSet->new();
- my $cf=$po->factories->{contact};
+ my $cf=$po->factories()->{contact};
  my $c=$infdata->getFirstChild();
  while ($c)
  {
@@ -329,7 +328,7 @@ sub info_parse
  $rinfo->{defreg}->{$oname}->{action}='info';
  $rinfo->{defreg}->{$oname}->{exist}=1;
  $rinfo->{defreg}->{$oname}->{contact}=$cs;
- $rinfo->{defreg}->{$oname}->{status}=Net::DRI::Protocol::EPP::Core::Status->new(\@s);
+ $rinfo->{defreg}->{$oname}->{status}=$po->create_local_object('status')->add(@s);
  $rinfo->{defreg}->{$oname}->{trademark}=\%t;
 }
 

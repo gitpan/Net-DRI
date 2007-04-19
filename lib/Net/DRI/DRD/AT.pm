@@ -23,7 +23,7 @@ use base qw/Net::DRI::DRD/;
 
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -169,6 +169,36 @@ sub domain_transfer_execute
 
  my $rc=$ndr->process('domain','nocommand',[$domain,$rd]);
  return $rc;
+}
+
+sub message_retrieve
+{
+ my ($self,$ndr,$id)=@_;
+ my $rc=$ndr->process('message','atretrieve',[$id]);
+ return $rc;
+}
+
+sub message_delete
+{
+ my ($self,$ndr,$id)=@_;
+ my $rc=$ndr->process('message','atdelete',[$id]);
+ return $rc;
+}
+
+sub message_waiting
+{
+ my ($self,$ndr)=@_;
+ my $c=$self->message_count($ndr);
+ return (defined($c) && $c)? 1 : 0;
+}
+
+sub message_count
+{
+ my ($self,$ndr)=@_;
+ my $rc=$ndr->process('message','atretrieve');
+ return unless $rc->is_success();
+ my $count=$ndr->get_info('count','message','info');
+ return (defined($count) && $count)? $count : 0;
 }
 
 ## unsupported transactions

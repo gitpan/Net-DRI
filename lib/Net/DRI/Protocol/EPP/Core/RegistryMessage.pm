@@ -24,7 +24,7 @@ use DateTime::Format::ISO8601;
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -110,7 +110,7 @@ sub parse_poll
   $rd=$rinfo->{message}->{$msgid}; ## already partially filled by Message::parse()
  }
 
- if ($mes->errcode() == 1301 && (defined($mes->node_resdata()) || defined($mes->node_extension()))) ## there was really a message with some content
+ if ($mes->errcode() == 1301 && (defined($mes->node_resdata()) || defined($mes->node_extension()) || defined($mes->node_msg()))) ## there was really a message with some content
  {
   my ($totype,$toaction,$toname); ## $toaction will remain undef, but could be $haction if only one
   my %info;

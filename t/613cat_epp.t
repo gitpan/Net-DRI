@@ -135,7 +135,7 @@ is($co->email_sponsor(),'catsponsor@example.com','contact_info get_info(self) em
 
 ##p.48
 $R2='';
-my $cs=$dri->local_object('contactset')->new();
+my $cs=$dri->local_object('contactset');
 my $c1=$dri->local_object('contact')->srid('jd1234');
 my $c2=$dri->local_object('contact')->srid('sh8013');
 $cs->set($c1,'registrant');
@@ -148,7 +148,7 @@ is_string($R1,Encode::encode('utf8',$E1.'<command><create><domain:create xmlns:d
 
 ##p.51
 $R2='';
-$toc=$dri->local_object('changes')->new();
+$toc=$dri->local_object('changes');
 $toc->add('ns',$dri->local_object('hosts')->set('ns2.example.com'));
 $cs=$dri->local_object('contactset');
 $cs->set($dri->local_object('contact')->srid('mak21'),'tech');
@@ -221,7 +221,7 @@ is($ens{intended_use},'Website dedicated about sailing around Barcelona','domain
 
 # p.71
 my $ro=$dri->remote_object('defreg');
-$cs=$dri->local_object('contactset')->new();
+$cs=$dri->local_object('contactset');
 $c1=$dri->local_object('contact')->srid('C100004');
 $cs->set($c1,'registrant');
 $cs->set($c1,'admin');
@@ -232,7 +232,7 @@ is_string($R1,$E1.'<command><create><defreg:create xmlns:defreg="http://xmlns.do
 
 # p.73
 $ro=$dri->remote_object('defreg','test18-id');
-$toc=$dri->local_object('changes')->new();
+$toc=$dri->local_object('changes');
 $cs=$dri->local_object('contactset');
 $cs->set($dri->local_object('contact')->srid('C100004'),'admin');
 $toc->add('contact',$cs);

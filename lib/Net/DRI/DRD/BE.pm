@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .BE (DNSBE) policies for Net::DRI
 ##
-## Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -22,7 +22,7 @@ use base qw/Net::DRI::DRD/;
 
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -52,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -90,12 +90,16 @@ sub transport_protocol_compatible
  my $tn=$to->name();
 
  return 1 if (($pn eq 'EPP') && ($tn eq 'socket_inet'));
+ return 1 if (($pn eq 'DAS') && ($tn eq 'socket_inet'));
  return;
 }
 
 sub transport_protocol_default
 {
- return ('Net::DRI::Transport::Socket','Net::DRI::Protocol::EPP::Extensions::DNSBE');
+ my ($drd,$ndr,$type)=@_;
+ $type='' if (!defined($type) || ref($type));
+ return ('Net::DRI::Transport::Socket','Net::DRI::Protocol::EPP::Extensions::DNSBE') unless ($type);
+ return ('Net::DRI::Transport::Socket',[{defer=>1,close_after=>1,socktype=>'tcp',remote_host=>'whois.dns.be',remote_port=>4343,protocol_connection=>'Net::DRI::Protocol::DAS::Connection',protocol_version=>1}],'Net::DRI::Protocol::DAS',[]) if (lc($type) eq 'das');
 }
 
 ######################################################################################

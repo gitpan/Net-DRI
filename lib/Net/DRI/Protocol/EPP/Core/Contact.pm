@@ -13,7 +13,7 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::Protocol::EPP::Core::Contact;
 
@@ -22,11 +22,10 @@ use strict;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 use Net::DRI::Protocol::EPP;
-use Net::DRI::Protocol::EPP::Core::Status;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -238,7 +237,7 @@ sub info_parse
  $contact->pc(@{$cd{pc}});
  $contact->cc(@{$cd{cc}});
 
- $rinfo->{contact}->{$oname}->{status}=Net::DRI::Protocol::EPP::Core::Status->new(\@s);
+ $rinfo->{contact}->{$oname}->{status}=$po->create_local_object('status')->add(@s);
  $rinfo->{contact}->{$oname}->{self}=$contact;
 }
 

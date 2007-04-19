@@ -24,7 +24,7 @@ use base qw/Net::DRI::Protocol::EPP/;
 use Net::DRI::Data::Contact::BE;
 use Net::DRI::Protocol::EPP::Extensions::DNSBE::Message;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -81,7 +81,6 @@ sub new
 
  my $self=$c->SUPER::new($drd,$version,[keys(%e)]); ## we are now officially a Net::DRI::Protocol::EPP object
 
- ## We currently do not handle agent update/info
  foreach my $w ('dnsbe','nsgroup')
  {
   $self->{ns}->{$w}=['http://www.dns.be/xml/epp/'.$w.'-1.0',$w.'-1.0.xsd'];

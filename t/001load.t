@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-use Test::More tests => 120;
+use Test::More tests => 144;
 
 BEGIN { 
 use_ok('Net::DRI');
@@ -28,6 +28,8 @@ use_ok('Net::DRI::DRD::AT');
 use_ok('Net::DRI::DRD::COOP');
 use_ok('Net::DRI::DRD::INFO');
 use_ok('Net::DRI::DRD::ORG');
+use_ok('Net::DRI::DRD::LU');
+use_ok('Net::DRI::DRD::BIZ');
 use_ok('Net::DRI::Data::Raw');
 use_ok('Net::DRI::Data::Hosts');
 use_ok('Net::DRI::Data::Changes');
@@ -45,6 +47,7 @@ use_ok('Net::DRI::Data::Contact::AERO');
 use_ok('Net::DRI::Data::Contact::BE');
 use_ok('Net::DRI::Data::Contact::AT');
 use_ok('Net::DRI::Data::Contact::COOP');
+use_ok('Net::DRI::Data::Contact::LU');
 use_ok('Net::DRI::Transport::Socket');
 use_ok('Net::DRI::Transport::Dummy');
 use_ok('Net::DRI::Transport::SOAP');
@@ -103,6 +106,7 @@ use_ok('Net::DRI::Protocol::EPP::Extensions::VeriSign::PollLowBalance');
 use_ok('Net::DRI::Protocol::EPP::Extensions::VeriSign::PollRGP');
 use_ok('Net::DRI::Protocol::EPP::Extensions::AT::Result');
 use_ok('Net::DRI::Protocol::EPP::Extensions::AT::IOptions');
+use_ok('Net::DRI::Protocol::EPP::Extensions::AT::Message');
 use_ok('Net::DRI::Protocol::EPP::Extensions::IENUMAT');
 use_ok('Net::DRI::Protocol::EPP::Extensions::CAT');
 use_ok('Net::DRI::Protocol::EPP::Extensions::CAT::Contact');
@@ -123,6 +127,26 @@ use_ok('Net::DRI::Protocol::EPP::Extensions::AT::Contact');
 use_ok('Net::DRI::Protocol::EPP::Extensions::AT::ATResult');
 use_ok('Net::DRI::Protocol::EPP::Extensions::COOP');
 use_ok('Net::DRI::Protocol::EPP::Extensions::COOP::Contact');
+use_ok('Net::DRI::Protocol::EPP::Extensions::LU');
+use_ok('Net::DRI::Protocol::EPP::Extensions::LU::Contact');
+use_ok('Net::DRI::Protocol::EPP::Extensions::LU::Domain');
+use_ok('Net::DRI::Protocol::EPP::Extensions::LU::Poll');
+use_ok('Net::DRI::Protocol::EPP::Extensions::LU::Status');
+use_ok('Net::DRI::Protocol::DAS');
+use_ok('Net::DRI::Protocol::DAS::Message');
+use_ok('Net::DRI::Protocol::DAS::Connection');
+use_ok('Net::DRI::Protocol::DAS::Domain');
+use_ok('Net::DRI::Protocol::Whois');
+use_ok('Net::DRI::Protocol::Whois::Message');
+use_ok('Net::DRI::Protocol::Whois::Connection');
+use_ok('Net::DRI::Protocol::Whois::Domain');
+use_ok('Net::DRI::Protocol::Whois::Domain::common');
+use_ok('Net::DRI::Protocol::Whois::Domain::COM');
+use_ok('Net::DRI::Protocol::Whois::Domain::ORG');
+use_ok('Net::DRI::Protocol::Whois::Domain::AERO');
+use_ok('Net::DRI::Protocol::Whois::Domain::INFO');
+use_ok('Net::DRI::Protocol::Whois::Domain::EU');
+use_ok('Net::DRI::Protocol::Whois::Domain::BIZ');
 }
 
 exit 0;

@@ -29,7 +29,7 @@ use Net::DRI::Exception;
 use Net::DRI::Util;
 use Net::DRI::Data::Raw;
 
-our $VERSION=do { my @r=(q$Revision: 1.21 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.22 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -39,60 +39,64 @@ Net::DRI::Transport::Socket - TCP/TLS Socket connection for Net::DRI
 
 =head1 DESCRIPTION
 
-The following options are available at creation:
+This module implements a socket (tcp or tls) for establishing connections in Net::DRI
 
-=over
+=head1 METHODS
 
-=item *
+At creation (see Net::DRI C<new_profile>) you pass a reference to an hash, with the following available keys:
 
-C<defer> : do we open the connection right now (0) or later (1)
+=head2 defer
+ 
+do we open the connection right now (0) or later (1)
 
-=item *
+=head2 timeout
 
-C<timeout> : time to wait (in seconds) for server reply
+time to wait (in seconds) for server reply
 
-=item *
+=head2 socktype
 
-C<socktype> : ssl or tcp
+ssl or tcp
 
-=item *
+=head2 ssl_key_file ssl_cert_file ssl_ca_file ssl_ca_path ssl_cipher_list ssl_version
 
-C<ssl_key_file> C<ssl_cert_file> C<ssl_ca_file> C<ssl_ca_path> C<ssl_cipher_list> : if C<socktype> is 'ssl', all key materials
+if C<socktype> is 'ssl', all key materials
 
-=item *
+=head2 ssl_verify ssl_verify_callback
 
-C<ssl_verify> C<ssl_verify_callback> : see IO::Socket::SSL documentation about verify_mode (by default 0x00 here) and verify_callback (used only if provided)
+see IO::Socket::SSL documentation about verify_mode (by default 0x00 here) and verify_callback (used only if provided)
 
-=item *
+=head2 remote_host remote_port
 
-C<remote_host> / C<remote_port> : hostname (or IP address) & port number of endpoint
+hostname (or IP address) & port number of endpoint
 
-=item *
+=head2 client_login client_password
 
-C<client_login> / C<client_password> : protocol login & password
+protocol login & password
 
-=item *
+=head2 client_newpassword
 
-C<protocol_connection> : Net::DRI class handling protocol connection details. (Ex: C<Net::DRI::Protocol::RRP::Connection> or C<Net::DRI::Protocol::EPP::Connection>)
+(optional) new password if you want to change password on login for registries handling that at connection
 
-=item *
+=head2 protocol_connection
 
-C<close_after> : number of protocol commands to send to server (we will automatically close and re-open connection if needed)
+Net::DRI class handling protocol connection details. (Ex: C<Net::DRI::Protocol::RRP::Connection> or C<Net::DRI::Protocol::EPP::Connection>)
 
-=item *
+=head2 close_after
 
-C<log_fh> : either a reference to something that have a print() method or a filehandle (ex: \*STDERR or an anonymous filehandle) on something already opened for write ;
+number of protocol commands to send to server (we will automatically close and re-open connection if needed)
+
+=head2 log_fh
+
+either a reference to something that have a print() method or a filehandle (ex: \*STDERR or an anonymous filehandle) on something already opened for write ;
 if defined, all exchanges (messages sent to server, messages received from server) will be printed to this filehandle
 
-=item *
+=head2 local_host 
 
-C<local_host> (optional) : the local address (hostname or IP) you want to use to connect
+(optional) the local address (hostname or IP) you want to use to connect
 
-=item *
+=head2 trid 
 
-C<trid> (optional) : code reference of a subroutine generating transaction id ; if not defined, Net::DRI::Util::create_trid_1 is used
-
-=back
+(optional) code reference of a subroutine generating transaction id ; if not defined, Net::DRI::Util::create_trid_1 is used
 
 =head1 SUPPORT
 
@@ -146,7 +150,10 @@ sub new
  Net::DRI::Exception::usererr_insufficient_parameters("socktype must be defined") unless (exists($opts{socktype}));
  Net::DRI::Exception::usererr_invalid_parameters("socktype must be ssl or tcp") unless ($opts{socktype}=~m/^(ssl|tcp)$/);
  $t{socktype}=$opts{socktype};
- foreach my $p ('remote_host','remote_port','client_login','client_password','protocol_version')
+ $t{client_login}=$opts{client_login};
+ $t{client_password}=$opts{client_password};
+ $t{client_newpassword}=$opts{client_newpassword} if (exists($opts{client_newpassword}) && $opts{client_newpassword});
+ foreach my $p ('remote_host','remote_port','protocol_version')
  {
   Net::DRI::Exception::usererr_insufficient_parameters("$p must be defined") unless (exists($opts{$p}) && $opts{$p});
   $t{$p}=$opts{$p};
@@ -155,7 +162,7 @@ sub new
  $t{pc}=$opts{protocol_connection};
 
  eval "require $t{pc}";
- my @need=qw/login logout parse_greeting parse_login parse_logout get_data/;
+ my @need=qw/get_data/;
  Net::DRI::Exception::usererr_invalid_parameters('protocol_connection class must have: '.join(' ',@need)) if (grep { ! $t{pc}->can($_) } @need);
 
  Net::DRI::Exception::usererr_invalid_parameters("close_after must be an integer") if ($opts{close_after} && !Net::DRI::Util::isint($opts{close_after}));
@@ -168,7 +175,7 @@ sub new
   my %s=(SSL_use_cert => 0);
   $s{SSL_verify_mode}=(exists($opts{ssl_verify}))? $opts{ssl_verify} : 0x00; ## by default, no authentication whatsoever
   $s{SSL_verify_callback}=$opts{ssl_verify_callback} if (exists($opts{ssl_verify_callback}) && defined($opts{ssl_verify_callback}));
-  foreach my $s ('key_file','cert_file','ca_file','ca_path')
+  foreach my $s ('key_file','cert_file','ca_file','ca_path','version')
   {
    next unless exists($opts{"ssl_$s"});
    $s{"SSL_$s"}=$opts{"ssl_$s"};
@@ -237,14 +244,20 @@ sub send_login
  my $t=$self->{transport};
  my $sock=$self->sock();
  my $pc=$t->{pc};
- my $cltrid=$t->{trid_factory}->($self->name());
+
+ return unless ($pc->can('parse_greeting') && $pc->can('login') && $pc->can('parse_login'));
+ foreach my $p (qw/client_login client_password/)
+ {
+  Net::DRI::Exception::usererr_insufficient_parameters("$p must be defined") unless (exists($t->{$p}) && $t->{$p});
+ }
 
  ## Get registry greeting
  my $dr=$pc->get_data($self,$sock);
  $self->log('C<=S',$dr);
  my $rc1=$pc->parse_greeting($dr); ## gives back a Net::DRI::Protocol::ResultStatus
  die($rc1) unless $rc1->is_success();
- my $login=$pc->login($t->{message_factory},$t->{client_login},$t->{client_password},$cltrid,$dr);
+ my $cltrid=$t->{trid_factory}->($self->name());
+ my $login=$pc->login($t->{message_factory},$t->{client_login},$t->{client_password},$cltrid,$dr,$t->{client_newpassword});
  $self->log('C=>S',$login);
  Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send login message') unless ($sock->print($login));
 
@@ -261,8 +274,10 @@ sub send_logout
  my $t=$self->{transport};
  my $sock=$self->sock();
  my $pc=$t->{pc};
- my $cltrid=$t->{trid_factory}->($self->name());
 
+ return unless ($pc->can('logout') && $pc->can('parse_logout'));
+
+ my $cltrid=$t->{trid_factory}->($self->name());
  my $logout=$pc->logout($t->{message_factory},$cltrid);
  $self->log('C=>S',$logout);
  Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send logout message') unless ($sock->print($logout));

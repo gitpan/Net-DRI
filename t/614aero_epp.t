@@ -50,7 +50,7 @@ is_deeply($ens,{registrant_group=>'Airport',ens_o=>'sita',request_type=>'manual'
 ## Domains
 
 $R2='';
-my $cs=$dri->local_object('contactset')->new();
+my $cs=$dri->local_object('contactset');
 my $c1=$dri->local_object('contact')->srid('jd1234');
 my $c2=$dri->local_object('contact')->srid('sh8013');
 $cs->set($c1,'registrant');

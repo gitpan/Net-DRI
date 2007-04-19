@@ -1,3 +1,20 @@
+0.80 2007-04-19
++ DAS support for .EU & .BE : quick lookup of domain availability ; see eg/eurid_das.pl for an example (same interface as domain_check)
++ Whois support (RFC3912) for thick registries (full) and thin registries (only registry part) ; see eg/whois.pl for an example (same interface as domain_info) ;
+   parse provided for .COM .NET .ORG .BIZ .INFO .AERO .EU
++ .LU support : all extensions (except startTLS & IDNs) ; we do not enforce policy of only one IPv4 and one IPv6 at most for hosts
++ Transport/Socket : new parameter ssl_version (suggestion from Rony Meyer)
++ Transport/Socket {RRP,EPP}/Protocol/Connection : allow changing password at connection (from initial patch by Rony Meyer)
++ DRD/BIZ (provided by Rony Meyer)
+= DateTime::Format::ISO8601 : required version is now 0.06 (0.0403 is also ok, but 0.05 is absolutely not ok, hence we upgraded the required version)
+= .AT updates (contributed by Michael Braunoeder from NIC.AT)
+= Data/Contact : new as_string() method for quick display
+= Data/ContactSet : minor changes, rem as alias to del, add/del/set returns the object itself, as new() (with explicit return)
+= Protocol/EPP/Core/{Domain,Host} VeriSign/PollRGP: make sure to lowercase domain names given back by registry (from bugreport by Rony Meyer)
+      We advise passing to Net::DRI only domain names and hostnames in lowercase.
+- DRD : bugfix in contact_info for cached values (bugfix from Rony Meyer)
+- Protocol/EPP/Core/Host : bugfix in parsing IP addresses (bugreport from Rony Meyer)
+
 0.70 2007-03-12
 + .COOP full support : all operations with EPP, see included example in eg/coop_epp.pl and t/619coop_epp.t (with help from registry staff member Dan Maharry)
 + .AT full support : all operations with EPP, contributed by Michael Braunoeder from NIC.AT

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Registry object
 ##
-## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -33,7 +33,7 @@ use Net::DRI::Data::Hosts;
 
 our $AUTOLOAD;
 
-our $VERSION=do { my @r=(q$Revision: 1.22 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.23 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -63,7 +63,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -272,13 +272,22 @@ sub get_auto_target
 sub new_profile
 {
  my ($self,$name,$transport,$t_params,$protocol,$p_params)=@_;
- Net::DRI::Exception->die(0,'DRI',12,"New profile name already in use") if $self->exist_profile($name);
+ Net::DRI::Exception->die(0,'DRI',12,'New profile name already in use') if $self->exist_profile($name);
 
  if (!defined($protocol) && !defined($p_params) && $self->can('transport_protocol_default'))
  {
-  $p_params=defined($t_params)? $t_params : [];
-  $t_params=defined($transport)? $transport : [];
-  ($transport,$protocol)=$self->transport_protocol_default();
+  $p_params=(defined($t_params) && ref($t_params) eq 'ARRAY')? $t_params : [];
+  $t_params=(defined($transport) && ref($transport) eq 'ARRAY')? $transport : [];
+  my @a=$self->transport_protocol_default($transport);
+  if (@a==2)
+  {
+   ($transport,$protocol)=@a;
+  } elsif (@a==4)
+  {
+   ($transport,$protocol)=@a[0,2];
+   $t_params=$a[1] unless @$t_params;
+   $p_params=$a[3] unless @$p_params;
+  }
  }
  Net::DRI::Exception::err_insufficient_parameters() unless (Net::DRI::Util::all_valid($transport,$t_params,$protocol,$p_params));
  Net::DRI::Exception::err_invalid_parameters() unless ((ref($t_params) eq 'ARRAY') && (ref($p_params) eq 'ARRAY'));
@@ -299,11 +308,8 @@ sub new_profile
  };
  if ($@) ## some kind of error happened
  {
-  if (ref($@) eq 'Net::DRI::Protocol::ResultStatus')
-  {
-   return $@;
-  }
-  $@=Net::DRI::Exception->new(1,'internal',0,"Error not handled: $@") unless ref($@);
+  return $@ if (ref($@) eq 'Net::DRI::Protocol::ResultStatus');
+  $@=Net::DRI::Exception->new(1,'internal',0,'Error not handled: '.$@) unless ref($@);
   die($@);
  }
 
@@ -314,7 +320,7 @@ sub new_profile
   my $c2=($po->can('is_compatible_with_transport'))? $po->is_compatible_with_transport($to) : 0;
   $compat=$c1 || $c2;
  }
- Net::DRI::Exception->die(0,'DRI',13,"Transport & Protocol not compatible") unless $compat;
+ Net::DRI::Exception->die(0,'DRI',13,'Transport & Protocol not compatible') unless $compat;
 
  $self->{profiles}->{$name}={ transport => $to, protocol => $po, status => undef };
  return Net::DRI::Protocol::ResultStatus->new_success('COMMAND_SUCCESSFUL',"Profile ${name} added successfully");

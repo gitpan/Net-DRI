@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Host commands (RFC3732)
 ##
-## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -13,7 +13,7 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::Protocol::EPP::Core::Host;
 
@@ -23,11 +23,10 @@ use Net::DRI::Util;
 use Net::DRI::Exception;
 use Net::DRI::Data::Hosts;
 use Net::DRI::Protocol::EPP;
-use Net::DRI::Protocol::EPP::Core::Status;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -57,7 +56,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -69,8 +68,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
-
-##########################################################
+####################################################################################################
 
 sub register_commands
 {
@@ -135,7 +133,7 @@ sub check_parse
    my $n=$c->localname() || $c->nodeName();
    if ($n eq 'name')
    {
-    $host=$c->getFirstChild()->getData();
+    $host=lc($c->getFirstChild()->getData());
     $rinfo->{host}->{$host}->{action}='check';
     $rinfo->{host}->{$host}->{exist}=1-Net::DRI::Util::xml_parse_boolean($c->getAttribute('avail'));
    }
@@ -174,7 +172,7 @@ sub info_parse
 
   if ($name eq 'name')
   {
-   $oname=$c->getFirstChild()->getData();
+   $oname=lc($c->getFirstChild()->getData());
    $rinfo->{host}->{$oname}->{action}='info';
    $rinfo->{host}->{$oname}->{exist}=1;
   } elsif ($name=~m/^(clID|crID|upID)$/)
@@ -193,13 +191,14 @@ sub info_parse
   {
    my $ip=$c->getFirstChild()->getData();
    my $ipv=$c->getAttribute('ip');
+   $ipv='v4' unless (defined($ipv) && $ipv);
    push @ip4,$ip if ($ipv eq 'v4');
    push @ip6,$ip if ($ipv eq 'v6');
   }
   $c=$c->getNextSibling();
  }
 
- $rinfo->{host}->{$oname}->{status}=Net::DRI::Protocol::EPP::Core::Status->new(\@s);
+ $rinfo->{host}->{$oname}->{status}=$po->create_local_object('status')->add(@s);
  $rinfo->{host}->{$oname}->{self}=Net::DRI::Data::Hosts->new($oname,\@ip4,\@ip6);
 }
 
@@ -231,7 +230,7 @@ sub create_parse
  
   if ($name eq 'name')
   {
-   $oname=$c->getFirstChild()->getData();
+   $oname=lc($c->getFirstChild()->getData());
    $rinfo->{host}->{$oname}->{action}='create';
    $rinfo->{host}->{$oname}->{exist}=1;
   } elsif ($name=~m/^(crDate)$/)
@@ -324,7 +323,7 @@ sub pandata_parse
 
   if ($name eq 'name')
   {
-   $oname=$c->getFirstChild()->getData();
+   $oname=lc($c->getFirstChild()->getData());
    $rinfo->{host}->{$oname}->{action}='create_review';
    $rinfo->{host}->{$oname}->{result}=Net::DRI::Util::xml_parse_boolean($c->getAttribute('paResult'));
    $rinfo->{host}->{$oname}->{exist}=$rinfo->{host}->{$oname}->{result};

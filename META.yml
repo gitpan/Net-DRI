@@ -1,7 +1,7 @@
 # http://module-build.sourceforge.net/META-spec.html
 #XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
 name:         Net-DRI
-version:      0.70
+version:      0.80
 version_from: lib/Net/DRI.pm
 installdirs:  site
 requires:
@@ -9,7 +9,7 @@ requires:
     Class::Accessor::Chained:      0
     DateTime:                      0
     DateTime::Duration:            0
-    DateTime::Format::ISO8601:     0
+    DateTime::Format::ISO8601:     0.06
     DateTime::Format::Strptime:    0
     DateTime::TimeZone:            0
     Email::Valid:                  0

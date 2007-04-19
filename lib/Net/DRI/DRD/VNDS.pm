@@ -24,7 +24,7 @@ use Net::DRI::DRD::ICANN;
 use DateTime::Duration;
 use DateTime;
 
-our $VERSION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -84,12 +84,16 @@ sub transport_protocol_compatible
 
  return 1 if (($pn eq 'RRP') && ($tn eq 'socket_inet'));
  return 1 if (($pn eq 'EPP') && ($tn eq 'socket_inet'));
+ return 1 if (($pn eq 'Whois') && ($tn eq 'socket_inet'));
  return;
 }
 
 sub transport_protocol_default
 {
- return ('Net::DRI::Transport::Socket','Net::DRI::Protocol::EPP::Extensions::VeriSign');
+ my ($drd,$ndr,$type)=@_;
+ $type='' if (!defined($type) || ref($type));
+ return ('Net::DRI::Transport::Socket','Net::DRI::Protocol::EPP::Extensions::VeriSign') unless ($type);
+ return ('Net::DRI::Transport::Socket',[{defer=>1,close_after=>1,socktype=>'tcp',remote_host=>'whois.verisign-grs.com',remote_port=>43,protocol_connection=>'Net::DRI::Protocol::Whois::Connection',protocol_version=>1}],'Net::DRI::Protocol::Whois',[]) if (lc($type) eq 'whois');
 }
 
 ####################################################################################################

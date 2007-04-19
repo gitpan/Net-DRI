@@ -38,7 +38,7 @@ my ($dh,@c);
 
 ## Domain commands
 $R2=$E1.'<response>'.r().'<resData><domain:creData xmlns:domain="urn:ietf:params:xml:ns:domain-1.0"><domain:name>th1domain1test.coop</domain:name><domain:crDate>2004-12-06T11:32:39.0Z</domain:crDate><domain:exDate>2006-12-06T11:32:39.0Z</domain:exDate></domain:creData></resData><extension><coop:stateChange xmlns:coop="http://www.nic.coop/contactCoopExt-1.0"><coop:id>th1contact1Test</coop:id><coop:state code="verified">verified</coop:state></coop:stateChange></extension>'.$TRID.'</response>'.$E2;
-my $cs=$dri->local_object('contactset')->new();
+my $cs=$dri->local_object('contactset');
 my $c1=$dri->local_object('contact')->srid('jd1234')->org('Whatever');
 my $c2=$dri->local_object('contact')->srid('sh8013');
 $cs->set($c1,'registrant');

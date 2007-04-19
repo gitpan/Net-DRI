@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Stores ordered list of contacts + type (registrant, admin, tech, bill, etc...)
 ##
-## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -20,7 +20,7 @@ package Net::DRI::Data::ContactSet;
 
 use strict;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -52,11 +52,15 @@ returns 1 if the given type as first argument has some contacts in this object, 
 
 with the first argument being a contact, and the second (optional) a type, adds the contact
 to the list of contacts for this type or all types (if no second argument). If the contact already exists
-(same id()), it will be replaced when found
+(same id()), it will be replaced when found. Returns the object itself.
 
 =head2 del() 
 
 the opposite of add()
+
+=head2 rem()
+
+alias for del()
 
 =head2 clear() 
 
@@ -65,7 +69,7 @@ removes all contact currently associated to all types
 =head2 set() 
 
 with an array ref as first argument, and a type (optional) as second, set the current list
-of the given type (or all types) to be the list of contacts in first argument
+of the given type (or all types) to be the list of contacts in first argument. Returns the object itself.
 
 =head2 get() 
 
@@ -89,7 +93,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -109,6 +113,7 @@ sub new
 
  my $self={ c => {} };
  bless($self,$class);
+ return $self;
 }
 
 sub types
@@ -160,6 +165,7 @@ sub add
    push @{$c->{$k}},$cobj;
   }
  }
+ return $self;
 }
 
 sub del
@@ -176,7 +182,10 @@ sub del
   next unless defined($p);
   splice(@{$c->{$k}},$p,1);
  }
+ return $self;
 }
+
+sub rem { return shift->del(@_); }
 
 sub clear
 {
@@ -195,6 +204,7 @@ sub set
   next if (defined($ctype) && ($k ne $ctype));
   $c->{$k}=(ref($robj) eq 'ARRAY')? $robj : [$robj];
  }
+ return $self;
 }
 
 sub get

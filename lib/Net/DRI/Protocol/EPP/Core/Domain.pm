@@ -13,7 +13,7 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::Protocol::EPP::Core::Domain;
 
@@ -24,11 +24,10 @@ use Net::DRI::Exception;
 use Net::DRI::Data::Hosts;
 use Net::DRI::Data::ContactSet;
 use Net::DRI::Protocol::EPP;
-use Net::DRI::Protocol::EPP::Core::Status;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -70,8 +69,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
-
-##########################################################
+####################################################################################################
 
 sub register_commands
 {
@@ -171,7 +169,7 @@ sub check_parse
    my $n=$c->localname() || $c->nodeName();
    if ($n eq 'name')
    {
-    $domain=$c->getFirstChild()->getData();
+    $domain=lc($c->getFirstChild()->getData());
     $rinfo->{domain}->{$domain}->{action}='check';
     $rinfo->{domain}->{$domain}->{exist}=1-Net::DRI::Util::xml_parse_boolean($c->getAttribute('avail'));
    }
@@ -208,13 +206,11 @@ sub info_parse
  my ($po,$otype,$oaction,$oname,$rinfo)=@_;
  my $mes=$po->message();
  return unless $mes->is_success();
-
  my $infdata=$mes->get_content('infData',$mes->ns('domain'));
  return unless $infdata;
-
  my (@s,@host);
  my $cs=Net::DRI::Data::ContactSet->new();
- my $cf=$po->factories->{contact};
+ my $cf=$po->factories()->{contact};
  my $c=$infdata->getFirstChild();
  while ($c)
  {
@@ -222,7 +218,7 @@ sub info_parse
   next unless $name;
   if ($name eq 'name')
   {
-   $oname=$c->getFirstChild()->getData();
+   $oname=lc($c->getFirstChild()->getData());
    $rinfo->{domain}->{$oname}->{action}='info';
    $rinfo->{domain}->{$oname}->{exist}=1;
   } elsif ($name eq 'roid')
@@ -258,7 +254,7 @@ sub info_parse
  }
 
  $rinfo->{domain}->{$oname}->{contact}=$cs;
- $rinfo->{domain}->{$oname}->{status}=Net::DRI::Protocol::EPP::Core::Status->new(\@s);
+ $rinfo->{domain}->{$oname}->{status}=$po->create_local_object('status')->add(@s);
  $rinfo->{domain}->{$oname}->{host}=Net::DRI::Data::Hosts->new_set(@host) if @host;
 }
 
@@ -332,7 +328,7 @@ sub transfer_parse
 
   if ($name eq 'name')
   {
-   $oname=$c->getFirstChild()->getData();
+   $oname=lc($c->getFirstChild()->getData());
    $rinfo->{domain}->{$oname}->{action}='transfer';
    $rinfo->{domain}->{$oname}->{exist}=1;
   } elsif ($name=~m/^(trStatus|reID|acID)$/)
@@ -451,7 +447,7 @@ sub create_parse
 
   if ($name eq 'name')
   {
-   $oname=$c->getFirstChild()->getData();
+   $oname=lc($c->getFirstChild()->getData());
    $rinfo->{domain}->{$oname}->{action}='create';
    $rinfo->{domain}->{$oname}->{exist}=1;
   } elsif ($name=~m/^(crDate|exDate)$/)
@@ -506,7 +502,7 @@ sub renew_parse
 
   if ($name eq 'name')
   {
-   $oname=$c->getFirstChild()->getData();
+   $oname=lc($c->getFirstChild()->getData());
    $rinfo->{domain}->{$oname}->{action}='renew';
    $rinfo->{domain}->{$oname}->{exist}=1;
   } elsif ($name=~m/^(exDate)$/)
@@ -578,12 +574,12 @@ sub update
  my $cdel=$todo->del('contact');
  my (@add,@del);
 
- push @add,build_ns($epp,$nsadd,$domain)     if $nsadd && !$nsadd->is_empty();
- push @add,build_contact_noregistrant($cadd) if $cadd;
- push @add,$sadd->build_xml('domain:status') if $sadd;
- push @del,build_ns($epp,$nsdel,$domain)     if $nsdel && !$nsdel->is_empty();
- push @del,build_contact_noregistrant($cdel) if $cdel;
- push @del,$sdel->build_xml('domain:status') if $sdel;
+ push @add,build_ns($epp,$nsadd,$domain)            if $nsadd && !$nsadd->is_empty();
+ push @add,build_contact_noregistrant($cadd)        if $cadd;
+ push @add,$sadd->build_xml('domain:status','core') if $sadd;
+ push @del,build_ns($epp,$nsdel,$domain)            if $nsdel && !$nsdel->is_empty();
+ push @del,build_contact_noregistrant($cdel)        if $cdel;
+ push @del,$sdel->build_xml('domain:status','core') if $sdel;
 
  push @d,['domain:add',@add] if @add;
  push @d,['domain:rem',@del] if @del;
@@ -627,7 +623,7 @@ sub pandata_parse
 
   if ($name eq 'name')
   {
-   $oname=$c->getFirstChild()->getData();
+   $oname=lc($c->getFirstChild()->getData());
    $rinfo->{domain}->{$oname}->{action}='create_review';
    $rinfo->{domain}->{$oname}->{result}=Net::DRI::Util::xml_parse_boolean($c->getAttribute('paResult'));
    $rinfo->{domain}->{$oname}->{exist}=$rinfo->{domain}->{$oname}->{result};

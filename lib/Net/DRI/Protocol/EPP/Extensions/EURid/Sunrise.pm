@@ -28,7 +28,7 @@ use Net::DRI::Protocol::EPP::Core::Domain;
 use Net::DRI::Protocol::EPP::Extensions::EURid::Domain;
 use Net::DRI::DRD::EURid;
 
-our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -111,7 +111,7 @@ sub info_parse
  return unless $infdata;
 
  my $cs=Net::DRI::Data::ContactSet->new();
- my $cf=$po->factories->{contact};
+ my $cf=$po->factories()->{contact};
 
  my $c=$infdata->firstChild();
  while ($c)

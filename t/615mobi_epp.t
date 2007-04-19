@@ -41,7 +41,7 @@ my ($rc,$s,$d,$dh,@c,$co);
 ## Domains
 
 $R2='';
-my $cs=$dri->local_object('contactset')->new();
+my $cs=$dri->local_object('contactset');
 my $c1=$dri->local_object('contact')->srid('jd1234');
 my $c2=$dri->local_object('contact')->srid('sh8013');
 $cs->set($c1,'registrant');
@@ -53,7 +53,7 @@ is_string($R1,$E1.'<command><create><domain:create xmlns:domain="urn:ietf:params
 
 
 $R2='';
-$toc=$dri->local_object('changes')->new();
+$toc=$dri->local_object('changes');
 $toc->add('ns',$dri->local_object('hosts')->set('ns2.example.com'));
 $cs=$dri->local_object('contactset');
 $cs->set($dri->local_object('contact')->srid('mak21'),'tech');

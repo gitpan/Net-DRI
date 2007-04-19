@@ -7,7 +7,7 @@ All
 	* Module::Build instead of ExtUtils::MakeMaker for better META.yml ?
 
 Net::DRI
-	* IDN support
+	* IDN support (in a cross registry fashion)
 	* way to use it without exceptions (wrap in eval + carp ?)
 	* let the user choose a trid factory (ex: UUID/UGID)
 
@@ -23,3 +23,9 @@ Net::DRI::DRD
 Net::DRI::Protocol::EPP::Message
 	* handle case of multiple <result> block
 	* better parse for value/extValue blocks ?
+
+Net::DRI::DRD::AFNIC
+	* implement all(?) webservices
+
+Net::DRI::DRD::LU
+	* implement startTLS extension ?

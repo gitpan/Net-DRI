@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Connection handling
 ##
-## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -21,7 +21,7 @@ use strict;
 use Net::DRI::Data::Raw;
 use Net::DRI::Protocol::ResultStatus;
 
-our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -51,7 +51,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -69,7 +69,7 @@ See the LICENSE file that comes with this distribution for more details.
 sub login
 {
  shift if ($_[0] eq __PACKAGE__);
- my ($cm,$id,$pass,$cltrid,$dr)=@_;
+ my ($cm,$id,$pass,$cltrid,$dr,$newpass)=@_;
 
  my $got=$cm->();
  $got->parse($dr);
@@ -80,6 +80,7 @@ sub login
  my @d;
  push @d,['clID',$id];
  push @d,['pw',$pass];
+ push @d,['newPW',$newpass] if (defined($newpass) && $newpass);
  push @d,['options',['version',$rg->{version}->[0]],['lang','en']];
 
  my @s;

@@ -28,9 +28,9 @@ use Net::DRI::Exception;
 use Net::DRI::Util;
 
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
-__PACKAGE__->mk_accessors(qw(version errcode errmsg errlang command command_body cltrid svtrid msg_id node_resdata node_extension result_greeting result_extra_info));
+__PACKAGE__->mk_accessors(qw(version errcode errmsg errlang command command_body cltrid svtrid msg_id node_resdata node_extension node_msg result_greeting result_extra_info));
 
-our $VERSION=do { my @r=(q$Revision: 1.16 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.17 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -111,7 +111,6 @@ sub is_success { return (shift->errcode()=~m/^1/)? 1 : 0; } ## 1XXX is for succe
 sub result_status
 {
  my $self=shift;
- my $code=$self->errcode();
  my $rs=Net::DRI::Protocol::ResultStatus->new('epp',$self->errcode(),undef,$self->is_success(),$self->errmsg(),$self->errlang(),$self->result_extra_info());
  $rs->_set_trid([ $self->cltrid(),$self->svtrid() ]);
  return $rs;
@@ -166,21 +165,21 @@ sub as_string
   my $body=$self->command_body();
   if (defined($ocmd) && $ocmd)
   {
-   push @d,"<${cmd}${attr}>";
-   push @d,"<${ocmd} ${ons}>";
+   push @d,'<'.$cmd.$attr.'>';
+   push @d,'<'.$ocmd.' '.$ons.'>';
    push @d,_toxml($body);
-   push @d,"</${ocmd}>";
-   push @d,"</${cmd}>";
+   push @d,'</'.$ocmd.'>';
+   push @d,'</'.$cmd.'>';
   } else
   {
    if (defined($body) && $body)
    {
-    push @d,"<${cmd}${attr}>";
+    push @d,'<'.$cmd.$attr.'>';
     push @d,_toxml($body);
-    push @d,"</${cmd}>";
+    push @d,'</'.$cmd.'>';
    } else
    {
-    push @d,"<${cmd}${attr}/>";
+    push @d,'<'.$cmd.$attr.'/>';
    }
   }
  }
@@ -195,9 +194,9 @@ sub as_string
    my ($ecmd,$ens,$rdata)=@$e;
    if ($ecmd && $ens)
    {
-    push @d,"<${ecmd} ${ens}>";
+    push @d,'<'.$ecmd.' '.$ens.'>';
     push @d,ref($rdata)? _toxml($rdata) : xml_escape($rdata);
-    push @d,"</${ecmd}>";
+    push @d,'</'.$ecmd.'>';
    } else
    {
     push @d,xml_escape(@$rdata);
@@ -208,7 +207,7 @@ sub as_string
 
  ## OPTIONAL clTRID
  my $cltrid=$self->cltrid();
- push @d,"<clTRID>${cltrid}</clTRID>" if (defined($cltrid) && $cltrid && Net::DRI::Util::xml_is_token($cltrid,3,64) && !$nocommand);
+ push @d,'<clTRID>'.$cltrid.'</clTRID>' if (defined($cltrid) && $cltrid && Net::DRI::Util::xml_is_token($cltrid,3,64) && !$nocommand);
  push @d,'</command>' unless $nocommand;
  push @d,'</epp>';
 
@@ -329,8 +328,15 @@ sub parse
    $self->msg_id($id);
    $d{qdate}=DateTime::Format::ISO8601->new()->parse_datetime(($msgq->getElementsByTagNameNS($NS,'qDate'))[0]->firstChild()->getData());
    my $msgc=($msgq->getElementsByTagNameNS($NS,'msg'))[0];
-   $d{content}=$msgc->firstChild()->getData();
    $d{lang}=$msgc->getAttribute('lang') || 'en';
+
+   if (grep { $_->nodeType() == 1 } $msgc->childNodes())
+   {
+    $self->node_msg($msgc);
+   } else
+   {
+    $d{content}=$msgc->firstChild()->getData();
+   }
    $rinfo->{message}->{$id}=\%d;
   }
  }

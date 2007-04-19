@@ -1,6 +1,6 @@
 ## Domain Registry Interface, RRP Connection handling
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -22,7 +22,7 @@ use Net::DRI::Protocol::RRP::Message;
 use Net::DRI::Protocol::ResultStatus;
 use Net::DRI::Data::Raw;
 
-our $VERSION=do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.14 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -52,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2007 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -71,8 +71,10 @@ See the LICENSE file that comes with this distribution for more details.
 sub login
 {
  shift if ($_[0] eq __PACKAGE__);
- my ($id,$pass,$cltrid,$dr)=@_;
- my $mes=Net::DRI::Protocol::RRP::Message->new({ command => 'session', options => { Id => $id, Password => $pass}});
+ my ($id,$pass,$cltrid,$dr,$newpass)=@_;
+ my %h=(Id => $id, Password => $pass);
+ $h{NewPassword}=$newpass if (defined($newpass) && $newpass);
+ my $mes=Net::DRI::Protocol::RRP::Message->new({ command => 'session', options => \%h});
  return $mes->as_string();
 }
 

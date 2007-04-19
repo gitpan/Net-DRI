@@ -23,7 +23,7 @@ use DateTime;
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.23 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.24 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -891,8 +891,8 @@ sub contact_info
  ## See comments in domain_info
  if (defined($exist=$ndr->get_info('exist','contact',$contact->srid())) && $exist && defined($ndr->get_info('self','contact',$contact->srid())))
  {
-  $ndr->set_info_from_cache('domain',$contact->srid());
-  $rc=get_info('result_status');
+  $ndr->set_info_from_cache('contact',$contact->srid());
+  $rc=$ndr->get_info('result_status');
  } else
  {
   $rc=$ndr->process('contact','info',[$contact,$ep]);

@@ -22,7 +22,7 @@ use base qw/Net::DRI::DRD/;
 
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -93,12 +93,18 @@ sub transport_protocol_compatible
  my $tn=$to->name();
 
  return 1 if (($pn eq 'EPP') && ($tn eq 'socket_inet'));
+ return 1 if (($pn eq 'DAS') && ($tn eq 'socket_inet'));
+ return 1 if (($pn eq 'Whois') && ($tn eq 'socket_inet'));
  return;
 }
 
 sub transport_protocol_default
 {
- return ('Net::DRI::Transport::Socket','Net::DRI::Protocol::EPP::Extensions::EURid');
+ my ($drd,$ndr,$type)=@_;
+ $type='' if (!defined($type) || ref($type));
+ return ('Net::DRI::Transport::Socket','Net::DRI::Protocol::EPP::Extensions::EURid') unless ($type);
+ return ('Net::DRI::Transport::Socket',[{defer=>1,close_after=>1,socktype=>'tcp',remote_host=>'das.eu',remote_port=>4343,protocol_connection=>'Net::DRI::Protocol::DAS::Connection',protocol_version=>1}],'Net::DRI::Protocol::DAS',[]) if (lc($type) eq 'das');
+ return ('Net::DRI::Transport::Socket',[{defer=>1,close_after=>1,socktype=>'tcp',remote_host=>'whois.eu',remote_port=>43,protocol_connection=>'Net::DRI::Protocol::Whois::Connection',protocol_version=>1}],'Net::DRI::Protocol::Whois',[]) if (lc($type) eq 'whois');
 }
 
 ######################################################################################

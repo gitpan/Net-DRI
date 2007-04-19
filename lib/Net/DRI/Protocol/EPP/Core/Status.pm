@@ -13,7 +13,7 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::Protocol::EPP::Core::Status;
 
@@ -23,7 +23,7 @@ use strict;
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -65,7 +65,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
-#######################################################################################
+####################################################################################################
 
 sub new
 {
@@ -99,11 +99,13 @@ sub new
 
 sub build_xml
 {
- my ($self,$name)=@_;
+ my ($self,$name,$range)=@_;
+ $range='core' unless defined($range);
  my @d;
  my $rd=$self->status_details();
  while(my ($k,$v)=each(%$rd))
  {
+  next if (($range eq 'core') xor ($k=~m/^client(?:Hold|(?:Delete|Renew|Update|Transfer)Prohibited)$/));
   if ($v && ref($v) && keys(%$v))
   {
    my %tmp=(s => $k);

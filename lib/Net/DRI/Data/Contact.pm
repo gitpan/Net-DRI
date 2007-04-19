@@ -28,7 +28,7 @@ use Net::DRI::Util;
 use Email::Valid;
 use Encode ();
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -164,7 +164,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
-################################################################################################################
+####################################################################################################
 ## Needed for ContactSet
 sub id { return shift->srid(@_); }
 
@@ -254,6 +254,14 @@ sub validate ## See RFC3733,§4
 
  Net::DRI::Exception::usererr_invalid_parameters('Invalid contact information: '.join('/',@errs)) if @errs;
  return 1; ## everything ok.
+}
+
+sub as_string
+{
+ my ($self,$sep)=@_;
+ $sep='|' unless (defined($sep) && $sep);
+ my $st=$self->street();
+ return join($sep,$self->name(),$self->org(),(defined($st))? @$st : '',$self->city(),$self->sp(),$self->pc(),$self->cc(),$self->voice(),$self->fax(),$self->email());
 }
 
 ####################################################################################################

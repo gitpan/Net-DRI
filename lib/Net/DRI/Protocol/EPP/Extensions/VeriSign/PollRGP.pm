@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP RGP Poll (EPP-RGP-Poll-Mapping.pdf)
 ##
-## Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -20,10 +20,9 @@ package Net::DRI::Protocol::EPP::Extensions::VeriSign::PollRGP;
 use strict;
 
 use Net::DRI::Protocol::EPP;
-use Net::DRI::Protocol::EPP::Core::Status;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -53,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -64,7 +63,6 @@ the Free Software Foundation; either version 2 of the License, or
 See the LICENSE file that comes with this distribution for more details.
 
 =cut
-
 
 ####################################################################################################
 
@@ -98,10 +96,10 @@ sub parse
 
   if ($name eq 'name')
   {
-   $oname=$c->getFirstChild()->getData();
+   $oname=lc($c->getFirstChild()->getData());
   } elsif ($name eq 'rgpStatus')
   {
-   $w{status}=Net::DRI::Protocol::EPP::Core::Status->new([Net::DRI::Protocol::EPP::parse_status($c)]);
+   $w{status}=$po->create_local_object('status')->add(Net::DRI::Protocol::EPP::parse_status($c));
   } elsif ($name=~m/^(reqDate|reportDueDate)$/)
   {
    $w{Net::DRI::Util::remcam($name)}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
