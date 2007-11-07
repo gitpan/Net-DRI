@@ -1,7 +1,7 @@
 ## Domain Registry Interface, EPP NSgroup extension commands
 ## (based on .BE Registration_guidelines_v4_7_1)
 ##
-## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -14,7 +14,7 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::Protocol::EPP::Extensions::NSgroup;
 
@@ -24,7 +24,7 @@ use Net::DRI::Util;
 use Net::DRI::Exception;
 use Net::DRI::Data::Hosts;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -54,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -66,8 +66,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
-
-##########################################################
+####################################################################################################
 
 sub register_commands
 {
@@ -140,8 +139,7 @@ sub add_nsname
  return map { ['nsgroup:ns',$_] } @a;
 }
 
-
-##################################################################################################
+####################################################################################################
 ########### Query commands
 
 sub check
@@ -168,6 +166,7 @@ sub check_parse
   my $nsgroup;
   while($c)
   {
+   next unless ($c->nodeType() == 1); ## only for element nodes
    my $n=$c->localname() || $c->nodeName();
    if ($n eq 'name')
    {
@@ -175,8 +174,7 @@ sub check_parse
     $rinfo->{nsgroup}->{$nsgroup}->{exist}=1-Net::DRI::Util::xml_parse_boolean($c->getAttribute('avail'));
     $rinfo->{nsgroup}->{$nsgroup}->{action}='check';
    }
-   $c=$c->getNextSibling();
-  }
+  } continue { $c=$c->getNextSibling(); }
  }
 }
 
@@ -202,6 +200,7 @@ sub info_parse
  my $c=$infdata->getFirstChild();
  while ($c)
  {
+  next unless ($c->nodeType() == 1); ## only for element nodes
   my $name=$c->localname() || $c->nodeName();
   next unless $name;
   if ($name eq 'name')
@@ -214,8 +213,7 @@ sub info_parse
   {
    $ns->add($c->getFirstChild()->getData());
   }
-  $c=$c->getNextSibling();
- }
+ } continue { $c=$c->getNextSibling(); }
 
  $rinfo->{nsgroup}->{$oname}->{self}=$ns;
 }

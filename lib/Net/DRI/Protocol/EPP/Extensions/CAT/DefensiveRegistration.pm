@@ -24,13 +24,13 @@ use Net::DRI::Exception;
 use Net::DRI::Protocol::EPP::Core::Domain;
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Protocol::EPP::Extensions::CAT::DefensiveRegistration - EPP .CAT Defensive Registration extension commands for Net::DRI
+Net::DRI::Protocol::EPP::Extensions::CAT::DefensiveRegistration - .CAT EPP Defensive Registration extension commands for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -223,6 +223,7 @@ sub check_parse
   my $id;
   while($c)
   {
+   next unless ($c->nodeType() == 1); ## only for element nodes
    my $n=$c->localname() || $c->nodeName();
    next unless $n;
 
@@ -235,8 +236,7 @@ sub check_parse
    {
     $rinfo->{defreg}->{$id}->{exist_reason}=$c->getFirstChild()->getData();
    }
-   $c=$c->getNextSibling();
-  }
+  } continue { $c=$c->getNextSibling(); }
  }
 }
 
@@ -264,6 +264,7 @@ sub info_parse
  my $c=$infdata->getFirstChild();
  while ($c)
  {
+  next unless ($c->nodeType() == 1); ## only for element nodes
   my $name=$c->localname() || $c->nodeName();
   next unless $name;
 
@@ -303,6 +304,7 @@ sub info_parse
    my $cc=$c->getFirstChild();
    while($cc)
    {
+    next unless ($cc->nodeType() == 1); ## only for element nodes
     my $name2=$cc->localname() || $cc->nodeName();
     next unless $name2;
     if ($name2 eq 'name')
@@ -318,12 +320,9 @@ sub info_parse
     {
      $t{number}=$cc->getFirstChild()->getData();
     }
-    $cc=$cc->getNextSibling();
-   }
+   } continue { $cc=$cc->getNextSibling(); }
   }
-
-  $c=$c->getNextSibling();
- }
+ } continue { $c=$c->getNextSibling(); }
 
  $rinfo->{defreg}->{$oname}->{action}='info';
  $rinfo->{defreg}->{$oname}->{exist}=1;

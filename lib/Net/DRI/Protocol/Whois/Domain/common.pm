@@ -26,13 +26,13 @@ use Net::DRI::Protocol::EPP::Core::Status;
 
 use DateTime::Format::Strptime;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Protocol::Whois::Domain::common - Whois common parse for Net::DRI
+Net::DRI::Protocol::Whois::Domain::common - Whois commands (RFC3912) for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -75,7 +75,9 @@ sub epp_parse_registrars
  my ($domain,$rr,$rinfo)=@_;
  my %t=('Sponsoring Registrar' => 'cl',
         'Created By'           => 'cr',
+	'Created by Registrar' => 'cr',
         'Updated By'           => 'up',
+	'Last Updated by Registrar' => 'up',
        );
 
  while(my ($whois,$epp)=each(%t))
@@ -115,13 +117,13 @@ sub epp_parse_dates
 sub epp_parse_status
 {
  my ($domain,$rr,$rinfo)=@_;
- my @s=map { s/OK/ok/; $_; } @{$rr->{'Domain Status'}};
+ my @s=map { my $s=$_; $s=~s/OK/ok/; $s; } @{$rr->{'Domain Status'}};
  if (@s)
  {
   $rinfo->{domain}->{$domain}->{status}=Net::DRI::Protocol::EPP::Core::Status->new(\@s);
   return;
  }
- ## .ORG/.INFO variation
+ ## .ORG/.INFO/.MOBI variation
  @s=map { my $t=lc($_); $t=~s/ (.)/uc($1)/eg; $t; } @{$rr->{'Status'}};
  $rinfo->{domain}->{$domain}->{status}=Net::DRI::Protocol::EPP::Core::Status->new(\@s) if @s;
 }

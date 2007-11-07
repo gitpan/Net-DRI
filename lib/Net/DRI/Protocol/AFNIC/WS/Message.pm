@@ -24,7 +24,7 @@ use Net::DRI::Protocol::ResultStatus;
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version service method params result errcode));
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -85,7 +85,7 @@ sub new
  return $self;
 }
 
-sub as_string { return undef; }
+sub as_string { return; }
 
 sub parse
 {

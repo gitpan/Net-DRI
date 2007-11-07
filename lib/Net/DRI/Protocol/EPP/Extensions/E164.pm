@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP E.164 Number Mapping (RFC4114)
 ##
-## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -13,7 +13,7 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::Protocol::EPP::Extensions::E164;
 
@@ -22,7 +22,7 @@ use strict;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 our $NS='urn:ietf:params:xml:ns:e164epp-1.0';
 
 =pod
@@ -53,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -65,7 +65,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
-###################################################################################################
+####################################################################################################
 
 sub register_commands
 {
@@ -84,7 +84,7 @@ sub capabilities_add
  return { 'domain_update' => { 'e164' => [ 'add','del'] }};
 }
 
-###################################################################################################
+####################################################################################################
 
 sub format_naptr
 {
@@ -119,8 +119,7 @@ sub format_naptr
  return @c;
 }
 
-##################################################################################################
-
+####################################################################################################
 ########### Query commands
 
 sub info_parse
@@ -139,14 +138,14 @@ sub info_parse
   my %n;
   while ($c)
   {
+   next unless ($c->nodeType() == 1); ## only for element nodes
    my $name=$c->localname() || $c->nodeName();
    next unless $name;
    if ($name=~m/^(order|pref|flags|svc|regex|replacement)$/)
    {
     $n{$1}=$c->getFirstChild()->getData();
    }
-   $c=$c->getNextSibling();
-  }
+  } continue { $c=$c->getNextSibling(); }
   push @naptr,\%n;
  }
 
@@ -193,5 +192,5 @@ sub update
  $mes->command_extension($eid,\@n);
 }
 
-#########################################################################################################
+####################################################################################################
 1;

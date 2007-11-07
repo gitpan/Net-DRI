@@ -1,6 +1,6 @@
 ## Domain Registry Interface, RRP Message
 ##
-## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -27,7 +27,7 @@ use Net::DRI::Protocol::ResultStatus;
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version errcode errmsg command));
 
-our $VERSION=do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.14 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -57,7 +57,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -152,7 +152,7 @@ sub as_string
 sub parse
 {
  my ($self,$dc)=@_; ## DataRaw
- my @todo=map { s/\r*\n*\r*$//; $_; } grep { defined() && ! /^\s+$/ } $dc->as_array();
+ my @todo=map { my $s=$_; $s=~s/\r*\n*\r*$//; $s; } grep { defined() && ! /^\s+$/ } $dc->as_array();
  Net::DRI::Exception->die(0,'protocol/RRP',1,"Unsuccessfull parse (last line not '.')") unless (pop(@todo) eq '.');
 
  my $t=shift(@todo);

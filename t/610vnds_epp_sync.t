@@ -34,7 +34,7 @@ $dri->target('VNDS')->new_current_profile('p1','Net::DRI::Transport::Dummy',[{f_
 my $toc=$dri->local_object('changes');
 $toc->set('sync','05-31');
 my $rc=$dri->domain_update('example2.com',$toc);
-is($R1,$E1.'<command><update><domain:update xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example2.com</domain:name><domain:chg/></domain:update></update><extension><sync:update xmlns:sync="http://www.verisign.com/epp/sync-1.0" xsi:schemaLocation="http://www.verisign.com/epp/sync-1.0 sync-1.0.xsd"><sync:expMonthDay>--05-31</sync:expMonthDay></sync:update></extension><clTRID>ABC-12345</clTRID></command>'.$E2,'domain_update build');
+is($R1,$E1.'<command><update><domain:update xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example2.com</domain:name></domain:update></update><extension><sync:update xmlns:sync="http://www.verisign.com/epp/sync-1.0" xsi:schemaLocation="http://www.verisign.com/epp/sync-1.0 sync-1.0.xsd"><sync:expMonthDay>--05-31</sync:expMonthDay></sync:update></extension><clTRID>ABC-12345</clTRID></command>'.$E2,'domain_update build');
 
 exit 0;
 

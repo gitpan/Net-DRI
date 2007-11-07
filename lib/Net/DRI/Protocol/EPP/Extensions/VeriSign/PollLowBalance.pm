@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Low Balance (EPP-LowBalance-Mapping.pdf)
 ##
-## Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -21,7 +21,7 @@ use strict;
 
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -51,7 +51,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -62,7 +62,6 @@ the Free Software Foundation; either version 2 of the License, or
 See the LICENSE file that comes with this distribution for more details.
 
 =cut
-
 
 ####################################################################################################
 
@@ -91,6 +90,7 @@ sub parse
  my $c=$infdata->getFirstChild();
  while ($c)
  {
+  next unless ($c->nodeType() == 1); ## only for element nodes
   my $name=$c->localname() || $c->nodeName();
   next unless $name;
 
@@ -102,8 +102,7 @@ sub parse
    $w{Net::DRI::Util::remcam($name)}=$c->getFirstChild()->getData();
    $w{'credit_threshold_type'}=$c->getAttribute('type');
   }
-  $c=$c->getNextSibling();
- }
+ } continue { $c=$c->getNextSibling(); }
 
  $rinfo->{session}->{lowbalance}=\%w;
 }

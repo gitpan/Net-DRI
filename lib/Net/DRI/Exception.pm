@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Encapsulatng errors (fatal or not) as exceptions in an OO way
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -21,7 +21,7 @@ use strict;
 
 use Carp;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -45,7 +45,7 @@ Net::DRI::Exception - Class to store all exceptions inside Net::DRI
 
  $s->msg(); ## gives back the message (fourth argument of new/die)
 
- $s->as_string(); ## gives back a nicely formatted complete backtrace
+ $s->as_string(); ## gives back a nicely formatted full backtrace
 
 =head1 SUPPORT
 
@@ -65,7 +65,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2007 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -77,7 +77,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
-####################################################################
+####################################################################################################
 
 sub new
 {
@@ -119,11 +119,12 @@ sub backtrace
   ($f,$l)=(shift(@bt2)=~m/ at (\S+) line (\d+)\s*$/);
  }
  my @b;
- push @b,"EXCEPTION ".$self->code().'@'.$self->area()." from line $l of file $f:";
+ push @b,sprintf('EXCEPTION %d@%s from line %d of file %s:',$self->code(),$self->area(),$l,$f);
  push @b,$self->msg();
  return (@b,@bt2);
 }
 
+## Do not parse result of this call. If needed use accessors above (is_error(), area(), code(), msg())
 sub as_string
 {
  my $self=shift;
@@ -135,16 +136,16 @@ sub print
  print shift->as_string();
 }
 
-########################################################################
+####################################################################################################
 
-sub err_method_not_implemented  { Net::DRI::Exception->die(1,'internal',1,"Method not implemented".($_[0]? ': '.$_[0] : '')); }
-sub err_insufficient_parameters { Net::DRI::Exception->die(1,'internal',2,"Insufficient parameters".($_[0]? ': '.$_[0] : '')); }
-sub err_invalid_parameters      { Net::DRI::Exception->die(1,'internal',3,"Invalid parameters".($_[0]? ': '.$_[0] : '')); }
+sub err_method_not_implemented  { Net::DRI::Exception->die(1,'internal',1,'Method not implemented'.($_[0]? ': '.$_[0] : '')); }
+sub err_insufficient_parameters { Net::DRI::Exception->die(1,'internal',2,'Insufficient parameters'.($_[0]? ': '.$_[0] : '')); }
+sub err_invalid_parameters      { Net::DRI::Exception->die(1,'internal',3,'Invalid parameters'.($_[0]? ': '.$_[0] : '')); }
 
-sub usererr_insufficient_parameters { Net::DRI::Exception->die(0,'internal',2,"Insufficient parameters".($_[0]? ': '.$_[0] : '')); }
-sub usererr_invalid_parameters      { Net::DRI::Exception->die(0,'internal',3,"Invalid parameters".($_[0]? ': '.$_[0] : '')); }
+sub usererr_insufficient_parameters { Net::DRI::Exception->die(0,'internal',2,'Insufficient parameters'.($_[0]? ': '.$_[0] : '')); }
+sub usererr_invalid_parameters      { Net::DRI::Exception->die(0,'internal',3,'Invalid parameters'.($_[0]? ': '.$_[0] : '')); }
 
 sub err_assert { Net::DRI::Exception->die(1,'internal',4,'Assert failed'.($_[0]? ': '.$_[0] : '')); }
 
-####################################################################
+####################################################################################################
 1;

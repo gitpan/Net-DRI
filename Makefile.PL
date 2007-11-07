@@ -8,6 +8,7 @@ WriteMakefile(
     VERSION_FROM        => 'lib/Net/DRI.pm',
     ABSTRACT            => 'Interface to Domain Name Registries/Registrars/Resellers',
     PL_FILES            => {},
+    LICENSE             => 'gpl',
     PREREQ_PM => {
         'Test::More' => 0,
         'DateTime' => 0,

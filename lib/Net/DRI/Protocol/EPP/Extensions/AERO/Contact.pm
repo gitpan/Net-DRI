@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .AERO Contact EPP extension commands
 ##
-## Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -22,7 +22,7 @@ use strict;
 use Net::DRI::Util;
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -52,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -94,6 +94,7 @@ sub info_parse
  my %ens;
  while($c)
  {
+  next unless ($c->nodeType() == 1); ## only for element nodes
   my $name=$c->localname() || $c->nodeName();
   next unless $name;
 
@@ -102,8 +103,7 @@ sub info_parse
    $ens{Net::DRI::Util::remcam($tag)}=$c->getFirstChild()->getData();
   }
 
-  $c=$c->getNextSibling();
- }
+ } continue { $c=$c->getNextSibling(); }
 
  $ens{last_checked_date}=DateTime::Format::ISO8601->new()->parse_datetime($ens{last_checked_date}) if exists($ens{last_checked_date});
 

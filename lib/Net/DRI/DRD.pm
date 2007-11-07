@@ -23,7 +23,7 @@ use DateTime;
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.24 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.25 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -90,9 +90,9 @@ sub info
 sub is_my_tld
 {
  my ($self,$domain)=@_;
- my ($tld)=($domain=~m/\.([^\.]+)$/);
- my @tlds=grep { uc($_) eq uc($tld) } $self->tlds();
- return (@tlds)? 1 : 0;
+ my $tlds=join('|',map { quotemeta($_) } sort { length($b) <=> length($a) } $self->tlds());
+ my $r=qr/\.(?:$tlds)$/i;
+ return ($domain=~$r);
 }
 
 ## Methods to be defined in subclasses:
@@ -581,7 +581,7 @@ sub domain_can
 {
  my ($self,$ndr,$domain,$what,$rd)=@_;
 
- my $sok=$self->domain_status_allow($ndr,$domain,$what,$rd);
+ my $sok=$self->domain_status_allows($ndr,$domain,$what,$rd);
  return 0 unless ($sok);
 
  my $ismine=$self->domain_is_mine($ndr,$domain,$rd);

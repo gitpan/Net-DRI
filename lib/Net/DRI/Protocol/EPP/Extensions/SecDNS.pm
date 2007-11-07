@@ -22,7 +22,7 @@ use strict;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 our $NS='urn:ietf:params:xml:ns:secDNS-1.0';
 
 =pod
@@ -127,7 +127,6 @@ sub format_secdns
 }
 
 ####################################################################################################
-
 ########### Query commands
 
 sub info_parse
@@ -146,6 +145,7 @@ sub info_parse
   my %n;
   while ($c)
   {
+   next unless ($c->nodeType() == 1); ## only for element nodes
    my $name=$c->localname() || $c->nodeName();
    next unless $name;
    if ($name=~m/^(keyTag|alg|digestType|digest|maxSigLife)$/)
@@ -156,17 +156,16 @@ sub info_parse
     my $cc=$c->getFirstChild();
     while ($cc)
     {
+     next unless ($cc->nodeType() == 1); ## only for element nodes
      my $name2=$cc->localname() || $cc->nodeName();
      next unless $name2;
      if ($name2=~m/^(flags|protocol|alg|pubKey)$/)
      {
-      $n{"key_$1"}=$cc->getFirstChild()->getData();    
+      $n{'key_'.$1}=$cc->getFirstChild()->getData();    
      }
-     $cc=$cc->getNextSibling();
-    }
+    } continue { $cc=$cc->getNextSibling(); }
    }
-   $c=$c->getNextSibling();
-  }
+  } continue { $c=$c->getNextSibling(); }
   push @ds,\%n;
  }
 

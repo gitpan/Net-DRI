@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Sync aka ConsoliDate (draft-hollenbeck-epp-sync-01)
 ##
-## Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -23,7 +23,7 @@ use Net::DRI::Util;
 use Net::DRI::Exception;
 use Net::DRI::Protocol::EPP::Core::Domain;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -53,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -64,7 +64,6 @@ the Free Software Foundation; either version 2 of the License, or
 See the LICENSE file that comes with this distribution for more details.
 
 =cut
-
 
 ####################################################################################################
 
@@ -103,21 +102,13 @@ sub update
  } else
  {
   Net::DRI::Exception::usererr_invalid_parameters('Sync date must be of type XML Schema gMonthDay') unless ($sync=~m/^(?:--)?(\d{2}-\d{2})$/);
-  $date="--$1";
+  $date='--'.$1;
  }
 
  Net::DRI::Exception::usererr_invalid_parameters('Sync operation can not be mixed with other domain changes') if (grep { $_ ne 'sync' } $todo->types());
 
  my $eid=$mes->command_extension_register('sync:update','xmlns:sync="http://www.verisign.com/epp/sync-1.0" xsi:schemaLocation="http://www.verisign.com/epp/sync-1.0 sync-1.0.xsd"');
  $mes->command_extension($eid,['sync:expMonthDay',$date]);
-
- ## This part is not clear
- ## The draft (march 2005), says one empty domaine:add/rem/chg must be there
- ## But EPP core RFC are being updated, to say these nodes are not necessary for extensions
- ## http://www.cafax.se/ietf-provreg/maillist/2005-09/msg00007.html (september 2005)
- my @d=Net::DRI::Protocol::EPP::Core::Domain::build_command($mes,'update',$domain);
- push @d,['domain:chg'];
- $mes->command_body(\@d);
 }
 
 ####################################################################################################

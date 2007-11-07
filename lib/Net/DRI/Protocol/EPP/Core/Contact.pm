@@ -1,4 +1,4 @@
-## Domain Registry Interface, EPP Contact commands (RFC3733)
+## Domain Registry Interface, EPP Contact commands (RFC4933)
 ##
 ## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
@@ -25,13 +25,13 @@ use Net::DRI::Protocol::EPP;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Protocol::EPP::Core::Contact - EPP Contact commands (RFC3733) for Net::DRI
+Net::DRI::Protocol::EPP::Core::Contact - EPP Contact commands (RFC4933 obsoleting RFC3733) for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -67,8 +67,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
-
-##########################################################
+####################################################################################################
 
 sub register_commands
 {
@@ -121,7 +120,7 @@ sub build_command
  return @d;
 }
 
-##################################################################################################
+####################################################################################################
 ########### Query commands
 
 sub check
@@ -146,6 +145,7 @@ sub check_parse
   my $contact;
   while($c)
   {
+   next unless ($c->nodeType() == 1); ## only for element nodes
    my $n=$c->localname() || $c->nodeName();
    if ($n eq 'id')
    {
@@ -157,8 +157,7 @@ sub check_parse
    {
     $rinfo->{contact}->{$contact}->{exist_reason}=$c->getFirstChild()->getData();
    }
-   $c=$c->getNextSibling();
-  }
+  } continue { $c=$c->getNextSibling(); }
  }
 }
 
@@ -185,6 +184,7 @@ sub info_parse
  my $c=$infdata->getFirstChild();
  while ($c)
  {
+  next unless ($c->nodeType() == 1);
   my $name=$c->localname() || $c->nodeName();
   next unless $name;
   if ($name eq 'id')
@@ -226,8 +226,7 @@ sub info_parse
   {
    $contact->disclose(parse_disclose($c));
   }
-  $c=$c->getNextSibling();
- }
+ } continue { $c=$c->getNextSibling(); }
 
  $contact->name(@{$cd{name}});
  $contact->org(@{$cd{org}});
@@ -265,6 +264,7 @@ sub parse_postalinfo
  my $n=$c->getFirstChild();
  while($n)
  {
+  next unless ($n->nodeType() == 1);
   my $name=$n->localname() || $n->nodeName();
   next unless $name;
   if ($name eq 'name')
@@ -279,6 +279,7 @@ sub parse_postalinfo
    my @street;
    while($nn)
    {
+    next unless ($nn->nodeType() == 1);
     my $name2=$nn->localname() || $nn->nodeName();
     next unless $name2;
     if ($name2 eq 'street')
@@ -297,15 +298,13 @@ sub parse_postalinfo
     {
      $rcd->{cc}->[$ti]=get_data($nn);
     }
-    $nn=$nn->getNextSibling();
-   }
+   } continue { $nn=$nn->getNextSibling(); }
    $rcd->{street}->[$ti]=\@street;
   }
-  $n=$n->getNextSibling();
- }
+ } continue { $n=$n->getNextSibling(); }
 }
 
-sub parse_disclose ## RFC 3733 §2.9
+sub parse_disclose ## RFC 4933 §2.9
 {
  my $c=shift;
  my $flag=Net::DRI::Util::xml_parse_boolean($c->getAttribute('flag'));
@@ -313,6 +312,7 @@ sub parse_disclose ## RFC 3733 §2.9
  my $n=$c->getFirstChild();
  while($n)
  {
+  next unless ($n->nodeType() == 1);
   my $name=$n->localname() || $n->nodeName();
   next unless $name;
   if ($name=~m/^(name|org|addr)$/)
@@ -323,8 +323,7 @@ sub parse_disclose ## RFC 3733 §2.9
   {
    $tmp{$1}=$flag;
   }
-  $n=$n->getNextSibling();
- }
+ } continue { $n=$n->getNextSibling(); }
  return \%tmp;
 }
 
@@ -348,6 +347,7 @@ sub transfer_parse
  my $c=$trndata->getFirstChild();
  while ($c)
  {
+  next unless ($c->nodeType() == 1); ## only for element nodes
   my $name=$c->localname() || $c->nodeName();
   next unless $name;
 
@@ -364,8 +364,7 @@ sub transfer_parse
   {
    $rinfo->{contact}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
   }
-  $c=$c->getNextSibling();
- }
+ } continue { $c=$c->getNextSibling(); }
 }
 
 ############ Transform commands
@@ -428,8 +427,17 @@ sub build_cdata
  _do_locint(\@addrl,\@addri,$contact,'cc');
  push @postl,['contact:addr',@addrl] if @addrl;
  push @posti,['contact:addr',@addri] if @addri;
- push @d,['contact:postalInfo',@postl,{type=>'loc'}] if @postl;
- push @d,['contact:postalInfo',@posti,{type=>'int'}] if @posti;
+
+ my $if=$contact->_intfirst();
+ if (defined($if) && $if)
+ {
+  push @d,['contact:postalInfo',@postl,{type=>'int'}] if @postl;
+  push @d,['contact:postalInfo',@posti,{type=>'loc'}] if @posti;
+ } else
+ {
+  push @d,['contact:postalInfo',@postl,{type=>'loc'}] if @postl;
+  push @d,['contact:postalInfo',@posti,{type=>'int'}] if @posti;
+ }
 
 
  push @d,build_tel('contact:voice',$contact->voice()) if defined($contact->voice());
@@ -438,22 +446,21 @@ sub build_cdata
  push @d,build_authinfo($contact);
  push @d,build_disclose($contact);
  return @d;
+}
 
-
- sub _do_locint
+sub _do_locint
+{
+ my ($rl,$ri,$contact,$what)=@_;
+ my @tmp=$contact->$what();
+ return unless @tmp;
+ if ($what eq 'street')
  {
-  my ($rl,$ri,$contact,$what)=@_;
-  my @tmp=$contact->$what();
-  return unless @tmp;
-  if ($what eq 'street')
-  {
-   if (defined($tmp[0])) { foreach (@{$tmp[0]}) { push @$rl,['contact:street',$_]; } };
-   if (defined($tmp[1])) { foreach (@{$tmp[1]}) { push @$ri,['contact:street',$_]; } };
-  } else
-  {
-   if (defined($tmp[0])) { push @$rl,['contact:'.$what,$tmp[0]]; }
-   if (defined($tmp[1])) { push @$ri,['contact:'.$what,$tmp[1]]; }
-  }
+  if (defined($tmp[0])) { foreach (@{$tmp[0]}) { push @$rl,['contact:street',$_]; } };
+  if (defined($tmp[1])) { foreach (@{$tmp[1]}) { push @$ri,['contact:street',$_]; } };
+ } else
+ {
+  if (defined($tmp[0])) { push @$rl,['contact:'.$what,$tmp[0]]; }
+  if (defined($tmp[1])) { push @$ri,['contact:'.$what,$tmp[1]]; }
  }
 }
 
@@ -481,6 +488,7 @@ sub create_parse
  my $c=$credata->getFirstChild();
  while ($c)
  {
+  next unless ($c->nodeType() == 1); ## only for element nodes
   my $name=$c->localname() || $c->nodeName();
   if ($name eq 'id')
   {
@@ -494,8 +502,7 @@ sub create_parse
   {
    $rinfo->{contact}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
   }
-  $c=$c->getNextSibling();
- }
+ } continue { $c=$c->getNextSibling(); }
 }
 
 sub delete
@@ -562,7 +569,7 @@ sub update
 }
 
 ####################################################################################################
-## RFC3733 §3.2.6  Offline Review of Requested Actions
+## RFC4933 §3.3 Offline Review of Requested Actions
 
 sub pandata_parse
 {
@@ -576,6 +583,7 @@ sub pandata_parse
  my $c=$pandata->firstChild();
  while ($c)
  {
+  next unless ($c->nodeType() == 1); ## only for element nodes
   my $name=$c->localname() || $c->nodeName();
   next unless $name;
 
@@ -594,8 +602,7 @@ sub pandata_parse
   {
    $rinfo->{contact}->{$oname}->{date}=DateTime::Format::ISO8601->new()->parse_datetime($c->firstChild->getData());
   }
-  $c=$c->getNextSibling();
- }
+ } continue { $c=$c->getNextSibling(); }
 }
 
 ####################################################################################################

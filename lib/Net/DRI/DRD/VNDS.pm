@@ -24,7 +24,7 @@ use Net::DRI::DRD::ICANN;
 use DateTime::Duration;
 use DateTime;
 
-our $VERSION=do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.14 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -72,7 +72,7 @@ See the LICENSE file that comes with this distribution for more details.
 sub root_servers { return wantarray()? map { $_.'.GTLD-SERVERS.NET' } ('a'..'m') : 'GTLD-SERVERS.NET'; } ## TO FIX: return a Hosts object ?
 sub periods      { return map { DateTime::Duration->new(years => $_) } (1..10); }
 sub name         { return 'VNDS'; }
-sub tlds         { return ('com','net'); } ## If this changes, VeriSign/NameStore will need to be updated also
+sub tlds         { return ('com','net','cc','tv'); } ## If this changes, VeriSign/NameStore will need to be updated also
 sub object_types { return ('domain','ns'); }
 
 sub transport_protocol_compatible 

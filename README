@@ -4,7 +4,7 @@ Net::DRI
 A Perl library to access Domain Name Registries/Registrars
 Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>
 with help and bugfix from various individuals
-(see Changes file)
+(see Changes file and our website)
 
 DRI stands for Domain Registry Interface and aims to be,
 for domain name registries/registrars/resellers
@@ -33,27 +33,30 @@ in production by various organizations with success.
 
 Currently Net::DRI ships with
 - a full RRP implementation (RFC 2832 & 3632)
-- a full EPP implementation (RFC 3730/3731/3732/3733/3734/3735), including poll messages
+- a full EPP implementation (RFC 4930/4931/4932/4933/4934 obsoleting RFC 3730/3731/3732/3733/3734,
+                             and RFC 3735), including poll messages
 - many EPP extensions:
   * GracePeriod (RFC 3915)
   * E164 for ENUM (RFC 4114)
   * SecDNS for DNSSEC (RFC 4310)
   * Infrastructure ENUM in Austria
   * NSgroup (used by .BE and .EU)
+  * CentralNic extensions: Release, TTL, WebForwarding
   * Domain/Contact/Host extensions needed for extra services in various TLD:
-    .EU .COM .NET .MOBI .AERO .CAT .US .PL .SE .BE .AT .COOP
+    .EU .COM .NET .MOBI .AERO .CAT .US .PL .SE .BE .AT .COOP .LU .ASIA
 - a full DAS (Domain Availability Service) implementation for .BE & .EU
-- a full Whois implementation (RFC3912) for thin and thick registries :
-     support included for domain names in .COM .NET .ORG .BIZ .INFO .AERO .EU
+- a full Whois implementation (RFC 3912) for thin and thick registries :
+     support included for domain names in .COM .NET .ORG .BIZ .INFO .AERO 
+     .EU .MOBI .NAME
 - a TCP/TLS transport
 - a SOAP transport (HTTP/HTTPS)
 - a Web scraping ``transport''
 - an SMTP transport
 - a Net::DRI::DRD::EURid covering EURid for .EU (with EPP & EPP extensions)
 - a Net::DRI::DRD::VNDS covering Verisign Naming & Directory Services for
-  .COM & .NET (with RRP or EPP)
+  .COM & .NET (with RRP or EPP), and also .CC and .TV
 - Net::DRI::DRD::* modules for : .WS .SE .PL .US .CAT .BE .MOBI .INFO .ORG .AT
-                                 .LU .BIZ
+                                 .LU .BIZ .NAME .NU
 - a Net::DRI::DRD::AFNIC covering AFNIC registry for .FR
      (only domain_check through web services and all operations by email)
 - a Net::DRI::DRD::Gandi covering Gandi registrar for .COM/.NET/.ORG/.BIZ/
@@ -68,6 +71,9 @@ the opportunity to be able to test Net::DRI against your system. Please
 drop a note to the authors of Net::DRI and do not hesitate to provide
 this framework to your clients (see license file).
 
+If you are already using Net::DRI or planning to do so, please let us 
+know also. Do not hesitate to let others know and if you want make a link
+back to our website at <http://www.dotandco.com/services/software/Net-DRI/index.en>
 
 Perl modules needed
 -------------------

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .CAT Domain EPP extension commands
 ##
-## Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -23,7 +23,7 @@ use Email::Valid;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -53,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -254,6 +254,7 @@ sub info_parse
  my $c=$infdata->getFirstChild();
  while($c)
  {
+  next unless ($c->nodeType() == 1); ## only for element nodes
   my $name=$c->localname() || $c->nodeName();
   next unless $name;
 
@@ -272,6 +273,7 @@ sub info_parse
    my $cc=$c->getFirstChild();
    while($cc)
    {
+    next unless ($cc->nodeType() == 1); ## only for element nodes
     my $name2=$cc->localname() || $cc->nodeName();
     next unless $name2;
     if ($name2 eq 'auth')
@@ -290,13 +292,10 @@ sub info_parse
     {
      $ens{intended_use}=$cc->getFirstChild()->getData();
     }
-    $cc=$cc->getNextSibling();
-   }
+   } continue { $cc=$cc->getNextSibling(); }
    $rinfo->{domain}->{$oname}->{ens}=\%ens;
   }
-
-  $c=$c->getNextSibling();
- }
+ } continue { $c=$c->getNextSibling(); }
 }
 
 ####################################################################################################

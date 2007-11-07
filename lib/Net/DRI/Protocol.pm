@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Protocol superclass
 ##
-## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -25,7 +25,7 @@ __PACKAGE__->mk_accessors(qw(name version factories commands message capabilitie
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.15 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.16 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -55,7 +55,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -105,7 +105,7 @@ sub _load
  {
   next if exists($done{$class});
   ## eval needed to make sure the variable is taken into account correctly;
-  eval "require $class";
+  eval 'require '.$class; ## no critic (ProhibitStringyEval)
   Net::DRI::Exception->die(1,$etype,6,"Failed to load Perl module ${class}") if $@;
   Net::DRI::Exception::err_method_not_implemented("register_commands() in $class") unless $class->can('register_commands');
   my $rh=$class->register_commands($version);

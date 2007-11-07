@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Dummy transport for tests & debug
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -22,7 +22,7 @@ use strict;
 
 use Net::DRI::Data::Raw;
 
-our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -52,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2007 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -91,9 +91,8 @@ sub is_compatible_with_protocol { return 1; }
 
 sub send
 {
- my $self=shift;
- my $tosend=shift;
- $self->SUPER::send($tosend,$self->{f_send},\&handle_error);
+ my ($self,$trid,$tosend)=@_;
+ $self->SUPER::send($trid,$tosend,$self->{f_send},\&handle_error);
 }
 
 sub handle_error
@@ -113,9 +112,8 @@ sub _print
 
 sub receive
 {
- my $self=shift;
-
- return $self->SUPER::receive($self->{f_recv});
+ my ($self,$trid)=@_;
+ return $self->SUPER::receive($trid,$self->{f_recv});
 }
 
 sub _got_ok

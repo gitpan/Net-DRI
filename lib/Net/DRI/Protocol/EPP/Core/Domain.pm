@@ -1,4 +1,4 @@
-## Domain Registry Interface, EPP Domain commands (RFC3731)
+## Domain Registry Interface, EPP Domain commands (RFC4931)
 ##
 ## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
@@ -27,13 +27,13 @@ use Net::DRI::Protocol::EPP;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Protocol::EPP::Core::Domain - EPP Domain commands (RFC3731) for Net::DRI
+Net::DRI::Protocol::EPP::Core::Domain - EPP Domain commands (RFC4931 obsoleting RFC3731) for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -139,8 +139,7 @@ sub build_period
  return ['domain:period',$v,{'unit' => $u}];
 }
 
-##################################################################################################
-
+####################################################################################################
 ########### Query commands
 
 sub check
@@ -166,19 +165,18 @@ sub check_parse
   my $domain;
   while($c)
   {
+   next unless ($c->nodeType() == 1); ## only for element nodes
    my $n=$c->localname() || $c->nodeName();
    if ($n eq 'name')
    {
     $domain=lc($c->getFirstChild()->getData());
     $rinfo->{domain}->{$domain}->{action}='check';
     $rinfo->{domain}->{$domain}->{exist}=1-Net::DRI::Util::xml_parse_boolean($c->getAttribute('avail'));
-   }
-   if ($n eq 'reason')
+   } elsif ($n eq 'reason')
    {
     $rinfo->{domain}->{$domain}->{exist_reason}=$c->getFirstChild()->getData();
    }
-   $c=$c->getNextSibling();
-  }
+  } continue { $c=$c->getNextSibling(); }
  }
 }
 
@@ -214,6 +212,7 @@ sub info_parse
  my $c=$infdata->getFirstChild();
  while ($c)
  {
+  next unless ($c->nodeType() == 1); ## only for element nodes
   my $name=$c->localname() || $c->nodeName();
   next unless $name;
   if ($name eq 'name')
@@ -250,15 +249,14 @@ sub info_parse
    my $pw=($c->getElementsByTagNameNS($mes->ns('domain'),'pw'))[0]; ## will be empty on domain:info request for objects we do not own
    $rinfo->{domain}->{$oname}->{auth}={pw => ($pw->hasChildNodes())? $pw->getFirstChild()->getData() : undef };
   }
-  $c=$c->getNextSibling();
- }
+ } continue { $c=$c->getNextSibling(); }
 
  $rinfo->{domain}->{$oname}->{contact}=$cs;
  $rinfo->{domain}->{$oname}->{status}=$po->create_local_object('status')->add(@s);
  $rinfo->{domain}->{$oname}->{host}=Net::DRI::Data::Hosts->new_set(@host) if @host;
 }
 
-sub parse_ns ## RFC 3731 §1.1
+sub parse_ns ## RFC 4931 §1.1
 {
  my $node=shift;
  my $ns=Net::DRI::Data::Hosts->new();
@@ -266,6 +264,7 @@ sub parse_ns ## RFC 3731 §1.1
  my $n=$node->getFirstChild();
  while($n)
  {
+  next unless ($n->nodeType() == 1); ## only for element nodes
   my $name=$n->localname() || $n->nodeName();
   next unless $name;
   if ($name eq 'hostObj')
@@ -277,6 +276,7 @@ sub parse_ns ## RFC 3731 §1.1
    my $nn=$n->getFirstChild();
    while($nn)
    {
+    next unless ($nn->nodeType() == 1); ## only for element nodes
     my $name2=$nn->localname() || $nn->nodeName();
     next unless $name2;
     if ($name2 eq 'hostName')
@@ -293,12 +293,10 @@ sub parse_ns ## RFC 3731 §1.1
       push @ip4,$nn->getFirstChild()->getData();
      }
     }
-    $nn=$nn->getNextSibling();
-   }
+   } continue { $nn=$nn->getNextSibling(); }
    $ns->add($hostname,\@ip4,\@ip6);
   }
-  $n=$n->getNextSibling();
- }
+ } continue { $n=$n->getNextSibling(); }
  return $ns;
 }
 
@@ -323,6 +321,7 @@ sub transfer_parse
  my $c=$trndata->getFirstChild();
  while ($c)
  {
+  next unless ($c->nodeType() == 1); ## only for element nodes
   my $name=$c->localname() || $c->nodeName();
   next unless $name;
 
@@ -338,8 +337,7 @@ sub transfer_parse
   {
    $rinfo->{domain}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
   }
-  $c=$c->getNextSibling();
- }
+ } continue { $c=$c->getNextSibling(); }
 }
 
 ############ Transform commands
@@ -391,9 +389,9 @@ sub build_contact_noregistrant
 {
  my $cs=shift;
  my @d;
- foreach my $t (sort($cs->types()))
+ # All nonstandard contacts go into the extension section
+ foreach my $t (sort(grep { $_ eq 'admin' || $_ eq 'tech' || $_ eq 'billing' } $cs->types()))
  {
-  next if ($t eq 'registrant');
   my @o=$cs->get($t);
   push @d,map { ['domain:contact',$_->srid(),{'type'=>$t}] } @o;
  }
@@ -442,6 +440,7 @@ sub create_parse
  my $c=$credata->getFirstChild();
  while ($c)
  {
+  next unless ($c->nodeType() == 1); ## only for element nodes
   my $name=$c->localname() || $c->nodeName();
   next unless $name;
 
@@ -454,8 +453,7 @@ sub create_parse
   {
    $rinfo->{domain}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
   }
-  $c=$c->getNextSibling();
- }
+ } continue { $c=$c->getNextSibling(); }
 }
 
 sub delete
@@ -497,6 +495,7 @@ sub renew_parse
  my $c=$rendata->getFirstChild();
  while ($c)
  {
+  next unless ($c->nodeType() == 1); ## only for element nodes
   my $name=$c->localname() || $c->nodeName();
   next unless $name;
 
@@ -509,8 +508,7 @@ sub renew_parse
   {
    $rinfo->{domain}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
   }
-  $c=$c->getNextSibling();
- }
+ } continue { $c=$c->getNextSibling(); }
 }
 
 sub transfer_request
@@ -590,21 +588,11 @@ sub update
  $chg=$todo->set('auth');
  push @chg,build_authinfo($chg) if ($chg && ref($chg));
  push @d,['domain:chg',@chg] if @chg;
-
- ## RFC3731 is ambigous
- ## The text says that domain:add domain:rem or domain:chg must be there,
- ## but the XML schema has minOccurs=0 for each of them
- ## The consensus on the mailing-list is that the XML schema is normative
- ## However some server might follow the text, in which case we will need the following lines
- ## which were removed for Net::DRI 0.16
-## my $hasext=(grep { ! /^(?:ns|status|contact|registrant|authinfo)$/ } $todo->types())? 1 : 0;
-## push @d,['domain:chg'] if ($hasext && !@chg);
- 
  $mes->command_body(\@d);
 }
 
 ####################################################################################################
-## RFC3731 §3.2.6  Offline Review of Requested Actions
+## RFC4931 §3.3  Offline Review of Requested Actions
 
 sub pandata_parse
 {
@@ -618,6 +606,7 @@ sub pandata_parse
  my $c=$pandata->firstChild();
  while ($c)
  {
+  next unless ($c->nodeType() == 1); ## only for element nodes
   my $name=$c->localname() || $c->nodeName();
   next unless $name;
 
@@ -636,8 +625,7 @@ sub pandata_parse
   {
    $rinfo->{domain}->{$oname}->{date}=DateTime::Format::ISO8601->new()->parse_datetime($c->firstChild->getData());
   }
-  $c=$c->getNextSibling();
- }
+ } continue { $c=$c->getNextSibling(); }
 }
 
 ####################################################################################################

@@ -1,7 +1,7 @@
 ## Domain Registry Interface, EURid Sunrise EPP extension for Net::DRI
 ## (from registration_guidelines_v1_0F-appendix2-sunrise.pdf )
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -14,7 +14,7 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::Protocol::EPP::Extensions::EURid::Sunrise;
 
@@ -28,7 +28,7 @@ use Net::DRI::Protocol::EPP::Core::Domain;
 use Net::DRI::Protocol::EPP::Extensions::EURid::Domain;
 use Net::DRI::DRD::EURid;
 
-our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -58,7 +58,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2007 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -70,7 +70,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
-###################################################################################################
+####################################################################################################
 
 sub register_commands
 {
@@ -116,6 +116,7 @@ sub info_parse
  my $c=$infdata->firstChild();
  while ($c)
  {
+  next unless ($c->nodeType() == 1); ## only for element nodes
   my $name=$c->nodeName();
   next unless $name;
 
@@ -141,9 +142,7 @@ sub info_parse
   {
    $rinfo->{domain}->{$oname}->{adr}=Net::DRI::Util::xml_parse_boolean($c->firstChild->getData());
   }
-
-  $c=$c->getNextSibling();
- }
+ } continue { $c=$c->getNextSibling(); }
 
  $rinfo->{domain}->{$oname}->{contact}=$cs;
 }
@@ -224,6 +223,7 @@ sub apply_parse
  my $c=$credata->firstChild();
  while ($c)
  {
+  next unless ($c->nodeType() == 1); ## only for element nodes
   my $name=$c->nodeName();
   next unless $name;
 
@@ -234,8 +234,7 @@ sub apply_parse
   {
    $rinfo->{domain}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->firstChild->getData());
   }
-  $c=$c->getNextSibling();
- }
+ } continue { $c=$c->getNextSibling(); }
 }
 
 ####################################################################################################

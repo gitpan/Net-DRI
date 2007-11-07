@@ -33,7 +33,7 @@ use Net::DRI::Data::Hosts;
 
 our $AUTOLOAD;
 
-our $VERSION=do { my @r=(q$Revision: 1.23 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.24 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -218,7 +218,7 @@ sub get_info
   my $p=$self->profile();
   err_no_current_profile() unless defined($p);
   my $regname=$self->name();
-  return $self->{cache}->get($type,$key,$what,"${regname}.${p}");
+  return $self->{cache}->get($type,$key,$what,$regname.'.'.$p);
  } else
  {
   return unless exists($self->{last_data}->{$what});
@@ -295,9 +295,9 @@ sub new_profile
  $transport='Net::DRI::Transport::'.$transport unless ($transport=~m/::/);
  $protocol ='Net::DRI::Protocol::'.$protocol   unless ($protocol=~m/::/);
 
- eval "require $transport";
+ eval 'require '.$transport; ## no critic (ProhibitStringyEval)
  Net::DRI::Exception->die(1,'DRI',8,"Failed to load Perl module $transport : ".(ref($@)? $@->as_string() : $@)) if $@;
- eval "require $protocol";
+ eval 'require '.$protocol; ## no critic (ProhibitStringyEval)
  Net::DRI::Exception->die(1,'DRI',8,"Failed to load Perl module $protocol : ".(ref($@)? $@->as_string() : $@)) if $@;
 
  my $drd=$self->{driver};
@@ -382,7 +382,7 @@ sub process
   my $tosend=$po->action($otype,$oaction,$trid,@$pa);
   $self->{ops}->{$trid}=[0,$tosend]; ## 0 = todo, not sent ## This will be done in/with LocalStorage
 
-  $to->send($tosend,@$ta); ## if synchronous, store results somewhere in dri, keyed by trid, store also $tosend + params passed that created $tosend (domain name, etc...)
+  $to->send($trid,$tosend,@$ta); ## if synchronous, store results somewhere in dri, keyed by trid, store also $tosend + params passed that created $tosend (domain name, etc...)
 
   $self->{ops}->{$trid}->[0]=1; ## now it is sent
  };
@@ -417,7 +417,7 @@ sub process_back
  eval
  {
   ## transport parameters ?
-  my $res=$to->receive(); ## a Net::DRI::Data::Raw or die inside
+  my $res=$to->receive($trid); ## a Net::DRI::Data::Raw or die inside
   ###  return $self->protocol()->new_from_reply($tosend,$gotback);
   ###  ## $tosend needed to propagate EPP version, for example
   ($rc,$ri,$oname)=$po->reaction($otype,$oaction,$res,$self->{ops}->{$trid}->[1]);

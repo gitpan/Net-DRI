@@ -13,7 +13,7 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::Transport;
 
@@ -25,7 +25,7 @@ __PACKAGE__->mk_accessors(qw/name version retry pause trace timeout defer curren
 use Net::DRI::Exception;
 use Time::HiRes;
 
-our $VERSION=do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.15 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -67,7 +67,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
-########################################################################################################
+####################################################################################################
 sub new
 {
  my $proto=shift;
@@ -81,12 +81,17 @@ sub new
 #           trace     => exists($opts{trace})?   $opts{trace}   : 0, ## NOT IMPL
            timeout   => exists($opts{timeout})? $opts{timeout} : 0,
            defer     => exists($opts{defer})?   $opts{defer}   : 0, ## defer opening connection as long as possible (irrelevant if stateless) ## XX maybe not here, too low
-           log_fh    => exists($opts{log_fh})? $opts{log_fh} : undef,
+           logging   => exists($opts{logging})? $opts{logging} : undef, ## object ref (with a logging method) or ref array of coderef and one opaque data
            current_state => undef, ## for stateless transport, otherwise 0=close, 1=open
            has_state     => undef, ## do we need to open a session before sending commands ?
            transport     => undef, ## will be defined in subclasses
            time_creation => time(),
           };
+
+ if (exists($opts{log_fh}) && defined($opts{log_fh})) ## convert to new api
+ {
+  $self->{logging}=[ \&xmldump_to_filehandle,$opts{log_fh} ];
+ }
 
  bless($self,$class);
  return $self;
@@ -94,7 +99,7 @@ sub new
 
 sub send
 {
- my ($self,$tosend,$cb1,$cb2)=@_; ## $cb1=how to send, $cb2=how to test if fatal (to break loop) or not (retry once more)
+ my ($self,$trid,$tosend,$cb1,$cb2)=@_; ## $cb1=how to send, $cb2=how to test if fatal (to break loop) or not (retry once more)
 
  Net::DRI::Exception::err_insufficient_parameters() unless ($cb1 && (ref($cb1) eq 'CODE'));
 
@@ -107,12 +112,12 @@ sub send
   sleep($self->pause()) if ($self->pause() && ($c > 1));
   eval
   {
-   local $SIG{ALRM}=sub { die "timeout" };
+   local $SIG{ALRM}=sub { die 'timeout' };
    alarm($timeout) if ($timeout);
 
    ## Try to reconnect if needed
    $self->open_connection() if ($self->has_state() && !$self->current_state());
-   $self->log('C=>S',$tosend);
+   $self->logging($trid,2,0,1,$tosend);
    $ok=$self->$cb1($c,$tosend);
    $self->time_used(time());
   }; ## end of try
@@ -122,7 +127,7 @@ sub send
   {
    die($@) if (ref($@) eq 'Net::DRI::Protocol::ResultStatus');
    my $is_timeout=(!ref($@) && ($@=~m/timeout/))? 1 : 0;
-   $@=Net::DRI::Exception->new(1,'internal',0,"Error not handled: $@") unless ref($@);
+   $@=Net::DRI::Exception->new(1,'internal',0,'Error not handled: '.$@) unless ref($@);
    die($@) unless ($cb2 && (ref($cb2) eq 'CODE'));
    $self->$cb2($@,$c,$is_timeout,$ok); ## will determine if 1) we break now the loop/we propagate the error (fatal error) 2) we retry
   }
@@ -138,7 +143,7 @@ sub send
 
 sub receive
 {
- my ($self,$cb1,$cb2)=@_;
+ my ($self,$trid,$cb1,$cb2)=@_;
  Net::DRI::Exception::err_insufficient_parameters() unless ($cb1 && (ref($cb1) eq 'CODE'));
  my $timeout=$self->timeout();
  my $prevalarm=alarm(0); ## removes current alarm
@@ -150,7 +155,7 @@ sub receive
   sleep($self->pause()) if ($self->pause() && ($c > 1));
   eval
   {
-   local $SIG{ALRM}=sub { die "timeout" };
+   local $SIG{ALRM}=sub { die 'timeout' };
    alarm($timeout) if ($timeout);
 
    $ans=$self->$cb1($c);
@@ -160,7 +165,7 @@ sub receive
   if ($@) ## some die happened inside the eval
   {
    my $is_timeout=(!ref($@) && ($@=~m/timeout/))? 1 : 0;
-   $@=Net::DRI::Exception->new(1,'internal',0,"Error not handled: $@") unless ref($@);
+   $@=Net::DRI::Exception->new(1,'internal',0,'Error not handled: '.$@) unless ref($@);
    die($@) unless ($cb2 && (ref($cb2) eq 'CODE'));
    $self->$cb2($@,$c,$is_timeout,defined($ans)); ## will determine if 1) we break now the loop/we propagate the error (fatal error) 2) we retry
   }
@@ -171,30 +176,55 @@ sub receive
  Net::DRI::Exception->die(0,'transport',5,'Unable to receive message from registry') unless defined($ans);
 
  alarm($prevalarm) if $prevalarm; ## re-enable previous alarm (warning, time is off !!)
- $self->log('C<=S',$ans);
+ $self->logging($trid,2,1,1,$ans);
  return $ans;
 }
 
-sub log
+sub dump_to_filehandle ## NOT a class method
 {
- my $self=shift;
- my $fh=$self->{log_fh};
- return unless defined($fh);
- my $tp=join(' ',map {UNIVERSAL::can($_,'as_string')? $_->as_string() : $_} @_);
- $tp=~s/^\s+//mg;
- $tp=~s/\s+$//mg;
- $tp=~s/\n/ /g;
- $tp=~s/> </></g;
+ my ($fh,$tname,$tversion,$trid,$step,$dir,$type,$data)=@_; ## $tname,$tversion,$step not used here
+ my $c=(ref($data) && UNIVERSAL::can($data,'as_string'))? $data->as_string() : $data;
  my ($t,$v)=Time::HiRes::gettimeofday();
  my @t=localtime($t);
- my $when=sprintf('%d-%02d-%02d %02d:%02d:%02d.%06d',1900+$t[5],1+$t[4],$t[3],$t[2],$t[1],$t[0],$v);
- $tp=$when.' '.$tp."\n";
+ my $tp=sprintf('%d-%02d-%02d %02d:%02d:%02d.%06d C%sS [%s] ',1900+$t[5],1+$t[4],$t[3],$t[2],$t[1],$t[0],$v,($dir==0)? '=>' : '<=',$trid || '').$c."\n";
  if (UNIVERSAL::can($fh,'print'))
  {
   $fh->print($tp);
  } else
  {
   print {$fh} $tp;
+ }
+}
+
+sub xmldump_to_filehandle ## NOT a class method
+{
+ my ($fh,$tname,$tversion,$trid,$step,$dir,$type,$data)=@_;
+ my $c=(ref($data) && UNIVERSAL::can($data,'as_string'))? $data->as_string() : $data; ## Handle other cases, based on $type
+ $c=~s/^\s+//mg;
+ $c=~s/\s+$//mg;
+ $c=~s/\n/ /g;
+ $c=~s/> </></g;
+ substr($c,0,4,'') if index($c,'<',0) > 0; ## remove TCP length if there
+ dump_to_filehandle($fh,$tname,$tversion,$trid,$step,$dir,$type,$c);
+}
+
+sub logging
+{
+ ## $self,(cl)TRID,Step (1=Init,2=Live,3=Closing),Direction(0=outgoing,1=incoming),Type of data given(1=Net::DRI::Data::Raw),Data to log
+ my ($self,$trid,$step,$dir,$type,$data)=@_;
+ my $tname=$self->name();
+ my $tversion=$self->version();
+ my $l=$self->{logging};
+ return unless defined($l) && ref($l);
+ if (ref($l) eq 'ARRAY')
+ {
+  my ($fn,$p)=@$l;
+  return unless (ref($fn) eq 'CODE');
+  $fn->($p,$tname,$tversion,$trid,$step,$dir,$type,$data);
+  return;
+ } elsif (UNIVERSAL::can($l,'logging'))
+ {
+  $l->logging($tname,$tversion,$trid,$step,$dir,$type,$data);
  }
 }
 

@@ -13,7 +13,7 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::Protocol::EPP::Message;
 
@@ -30,7 +30,7 @@ use Net::DRI::Util;
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version errcode errmsg errlang command command_body cltrid svtrid msg_id node_resdata node_extension node_msg result_greeting result_extra_info));
 
-our $VERSION=do { my @r=(q$Revision: 1.17 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.18 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -72,9 +72,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
-
-
-########################################
+####################################################################################################
 
 sub new
 {
@@ -212,7 +210,7 @@ sub as_string
  push @d,'</epp>';
 
  my $m=Encode::encode('utf8',join('',@d));
- my $l=pack('N',4+length($m)); ## RFC 3734 §4
+ my $l=pack('N',4+length($m)); ## RFC 4934 §4
  return (defined($to) && ($to eq 'tcp'))? $l.$m : $m;
 }
 
@@ -304,7 +302,7 @@ sub parse
  my $res=($root->getElementsByTagNameNS($NS,'response'))[0];
 
  ## result block(s)
- my @results=$res->getElementsByTagNameNS($NS,'result'); ## one element if success, multiple elements if failure RFC3730 §2.6
+ my @results=$res->getElementsByTagNameNS($NS,'result'); ## one element if success, multiple elements if failure RFC4930 §2.6
  foreach (@results)
  {
   my ($errc,$errm,$errl)=$self->parse_result($_);
@@ -317,10 +315,7 @@ sub parse
  if ($res->getElementsByTagNameNS($NS,'msgQ')) ## OPTIONAL
  {
   my $msgq=($res->getElementsByTagNameNS($NS,'msgQ'))[0];
-  my $id=$msgq->getAttribute('id');
-  ## id : id of message that has just been retrieved and dequeued
-  ## Warning: in previous versions of EPP, its value was the id of the *next* available message (but useless since in EPP you do not need the ID to retrieve a message)
-  ## see draft-hollenbeck-epp-rfc3730bis-04.txt Appendix C.
+  my $id=$msgq->getAttribute('id'); ## id of the message that has just been retrieved and dequeued (RFC4930) OR id of *next* available message (RFC3730)
   $rinfo->{message}->{info}={ count => $msgq->getAttribute('count'), id => $id };
   if ($msgq->hasChildNodes()) ## We will have childs only as a result of a poll request
   {
@@ -379,6 +374,7 @@ sub parse_result
  my $c=$node->getFirstChild();
  while ($c)
  {
+  next unless ($c->nodeType() == 1); ## only for element nodes
   my $name=$c->nodeName();
   next unless $name;
  
@@ -390,8 +386,7 @@ sub parse_result
    push @{$self->{result_extra_info}},$c->toString();
   }
 
-  $c=$c->getNextSibling();
- }
+ } continue { $c=$c->getNextSibling(); }
 
  return ($code,$msg,$lang);
 }
@@ -403,6 +398,7 @@ sub parse_greeting
  my $c=$g->getFirstChild();
  while($c)
  {
+  next unless ($c->nodeType() == 1); ## only for element nodes
   my $n=$c->getName();
   if ($n=~m/^(svID|svDate)$/)
   {
@@ -412,6 +408,7 @@ sub parse_greeting
    my $cc=$c->getFirstChild();
    while($cc)
    {
+    next unless ($cc->nodeType() == 1); ## only for element nodes
     my $nn=$cc->getName();
     if ($nn=~m/^(version|lang)$/)
     {
@@ -423,19 +420,17 @@ sub parse_greeting
     {
      push @{$tmp{svcext}},map { $_->getFirstChild->getData() } grep { $_->getName() eq 'extURI' } $cc->getChildNodes();
     }
-    $cc=$cc->getNextSibling();
-   }
+   } continue { $cc=$cc->getNextSibling(); }
   } elsif ($n eq 'dcp')
   {
    ## TODO : do something with that data
   }
-  $c=$c->getNextSibling();
- }
+ } continue { $c=$c->getNextSibling(); }
 
  return \%tmp;
 }
 
-########################################################################
+####################################################################################################
 
 sub get_name_from_message
 {
@@ -450,5 +445,5 @@ sub get_name_from_message
  return 'session'; ## TO FIX
 }
 
-########################################################################
+####################################################################################################
 1;

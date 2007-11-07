@@ -22,7 +22,7 @@ use strict;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -85,6 +85,8 @@ sub create
 {
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
+
+ return unless ($domain=~/^xn--/);
 
  Net::DRI::Exception::usererr_insufficient_parameters('Language tag must be provided') unless (defined($rd) && (ref($rd) eq 'HASH') && exists($rd->{language}));
 

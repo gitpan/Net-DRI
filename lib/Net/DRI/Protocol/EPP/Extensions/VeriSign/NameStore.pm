@@ -22,7 +22,7 @@ use strict;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 our $NS='http://www.verisign-grs.com/epp/namestoreExt-1.1';
 
 =pod
@@ -161,6 +161,7 @@ sub parse_error
  return unless $mes->errcode() == 2306;
 
  my $ext=$mes->node_extension();
+ return unless $ext;
  my $data=$ext->getElementsByTagNameNS($NS,'nsExtErrData');
  return unless $data;
  $data=$data->shift()->getElementsByTagNameNS($NS,'msg');

@@ -1,3 +1,26 @@
+0.81 2007-11-07
+= Updated all RFCs references related to EPP : RFCs 4930,4931,4932,4933,4934 are now obsoleting RFCs 3730,3731,3732,3733,3734
+  xsi:schemaLocation is not removed in messages created, but may be removed in future releases
+  we do not add an empty domain:chg any more for pure extension update commands
+= Conformity with Perl critic Best Practices (level 5)
++ Added support for .ASIA extensions (work submitted by Tonnerre Lombard)
++ Update for .EU : taking into account new version=2 for domain_info & domain_check (retrieving more data from registry)
+  Warning : this changes some registry reply codes, see registry documentation
++ Contact : new method _intfirst() (from suggestion by Rony Meyer)
++ Transport/Socket : new parameter protocol_data, see documentation (from idea by Rony Meyer)
++ DRD/VNDS : also handle .CC & .TV
++ DRD/NAME and DRD/NU : provided by Alexander Biehl 
++ 3 new EPP extensions for CentralNic : WebForwarding, TTL & Domain Release (see t/621centralnic_epp.t for examples of use)
++ Whois support for .MOBI .NAME (see example in eg/whois.pl) 
++ Transport : new way to do logging (send/receive methods receive an extra parameter at beginning, the trid)
+= DRD : is_my_tld() correctly handles registries with more than one TLD (from initial bugreport by Rony Meyer)
+= Data/Hosts : new method clear() (patch by Tonnerre Lombard)
+= Protocol/EPP/Extensions/VeriSign/NameStore : extension not always provided by registry (bugfix from Rony Meyer)
+= Protocol/EPP/Extensions/VeriSign/IDNLanguage DRD/ICANN : allow use of xn-- domain names (from suggestion by Rony Meyer)
+  [ This may change in the future, depending on how Net::DRI implements IDN ]
+- DRD : bugfix in domain_can (bugfix from Tonnerre Lombard)
+- Protocol/EPP/* (various parses) : better handling of XML nodes/elements (from initial bugreport by Tonnerre Lombard for .LU)
+
 0.80 2007-04-19
 + DAS support for .EU & .BE : quick lookup of domain availability ; see eg/eurid_das.pl for an example (same interface as domain_check)
 + Whois support (RFC3912) for thick registries (full) and thin registries (only registry part) ; see eg/whois.pl for an example (same interface as domain_info) ;

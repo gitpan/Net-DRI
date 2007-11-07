@@ -24,7 +24,7 @@ use Net::DRI::Util;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -118,6 +118,7 @@ sub info_parse
  my $c=$c[0]->getFirstChild();
  while($c)
  {
+  next unless ($c->nodeType() == 1); ## only for element nodes
   my $name=$c->localname() || $c->nodeName();
   next unless $name;
 
@@ -135,8 +136,7 @@ sub info_parse
    $rinfo->{domain}->{$oname}->{$name}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
   }
 
-  $c=$c->getNextSibling();
- }
+ } continue { $c=$c->getNextSibling(); }
 }
 
 sub verify_contacts
@@ -279,6 +279,7 @@ sub parse_transfer_trade_restore
  my $c=$c[0]->getFirstChild();
  while($c)
  {
+  next unless ($c->nodeType() == 1); ## only for element nodes
   my $name=$c->localname() || $c->nodeName();
   next unless $name;
 
@@ -292,8 +293,7 @@ sub parse_transfer_trade_restore
   {
    $rinfo->{domain}->{$oname}->{$name}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
   }
-  $c=$c->getNextSibling();
- }
+ } continue { $c=$c->getNextSibling(); }
 }
 
 sub trade_request

@@ -4,7 +4,7 @@ use Net::DRI;
 use Net::DRI::Data::Raw;
 use DateTime::Duration;
 
-use Test::More tests => 157;
+use Test::More tests => 207;
 
 eval { use Test::LongString max => 100; $Test::LongString::Context=50; };
 *{'main::is_string'}=\&main::is if $@;
@@ -414,7 +414,7 @@ is($dri->get_info('exist','domain','mything.eu'),0,'domain_check_multi get_info(
 ## p.78
 $R2=$E1.'<response>'.r().'<resData><domain:infData><domain:name>ecom.eu</domain:name><domain:roid>19204-EURID</domain:roid><domain:status s="ok"/><domain:registrant>mvw14</domain:registrant><domain:contact type="billing">jj1</domain:contact><domain:contact type="tech">mmai1</domain:contact><domain:ns><domain:hostAttr><domain:hostName>ns.anything.eu</domain:hostName></domain:hostAttr><domain:hostAttr><domain:hostName>ns.everything.eu</domain:hostName></domain:hostAttr><domain:hostAttr><domain:hostName>ns.unknown.eu</domain:hostName></domain:hostAttr></domain:ns><domain:clID>t000006</domain:clID><domain:crID>t000006</domain:crID><domain:crDate>2005-09-29T14:45:35.000Z</domain:crDate><domain:upID>t000006</domain:upID><domain:upDate>2005-09-29T14:45:35.000Z</domain:upDate><domain:exDate>2006-09-29T15:45:35.0Z</domain:exDate></domain:infData></resData><extension><eurid:ext><eurid:infData><eurid:domain><eurid:nsgroup>nsgroup-eurid2</eurid:nsgroup></eurid:domain></eurid:infData></eurid:ext></extension>'.$TRID.'</response>'.$E2;
 $rc=$dri->domain_info('ecom.eu');
-is($R1,'<?xml version="1.0" encoding="UTF-8" standalone="no"?><epp xmlns="http://www.eurid.eu/xml/epp/epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.eurid.eu/xml/epp/epp-1.0 epp-1.0.xsd"><command><info><domain:info xmlns:domain="http://www.eurid.eu/xml/epp/domain-1.0" xsi:schemaLocation="http://www.eurid.eu/xml/epp/domain-1.0 domain-1.0.xsd"><domain:name hosts="all">ecom.eu</domain:name></domain:info></info><clTRID>TRID-0001</clTRID></command></epp>','domain_info build');
+is_string($R1,'<?xml version="1.0" encoding="UTF-8" standalone="no"?><epp xmlns="http://www.eurid.eu/xml/epp/epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.eurid.eu/xml/epp/epp-1.0 epp-1.0.xsd"><command><info><domain:info xmlns:domain="http://www.eurid.eu/xml/epp/domain-1.0" xsi:schemaLocation="http://www.eurid.eu/xml/epp/domain-1.0 domain-1.0.xsd"><domain:name hosts="all">ecom.eu</domain:name></domain:info></info><extension><eurid:ext xmlns:eurid="http://www.eurid.eu/xml/epp/eurid-1.0" xsi:schemaLocation="http://www.eurid.eu/xml/epp/eurid-1.0 eurid-1.0.xsd"><eurid:info><eurid:domain version="2.0"/></eurid:info></eurid:ext></extension><clTRID>TRID-0001</clTRID></command></epp>','domain_info build');
 is($rc->is_success(),1,'domain_info is_success');
 is($dri->get_info('exist'),1,'domain_info get_info(exist)');
 is($dri->get_info('roid'),'19204-EURID','domain_info get_info(roid)');
@@ -426,8 +426,8 @@ $s=$dri->get_info('contact');
 isa_ok($s,'Net::DRI::Data::ContactSet','domain_info get_info(contact)');
 is_deeply([$s->types()],['billing','registrant','tech'],'domain_info get_info(contact) types');
 is($s->get('registrant')->srid(),'mvw14','domain_info get_info(contact) registrant srid');
-is($s->get('billing')->srid(),'jj1','domain_info get_info(contact) registrant billing');
-is($s->get('tech')->srid(),'mmai1','domain_info get_info(contact) registrant tech');
+is($s->get('billing')->srid(),'jj1','domain_info get_info(contact) billing srid');
+is($s->get('tech')->srid(),'mmai1','domain_info get_info(contact) tech srid');
 $dh=$dri->get_info('ns');
 isa_ok($dh,'Net::DRI::Data::Hosts','domain_info get_info(ns)');
 @c=$dh->get_names();
@@ -450,6 +450,104 @@ is(@$d,1,'domain_info get_info(nsgroup) count');
 $d=$d->[0];
 isa_ok($d,'Net::DRI::Data::Hosts','domain_info get_info(nsgroup) [0]');
 is($d->name(),'nsgroup-eurid2','domain_info get_info(nsgroup) [0] value');
+
+## Examples from https://secure.registry.eu/images/Library/release%20notes%205%201.pdf (in effect since 2007-08-06)
+
+# §1.2
+$R2=$E1.'<response>'.r().'<resData><domain:infData><domain:name>0001-inusedomain-0001-test.eu</domain:name><domain:roid>3787937-EURID</domain:roid><domain:status s="ok"/><domain:registrant>c195332</domain:registrant><domain:contact type="billing">c31</domain:contact><domain:contact type="tech">c34</domain:contact><domain:clID>a000005</domain:clID><domain:crID>a000005</domain:crID><domain:crDate>2007-07-31T16:43:44.000Z</domain:crDate><domain:upID>a000005</domain:upID><domain:upDate>2007-07-31T16:46:16.000Z</domain:upDate><domain:exDate>2008-07-31T16:43:44.000Z</domain:exDate></domain:infData></resData><extension><eurid:ext><eurid:infData><eurid:domain><eurid:nsgroup>test</eurid:nsgroup><eurid:onhold>false</eurid:onhold><eurid:quarantined>false</eurid:quarantined></eurid:domain></eurid:infData></eurid:ext></extension>'.$TRID.'</response>'.$E2;
+$rc=$dri->domain_info('0001-inusedomain-0001-test.eu');
+is_string($R1,'<?xml version="1.0" encoding="UTF-8" standalone="no"?><epp xmlns="http://www.eurid.eu/xml/epp/epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.eurid.eu/xml/epp/epp-1.0 epp-1.0.xsd"><command><info><domain:info xmlns:domain="http://www.eurid.eu/xml/epp/domain-1.0" xsi:schemaLocation="http://www.eurid.eu/xml/epp/domain-1.0 domain-1.0.xsd"><domain:name hosts="all">0001-inusedomain-0001-test.eu</domain:name></domain:info></info><extension><eurid:ext xmlns:eurid="http://www.eurid.eu/xml/epp/eurid-1.0" xsi:schemaLocation="http://www.eurid.eu/xml/epp/eurid-1.0 eurid-1.0.xsd"><eurid:info><eurid:domain version="2.0"/></eurid:info></eurid:ext></extension><clTRID>TRID-0001</clTRID></command></epp>','domain_info version 2.0 build');
+$s=$dri->get_info('status');
+isa_ok($s,'Net::DRI::Data::StatusList','domain_info version 2.0 get_info(status)');
+is_deeply([$s->list_status()],['ok'],'domain_info version 2.0 get_info(status) list');
+
+
+# §2.2
+$R2=$E1.'<response>'.r().'<resData><domain:infData><domain:name>0001-scheduledfordelete-0001-test.eu</domain:name><domain:roid>3787636-EURID</domain:roid><domain:status s="ok"/><domain:registrant>c195332</domain:registrant><domain:contact type="billing">c31</domain:contact><domain:contact type="tech">c34</domain:contact><domain:clID>a000005</domain:clID><domain:crID>a000005</domain:crID><domain:crDate>2007-07-31T14:50:19.000Z</domain:crDate><domain:upID>a000005</domain:upID><domain:upDate>2007-07-31T16:46:58.000Z</domain:upDate><domain:exDate>2008-07-31T14:50:19.000Z</domain:exDate></domain:infData></resData><extension><eurid:ext><eurid:infData><eurid:domain><eurid:nsgroup>test</eurid:nsgroup><eurid:onhold>false</eurid:onhold><eurid:quarantined>false</eurid:quarantined><eurid:deletionDate>2009-07-31T18:00:00.000Z</eurid:deletionDate></eurid:domain></eurid:infData></eurid:ext></extension>'.$TRID.'</response>'.$E2;
+$rc=$dri->domain_info('0001-scheduledfordelete-0001-test.eu');
+$d=$dri->get_info('deletionDate');
+isa_ok($d,'DateTime','domain_info version 2.0 get_info(deletionDate)');
+is(''.$d,'2009-07-31T18:00:00','domain_info version 2.0 get_info(deletionDate) value');
+
+
+# §3.2
+$R2=$E1.'<response>'.r().'<resData><domain:infData><domain:name>0001-quarantinedomain-0001.eu</domain:name><domain:roid>3787640-EURID</domain:roid><domain:status s="ok"/><domain:registrant>c195332</domain:registrant><domain:contact type="billing">c31</domain:contact><domain:contact type="tech">c34</domain:contact><domain:clID>a000005</domain:clID><domain:crID>a000005</domain:crID><domain:crDate>2007-07-31T14:51:37.000Z</domain:crDate><domain:upID>a000005</domain:upID><domain:upDate>2007-07-31T14:51:37.000Z</domain:upDate><domain:exDate>2008-07-31T14:51:37.000Z</domain:exDate></domain:infData></resData><extension><eurid:ext><eurid:infData><eurid:domain><eurid:onhold>false</eurid:onhold><eurid:quarantined>true</eurid:quarantined><eurid:availableDate>2007-09-09T23:00:00.000Z</eurid:availableDate><eurid:deletionDate>2007-07-31T14:00:00.000Z</eurid:deletionDate></eurid:domain></eurid:infData></eurid:ext></extension>'.$TRID.'</response>'.$E2;
+$rc=$dri->domain_info('0001-quarantinedomain-0001.eu');
+$s=$dri->get_info('status');
+isa_ok($s,'Net::DRI::Data::StatusList','domain_info version 2.0 get_info(status)');
+is_deeply([$s->list_status()],['ok','quarantined'],'domain_info version 2.0 get_info(status) list');
+$d=$dri->get_info('deletionDate');
+isa_ok($d,'DateTime','domain_info version 2.0 get_info(deletionDate)');
+is(''.$d,'2007-07-31T14:00:00','domain_info version 2.0 get_info(deletionDate) value');
+$d=$dri->get_info('availableDate');
+isa_ok($d,'DateTime','domain_info version 2.0 get_info(availableDate)');
+is(''.$d,'2007-09-09T23:00:00','domain_info version 2.0 get_info(availableDate) value');
+
+
+# §4.2
+$R2=$E1.'<response>'.r().'<resData><domain:infData><domain:name>0001-domainonhold-0001-test.eu</domain:name><domain:roid>3787823-EURID</domain:roid><domain:status s="ok"/><domain:registrant>c8033037</domain:registrant><domain:contact type="billing">c31</domain:contact><domain:contact type="tech">c34</domain:contact><domain:clID>a000005</domain:clID><domain:crID>a000005</domain:crID><domain:crDate>2007-07-31T16:01:26.000Z</domain:crDate><domain:upID>a000005</domain:upID><domain:upDate>2007-07-31T16:49:58.000Z</domain:upDate><domain:exDate>2008-07-31T16:01:26.000Z</domain:exDate></domain:infData></resData><extension><eurid:ext><eurid:infData><eurid:domain><eurid:nsgroup>test</eurid:nsgroup><eurid:onhold>true</eurid:onhold><eurid:quarantined>false</eurid:quarantined></eurid:domain></eurid:infData></eurid:ext></extension>'.$TRID.'</response>'.$E2;
+$rc=$dri->domain_info('0001-domainonhold-0001-test.eu');
+$s=$dri->get_info('status');
+isa_ok($s,'Net::DRI::Data::StatusList','domain_info version 2.0 get_info(status)');
+is_deeply([$s->list_status()],['ok','onhold'],'domain_info version 2.0 get_info(status) list');
+
+# §5.2
+$R2=$E1.'<response>'.r().'<resData><domain:infData><domain:name>0001-internaltradedomain-0001-test.eu</domain:name><domain:roid>3787827-EURID</domain:roid><domain:status s="ok"/><domain:registrant>c195332</domain:registrant><domain:contact type="billing">c31</domain:contact><domain:contact type="tech">c34</domain:contact><domain:clID>a000005</domain:clID><domain:crID>a000005</domain:crID><domain:crDate>2007-07-31T16:02:21.000Z</domain:crDate><domain:upID>a000005</domain:upID><domain:upDate>2007-07-31T16:50:25.000Z</domain:upDate><domain:exDate>2008-07-31T16:02:21.000Z</domain:exDate></domain:infData></resData><extension><eurid:ext><eurid:infData><eurid:domain><eurid:nsgroup>test</eurid:nsgroup><eurid:onhold>false</eurid:onhold><eurid:quarantined>false</eurid:quarantined><eurid:pendingTransaction><eurid:trade><eurid:domain><eurid:registrant>c7557462</eurid:registrant><eurid:trDate>2007-07-30T22:00:00.000Z</eurid:trDate><eurid:billing>c31</eurid:billing><eurid:tech>c34</eurid:tech></eurid:domain><eurid:initiationDate>2007-07-31T16:19:58.000Z</eurid:initiationDate><eurid:status>NotYetApproved</eurid:status><eurid:replySeller>NoAnswer</eurid:replySeller><eurid:replyBuyer>NoAnswer</eurid:replyBuyer></eurid:trade></eurid:pendingTransaction></eurid:domain></eurid:infData></eurid:ext></extension>'.$TRID.'</response>'.$E2;
+$rc=$dri->domain_info('0001-internaltradedomain-0001-test.eu');
+$s=$dri->get_info('pending_transaction');
+is(ref($s),'HASH','domain_info version 2.0 get_info(pending_transaction) trade');
+is($s->{type},'trade','domain_info version 2.0 get_info(pending_transaction) trade type');
+isa_ok($s->{trDate},'DateTime','domain_info version 2.0 get_info(pending_transaction) trade trDate');
+is(''.$s->{trDate},'2007-07-30T22:00:00','domain_info version 2.0 get_info(pending_transaction) trade trDate value');
+$d=$s->{'contact'};
+isa_ok($d,'Net::DRI::Data::ContactSet','domain_info version 2.0 get_info(pending_transaction) trade contact');
+is_deeply([$d->types()],['billing','registrant','tech'],'domain_info version 2.0 get_info(pending_transaction) trade contact types');
+is($d->get('registrant')->srid(),'c7557462','domain_info version 2.0 get_info(pending_transaction) trade registrant srid');
+is($d->get('billing')->srid(),'c31','domain_info version 2.0 get_info(pending_transaction) trade billing srid');
+is($d->get('tech')->srid(),'c34','domain_info version 2.0 get_info(pending_transaction) trade tech srid');
+isa_ok($s->{initiationDate},'DateTime','domain_info version 2.0 get_info(pending_transaction) trade initiationDate');
+is(''.$s->{initiationDate},'2007-07-31T16:19:58','domain_info version 2.0 get_info(pending_transaction) trade initiationDate value');
+is($s->{status},'NotYetApproved','domain_info version 2.0 get_info(pending_transaction) trade status');
+is($s->{replySeller},'NoAnswer','domain_info version 2.0 get_info(pending_transaction) trade replySeller');
+is($s->{replyBuyer},'NoAnswer','domain_info version 2.0 get_info(pending_transaction) trade replyBuyer');
+
+# §6.2, not done, same as §1.2
+# §7.2 and §8.2, nothing new
+# §9.2, same as §5.2
+
+# §10.2
+$R2=$E1.'<response>'.r().'<resData><domain:infData><domain:name>0001-domaintransfer-0001-test.eu</domain:name><domain:roid>0-EURID</domain:roid><domain:clID>#non-disclosed#</domain:clID></domain:infData></resData><extension><eurid:ext><eurid:infData><eurid:domain><eurid:onhold>false</eurid:onhold><eurid:quarantined>false</eurid:quarantined><eurid:pendingTransaction><eurid:transfer><eurid:domain><eurid:registrant>#AUTO#</eurid:registrant><eurid:trDate>2007-07-30T22:00:00.000Z</eurid:trDate><eurid:billing>c31</eurid:billing><eurid:tech>c34</eurid:tech></eurid:domain><eurid:initiationDate>2007-07-31T16:22:19.000Z</eurid:initiationDate><eurid:status>NotYetApproved</eurid:status><eurid:replyOwner>NoAnswer</eurid:replyOwner></eurid:transfer></eurid:pendingTransaction></eurid:domain></eurid:infData></eurid:ext></extension>'.$TRID.'</response>'.$E2;
+$rc=$dri->domain_info('0001-domaintransfer-0001-test.eu');
+$s=$dri->get_info('pending_transaction');
+is(ref($s),'HASH','domain_info version 2.0 get_info(pending_transaction) trade');
+is($s->{type},'transfer','domain_info version 2.0 get_info(pending_transaction) transfer type');
+isa_ok($s->{trDate},'DateTime','domain_info version 2.0 get_info(pending_transaction) transfer trDate');
+is(''.$s->{trDate},'2007-07-30T22:00:00','domain_info version 2.0 get_info(pending_transaction) transfer trDate value');
+$d=$s->{'contact'};
+isa_ok($d,'Net::DRI::Data::ContactSet','domain_info version 2.0 get_info(pending_transaction) transfer contact');
+is_deeply([$d->types()],['billing','registrant','tech'],'domain_info version 2.0 get_info(pending_transaction) transfer contact types');
+is($d->get('registrant')->srid(),'#AUTO#','domain_info version 2.0 get_info(pending_transaction) transfer registrant srid');
+is($d->get('billing')->srid(),'c31','domain_info version 2.0 get_info(pending_transaction) transfer billing srid');
+is($d->get('tech')->srid(),'c34','domain_info version 2.0 get_info(pending_transaction) transfer tech srid');
+isa_ok($s->{initiationDate},'DateTime','domain_info version 2.0 get_info(pending_transaction) transfer initiationDate');
+is(''.$s->{initiationDate},'2007-07-31T16:22:19','domain_info version 2.0 get_info(pending_transaction) transfer initiationDate value');
+is($s->{status},'NotYetApproved','domain_info version 2.0 get_info(pending_transaction) transfer status');
+is($s->{replyOwner},'NoAnswer','domain_info version 2.0 get_info(pending_transaction) transfer replyOwner');
+
+## Check commands
+$R2=$E1.'<response>'.r().'<resData><domain:chkData><domain:cd><domain:name avail="false">0002-quarantinedomain-0001.eu</domain:name><domain:reason lang="en">quarantine</domain:reason></domain:cd></domain:chkData></resData><extension><eurid:ext><eurid:chkData><eurid:domain><eurid:cd><eurid:name accepted="0" expired="0" initial="0" rejected="0">0002-quarantinedomain-0001.eu</eurid:name><eurid:availableDate>2007-09-09T23:00:00.000Z</eurid:availableDate></eurid:cd></eurid:domain></eurid:chkData></eurid:ext></extension>'.$TRID.'</response>'.$E2;
+$rc=$dri->domain_check('0002-quarantinedomain-0001.eu');
+is_string($R1,'<?xml version="1.0" encoding="UTF-8" standalone="no"?><epp xmlns="http://www.eurid.eu/xml/epp/epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.eurid.eu/xml/epp/epp-1.0 epp-1.0.xsd"><command><check><domain:check xmlns:domain="http://www.eurid.eu/xml/epp/domain-1.0" xsi:schemaLocation="http://www.eurid.eu/xml/epp/domain-1.0 domain-1.0.xsd"><domain:name>0002-quarantinedomain-0001.eu</domain:name></domain:check></check><extension><eurid:ext xmlns:eurid="http://www.eurid.eu/xml/epp/eurid-1.0" xsi:schemaLocation="http://www.eurid.eu/xml/epp/eurid-1.0 eurid-1.0.xsd"><eurid:check><eurid:domain version="2.0"/></eurid:check></eurid:ext></extension><clTRID>TRID-0001</clTRID></command></epp>','domain_check version 2.0 build');
+is($rc->is_success(),1,'domain_check version 2.0 is_success');
+is($dri->get_info('exist','domain','0002-quarantinedomain-0001.eu'),1,'domain_check version 2.0 get_info(exist)');
+is($dri->get_info('exist_reason','domain','0002-quarantinedomain-0001.eu'),'quarantine','domain_check version 2.0 get_info(exist_reason)');
+is($dri->get_info('application_accepted','domain','0002-quarantinedomain-0001.eu'),0,'domain_check version 2.0 get_info(application_accepted)');
+is($dri->get_info('application_expired','domain','0002-quarantinedomain-0001.eu'),0,'domain_check version 2.0 get_info(application_expired)');
+is($dri->get_info('application_initial','domain','0002-quarantinedomain-0001.eu'),0,'domain_check version 2.0 get_info(application_initial)');
+is($dri->get_info('application_rejected','domain','0002-quarantinedomain-0001.eu'),0,'domain_check version 2.0 get_info(application_rejected)');
+$s=$dri->get_info('availableDate','domain','0002-quarantinedomain-0001.eu');
+isa_ok($s,'DateTime','domain_check version 2.0 get_info(availableDate)');
+is(''.$s,'2007-09-09T23:00:00','domain_check version 2.0 get_info(availableDate) value');
 
 
 ################################################################################################################

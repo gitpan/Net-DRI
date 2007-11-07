@@ -13,7 +13,7 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI;
 
@@ -24,8 +24,8 @@ use Net::DRI::Util;
 use strict;
 
 our $AUTOLOAD;
-our $VERSION='0.80';
-our $CVS_REVISION=do { my @r=(q$Revision: 1.26 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION='0.81';
+our $CVS_REVISION=do { my @r=(q$Revision: 1.27 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -67,8 +67,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
-#########################################################################################
-#########################################################################################
+####################################################################################################
 
 sub new
 {
@@ -97,7 +96,7 @@ sub add_registry
  my $reg=shift;
  $reg='Net::DRI::DRD::'.$reg unless ($reg=~m/::/);
 
- eval "require $reg";
+ eval 'require '.$reg; ## no critic (ProhibitStringyEval)
  Net::DRI::Exception->die(1,'DRI',8,"Failed to load Perl module $reg ($@)") if $@;
 
  my $drd=$reg->new(@_);
@@ -122,14 +121,14 @@ sub add_registry
  return $self;
 }
 
-###########################################################################################################
+####################################################################################################
 
 sub err_no_current_registry          { Net::DRI::Exception->die(0,'DRI',1,"No current registry available"); }
 sub err_registry_name_does_not_exist { Net::DRI::Exception->die(0,'DRI',2,"Registry name $_[0] does not exist"); }
 sub err_no_current_profile           { Net::DRI::Exception->die(0,'DRI',3,"No current profile available"); }
 sub err_profile_name_does_not_exist  { Net::DRI::Exception->die(0,'DRI',4,"Profile name $_[0] does not exist"); }
 
-###########################################################################################################
+####################################################################################################
 ## Accessor functions
 
 sub available_registries { return keys(%{shift->{registries}}); }
@@ -156,7 +155,7 @@ sub tld2reg
  return @t;
 }
 
-#########################################################################################################
+####################################################################################################
 sub target
 {
  my ($self,$driver,$profile)=@_;

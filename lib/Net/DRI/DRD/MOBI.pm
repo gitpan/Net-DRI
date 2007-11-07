@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .MOBI policies
 ##
-## Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -20,7 +20,7 @@ package Net::DRI::DRD::MOBI;
 use strict;
 use base qw/Net::DRI::DRD/;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -50,7 +50,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -88,12 +88,17 @@ sub transport_protocol_compatible
  my $tn=$to->name();
 
  return 1 if (($pn eq 'EPP') && ($tn eq 'socket_inet'));
+ return 1 if (($pn eq 'Whois') && ($tn eq 'socket_inet'));
  return;
 }
 
 sub transport_protocol_default
 {
- return ('Net::DRI::Transport::Socket','Net::DRI::Protocol::EPP::Extensions::MOBI');
+ my ($drd,$ndr,$type)=@_;
+ $type='' if (!defined($type) || ref($type));
+ return ('Net::DRI::Transport::Socket','Net::DRI::Protocol::EPP::Extensions::MOBI') unless ($type);
+ return ('Net::DRI::Transport::Socket',[{defer=>1,close_after=>1,socktype=>'tcp',remote_host=>'whois.dotmobiregistry.net',remote_port=>43,protocol_connection=>'Net::DRI::Protocol::Whois::Connection',protocol_version=>1}],'Net::DRI::Protocol::Whois',[]) if (lc($type) eq 'whois');
+
 }
 
 ####################################################################################################

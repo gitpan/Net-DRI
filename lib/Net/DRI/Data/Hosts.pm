@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Implements a list of host (names+ip) with order preserved
 ##
-## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -13,7 +13,7 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::Data::Hosts;
 
@@ -23,7 +23,7 @@ __PACKAGE__->mk_accessors(qw(name loid));
 
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.14 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -72,6 +72,10 @@ creates a new instance ; if parameters are given, add() is called with them all 
 =head2 new_set(...)
 
 creates a new instance ; if parameters are given, add() is called once for each parameter
+
+=head2 clear()
+
+clears the current list of nameservers
 
 =head2 set(...)
 
@@ -129,7 +133,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -141,8 +145,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
-################################################################################
-
+####################################################################################################
 
 sub new
 {
@@ -162,6 +165,12 @@ sub new_set
  my $s=shift->new();
  foreach (@_) { $s->add($_); }
  return $s;
+}
+
+sub clear
+{
+ my $s=shift;
+ $s->{list}=[];
 }
 
 sub set
@@ -299,5 +308,5 @@ sub get_details
  }
 }
 
-################################################################################
+####################################################################################################
 1;

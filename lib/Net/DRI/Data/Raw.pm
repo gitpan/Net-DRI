@@ -21,7 +21,7 @@ use strict;
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -90,7 +90,7 @@ sub new
 sub new_from_array  
 {
  my $class=shift;
- my @a=map { s/[\r\n\s]+$//; $_; } (ref($_[0]))? @{$_[0]} : @_;
+ my @a=map { my $f=$_; $f=~s/[\r\n\s]+$//; $f; } (ref($_[0]))? @{$_[0]} : @_;
  return $class->new(1,\@a);
 }
 

@@ -20,7 +20,7 @@ package Net::DRI::Protocol::EPP::Extensions::AT::ATResult;
 
 use strict;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 our $NS='http://www.nic.at/xsd/at-ext-result-1.0';
 
 =pod
@@ -109,6 +109,7 @@ sub condition_parse
 
   while ($c)
   {
+   next unless ($c->nodeType() == 1); ## only for element nodes
    my $name=$c->localname() || $c->nodeName();
    next unless $name;
    if ($name=~m/^(msg|details)$/)
@@ -121,8 +122,7 @@ sub condition_parse
                 $con{"attr " .$attrname} = $attr->getFirstChild()->getData();
         }
      }
-   $c=$c->getNextSibling();
-  }
+  } continue { $c=$c->getNextSibling(); }
   push @conditions,\%con;
  }
 

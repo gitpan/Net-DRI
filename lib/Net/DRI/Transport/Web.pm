@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Web Scraping Transport
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -25,7 +25,7 @@ use WWW::Mechanize;
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -71,7 +71,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2007 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -110,7 +110,7 @@ sub new
  $t{pc}=$opts{protocol_connection};
 
  my @needed=('login','logout','sleep');
- eval "require $t{pc}";
+ eval 'require '.$t{pc}; ## no critic (ProhibitStringyEval)
  Net::DRI::Exception::usererr_invalid_parameters("protocol_connection class must have: ".join(" ",@needed)) if (grep { ! $t{pc}->can($_) } @needed);
 
  $t{creds}=exists($opts{credentials})? $opts{credentials} : {};
@@ -164,8 +164,8 @@ sub end
 
 sub send
 {
- my ($self,$tosend)=@_;
- $self->SUPER::send($tosend,\&_webprint,sub {});
+ my ($self,$trid,$tosend)=@_;
+ $self->SUPER::send($trid,$tosend,\&_webprint,sub {});
 }
 
 sub _webprint ## here we are sure open_connection() was called before
@@ -184,8 +184,8 @@ sub _webprint ## here we are sure open_connection() was called before
 
 sub receive
 {
- my $self=shift;
- return $self->SUPER::receive(\&_web_receive);
+ my ($self,$trid)=@_;
+ return $self->SUPER::receive($trid,\&_web_receive);
 }
 
 sub _web_receive

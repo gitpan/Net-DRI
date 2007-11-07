@@ -20,7 +20,7 @@ package Net::DRI::Data::Contact;
 
 use strict;
 use base qw(Class::Accessor::Chained); ## provides a new() method
-__PACKAGE__->mk_accessors(qw(name org street city sp pc cc email voice fax loid roid srid auth disclose));
+__PACKAGE__->mk_accessors(qw(name org street city sp pc cc email voice fax loid roid srid auth disclose _intfirst));
 
 use Net::DRI::Exception;
 use Net::DRI::Util;
@@ -28,7 +28,7 @@ use Net::DRI::Util;
 use Email::Valid;
 use Encode ();
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -38,7 +38,7 @@ Net::DRI::Data::Contact - Handle contact data, modeled from EPP for Net::DRI
 
 =head1 DESCRIPTION
 
-This base class encapsulates all data for a contact as defined in EPP (RFC3733).
+This base class encapsulates all data for a contact as defined in EPP (RFC4933).
 It can (and should) be subclassed for TLDs needing to store other data for a contact.
 All subclasses must have a validate() method that takes care of verifying contact data,
 and an id() method returning an opaque value, unique per contact (in a given registry).
@@ -213,7 +213,7 @@ sub int2loc
  return $self;
 }
 
-sub validate ## See RFC3733,§4
+sub validate ## See RFC4933,§4
 {
  my ($self,$change)=@_;
  $change||=0;

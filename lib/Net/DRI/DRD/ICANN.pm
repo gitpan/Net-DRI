@@ -19,7 +19,7 @@ package Net::DRI::DRD::ICANN;
 
 use strict;
 
-our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -76,7 +76,7 @@ sub is_reserved_name
   return 1 if ($d=~m/^(?:aso|dnso|gnso|icann|internic|ccnso|pso|afrinic|apnic|arin|example|gtld-servers|iab|iana|iana-servers|iesg|ietf|irtf|istf|lacnic|latnic|rfc-editor|ripe|root-servers)$/io);
 
   ## §C (tagged domain names)
-  return 1 if (length($d)>3 && (substr($d,2,2) eq '--'));
+  return 1 if (length($d)>3 && (substr($d,2,2) eq '--') && ($d!~/^xn--/));
  }
 
  if ($op eq 'create')

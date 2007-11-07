@@ -14,7 +14,7 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::Protocol::EPP::Extensions::EURid::Domain;
 
@@ -24,8 +24,11 @@ use Net::DRI::Util;
 use Net::DRI::Exception;
 use Net::DRI::Protocol::EPP::Core::Domain;
 use Net::DRI::Data::Hosts;
+use Net::DRI::Data::ContactSet;
 
-our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+use DateTime::Format::ISO8601;
+
+our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -75,7 +78,8 @@ sub register_commands
  my %tmp=( 
           create            => [ \&create, undef ],
           update            => [ \&update, undef ],
-          info              => [ undef, \&info_parse ],
+          info              => [ \&info, \&info_parse ],
+	  check             => [ \&check, \&check_parse ],
           delete            => [ \&delete, undef ],
           transfer_request  => [ \&transfer_request, undef ],
           undelete          => [ \&undelete, undef ],
@@ -83,8 +87,6 @@ sub register_commands
           trade             => [ \&trade, undef ],
           reactivate        => [ \&reactivate, undef ],
          );
-## EURid also adds extensions for domain:check if domains in sunrise
-## We do not parse them
 
  return { 'domain' => \%tmp };
 }
@@ -138,6 +140,14 @@ sub update
  $mes->command_extension($eid,['eurid:update',['eurid:domain',@n]]);
 }
 
+sub info
+{
+ my ($epp,$domain,$rd)=@_;
+ my $mes=$epp->message();
+ my $eid=build_command_extension($mes,$epp,'eurid:ext');
+ $mes->command_extension($eid,['eurid:info',['eurid:domain',{version=>'2.0'}]]);
+}
+
 sub info_parse
 {
  my ($po,$otype,$oaction,$oname,$rinfo)=@_;
@@ -154,7 +164,113 @@ sub info_parse
  }
 
  $rinfo->{domain}->{$oname}->{nsgroup}=\@c;
+
+ my $cs=$rinfo->{domain}->{$oname}->{status};
+ foreach my $s (qw/onhold quarantined/) ## onhold here has nothing to do with EPP client|serverHold, unfortunately
+ {
+  my @s=$infdata->getElementsByTagNameNS($mes->ns('eurid'),$s);
+  next unless @s;
+  $cs->add($s) if Net::DRI::Util::xml_parse_boolean($s[0]->getFirstChild()->getData()); ## should we also remove 'ok' status then ?
+ }
+ foreach my $d (qw/availableDate deletionDate/)
+ {
+  my @d=$infdata->getElementsByTagNameNS($mes->ns('eurid'),$d);
+  next unless @d;
+  $rinfo->{domain}->{$oname}->{$d}=DateTime::Format::ISO8601->new()->parse_datetime($d[0]->getFirstChild()->getData());
+ }
+
+ my $pt=$infdata->getElementsByTagNameNS($mes->ns('eurid'),'pendingTransaction');
+ if ($pt->size())
+ {
+  my %p;
+  foreach my $t (qw/trade transfer transferq/)
+  {
+   my $r=$infdata->getElementsByTagNameNS($mes->ns('eurid'),$t);
+   next unless $r->size();
+   $p{type}=$t;
+   $cs->add(($t eq 'trade')? 'pendingUpdate' : 'pendingTransfer');
+
+   my $c=$r->shift()->getFirstChild();
+   while ($c)
+   {
+    next unless ($c->nodeType() == 1); ## only for element nodes
+    my $name=$c->localname() || $c->nodeName();
+    next unless $name;
+    if ($name eq 'domain')
+    {
+     my $cs2=Net::DRI::Data::ContactSet->new();
+     my $cf=$po->factories()->{contact};
+     my $cc=$c->getFirstChild();
+     while($cc)
+     {
+      next unless ($cc->nodeType() == 1); ## only for element nodes
+      my $name2=$cc->localname() || $cc->nodeName();
+      next unless $name2;
+      if ($name2=~m/^(registrant|tech|billing)$/)
+      {
+       $cs2->set($cf->()->srid($cc->getFirstChild()->getData()),$name2);       
+      } elsif ($name2=~m/^(trDate)$/)
+      {
+       $p{$1}=DateTime::Format::ISO8601->new()->parse_datetime($cc->getFirstChild()->getData());
+      }
+     } continue { $cc=$cc->getNextSibling(); }
+     $p{contact}=$cs2;
+    } elsif ($name=~m/^(initiationDate|unscreenedFax)$/)
+    {
+     $p{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
+    } elsif ($name=~m/^(status|replySeller|replyBuyer|replyOwner)$/)
+    {
+     $p{$1}=$c->getFirstChild()->getData();
+    }
+   } continue { $c=$c->getNextSibling(); }
+   last;
+  }
+  $rinfo->{domain}->{$oname}->{pending_transaction}=\%p;
+ }
 }
+
+sub check
+{
+ my ($epp,$domain,$rd)=@_;
+ my $mes=$epp->message();
+ my $eid=build_command_extension($mes,$epp,'eurid:ext');
+ $mes->command_extension($eid,['eurid:check',['eurid:domain',{version=>'2.0'}]]);
+}
+
+sub check_parse
+{
+ my ($po,$otype,$oaction,$oname,$rinfo)=@_;
+ my $mes=$po->message();
+ return unless $mes->is_success();
+
+ my $chkdata=$mes->get_content('chkData',$mes->ns('eurid'),1);
+ return unless $chkdata;
+
+ foreach my $cd ($chkdata->getElementsByTagNameNS($mes->ns('eurid'),'cd'))
+ {
+  my $c=$cd->getFirstChild();
+  my $domain;
+  while($c)
+  {
+   next unless ($c->nodeType() == 1); ## only for element nodes
+   my $n=$c->localname() || $c->nodeName();
+   if ($n eq 'name')
+   {
+    $domain=lc($c->getFirstChild()->getData());
+    $rinfo->{domain}->{$domain}->{action}='check';
+    foreach my $ef (qw/accepted expired initial rejected/) ## only for domain applications
+    {
+     next unless $c->hasAttribute($ef);
+     $rinfo->{domain}->{$domain}->{'application_'.$ef}=Net::DRI::Util::xml_parse_boolean($c->getAttribute($ef));
+    }
+   } elsif ($n eq 'availableDate')
+   {
+    $rinfo->{domain}->{$domain}->{availableDate}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
+   }
+  } continue { $c=$c->getNextSibling(); }
+ }
+}
+
 
 sub delete
 {

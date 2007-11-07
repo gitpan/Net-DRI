@@ -21,13 +21,13 @@ use strict;
 use Net::DRI::Data::Raw;
 use Net::DRI::Protocol::ResultStatus;
 
-our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Protocol::EPP::Connection - EPP Connection handling for Net::DRI
+Net::DRI::Protocol::EPP::Connection - EPP Connection handling (RFC4934) for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -69,7 +69,7 @@ See the LICENSE file that comes with this distribution for more details.
 sub login
 {
  shift if ($_[0] eq __PACKAGE__);
- my ($cm,$id,$pass,$cltrid,$dr,$newpass)=@_;
+ my ($cm,$id,$pass,$cltrid,$dr,$newpass,$pdata)=@_;
 
  my $got=$cm->();
  $got->parse($dr);
@@ -86,7 +86,8 @@ sub login
  my @s;
  push @s,map { ['objURI',$_] } @{$rg->{svcs}};
  push @s,['svcExtension',map {['extURI',$_]} @{$rg->{svcext}}] if (exists($rg->{svcext}) && defined($rg->{svcext}) && (ref($rg->{svcext}) eq 'ARRAY'));
- push @d,['svcs',@s];
+ @s=$pdata->{login_service_filter}->(@s) if (defined($pdata) && ref($pdata) eq 'HASH' && exists($pdata->{login_service_filter}) && ref($pdata->{login_service_filter}) eq 'CODE');
+ push @d,['svcs',@s] if @s;
 
  $mes->command_body(\@d);
  $mes->cltrid($cltrid) if $cltrid;
@@ -108,7 +109,7 @@ sub keepalive
  shift if ($_[0] eq __PACKAGE__);
  my ($cm,$cltrid)=@_;
  my $mes=$cm->();
- $mes->command(['hello']); ## Explicitely allowed since draft-hollenbeck-epp-rfc3730bis-02.txt
+ $mes->command(['hello']);
  return $mes->as_string('tcp');
 }
 

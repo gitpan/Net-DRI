@@ -1,4 +1,4 @@
-## Domain Registry Interface, EPP Registry messages commands (RFC3730)
+## Domain Registry Interface, EPP Registry messages commands (RFC4930)
 ##
 ## Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
@@ -24,13 +24,13 @@ use DateTime::Format::ISO8601;
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Protocol::EPP::Core::RegistryMessage - EPP Registry messages commands (RFC3730) for Net::DRI
+Net::DRI::Protocol::EPP::Core::RegistryMessage - EPP Registry messages commands (RFC4930 obsoleting RFC3730) for Net::DRI
 
 =head1 DESCRIPTION
 

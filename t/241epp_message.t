@@ -103,7 +103,7 @@ $s=<<EOF;
 </epp>
 EOF
 
-is($msg->as_string(),_n($s),'build host check [RFC 3732 §3.1.1]');
+is($msg->as_string(),_n($s),'build host check [RFC 4932 §3.1.1]');
 
 $msg=Net::DRI::Protocol::EPP::Message->new();
 $msg->ns({ _main => ['urn:ietf:params:xml:ns:epp-1.0','epp-1.0.xsd'] });
@@ -196,7 +196,7 @@ $s=<<EOF;
 </epp>
 EOF
 
-is($msg->as_string(),_n($s),'build host info [RFC 3732 §3.1.2]');
+is($msg->as_string(),_n($s),'build host info [RFC 4932 §3.1.2]');
 
 ##############################################################################
 
@@ -230,7 +230,7 @@ $s=<<EOF;
 </epp>
 EOF
 
-is($msg->as_string(),_n($s),'build host create [RFC 3732 §3.2.1]');
+is($msg->as_string(),_n($s),'build host create [RFC 4932 §3.2.1]');
 
 ##############################################################################
 
@@ -261,7 +261,7 @@ $s=<<EOF;
 </epp>
 EOF
 
-is($msg->as_string(),_n($s),'build host delete [RFC 3732 §3.2.2]');
+is($msg->as_string(),_n($s),'build host delete [RFC 4932 §3.2.2]');
 
 ##############################################################################
 
@@ -302,7 +302,7 @@ $s=<<EOF;
 </epp>
 EOF
 
-is($msg->as_string(),_n($s),'build host update [RFC 3732 §3.2.5]');
+is($msg->as_string(),_n($s),'build host update [RFC 4932 §3.2.5]');
 
 
 

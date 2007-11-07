@@ -23,7 +23,7 @@ use strict;
 use Net::DRI::Util;
 use Net::DRI::Protocol::EPP::Core::Domain;
 
-our $VERSION = do { my @r = ( q$Revision: 1.2 $ =~ /\d+/g ); sprintf( "%d" . ".%02d" x $#r, @r ); };
+our $VERSION = do { my @r = ( q$Revision: 1.3 $ =~ /\d+/g ); sprintf( "%d" . ".%02d" x $#r, @r ); };
 our $NS = 'http://www.nic.at/xsd/at-ext-domain-1.0';
 our $ExtNS = 'http://www.nic.at/xsd/at-ext-epp-1.0';
 
@@ -86,7 +86,8 @@ sub register_commands {
 sub extonly {
        my ( $epp, $domain, $rd ) = @_;
 
-       my $transaction = $rd->{transactionname} if $rd->{transactionname};
+       my $transaction;
+       $transaction = $rd->{transactionname} if $rd->{transactionname};
 
        return unless ($transaction);
 
@@ -134,7 +135,8 @@ sub extonly {
        elsif ( $transaction eq 'transfer_execute' ) {
 
 
-               my $token = $rd->{token} if $rd->{token};
+               my $token;
+               $token = $rd->{token} if $rd->{token};
 
        return unless ( defined($token) );
 
@@ -173,7 +175,8 @@ sub delete {
        my ( $epp, $domain, $rd ) = @_;
        my $mes = $epp->message();
 
-       my $scheduledate = $rd->{scheduledate} if $rd->{scheduledate};
+       my $scheduledate;
+       $scheduledate = $rd->{scheduledate} if $rd->{scheduledate};
 
        return unless ( defined($scheduledate) );
 
@@ -191,7 +194,8 @@ sub transfer_request {
        my ( $epp, $domain, $rd ) = @_;
        my $mes = $epp->message();
 
-       my $registrarinfo = $rd->{registrarinfo} if $rd->{registrarinfo};
+       my $registrarinfo;
+       $registrarinfo = $rd->{registrarinfo} if $rd->{registrarinfo};
 
        return unless ( defined($registrarinfo) );
 

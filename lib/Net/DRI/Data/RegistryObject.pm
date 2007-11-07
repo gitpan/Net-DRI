@@ -22,7 +22,7 @@ use Net::DRI::Exception;
 
 our $AUTOLOAD;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -144,11 +144,11 @@ sub AUTOLOAD
   return $p->process($self->{type},$attr,$rp,$rt);
  } elsif (ref($p) eq 'Net::DRI')
  {
-  my $c=$self->{type}."_".$attr;
+  my $c=$self->{type}.'_'.$attr;
   return $p->$c->(@$rp);
  } else
  {
-  Net::DRI::Exception::err_assert("case not handled: ".ref($p));
+  Net::DRI::Exception::err_assert('case not handled: '.ref($p));
  }
 }
 

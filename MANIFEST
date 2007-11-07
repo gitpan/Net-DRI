@@ -17,6 +17,7 @@ lib/Net/DRI/Data/Changes.pm
 lib/Net/DRI/Data/Contact.pm
 lib/Net/DRI/Data/Contact/AERO.pm
 lib/Net/DRI/Data/Contact/AFNIC.pm
+lib/Net/DRI/Data/Contact/ASIA.pm
 lib/Net/DRI/Data/Contact/AT.pm
 lib/Net/DRI/Data/Contact/BE.pm
 lib/Net/DRI/Data/Contact/CAT.pm
@@ -34,6 +35,7 @@ lib/Net/DRI/Data/StatusList.pm
 lib/Net/DRI/DRD.pm
 lib/Net/DRI/DRD/AERO.pm
 lib/Net/DRI/DRD/AFNIC.pm
+lib/Net/DRI/DRD/ASIA.pm
 lib/Net/DRI/DRD/AT.pm
 lib/Net/DRI/DRD/BE.pm
 lib/Net/DRI/DRD/BIZ.pm
@@ -46,6 +48,8 @@ lib/Net/DRI/DRD/IENUMAT.pm
 lib/Net/DRI/DRD/INFO.pm
 lib/Net/DRI/DRD/LU.pm
 lib/Net/DRI/DRD/MOBI.pm
+lib/Net/DRI/DRD/NAME.pm
+lib/Net/DRI/DRD/NU.pm
 lib/Net/DRI/DRD/ORG.pm
 lib/Net/DRI/DRD/PL.pm
 lib/Net/DRI/DRD/SE.pm
@@ -74,6 +78,9 @@ lib/Net/DRI/Protocol/EPP/Core/Status.pm
 lib/Net/DRI/Protocol/EPP/Extensions/AERO.pm
 lib/Net/DRI/Protocol/EPP/Extensions/AERO/Contact.pm
 lib/Net/DRI/Protocol/EPP/Extensions/AERO/Domain.pm
+lib/Net/DRI/Protocol/EPP/Extensions/ASIA.pm
+lib/Net/DRI/Protocol/EPP/Extensions/ASIA/CED.pm
+lib/Net/DRI/Protocol/EPP/Extensions/ASIA/IPR.pm
 lib/Net/DRI/Protocol/EPP/Extensions/AT.pm
 lib/Net/DRI/Protocol/EPP/Extensions/AT/ATResult.pm
 lib/Net/DRI/Protocol/EPP/Extensions/AT/Contact.pm
@@ -85,6 +92,10 @@ lib/Net/DRI/Protocol/EPP/Extensions/CAT.pm
 lib/Net/DRI/Protocol/EPP/Extensions/CAT/Contact.pm
 lib/Net/DRI/Protocol/EPP/Extensions/CAT/DefensiveRegistration.pm
 lib/Net/DRI/Protocol/EPP/Extensions/CAT/Domain.pm
+lib/Net/DRI/Protocol/EPP/Extensions/CentralNic.pm
+lib/Net/DRI/Protocol/EPP/Extensions/CentralNic/Release.pm
+lib/Net/DRI/Protocol/EPP/Extensions/CentralNic/TTL.pm
+lib/Net/DRI/Protocol/EPP/Extensions/CentralNic/WebForwarding.pm
 lib/Net/DRI/Protocol/EPP/Extensions/COOP.pm
 lib/Net/DRI/Protocol/EPP/Extensions/COOP/Contact.pm
 lib/Net/DRI/Protocol/EPP/Extensions/DNSBE.pm
@@ -145,6 +156,8 @@ lib/Net/DRI/Protocol/Whois/Domain/COM.pm
 lib/Net/DRI/Protocol/Whois/Domain/common.pm
 lib/Net/DRI/Protocol/Whois/Domain/EU.pm
 lib/Net/DRI/Protocol/Whois/Domain/INFO.pm
+lib/Net/DRI/Protocol/Whois/Domain/MOBI.pm
+lib/Net/DRI/Protocol/Whois/Domain/NAME.pm
 lib/Net/DRI/Protocol/Whois/Domain/ORG.pm
 lib/Net/DRI/Protocol/Whois/Message.pm
 lib/Net/DRI/Registry.pm
@@ -162,6 +175,7 @@ README
 SUPPORT
 t/001load.t
 t/002pod.t
+t/003critic.t
 t/101exception.t
 t/102util.t
 t/103cache.t
@@ -203,5 +217,6 @@ t/617vnds_epp_polllowbalance.t
 t/618vnds_epp_pollrgp.t
 t/619coop_epp.t
 t/620lu_epp.t
+t/621centralnic_epp.t
 TODO
 META.yml                                 Module meta-data (added by MakeMaker)

@@ -1,4 +1,4 @@
-## Domain Registry Interface, Whois parse for .INFO (RFC3912)
+## Domain Registry Interface, Whois commands for .INFO (RFC3912)
 ##
 ## Copyright (c) 2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
@@ -23,13 +23,13 @@ use Net::DRI::Exception;
 use Net::DRI::Util;
 use Net::DRI::Protocol::Whois::Domain::common;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Protocol::Whois::Domain::INFO - Whois .INFO parse (RFC3912) for Net::DRI
+Net::DRI::Protocol::Whois::Domain::INFO - .INFO Whois commands (RFC3912) for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -77,7 +77,7 @@ sub info
 {
  my ($po,$domain,$rd)=@_;
  my $mes=$po->message();
- Net::DRI::Exception->die(1,'protocol/DAS',10,'Invalid domain name: '.$domain) unless Net::DRI::Util::is_hostname($domain);
+ Net::DRI::Exception->die(1,'protocol/whois',10,'Invalid domain name: '.$domain) unless Net::DRI::Util::is_hostname($domain);
  $mes->command('domain '.lc($domain));
 }
 

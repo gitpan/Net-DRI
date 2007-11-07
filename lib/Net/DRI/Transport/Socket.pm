@@ -29,7 +29,7 @@ use Net::DRI::Exception;
 use Net::DRI::Util;
 use Net::DRI::Data::Raw;
 
-our $VERSION=do { my @r=(q$Revision: 1.22 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.24 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -80,6 +80,12 @@ protocol login & password
 =head2 protocol_connection
 
 Net::DRI class handling protocol connection details. (Ex: C<Net::DRI::Protocol::RRP::Connection> or C<Net::DRI::Protocol::EPP::Connection>)
+
+=head2 protocol_data
+
+(optional) opaque data given to protocol_connection class.
+For EPP, a key login_service_filter may exist, whose value is a code ref. It will be given an array of services, and should give back a
+similar array; it can be used to filter out some services from those given by the registry.
 
 =head2 close_after
 
@@ -147,25 +153,26 @@ sub new
  my %t=(message_factory => $po->factories()->{message});
  $t{trid_factory}=(exists($opts{trid}) && (ref($opts{trid}) eq 'CODE'))? $opts{trid} : \&Net::DRI::Util::create_trid_1;
 
- Net::DRI::Exception::usererr_insufficient_parameters("socktype must be defined") unless (exists($opts{socktype}));
- Net::DRI::Exception::usererr_invalid_parameters("socktype must be ssl or tcp") unless ($opts{socktype}=~m/^(ssl|tcp)$/);
+ Net::DRI::Exception::usererr_insufficient_parameters('socktype must be defined') unless (exists($opts{socktype}));
+ Net::DRI::Exception::usererr_invalid_parameters('socktype must be ssl or tcp') unless ($opts{socktype}=~m/^(ssl|tcp)$/);
  $t{socktype}=$opts{socktype};
  $t{client_login}=$opts{client_login};
  $t{client_password}=$opts{client_password};
  $t{client_newpassword}=$opts{client_newpassword} if (exists($opts{client_newpassword}) && $opts{client_newpassword});
  foreach my $p ('remote_host','remote_port','protocol_version')
  {
-  Net::DRI::Exception::usererr_insufficient_parameters("$p must be defined") unless (exists($opts{$p}) && $opts{$p});
+  Net::DRI::Exception::usererr_insufficient_parameters($p.' must be defined') unless (exists($opts{$p}) && $opts{$p});
   $t{$p}=$opts{$p};
  }
- Net::DRI::Exception::usererr_insufficient_parameters("protocol_connection") unless (exists($opts{protocol_connection}) && $opts{protocol_connection});
+ Net::DRI::Exception::usererr_insufficient_parameters('protocol_connection') unless (exists($opts{protocol_connection}) && $opts{protocol_connection});
  $t{pc}=$opts{protocol_connection};
+ $t{protocol_data}=$opts{protocol_data} if (exists($opts{protocol_data}) && $opts{protocol_data});
 
- eval "require $t{pc}";
+ eval 'require '.$t{pc}; ## no critic (ProhibitStringyEval)
  my @need=qw/get_data/;
  Net::DRI::Exception::usererr_invalid_parameters('protocol_connection class must have: '.join(' ',@need)) if (grep { ! $t{pc}->can($_) } @need);
 
- Net::DRI::Exception::usererr_invalid_parameters("close_after must be an integer") if ($opts{close_after} && !Net::DRI::Util::isint($opts{close_after}));
+ Net::DRI::Exception::usererr_invalid_parameters('close_after must be an integer') if ($opts{close_after} && !Net::DRI::Util::isint($opts{close_after}));
  $t{close_after}=$opts{close_after} || 0;
 
  if ($t{socktype} eq 'ssl')
@@ -177,13 +184,13 @@ sub new
   $s{SSL_verify_callback}=$opts{ssl_verify_callback} if (exists($opts{ssl_verify_callback}) && defined($opts{ssl_verify_callback}));
   foreach my $s ('key_file','cert_file','ca_file','ca_path','version')
   {
-   next unless exists($opts{"ssl_$s"});
-   $s{"SSL_$s"}=$opts{"ssl_$s"};
+   next unless exists($opts{'ssl_'.$s});
+   $s{'SSL_'.$s}=$opts{'ssl_'.$s};
   }
   $s{SSL_use_cert}=1 if exists($s{SSL_cert_file});
 
   ## Library default: ALL:!ADH:RC4+RSA:+HIGH:+MEDIUM:+LOW:+SSLv2:+EXP
-  $s{SSL_cipher_list}=(exists($opts{ssl_cipher_list}))? $opts{ssl_cipher_list} : 'ALL:!ADH:!LOW:+HIGH:+MEDIUM:+SSLv3'; ##
+  $s{SSL_cipher_list}=(exists($opts{ssl_cipher_list}))? $opts{ssl_cipher_list} : 'ALL:!ADH:!LOW:+HIGH:+MEDIUM:+SSLv3';
 
   $t{ssl_context}=\%s;
  }
@@ -233,7 +240,7 @@ sub open_socket
   $sock=IO::Socket::INET->new(%n);
  }
 
- Net::DRI::Exception->die(1,'transport/socket',6,"Unable to setup the ${type} socket".($type eq 'ssl'? ' with SSL error: '.IO::Socket::SSL::errstr() : '')) unless defined($sock);
+ Net::DRI::Exception->die(1,'transport/socket',6,'Unable to setup the '.$type.' socket'.($type eq 'ssl'? ' with SSL error: '.IO::Socket::SSL::errstr() : '')) unless defined($sock);
  $sock->autoflush(1);
  $self->sock($sock);
 }
@@ -248,22 +255,22 @@ sub send_login
  return unless ($pc->can('parse_greeting') && $pc->can('login') && $pc->can('parse_login'));
  foreach my $p (qw/client_login client_password/)
  {
-  Net::DRI::Exception::usererr_insufficient_parameters("$p must be defined") unless (exists($t->{$p}) && $t->{$p});
+  Net::DRI::Exception::usererr_insufficient_parameters($p.' must be defined') unless (exists($t->{$p}) && $t->{$p});
  }
 
  ## Get registry greeting
+ my $cltrid=$t->{trid_factory}->($self->name());
  my $dr=$pc->get_data($self,$sock);
- $self->log('C<=S',$dr);
+ $self->logging($cltrid,1,1,1,$dr);
  my $rc1=$pc->parse_greeting($dr); ## gives back a Net::DRI::Protocol::ResultStatus
  die($rc1) unless $rc1->is_success();
- my $cltrid=$t->{trid_factory}->($self->name());
- my $login=$pc->login($t->{message_factory},$t->{client_login},$t->{client_password},$cltrid,$dr,$t->{client_newpassword});
- $self->log('C=>S',$login);
+ my $login=$pc->login($t->{message_factory},$t->{client_login},$t->{client_password},$cltrid,$dr,$t->{client_newpassword},$t->{protocol_data});
+ $self->logging($cltrid,1,0,1,$login);
  Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send login message') unless ($sock->print($login));
 
  ## Verify login successful
  $dr=$pc->get_data($self,$sock);
- $self->log('C<=S',$dr);
+ $self->logging($cltrid,1,1,1,$dr);
  my $rc2=$pc->parse_login($dr); ## gives back a Net::DRI::Protocol::ResultStatus
  die($rc2) unless $rc2->is_success();
 }
@@ -279,10 +286,10 @@ sub send_logout
 
  my $cltrid=$t->{trid_factory}->($self->name());
  my $logout=$pc->logout($t->{message_factory},$cltrid);
- $self->log('C=>S',$logout);
+ $self->logging($cltrid,3,0,1,$logout);
  Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send logout message') unless ($sock->print($logout));
  my $dr=$pc->get_data($self,$sock); ## We expect this to throw an exception, since the server will probably cut the connection
- $self->log('C<=S',$dr);
+ $self->logging($cltrid,3,1,1,$dr);
  my $rc1=$pc->parse_logout($dr);
  die($rc1) unless $rc1->is_success();
 }
@@ -310,15 +317,15 @@ sub ping
  my $cltrid=$t->{trid_factory}->($self->name());
  eval
  {
-  local $SIG{ALRM}=sub { die "timeout" };
+  local $SIG{ALRM}=sub { die 'timeout' };
   alarm(10);
   my $noop=$pc->keepalive($t->{message_factory},$cltrid);
-  $self->log('C=>S',$noop);
+  $self->logging($cltrid,2,0,1,$noop);
   Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send ping message') unless ($sock->print($noop));
   $self->time_used(time());
   $t->{exchanges_done}++;
   my $dr=$pc->get_data($self,$sock);
-  $self->log('C<=S',$dr);
+  $self->logging($cltrid,2,1,1,$dr);
   my $rc=$pc->parse_keepalive($dr);
   die($rc) unless $rc->is_success();
  };
@@ -351,7 +358,7 @@ sub end
  {
   eval
   {
-   local $SIG{ALRM}=sub { die "timeout" };
+   local $SIG{ALRM}=sub { die 'timeout' };
    alarm(10);
    $self->close_connection();
   };
@@ -363,10 +370,10 @@ sub end
 
 sub send
 {
- my ($self,$tosend)=@_;
+ my ($self,$trid,$tosend)=@_;
  ## We do a very crude error handling : if first send fails, we reset connection.
  ## Thus if you put retry=>2 when creating this object, the connection will be re-established and the message resent
- $self->SUPER::send($tosend,\&_print,sub { shift->current_state(0) });
+ $self->SUPER::send($trid,$tosend,\&_print,sub { shift->current_state(0) });
 }
 
 sub _print ## here we are sure open_connection() was called before
@@ -380,9 +387,9 @@ sub _print ## here we are sure open_connection() was called before
 
 sub receive
 {
- my ($self)=@_;
+ my ($self,$trid)=@_;
 
- return $self->SUPER::receive(\&_get);
+ return $self->SUPER::receive($trid,\&_get);
 }
 
 sub _get

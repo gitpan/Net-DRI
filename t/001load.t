@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-use Test::More tests => 144;
+use Test::More tests => 157;
 
 BEGIN { 
 use_ok('Net::DRI');
@@ -30,6 +30,9 @@ use_ok('Net::DRI::DRD::INFO');
 use_ok('Net::DRI::DRD::ORG');
 use_ok('Net::DRI::DRD::LU');
 use_ok('Net::DRI::DRD::BIZ');
+use_ok('Net::DRI::DRD::ASIA');
+use_ok('Net::DRI::DRD::NAME');
+use_ok('Net::DRI::DRD::NU');
 use_ok('Net::DRI::Data::Raw');
 use_ok('Net::DRI::Data::Hosts');
 use_ok('Net::DRI::Data::Changes');
@@ -48,6 +51,7 @@ use_ok('Net::DRI::Data::Contact::BE');
 use_ok('Net::DRI::Data::Contact::AT');
 use_ok('Net::DRI::Data::Contact::COOP');
 use_ok('Net::DRI::Data::Contact::LU');
+use_ok('Net::DRI::Data::Contact::ASIA');
 use_ok('Net::DRI::Transport::Socket');
 use_ok('Net::DRI::Transport::Dummy');
 use_ok('Net::DRI::Transport::SOAP');
@@ -132,6 +136,13 @@ use_ok('Net::DRI::Protocol::EPP::Extensions::LU::Contact');
 use_ok('Net::DRI::Protocol::EPP::Extensions::LU::Domain');
 use_ok('Net::DRI::Protocol::EPP::Extensions::LU::Poll');
 use_ok('Net::DRI::Protocol::EPP::Extensions::LU::Status');
+use_ok('Net::DRI::Protocol::EPP::Extensions::CentralNic');
+use_ok('Net::DRI::Protocol::EPP::Extensions::CentralNic::TTL');
+use_ok('Net::DRI::Protocol::EPP::Extensions::CentralNic::WebForwarding');
+use_ok('Net::DRI::Protocol::EPP::Extensions::CentralNic::Release');
+use_ok('Net::DRI::Protocol::EPP::Extensions::ASIA');
+use_ok('Net::DRI::Protocol::EPP::Extensions::ASIA::CED');
+use_ok('Net::DRI::Protocol::EPP::Extensions::ASIA::IPR');
 use_ok('Net::DRI::Protocol::DAS');
 use_ok('Net::DRI::Protocol::DAS::Message');
 use_ok('Net::DRI::Protocol::DAS::Connection');
@@ -147,6 +158,8 @@ use_ok('Net::DRI::Protocol::Whois::Domain::AERO');
 use_ok('Net::DRI::Protocol::Whois::Domain::INFO');
 use_ok('Net::DRI::Protocol::Whois::Domain::EU');
 use_ok('Net::DRI::Protocol::Whois::Domain::BIZ');
+use_ok('Net::DRI::Protocol::Whois::Domain::MOBI');
+use_ok('Net::DRI::Protocol::Whois::Domain::NAME');
 }
 
 exit 0;

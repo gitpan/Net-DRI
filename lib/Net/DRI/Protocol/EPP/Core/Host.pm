@@ -1,4 +1,4 @@
-## Domain Registry Interface, EPP Host commands (RFC3732)
+## Domain Registry Interface, EPP Host commands (RFC4932)
 ##
 ## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
@@ -26,13 +26,13 @@ use Net::DRI::Protocol::EPP;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Protocol::EPP::Core::Host - EPP Host commands (RFC3732) for Net::DRI
+Net::DRI::Protocol::EPP::Core::Host - EPP Host commands (RFC4932 obsoleting RFC3732) for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -104,7 +104,7 @@ sub build_command
  return @d;
 }
 
-##################################################################################################
+####################################################################################################
 ########### Query commands
 
 sub check
@@ -130,6 +130,7 @@ sub check_parse
   my $host;
   while($c)
   {
+   next unless ($c->nodeType() == 1); ## only for element nodes
    my $n=$c->localname() || $c->nodeName();
    if ($n eq 'name')
    {
@@ -141,8 +142,7 @@ sub check_parse
    {
     $rinfo->{host}->{$host}->{exist_reason}=$c->getFirstChild()->getData();
    }
-   $c=$c->getNextSibling();
-  }
+  } continue { $c=$c->getNextSibling(); }
  }
 }
 
@@ -167,6 +167,7 @@ sub info_parse
  my $c=$infdata->getFirstChild();
  while ($c)
  {
+  next unless ($c->nodeType() == 1); ## only for element nodes
   my $name=$c->localname() || $c->nodeName();
   next unless $name;
 
@@ -195,8 +196,7 @@ sub info_parse
    push @ip4,$ip if ($ipv eq 'v4');
    push @ip6,$ip if ($ipv eq 'v6');
   }
-  $c=$c->getNextSibling();
- }
+ } continue { $c=$c->getNextSibling(); }
 
  $rinfo->{host}->{$oname}->{status}=$po->create_local_object('status')->add(@s);
  $rinfo->{host}->{$oname}->{self}=Net::DRI::Data::Hosts->new($oname,\@ip4,\@ip6);
@@ -225,6 +225,7 @@ sub create_parse
  my $c=$infdata->getFirstChild();
  while ($c) ## host:name is not used
  {
+  next unless ($c->nodeType() == 1); ## only for element nodes
   my $name=$c->localname() || $c->nodeName();
   next unless $name;
  
@@ -237,8 +238,7 @@ sub create_parse
   {
    $rinfo->{host}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
   }
-  $c=$c->getNextSibling();
- }
+ } continue { $c=$c->getNextSibling(); }
 }
 
 sub delete
@@ -304,7 +304,7 @@ sub add_ip
 }
 
 ####################################################################################################
-## RFC3732 §3.2.6  Offline Review of Requested Actions
+## RFC4932 §3.3  Offline Review of Requested Actions
 
 sub pandata_parse
 {
@@ -318,6 +318,7 @@ sub pandata_parse
  my $c=$pandata->firstChild();
  while ($c)
  {
+  next unless ($c->nodeType() == 1); ## only for element nodes
   my $name=$c->localname() || $c->nodeName();
   next unless $name;
 
@@ -336,8 +337,7 @@ sub pandata_parse
   {
    $rinfo->{host}->{$oname}->{date}=DateTime::Format::ISO8601->new()->parse_datetime($c->firstChild->getData());
   }
-  $c=$c->getNextSibling();
- }
+ } continue { $c=$c->getNextSibling(); }
 }
 
 ####################################################################################################
