@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Contact commands (RFC4933)
 ##
-## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -25,7 +25,7 @@ use Net::DRI::Protocol::EPP;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -55,7 +55,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -95,7 +95,7 @@ sub build_command
  my @contact=(ref($contact) eq 'ARRAY')? @$contact : ($contact);
  my @c=map { UNIVERSAL::isa($_,'Net::DRI::Data::Contact')? $_->srid() : $_ } @contact;
 
- Net::DRI::Exception->die(1,'protocol/EPP',2,"Contact id needed") unless @c;
+ Net::DRI::Exception->die(1,'protocol/EPP',2,'Contact id needed') unless @c;
  foreach my $n (@c)
  {
   Net::DRI::Exception->die(1,'protocol/EPP',2,'Contact id needed') unless defined($n) && $n;
@@ -181,6 +181,7 @@ sub info_parse
  my %cd=map { $_ => [] } qw/name org street city sp pc cc/;
  my $contact=$po->factories()->{contact}->();
  my @s;
+ my $pd=DateTime::Format::ISO8601->new();
  my $c=$infdata->getFirstChild();
  while ($c)
  {
@@ -202,10 +203,10 @@ sub info_parse
    push @s,Net::DRI::Protocol::EPP::parse_status($c);
   } elsif ($name=~m/^(clID|crID|upID)$/)
   {
-   $rinfo->{contact}->{$oname}->{$1}=$c->getFirstChild()->getData();
+   $rinfo->{contact}->{$oname}->{$1}=get_data($c);
   } elsif ($name=~m/^(crDate|upDate|trDate)$/)
   {
-   $rinfo->{contact}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
+   $rinfo->{contact}->{$oname}->{$1}=$pd->parse_datetime($c->getFirstChild()->getData());
   } elsif ($name eq 'email')
   {
    $contact->email($c->getFirstChild()->getData());
@@ -245,7 +246,7 @@ sub parse_tel
  my $node=shift;
  my $ext=$node->getAttribute('x') || '';
  my $num=get_data($node);
- $num.="x${ext}" if $ext;
+ $num.='x'.$ext if $ext;
  return $num;
 }
 
@@ -344,6 +345,7 @@ sub transfer_parse
  my $trndata=$mes->get_content('trnData',$mes->ns('contact'));
  return unless $trndata;
 
+ my $pd=DateTime::Format::ISO8601->new();
  my $c=$trndata->getFirstChild();
  while ($c)
  {
@@ -362,7 +364,7 @@ sub transfer_parse
    $rinfo->{contact}->{$oname}->{$1}=$c->getFirstChild()->getData();
   } elsif ($name=~m/^(reDate|acDate)$/)
   {
-   $rinfo->{contact}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
+   $rinfo->{contact}->{$oname}->{$1}=$pd->parse_datetime($c->getFirstChild()->getData());
   }
  } continue { $c=$c->getNextSibling(); }
 }
@@ -414,8 +416,18 @@ sub build_disclose
 
 sub build_cdata
 {
- my $contact=shift;
- my @d;
+ my ($contact,$v)=@_;
+ my $hasloc=$contact->has_loc();
+ my $hasint=$contact->has_int();
+ if ($hasint && !$hasloc && (($v & 5) == $v))
+ {
+  $contact->int2loc();
+  $hasloc=1;
+ } elsif ($hasloc && !$hasint && (($v & 6) == $v))
+ {
+  $contact->loc2int();
+  $hasint=1;
+ }
 
  my (@postl,@posti,@addrl,@addri);
  _do_locint(\@postl,\@posti,$contact,'name');
@@ -428,23 +440,16 @@ sub build_cdata
  push @postl,['contact:addr',@addrl] if @addrl;
  push @posti,['contact:addr',@addri] if @addri;
 
- my $if=$contact->_intfirst();
- if (defined($if) && $if)
- {
-  push @d,['contact:postalInfo',@postl,{type=>'int'}] if @postl;
-  push @d,['contact:postalInfo',@posti,{type=>'loc'}] if @posti;
- } else
- {
-  push @d,['contact:postalInfo',@postl,{type=>'loc'}] if @postl;
-  push @d,['contact:postalInfo',@posti,{type=>'int'}] if @posti;
- }
-
+ my @d;
+ push @d,['contact:postalInfo',@postl,{type=>'loc'}] if (($v & 5) && $hasloc); ## loc+int OR loc
+ push @d,['contact:postalInfo',@posti,{type=>'int'}] if (($v & 6) && $hasint); ## loc+int OR int
 
  push @d,build_tel('contact:voice',$contact->voice()) if defined($contact->voice());
  push @d,build_tel('contact:fax',$contact->fax()) if defined($contact->fax());
  push @d,['contact:email',$contact->email()] if defined($contact->email());
  push @d,build_authinfo($contact);
  push @d,build_disclose($contact);
+
  return @d;
 }
 
@@ -469,10 +474,10 @@ sub create
  my ($epp,$contact)=@_;
  my $mes=$epp->message();
  my @d=build_command($mes,'create',$contact);
- 
+
  Net::DRI::Exception->die(1,'protocol/EPP',10,'Invalid contact '.$contact) unless (UNIVERSAL::isa($contact,'Net::DRI::Data::Contact'));
  $contact->validate(); ## will trigger an Exception if needed
- push @d,build_cdata($contact);
+ push @d,build_cdata($contact,$epp->{contacti18n});
  $mes->command_body(\@d);
 }
 
@@ -542,7 +547,7 @@ sub update
  my ($epp,$contact,$todo)=@_;
  my $mes=$epp->message();
 
- Net::DRI::Exception::usererr_invalid_parameters($todo." must be a Net::DRI::Data::Changes object") unless ($todo && ref($todo) && $todo->isa('Net::DRI::Data::Changes'));
+ Net::DRI::Exception::usererr_invalid_parameters($todo.' must be a Net::DRI::Data::Changes object') unless ($todo && ref($todo) && $todo->isa('Net::DRI::Data::Changes'));
  if ((grep { ! /^(?:add|del)$/ } $todo->types('status')) ||
      (grep { ! /^(?:set)$/ } $todo->types('info'))
     )
@@ -562,7 +567,7 @@ sub update
  {
   Net::DRI::Exception->die(1,'protocol/EPP',10,'Invalid contact '.$newc) unless (UNIVERSAL::isa($newc,'Net::DRI::Data::Contact'));
   $newc->validate(1); ## will trigger an Exception if needed
-  my @c=build_cdata($newc);
+  my @c=build_cdata($newc,$epp->{contacti18n});
   push @d,['contact:chg',@c] if @c;
  }
  $mes->command_body(\@d);

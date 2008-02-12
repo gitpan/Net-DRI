@@ -1,6 +1,6 @@
 ## Domain Registry Interface, ASIA IPR extension
 ##
-## Copyright (c) 2007 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
+## Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -19,9 +19,9 @@ package Net::DRI::Protocol::EPP::Extensions::ASIA::IPR;
 
 use strict;
 
-use DateTime;
+use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -52,7 +52,7 @@ Tonnerre Lombard E<lt>tonnerre.lombard@sygroup.chE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -71,7 +71,7 @@ sub register_commands
 {
  my ($class,$version)=@_;
  my %tmp=(
-           create =>		[ \&create, undef ],
+           create =>		[ \&create, \&create_parse ],
 	   info =>		[ undef, \&parse ]
          );
 
@@ -112,12 +112,25 @@ sub create
 	if (exists($rd->{ipr}->{type}));
   push(@iprdata, ['ipr:preVerified', $rd->{ipr}->{preVerified}])
 	if (exists($rd->{ipr}->{preVerified}));
-  push(@iprdata, ['ipr:phase', $rd->{ipr}->{phase}])
-	if (exists($rd->{ipr}->{phase}));
 
   my $eid=$mes->command_extension_register('ipr:create','xmlns:ipr="urn:afilias:params:xml:ns:ipr-1.0" xsi:schemaLocation="urn:afilias:params:xml:ns:ipr-1.0 ipr-1.0.xsd"');
   $mes->command_extension($eid,[@iprdata]);
  }
+}
+
+sub create_parse
+{
+ my ($po, $otype, $oaction, $oname, $rinfo) = @_;
+ my $NS = 'urn:afilias:params:xml:ns:asia-1.0';
+ my $mes = $po->message();
+ my $infdata = $mes->get_content('creData', $NS, 1);
+ my $c;
+
+ return unless ($infdata);
+
+ $c = $infdata->getElementsByTagNameNS($NS, 'domainRoid');
+ $rinfo->{$otype}->{$oname}->{roid} = $c->shift()->getFirstChild()->getData()
+	if ($c);
 }
 
 sub parse
@@ -129,6 +142,7 @@ sub parse
  my $c;
 
  return unless ($infdata);
+ my $pd=DateTime::Format::ISO8601->new();
 
  $c = $infdata->getElementsByTagNameNS('urn:afilias:params:xml:ns:ipr-1.0', 'name');
  $ipr->{name} = $c->shift()->getFirstChild()->getData() if ($c);
@@ -137,9 +151,9 @@ sub parse
  $c = $infdata->getElementsByTagNameNS('urn:afilias:params:xml:ns:ipr-1.0', 'number');
  $ipr->{number} = $c->shift()->getFirstChild()->getData() if ($c);
  $c = $infdata->getElementsByTagNameNS('urn:afilias:params:xml:ns:ipr-1.0', 'appDate');
- $ipr->{appDate} = DateTime->from_epoch(epoch => str2time($c->shift()->getFirstChild()->getData())) if ($c);
+ $ipr->{appDate} =$pd->parse_datetime ($c->shift()->getFirstChild()->getData()) if ($c);
  $c = $infdata->getElementsByTagNameNS('urn:afilias:params:xml:ns:ipr-1.0', 'regDate');
- $ipr->{regDate} = DateTime->from_epoch(epoch => str2time($c->shift()->getFirstChild()->getData())) if ($c);
+ $ipr->{regDate} = $pd->parse_datetime($c->shift()->getFirstChild()->getData()) if ($c);
  $c = $infdata->getElementsByTagNameNS('urn:afilias:params:xml:ns:ipr-1.0', 'class');
  $ipr->{class} = $c->shift()->getFirstChild()->getData() if ($c);
  $c = $infdata->getElementsByTagNameNS('urn:afilias:params:xml:ns:ipr-1.0', 'entitlement');
@@ -148,8 +162,8 @@ sub parse
  $ipr->{form} = $c->shift()->getFirstChild()->getData() if ($c);
  $c = $infdata->getElementsByTagNameNS('urn:afilias:params:xml:ns:ipr-1.0', 'preVerified');
  $ipr->{preVerified} = $c->shift()->getFirstChild()->getData() if ($c);
- $c = $infdata->getElementsByTagNameNS('urn:afilias:params:xml:ns:ipr-1.0', 'phase');
- $ipr->{phase} = $c->shift()->getFirstChild()->getData() if ($c);
+ $c = $infdata->getElementsByTagNameNS('urn:afilias:params:xml:ns:ipr-1.0', 'type');
+ $ipr->{type} = $c->shift()->getFirstChild()->getData() if ($c);
  $rinfo->{$otype}->{$oname}->{ipr} = $ipr;
 }
 

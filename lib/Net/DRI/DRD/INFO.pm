@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .INFO policies
 ##
-## Copyright (c) 2006,2007 Rony Meyer <perl@spot-light.ch>. All rights reserved.
+## Copyright (c) 2006,2007,2008 Rony Meyer <perl@spot-light.ch>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -22,7 +22,7 @@ use base qw/Net::DRI::DRD/;
 
 use Net::DRI::DRD::ICANN;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -52,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2007 Rony Meyer <perl@spot-light.ch>.
+Copyright (c) 2006,2007,2008 Rony Meyer <perl@spot-light.ch>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -97,10 +97,10 @@ sub transport_protocol_compatible
 
 sub transport_protocol_default
 {
- my ($drd,$ndr,$type)=@_;
- $type='' if (!defined($type) || ref($type));
- return ('Net::DRI::Transport::Socket','Net::DRI::Protocol::EPP') unless ($type);
- return ('Net::DRI::Transport::Socket',[{defer=>1,close_after=>1,socktype=>'tcp',remote_host=>'whois.afilias.info',remote_port=>43,protocol_connection=>'Net::DRI::Protocol::Whois::Connection',protocol_version=>1}],'Net::DRI::Protocol::Whois',[]) if (lc($type) eq 'whois');
+ my ($drd,$ndr,$type,$ta,$pa)=@_;
+ $type='epp' if (!defined($type) || ref($type));
+ return Net::DRI::DRD::_transport_protocol_default_epp('Net::DRI::Protocol::EPP',$ta,$pa) if ($type eq 'epp');
+ return ('Net::DRI::Transport::Socket',[{%Net::DRI::DRD::PROTOCOL_DEFAULT_WHOIS,remote_host=>'whois.afilias.info'}],'Net::DRI::Protocol::Whois',[]) if (lc($type) eq 'whois');
 }
 
 ####################################################################################################

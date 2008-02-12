@@ -1,6 +1,7 @@
 #!/usr/bin/perl -w
 
 use strict;
+use warnings;
 use Test::More;
 
 if ( not $ENV{TEST_AUTHOR} ) 
@@ -9,8 +10,7 @@ if ( not $ENV{TEST_AUTHOR} )
  plan( skip_all => $msg );
 }
 
-#eval { use Test::Perl::Critic -exclude => ['ProhibitStringyEval']; };
-eval { use Test::Perl::Critic; };
+eval { require Test::Perl::Critic; };
 
 if ($@) 
 {
@@ -18,4 +18,5 @@ if ($@)
  plan( skip_all => $msg );
 }
 
+Test::Perl::Critic->import(-severity => 'gentle');
 all_critic_ok();

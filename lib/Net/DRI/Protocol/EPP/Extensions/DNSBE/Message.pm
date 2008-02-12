@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Message for DNSBE
 ##
-## Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -21,7 +21,7 @@ use strict;
 
 use base qw/Net::DRI::Protocol::EPP::Message/;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -51,7 +51,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -74,9 +74,11 @@ sub parse
  my $result=$self->get_content('result',$self->ns('dnsbe'),1);
  return unless $result;
 
+ ## We add it to the latest status extra_info seen.
+ my $ra=$self->{results}->[-1]->{extra_info};
  foreach my $el ($result->getElementsByTagNameNS($self->ns('dnsbe'),'msg'))
  {
-  push @{$self->{result_extra_info}},$el->getFirstChild()->getData();
+  push @{$ra},$el->getFirstChild()->getData();
  }
 }
 

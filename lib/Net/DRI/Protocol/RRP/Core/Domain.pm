@@ -1,6 +1,6 @@
 ## Domain Registry Interface, RRP Domain commands
 ##
-## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -24,7 +24,7 @@ use Net::DRI::Protocol::RRP::Core::Status;
 use Net::DRI::Protocol::RRP;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -54,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -235,7 +235,13 @@ sub mod
 
 sub renew
 {
- my ($rrp,$domain,$period,$curexp)=@_;
+ my ($rrp,$domain,$rd)=@_;
+ my ($period,$curexp);
+ if (defined($rd) && (ref($rd) eq 'HASH') && keys(%$rd))
+ {
+  $period=$rd->{duration};
+  $curexp=$rd->{current_expiration};
+ }
  Net::DRI::Exceptions::usererr_insufficient_parameters("current expiration year and period must be both defined or not at all") if (defined($curexp) xor defined($period)); ## both or none should be defined
  if (defined($curexp))
  {

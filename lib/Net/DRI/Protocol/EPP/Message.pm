@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Message
 ##
-## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -28,9 +28,9 @@ use Net::DRI::Exception;
 use Net::DRI::Util;
 
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
-__PACKAGE__->mk_accessors(qw(version errcode errmsg errlang command command_body cltrid svtrid msg_id node_resdata node_extension node_msg result_greeting result_extra_info));
+__PACKAGE__->mk_accessors(qw(version command command_body cltrid svtrid msg_id node_resdata node_extension node_msg result_greeting));
 
-our $VERSION=do { my @r=(q$Revision: 1.18 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.19 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -60,7 +60,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -80,15 +80,38 @@ sub new
  my $class=ref($proto) || $proto;
  my $trid=shift;
 
- my $self={
-           errcode => 2999,
-          };
-
+ my $self={ results => [] };
  bless($self,$class);
 
  $self->cltrid($trid) if (defined($trid) && $trid);
  return $self;
 }
+
+sub _get_result
+{
+ my ($self,$what,$pos)=@_;
+ $pos=0 unless defined($pos);
+ my $rh=$self->{results}->[$pos];
+ return unless (defined($rh) && (ref($rh) eq 'HASH') && keys(%$rh)==4);
+ return $rh->{$what};
+}
+
+sub results { return @{shift->{results}}; }
+sub results_code { return map { $_->{code} } shift->results(); }
+sub results_message { return map { $_->{message} } shift->results(); }
+sub results_lang { return map { $_->{lang} } shift->results(); }
+sub results_extra_info { return map { $_->{extra_info} } shift->results(); }
+
+sub result_code { return shift->_get_result('code',@_); }
+sub result_message { return shift->_get_result('message',@_); }
+sub result_lang  { return shift->_get_result('lang',@_); }
+sub result_extra_info { return shift->_get_result('extra_info',@_); }
+
+## old names and old API, we were storing results each on on top of the previous one, hence the net result was the latest seen
+## except for result_extra_info that is now giving back, by default, the *first* result seen, not the last
+sub errcode { return shift->result_code(-1); }
+sub errlang { return shift->result_lang(-1); }
+sub errmsg  { return shift->result_message(-1); }
 
 sub ns
 {
@@ -104,14 +127,22 @@ sub ns
  return $self->{ns}->{$what}->[0];
 }
 
-sub is_success { return (shift->errcode()=~m/^1/)? 1 : 0; } ## 1XXX is for success, 2XXX for failures
+sub is_success { return _is_success(shift->result_code()); }
+sub _is_success { return (shift=~m/^1/)? 1 : 0; } ## 1XXX is for success, 2XXX for failures
 
 sub result_status
 {
  my $self=shift;
- my $rs=Net::DRI::Protocol::ResultStatus->new('epp',$self->errcode(),undef,$self->is_success(),$self->errmsg(),$self->errlang(),$self->result_extra_info());
- $rs->_set_trid([ $self->cltrid(),$self->svtrid() ]);
- return $rs;
+ my $prev;
+
+ foreach my $rs (reverse(@{$self->{results}}))
+ {
+  my $rso=Net::DRI::Protocol::ResultStatus->new('epp',$rs->{code},undef,_is_success($rs->{code}),$rs->{message},$rs->{lang},$rs->{extra_info});
+  $rso->_set_trid([ $self->cltrid(),$self->svtrid() ]);
+  $rso->_set_next($prev) if defined($prev);
+  $prev=$rso;
+ }
+ return $prev;
 }
 
 sub command_extension_register
@@ -181,7 +212,7 @@ sub as_string
    }
   }
  }
- 
+
  ## OPTIONAL extension
  my $ext=$self->{extension};
  if (defined($ext) && (ref($ext) eq 'ARRAY') && @$ext)
@@ -211,7 +242,7 @@ sub as_string
 
  my $m=Encode::encode('utf8',join('',@d));
  my $l=pack('N',4+length($m)); ## RFC 4934 §4
- return (defined($to) && ($to eq 'tcp'))? $l.$m : $m;
+ return (defined($to) && ($to eq 'tcp') && ($self->version() > 0.4))? $l.$m : $m;
 }
 
 sub _toxml
@@ -236,12 +267,12 @@ sub _toxml
   my $attr=keys(%attr)? ' '.join(' ',map { $_.'="'.$attr{$_}.'"' } sort(keys(%attr))) : '';
   if (!@c || (@c==1 && !ref($c[0]) && ($c[0] eq '')))
   {
-   push @t,"<${tag}${attr}/>";
+   push @t,'<'.$tag.$attr.'/>';
   } else
   {
-   push @t,"<${tag}${attr}>";
+   push @t,'<'.$tag.$attr.'>';
    push @t,(@c==1 && !ref($c[0]))? xml_escape($c[0]) : _toxml(\@c);
-   push @t,"</${tag}>";
+   push @t,'</'.$tag.'>';
   }
  }
  return @t;
@@ -293,7 +324,7 @@ sub parse
 
  if ($root->getElementsByTagNameNS($NS,'greeting'))
  {
-  $self->errcode(1000); ## fake an OK
+  push @{$self->{results}},{ code => 1000, message => undef, lang => undef, extra_info => []}; ## fake an OK
   my $r=$self->parse_greeting(($root->getElementsByTagNameNS($NS,'greeting'))[0]);
   $self->result_greeting($r);
   return;
@@ -302,14 +333,9 @@ sub parse
  my $res=($root->getElementsByTagNameNS($NS,'response'))[0];
 
  ## result block(s)
- my @results=$res->getElementsByTagNameNS($NS,'result'); ## one element if success, multiple elements if failure RFC4930 §2.6
- foreach (@results)
+ foreach my $result ($res->getElementsByTagNameNS($NS,'result')) ## one element if success, multiple elements if failure RFC4930 §2.6
  {
-  my ($errc,$errm,$errl)=$self->parse_result($_);
-  ## TODO : store all in a stack (to preserve the list of results ?)
-  $self->errcode($errc);
-  $self->errmsg($errm);
-  $self->errlang($errl);
+  $self->parse_result($result);
  }
 
  if ($res->getElementsByTagNameNS($NS,'msgQ')) ## OPTIONAL
@@ -370,6 +396,7 @@ sub parse_result
  my $msg=($node->getElementsByTagNameNS($NS,'msg'))[0];
  my $lang=$msg->getAttribute('lang') || 'en';
  $msg=$msg->firstChild()->getData();
+ my @i;
 
  my $c=$node->getFirstChild();
  while ($c)
@@ -377,18 +404,17 @@ sub parse_result
   next unless ($c->nodeType() == 1); ## only for element nodes
   my $name=$c->nodeName();
   next unless $name;
- 
+
   if ($name eq 'extValue') ## OPTIONAL
   {
-   push @{$self->{result_extra_info}},substr(substr($c->toString(),10),0,-11); ## grab everything as a string, without <extValue> and </extValue>
+   push @i,substr(substr($c->toString(),10),0,-11); ## grab everything as a string, without <extValue> and </extValue>
   } elsif ($name eq 'value') ## OPTIONAL
   {
-   push @{$self->{result_extra_info}},$c->toString();
+   push @i,$c->toString();
   }
-
  } continue { $c=$c->getNextSibling(); }
 
- return ($code,$msg,$lang);
+ push @{$self->{results}},{ code => $code, message => $msg, lang => $lang, extra_info => \@i};
 }
 
 sub parse_greeting
@@ -441,6 +467,7 @@ sub get_name_from_message
  {
   return $e->[1] if ($e->[0]=~m/^(?:domain|host|nsgroup):name$/); ## TO FIX (notably in case of check_multi)
   return $e->[1] if ($e->[0]=~m/^(?:contact|defreg):id$/); ## TO FIX
+  return $e->[1] if ($e->[0]=~m/^(?:contact|ns|account):roid$/); ## Needed for .UK (ok here since this whole function should (must!) disappear)
  }
  return 'session'; ## TO FIX
 }

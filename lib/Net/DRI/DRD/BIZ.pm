@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .BIZ policies
 ##
-## Copyright (c) 2007 Distribute.IT Pty Ltd, www.distributeit.com.au,
+## Copyright (c) 2007,2008 Distribute.IT Pty Ltd, www.distributeit.com.au,
 ##                    Rony Meyer <perl@spot-light.ch>.
 ##                    All rights reserved.
 ##
@@ -24,7 +24,7 @@ use base qw/Net::DRI::DRD/;
 
 use Net::DRI::DRD::ICANN;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -54,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007 Distribute.IT Pty Ltd, E<lt>http://www.distributeit.com.auE<gt>,
+Copyright (c) 2007,2008 Distribute.IT Pty Ltd, E<lt>http://www.distributeit.com.auE<gt>,
 Rony Meyer <perl@spot-light.ch>.
 All rights reserved.
 
@@ -71,12 +71,10 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $proto=shift;
- my $class=ref($proto) || $proto;
-
+ my $class=shift;
  my $self=$class->SUPER::new(@_);
  $self->{info}->{host_as_attr}=0;
-
+ $self->{info}->{contact_i18n}=6; ## INT only or INT+LOC (but not LOC only)
  bless($self,$class);
  return $self;
 }
@@ -100,10 +98,10 @@ sub transport_protocol_compatible
 
 sub transport_protocol_default
 {
- my ($drd,$ndr,$type)=@_;
- $type='' if (!defined($type) || ref($type));
- return ('Net::DRI::Transport::Socket','Net::DRI::Protocol::EPP') unless ($type);
- return ('Net::DRI::Transport::Socket',[{defer=>1,close_after=>1,socktype=>'tcp',remote_host=>'whois.nic.biz',remote_port=>43,protocol_connection=>'Net::DRI::Protocol::Whois::Connection',protocol_version=>1}],'Net::DRI::Protocol::Whois',[]) if (lc($type) eq 'whois');
+ my ($drd,$ndr,$type,$ta,$pa)=@_;
+ $type='epp' if (!defined($type) || ref($type));
+ return Net::DRI::DRD::_transport_protocol_default_epp('Net::DRI::Protocol::EPP',$ta,$pa) if ($type eq 'epp');
+ return ('Net::DRI::Transport::Socket',[{%Net::DRI::DRD::PROTOCOL_DEFAULT_WHOIS,remote_host=>'whois.nic.biz'}],'Net::DRI::Protocol::Whois',[]) if (lc($type) eq 'whois');
 
 }
 

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Implements a list of host (names+ip) with order preserved
 ##
-## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -19,11 +19,11 @@ package Net::DRI::Data::Hosts;
 
 use strict;
 use base qw(Class::Accessor::Chained::Fast);
-__PACKAGE__->mk_accessors(qw(name loid));
+__PACKAGE__->mk_accessors(qw(name loid roid));
 
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.14 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.15 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -94,6 +94,10 @@ this has nothing to do with the name(s) of the nameservers inside this object
 
 local id of this object
 
+=head2 roid()
+
+registry id of this object, only used by .UK for now
+
 =head2 get_names(limit)
 
 returns a list of nameservers' names included in this object ; if limit is provided
@@ -133,7 +137,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -149,14 +153,10 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $proto=shift;
- my $class=ref($proto) || $proto;
-
+ my $class=shift;
  my $self={ list => [] }; ## list=>[['',[ipv4],[ipv6]]+],options=>{}
  bless($self,$class);
-
  $self->add(@_) if (@_);
-
  return $self;
 }
 
@@ -183,7 +183,7 @@ sub set
 
 sub add
 {
- my ($self,$in,$e1,$e2)=@_;
+ my ($self,$in,$e1,$e2,$ipall)=@_;
  return unless (defined($in) && $in);
 
  if (ref($in) eq 'ARRAY')
@@ -193,16 +193,16 @@ sub add
 
  if (defined($e2) && $e2)
  {
-  $self->_push($in,$e1,$e2);
+  $self->_push($in,$e1,$e2,$ipall);
   return $self;
  }
 
  if (defined($e1) && $e1)
  {
-  $self->_push($in,_separate_ips($e1));
+  $self->_push($in,_separate_ips($e1,$ipall));
   return $self;
  }
- 
+
  $self->_push($in,[],[]);
  return $self;
 }
@@ -210,24 +210,28 @@ sub add
 sub _separate_ips
 {
  my (@ip4,@ip6);
+ my $ipall=pop(@_);
+ $ipall=0 unless defined($ipall);
  foreach my $ip (map {ref($_)? @{$_} : $_} @_)
- { 
+ {
   ## We keep only the public ips
-  push @ip4,$ip if Net::DRI::Util::is_ipv4($ip,1);
-  push @ip6,$ip if Net::DRI::Util::is_ipv6($ip,1);
+  push @ip4,$ip if Net::DRI::Util::is_ipv4($ip,1-$ipall);
+  push @ip6,$ip if Net::DRI::Util::is_ipv6($ip,1-$ipall);
  }
  return (\@ip4,\@ip6);
 }
 
 sub _push
 {
- my ($self,$name,$ipv4,$ipv6)=@_;
+ my ($self,$name,$ipv4,$ipv6,$ipall)=@_;
+ $ipall=0 unless defined($ipall);
+ chop($name) if (defined($name) && $name && $name=~m/\.$/);
  return unless Net::DRI::Util::is_hostname($name);
  $name=lc($name); ## by default, hostnames are case insensitive
 
  ## We keep only the public ips
- my @ipv4=grep { Net::DRI::Util::is_ipv4($_,1) } ref($ipv4)? @$ipv4 : ($ipv4);
- my @ipv6=grep { Net::DRI::Util::is_ipv6($_,1) } ref($ipv6)? @$ipv6 : ($ipv6);
+ my @ipv4=grep { Net::DRI::Util::is_ipv4($_,1-$ipall) } ref($ipv4)? @$ipv4 : ($ipv4);
+ my @ipv6=grep { Net::DRI::Util::is_ipv6($_,1-$ipall) } ref($ipv6)? @$ipv6 : ($ipv6);
 
  if ($self->count() && defined($self->get_details($name))) ## name already here, we append IP
  {
@@ -306,6 +310,19 @@ sub get_details
   }
   return;
  }
+}
+
+# Do not use this method for anything else than debugging. The output format is not guaranteed to remain stable
+sub as_string
+{
+ my ($self)=shift;
+ my @s;
+ foreach my $el (@{$self->{list}})
+ {
+  my $ips=join(',',@{$el->[1]},@{$el->[2]});
+  push @s,$ips? $el->[0].' ['.$ips.']' : $el->[0];
+ }
+ return join(' ',@s);
 }
 
 ####################################################################################################

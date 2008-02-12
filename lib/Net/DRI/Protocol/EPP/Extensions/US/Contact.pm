@@ -1,6 +1,6 @@
-## Domain Registry Interface, EPP .US Contact NEXUS Extensions (draft-liu-epp-usTLD-00)
+## Domain Registry Interface, EPP .US Contact NEXUS Extensions
 ##
-## Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -22,13 +22,13 @@ use strict;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Protocol::EPP::Extensions::US::Contact - EPP .US Contact NEXUS Extensions (draft-liu-epp-usTLD-00) for Net::DRI
+Net::DRI::Protocol::EPP::Extensions::US::Contact - .US EPP Contact NEXUS Extensions for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -52,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -108,8 +108,8 @@ sub create
  return unless (UNIVERSAL::isa($contact,'Net::DRI::Data::Contact::US'));
 
  my $str=sprintf('AppPurpose=%s NexusCategory=%s',$contact->application_purpose(),$contact->nexus_category());
- my $eid=$mes->command_extension_register('','');
- $mes->command_extension($eid,[$str]);
+ my $eid=$mes->command_extension_register('neulevel:extension','xmlns:neulevel="urn:ietf:params:xml:ns:neulevel-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:neulevel-1.0 neulevel-1.0.xsd"');
+ $mes->command_extension($eid,['neulevel:unspec',$str]);
 }
 
 sub update
@@ -126,8 +126,8 @@ sub update
 
  return unless @tmp;
  
- my $eid=$mes->command_extension_register('','');
- $mes->command_extension($eid,[join(' ',@tmp)]);
+ my $eid=$mes->command_extension_register('neulevel:extension','xmlns:neulevel="urn:ietf:params:xml:ns:neulevel-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:neulevel-1.0 neulevel-1.0.xsd"');
+ $mes->command_extension($eid,['neulevel:unspec',join(' ',@tmp)]);
 }
 
 ####################################################################################################

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Protocol (RFC 4930,4931,4932,4933,4934,3735)
 ##
-## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -27,7 +27,7 @@ use Net::DRI::Protocol::EPP::Message;
 use Net::DRI::Protocol::EPP::Core::Status;
 use Net::DRI::Data::Contact;
 
-our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -57,7 +57,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -73,10 +73,8 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $h=shift;
- my $c=ref($h) || $h;
-
- my ($drd,$version,$extrah)=@_;
+ my $c=shift;
+ my ($drd,$version,$extrah,$coremods)=@_;
 
  my $self=$c->SUPER::new(); ## we are now officially a Net::DRI::Protocol object
  $self->name('EPP');
@@ -89,6 +87,7 @@ sub new
                      });
 
  $self->{hostasattr}=$drd->info('host_as_attr') || 0;
+ $self->{contacti18n}=$drd->info('contact_i18n') || 7; ## bitwise OR with 1=LOC only, 2=INT only, 4=LOC+INT only
  $self->{ns}={ _main   => ['urn:ietf:params:xml:ns:epp-1.0','epp-1.0.xsd'],
                domain  => ['urn:ietf:params:xml:ns:domain-1.0','domain-1.0.xsd'],
                host    => ['urn:ietf:params:xml:ns:host-1.0','host-1.0.xsd'],
@@ -103,17 +102,24 @@ sub new
 
  bless($self,$c); ## rebless
 
- $self->_load($extrah);
+ $self->_load($extrah,$coremods);
  return $self;
 }
 
 sub _load
 {
- my ($self,$extrah)=@_;
+ my ($self,$extrah,$coremods)=@_;
+ my (@core,@class);
 
- my @core=('Session','RegistryMessage','Domain','Contact');
- push @core,'Host' unless $self->{hostasattr};
- my @class=map { 'Net::DRI::Protocol::EPP::Core::'.$_ } @core;
+ if (defined($coremods))
+ {
+  @core=(ref($coremods) eq 'ARRAY')? @$coremods : ($coremods);
+ } else
+ {
+  @core=qw/Session RegistryMessage Domain Contact/;
+  push @core,'Host' unless $self->{hostasattr};
+ }
+ push @class,map { /::/? $_ : 'Net::DRI::Protocol::EPP::Core::'.$_ } @core;
  if (defined($extrah) && $extrah)
  {
   push @class,map { my $f=$_; $f=~s!/!::!g; $f; } map { /::/? $_ : 'Net::DRI::Protocol::EPP::Extensions::'.$_ } (ref($extrah)? @$extrah : ($extrah));
@@ -133,6 +139,8 @@ sub parse_status
  $tmp{msg}=$node->firstChild()->getData() if ($node->firstChild());
  return \%tmp;
 }
+
+sub core_contact_types { return ('admin','tech','billing'); }
 
 ####################################################################################################
 1;

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EURid (.EU) policy on reserved names
 ##
-## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -22,7 +22,7 @@ use base qw/Net::DRI::DRD/;
 
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -52,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -71,12 +71,10 @@ our %LANGA2_EU=map { $_ => 1 } qw/bg cs da de el en es et fi fr hu it lt lv mt n
 
 sub new
 {
- my $proto=shift;
- my $class=ref($proto) || $proto;
-
+ my $class=shift;
  my $self=$class->SUPER::new(@_);
  $self->{info}->{host_as_attr}=1;
-
+ $self->{info}->{contact_i18n}=1; ## LOC only
  bless($self,$class);
  return $self;
 }
@@ -100,11 +98,21 @@ sub transport_protocol_compatible
 
 sub transport_protocol_default
 {
- my ($drd,$ndr,$type)=@_;
- $type='' if (!defined($type) || ref($type));
- return ('Net::DRI::Transport::Socket','Net::DRI::Protocol::EPP::Extensions::EURid') unless ($type);
- return ('Net::DRI::Transport::Socket',[{defer=>1,close_after=>1,socktype=>'tcp',remote_host=>'das.eu',remote_port=>4343,protocol_connection=>'Net::DRI::Protocol::DAS::Connection',protocol_version=>1}],'Net::DRI::Protocol::DAS',[]) if (lc($type) eq 'das');
- return ('Net::DRI::Transport::Socket',[{defer=>1,close_after=>1,socktype=>'tcp',remote_host=>'whois.eu',remote_port=>43,protocol_connection=>'Net::DRI::Protocol::Whois::Connection',protocol_version=>1}],'Net::DRI::Protocol::Whois',[]) if (lc($type) eq 'whois');
+ my ($drd,$ndr,$type,$ta,$pa)=@_;
+ $type='epp' if (!defined($type) || ref($type));
+ if ($type eq 'epp')
+ {
+  return ('Net::DRI::Transport::Socket','Net::DRI::Protocol::EPP::Extensions::EURid') unless (defined($ta) && defined($pa));
+  my %ta=( %Net::DRI::DRD::PROTOCOL_DEFAULT_EPP,
+                     remote_host => 'epp.registry.tryout.eu', ## OTE by default, since production parameters can not be publicly released
+                     remote_port => 33128,
+                     (ref($ta) eq 'ARRAY')? %{$ta->[0]} : %$ta,
+                   );
+  my @pa=(ref($pa) eq 'ARRAY' && @$pa)? @$pa : ('1.0');
+  return ('Net::DRI::Transport::Socket',[\%ta],'Net::DRI::Protocol::EPP::Extensions::EURid',\@pa);
+ }
+ return ('Net::DRI::Transport::Socket',[{%Net::DRI::DRD::PROTOCOL_DEFAULT_DAS,remote_host=>'das.eu'}],'Net::DRI::Protocol::DAS',[]) if (lc($type) eq 'das');
+ return ('Net::DRI::Transport::Socket',[{%Net::DRI::DRD::PROTOCOL_DEFAULT_WHOIS,remote_host=>'whois.eu'}],'Net::DRI::Protocol::Whois',[]) if (lc($type) eq 'whois');
 }
 
 ######################################################################################

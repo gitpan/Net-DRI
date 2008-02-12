@@ -1,6 +1,7 @@
-## Domain Registry Interface, Gandi Web Scraping Protocol
+## Domain Registry Interface, OVH Web Services Protocol
+## As seen on http://www.ovh.com/soapi/fr/ and http://www.verot.org/ovhapi/ and http://wikikillers.eu/
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -13,23 +14,22 @@
 #
 # 
 #
-######################################################################################
+#########################################################################################
 
-package Net::DRI::Protocol::Gandi::Web;
+package Net::DRI::Protocol::OVH::WS;
 
 use strict;
 
 use base qw(Net::DRI::Protocol);
+use Net::DRI::Protocol::OVH::WS::Message;
 
-use Net::DRI::Protocol::Gandi::Web::Message;
-
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Protocol::Gandi::Web - Gandi Web Scraping Protocol for Net::DRI
+Net::DRI::Protocol::OVH::WS - OVH Web Services Protocol for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -53,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -65,25 +65,20 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
-##############################################################################################################
+####################################################################################################
 
 sub new
 {
- use Net::DRI::Exception;
- Net::DRI::Exception->die(1,'internal',1,'Gandi web site scraping transport currently disabled');
- my $h=shift;
- my $c=ref($h) || $h;
-
+ my $c=shift;
  my ($drd,$version,$extrah)=@_;
 
  my $self=$c->SUPER::new(); ## we are now officially a Net::DRI::Protocol object
- $self->name('gandi_web');
+ $self->name('ovh_ws');
  $self->version($VERSION);
 
- $self->capabilities({ domain_update => { 'ns' => ['add','del','set'] }});
+ $self->capabilities({});
 
- $self->factories({ message => sub { my $m=Net::DRI::Protocol::Gandi::Web::Message->new(); $m->version($VERSION); return $m; },
-                    status  => undef,
+ $self->factories({ message => sub { my $m=Net::DRI::Protocol::OVH::WS::Message->new(); $m->version($VERSION); return $m; },
                   });
 
  bless($self,$c); ## rebless
@@ -95,10 +90,10 @@ sub new
 sub _load
 {
  my ($self,$extrah)=@_;
-
- my @class=map { "Net::DRI::Protocol::Gandi::Web::".$_ } ('Domain');
+ my @class=map { 'Net::DRI::Protocol::OVH::WS::'.$_ } (qw/Account Domain/);
  $self->SUPER::_load(@class);
 }
 
-#########################################################################################
+
+####################################################################################################
 1;

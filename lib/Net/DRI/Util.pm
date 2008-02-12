@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Misc. useful functions
 ##
-## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -22,7 +22,7 @@ use strict;
 use Time::HiRes ();
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.14 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.15 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -52,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -116,11 +116,11 @@ sub check_equal
 sub check_isa
 {
  my ($what,$isa)=@_;
- Net::DRI::Exception::usererr_invalid_parameters((${what} || 'parameter')." must be a ${isa} object") unless ($what && UNIVERSAL::isa($what,$isa));
+ Net::DRI::Exception::usererr_invalid_parameters((${what} || 'parameter').' must be a '.$isa.' object') unless ($what && UNIVERSAL::isa($what,$isa));
  return 1;
 }
 
-#################################################################################################
+####################################################################################################
 
 sub microtime
 {
@@ -136,17 +136,16 @@ sub create_trid_1
  return uc($name).'-'.$$.'-'.$mt;
 }
 
-########################################################################################################
+####################################################################################################
 
 sub is_hostname ## RFC952/1123
 {
  my ($name)=@_;
- 
  return 0 unless defined($name);
 
  my @d=split(/\./,$name,-1);
  foreach my $d (@d)
- { 
+ {
   return 0 unless (defined($d) && ($d ne ''));
   return 0 unless (length($d)<=63);
   return 0 if (($d=~m/[^A-Za-z0-9\-]/) || ($d=~m/^-/) || ($d=~m/-$/));
@@ -185,14 +184,13 @@ sub is_ipv4
 sub is_ipv6
 {
  my ($ip,$checkpublic)=@_;
-
  return 0 unless defined($ip);
 
  my (@ip)=split(/:/,$ip);
  return 0 unless ((@ip > 0) && (@ip <= 8));
  return 0 if (($ip=~m/^:[^:]/) || ($ip=~m/[^:]:$/));
  return 0 if ($ip =~ s/:(?=:)//g > 1);
- 
+
  ## We do not allow IPv4 in IPv6
  return 0 if grep { ! /^[a-f\d]{0,4}$/i } @ip;
 
@@ -200,8 +198,8 @@ sub is_ipv6
 
  ## Check if this IP is public
  my ($ip1,$ip2)=split(/::/,$ip);
- $ip1=join("",map { sprintf("%04s",$_) } split(/:/,$ip1 || ''));
- $ip2=join("",map { sprintf("%04s",$_) } split(/:/,$ip2 || ''));
+ $ip1=join('',map { sprintf('%04s',$_) } split(/:/,$ip1 || ''));
+ $ip2=join('',map { sprintf('%04s',$_) } split(/:/,$ip2 || ''));
  my $wip=$ip1.('0' x (32-length($ip1)-length($ip2))).$ip2; ## 32 chars
  my $bip=unpack('B128',pack('H32',$wip)); ## 128-bit array
 
@@ -215,7 +213,7 @@ sub is_ipv6
  return 0; ## everything else is unassigned
 }
 
-############################################################################################
+####################################################################################################
 
 sub compare_durations
 {
@@ -234,12 +232,12 @@ sub compare_durations
         );
 }
 
-#############################################################################################
+####################################################################################################
 
 sub xml_is_normalizedstring
 {
  my ($what,$min,$max)=@_;
- 
+
  return 0 unless defined($what);
  return 0 if ($what=~m/[\r\n\t]/);
  my $l=length($what);
@@ -264,10 +262,17 @@ sub xml_is_token
  return 1;
 }
 
+sub xml_is_ncname ## xml:id is of this type
+{
+ my ($what)=@_;
+ return 0 unless defined($what) && $what;
+ return ($what=~m/^\p{ID_Start}\p{ID_Continue}*$/)
+}
+
 sub verify_ushort { my $in=shift; return (defined($in) && ($in=~m/^\d+$/) && ($in < 65536))? 1 : 0; }
 sub verify_ubyte  { my $in=shift; return (defined($in) && ($in=~m/^\d+$/) && ($in < 256))? 1 : 0; }
 sub verify_hex    { my $in=shift; return (defined($in) && ($in=~m/^[0-9A-F]+$/i))? 1 : 0; }
-sub verify_int   
+sub verify_int
 {
  my ($in,$min,$max)=@_;
  return 0 unless defined($in) && ($in=~m/^-?\d+$/);
@@ -314,9 +319,10 @@ sub xml_parse_boolean
 sub remcam
 {
  my $in=shift;
+ $in=~s/ID/_id/g;
  $in=~s/([A-Z])/_$1/g;
  return lc($in);
 }
 
-#############################################################################################
+####################################################################################################
 1;

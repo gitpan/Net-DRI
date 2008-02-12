@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP DNS-LU Poll extensions 
 ##
-## Copyright (c) 2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -23,7 +23,7 @@ use Net::DRI::Util;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -53,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -87,10 +87,12 @@ sub parse
  my $infdata=$mes->node_msg();
  return unless $infdata;
 
+ my $pollmsg=$infdata->getFirstChild();
  my %w=(action => 'dnslu_notification', type => $infdata->getAttribute('type')); ## list of types p.36
- my (%ns,%e);
+ $w{type}=$pollmsg->getAttribute('type') if (!defined($w{type}) && $pollmsg->localname() eq 'pollmsg'); 
 
- my $c=$infdata->getFirstChild()->getFirstChild();
+ my (%ns,%e);
+ my $c=$pollmsg->getFirstChild();
  while ($c)
  {
   next unless ($c->nodeType() == 1); ## only for element nodes

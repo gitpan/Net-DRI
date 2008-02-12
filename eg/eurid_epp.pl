@@ -22,9 +22,10 @@ $dri->add_registry('EURid',{clid=>$CLID});
 my $file='results-'.time().'.log';
 open(my $fh,'>>',$file) || die $!;
 print "Dumping XML exchange to $file\n";
+my $oldfh=select($fh); $|++; select($oldfh);
 
 ## This connects to .EU server for tests
-my $rc=$dri->target('EURid')->new_current_profile('profile1','Net::DRI::Transport::Socket',[{log_fh=>$fh,defer=>0,socktype=>'ssl',remote_host=>'epp.registry.tryout.eu',remote_port=>33128,ssl_cipher_list=>'TLSv1',protocol_connection=>'Net::DRI::Protocol::EPP::Connection',protocol_version=>1,client_login=>$CLID,client_password=>$PASS}],'Net::DRI::Protocol::EPP::Extensions::EURid',['1.0',['Net::DRI::Protocol::EPP::Extensions::EURid::Sunrise']]);
+my $rc=$dri->target('EURid')->new_current_profile('profile1','epp',[{log_fh=>$fh,client_login=>$CLID,client_password=>$PASS}],[]);
 
 die($rc) unless $rc->is_success(); ## Here we catch all errors during setup of transport, such as authentication errors
 

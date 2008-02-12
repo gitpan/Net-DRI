@@ -1,6 +1,6 @@
 ## Domain Registry Interface, ASIA CED extension
 ##
-## Copyright (c) 2006 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
+## Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -19,7 +19,7 @@ package Net::DRI::Protocol::EPP::Extensions::ASIA::CED;
 
 use strict;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -50,7 +50,7 @@ Tonnerre Lombard E<lt>tonnerre.lombard@sygroup.chE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -61,7 +61,6 @@ the Free Software Foundation; either version 2 of the License, or
 See the LICENSE file that comes with this distribution for more details.
 
 =cut
-
 
 ####################################################################################################
 
@@ -94,8 +93,7 @@ sub dom_create
 
  if (defined($rd) && (ref($rd) eq 'HASH') && exists($rd->{url}))
  {
-  push(@ceddata, ['asia:maintainerUrl', $rd->{ced}->{url}])
-	if (exists($rd->{ced}->{url}));
+  push(@ceddata, ['asia:maintainerUrl', $rd->{url}]);
  }
 
  if (defined($cs))
@@ -131,7 +129,7 @@ sub dom_parse
  return unless ($ceddata);
 
  $c = $ceddata->getElementsByTagNameNS('urn:afilias:params:xml:ns:asia-1.0',
-	'mantainerUrl');
+	'maintainerUrl');
  $rinfo->{$otype}->{$oname}->{url} = $c->shift()->getFirstChild()->getData()
 	if ($c);
 

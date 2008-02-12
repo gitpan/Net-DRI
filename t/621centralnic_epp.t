@@ -5,8 +5,7 @@ use Net::DRI::Data::Raw;
 use DateTime::Duration;
 
 use Test::More tests => 13;
-
-eval { use Test::LongString max => 100; $Test::LongString::Context=50; };
+eval { no warnings; require Test::LongString; Test::LongString->import(max => 100); $Test::LongString::Context=50; };
 *{'main::is_string'}=\&main::is if $@;
 
 our $E1='<?xml version="1.0" encoding="UTF-8" standalone="no"?><epp xmlns="urn:ietf:params:xml:ns:epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="urn:ietf:params:xml:ns:epp-1.0 epp-1.0.xsd">';
@@ -30,11 +29,7 @@ sub myrecv
 my $dri=Net::DRI->new(10);
 $dri->{trid_factory}=sub { return 'ABC-12345'; };
 $dri->add_registry('VNDS');
-eval {
 $dri->target('VNDS')->new_current_profile('p1','Net::DRI::Transport::Dummy',[{f_send=>\&mysend,f_recv=>\&myrecv}],'Net::DRI::Protocol::EPP::Extensions::CentralNic',[]);
-};
-print $@->as_string() if $@;
-
 
 my $rc;
 my $s;

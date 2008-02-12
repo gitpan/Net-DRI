@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .COOP policies
 ##
-## Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -20,7 +20,9 @@ package Net::DRI::DRD::COOP;
 use strict;
 use base qw/Net::DRI::DRD/;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+use Net::DRI::Exception;
+
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -50,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -93,7 +95,20 @@ sub transport_protocol_compatible
 
 sub transport_protocol_default
 {
- return ('Net::DRI::Transport::Socket','Net::DRI::Protocol::EPP::Extensions::COOP');
+ my ($drd,$ndr,$type,$ta,$pa)=@_;
+ $type='epp' if (!defined($type) || ref($type));
+ if ($type eq 'epp')
+ {
+  return ('Net::DRI::Transport::Socket','Net::DRI::Protocol::EPP::Extensions::COOP')  unless (defined($ta) && defined($pa));
+  my %ta=( %Net::DRI::DRD::PROTOCOL_DEFAULT_EPP,
+           remote_host => '217.10.159.121', ## .COOP tests server
+          (ref($ta) eq 'ARRAY')? %{$ta->[0]} : %$ta,
+         );
+  my @pa=(ref($pa) eq 'ARRAY' && @$pa)? @$pa : ('1.0');
+  my @n=grep { ! exists($ta{$_}) || ! defined($ta{$_}) || ! $ta{$_}} qw/ssl_key_file ssl_cert_file ssl_ca_file/;
+  Net::DRI::Exception::usererr_insufficient_parameters('these parameters must be defined: '.join(' ',@n)) if @n;
+  return ('Net::DRI::Transport::Socket',[\%ta],'Net::DRI::Protocol::EPP::Extensions::COOP',\@pa);
+ }
 }
 
 ####################################################################################################

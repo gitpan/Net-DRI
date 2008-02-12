@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Protocol superclass
 ##
-## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -13,7 +13,7 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::Protocol;
 
@@ -25,7 +25,7 @@ __PACKAGE__->mk_accessors(qw(name version factories commands message capabilitie
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.16 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.17 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -55,7 +55,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -67,13 +67,11 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
-
-##############################################################################################################
+####################################################################################################
 
 sub new
 {
- my $h=shift;
- my $c=ref($h) || $h;
+ my $c=shift;
  my $self={}; ## more to do ?
  bless($self,$c);
 
@@ -104,10 +102,8 @@ sub _load
  foreach my $class (@_)
  {
   next if exists($done{$class});
-  ## eval needed to make sure the variable is taken into account correctly;
-  eval 'require '.$class; ## no critic (ProhibitStringyEval)
-  Net::DRI::Exception->die(1,$etype,6,"Failed to load Perl module ${class}") if $@;
-  Net::DRI::Exception::err_method_not_implemented("register_commands() in $class") unless $class->can('register_commands');
+  $class->require or Net::DRI::Exception::err_failed_load_module($etype,$class,$@);
+  Net::DRI::Exception::err_method_not_implemented('register_commands() in '.$class) unless $class->can('register_commands');
   my $rh=$class->register_commands($version);
   Net::DRI::Util::hash_merge(\%c,$rh); ## { object type => { action type => [ build action, parse action ]+ } }
   if ($class->can('capabilities_add'))
@@ -119,17 +115,17 @@ sub _load
  }
 
  $self->commands(\%c);
-} 
+}
 
 sub _load_commands
 {
  my ($self,$otype,$oaction)=@_;
 
  my $etype='protocol/'.$self->name();
- Net::DRI::Exception->die(1,$etype,7,"Object type and/or action not defined") unless (defined($otype) && $otype && defined($oaction) && $oaction);
+ Net::DRI::Exception->die(1,$etype,7,'Object type and/or action not defined') unless (defined($otype) && $otype && defined($oaction) && $oaction);
  my $h=$self->commands();
- Net::DRI::Exception->die(1,$etype,8,"No actions defined for object of type <${otype}>") unless exists($h->{$otype});
- Net::DRI::Exception->die(1,$etype,9,"No action name <${oaction}> defined for object of type <${otype}> in ".ref($self)) unless exists($h->{$otype}->{$oaction});
+ Net::DRI::Exception->die(1,$etype,8,'No actions defined for object of type <'.$otype.'>') unless exists($h->{$otype});
+ Net::DRI::Exception->die(1,$etype,9,'No action name <'.$oaction.'> defined for object of type <'.$otype.'> in '.ref($self)) unless exists($h->{$otype}->{$oaction});
  return $h;
 }
 
@@ -156,7 +152,7 @@ sub action
  my $msg=$f->{message}->($trid,$otype,$oaction);
  Net::DRI::Exception->die(0,'protocol',1,'Unsuccessfull message creation') unless ($msg && ref($msg) && $msg->isa('Net::DRI::Protocol::Message'));
  $self->message($msg); ## store it for later use (in loop below)
- 
+
  foreach my $t (@{$h->{$otype}->{$oaction}})
  {
   my $pf=$t->[0];
@@ -177,10 +173,10 @@ sub reaction
  Net::DRI::Exception->die(0,'protocol',1,'Unsuccessfull message creation') unless ($msg && ref($msg) && $msg->isa('Net::DRI::Protocol::Message'));
 
  my %info;
- $msg->parse($dr,\%info); ## will trigger an Exception by itself if problem
+ $msg->parse($dr,\%info,$otype,$oaction,$sent); ## will trigger an Exception by itself if problem ## TODO : add  later the whole LocalStorage stuff done when sending ? (instead of otype/oaction/message sent)
  $self->message($msg); ## store it for later use (in loop below)
 
- my $oname; ## Should be done by retrieving information from sent object (will be with LocalStorage) ## WARNING : what about messages for multiple names, like check_multi ?
+ my $oname; ## Should be done by retrieving information from sent object (will be with LocalStorage) ## WARNING : what about messages for multiple names, like check_multi ? and messages with no names at all ?
  $oname=$sent->get_name_from_message() if $sent->can('get_name_from_message');
  $info{$otype}->{$oname}->{name}=$oname if (defined($oname) && $oname);
 
@@ -192,7 +188,15 @@ sub reaction
  }
 
  my $rc=$msg->result_status();
- $info{$otype}->{$oname}->{result_status}=$rc if (defined($oname) && $oname);
+ foreach my $v1 (values(%info))
+ {
+  next unless (ref($v1) eq 'HASH' && keys(%$v1));
+  foreach my $v2 (values(%{$v1}))
+  {
+   next unless (ref($v2) eq 'HASH' && keys(%$v2)); ## yes, this can happen, with must_reconnect for example
+   $v2->{result_status}=$rc;
+  }
+ }
  $self->message(undef); ## needed ? useful ?
 
  return ($rc,\%info,$oname);
@@ -204,5 +208,5 @@ sub nameversion
  return $self->name().'/'.$self->version();
 }
 
-##############################################################################################################
+####################################################################################################
 1;

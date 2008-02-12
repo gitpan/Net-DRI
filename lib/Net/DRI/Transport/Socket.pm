@@ -1,6 +1,6 @@
 ## Domain Registry Interface, TCP/SSL Socket Transport
 ##
-## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -13,7 +13,7 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::Transport::Socket;
 
@@ -29,7 +29,7 @@ use Net::DRI::Exception;
 use Net::DRI::Util;
 use Net::DRI::Data::Raw;
 
-our $VERSION=do { my @r=(q$Revision: 1.24 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.25 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -122,7 +122,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -134,7 +134,8 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
-################################################################################################################
+####################################################################################################
+
 sub new
 {
  my $proto=shift;
@@ -168,7 +169,7 @@ sub new
  $t{pc}=$opts{protocol_connection};
  $t{protocol_data}=$opts{protocol_data} if (exists($opts{protocol_data}) && $opts{protocol_data});
 
- eval 'require '.$t{pc}; ## no critic (ProhibitStringyEval)
+ $t{pc}->require or Net::DRI::Exception::err_failed_load_module('transport/socket',$t{pc},$@);
  my @need=qw/get_data/;
  Net::DRI::Exception::usererr_invalid_parameters('protocol_connection class must have: '.join(' ',@need)) if (grep { ! $t{pc}->can($_) } @need);
 
@@ -412,5 +413,5 @@ sub _get
  return $dr;
 }
 
-########################################################################################################
+####################################################################################################
 1;

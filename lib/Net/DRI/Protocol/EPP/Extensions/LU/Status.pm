@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Status for .LU
 ##
-## Copyright (c) 2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -23,7 +23,7 @@ use strict;
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -53,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -75,14 +75,22 @@ sub new
  my $self=$class->SUPER::new(shift);
  bless($self,$class);
 
- ## .LU accepts only some EPP status, and adds serverTradeProhibited, serverRestoreProhibited
+ ## .LU accepts only some EPP status, and adds inactive, serverTradeProhibited, serverRestoreProhibited
  my %s=(
         'renew'    => 'clientRenewProhibited',
         'publish'  => 'clientHold',
+	'active'     => 'inactive',
        );
  $self->_register_pno(\%s); ## this will overwrite what has been done in SUPER::new
  return $self;
 }
+
+sub is_core_status
+{
+ return (shift=~m/^(?:client(?:Hold|(?:Delete|Renew|Update|Transfer)Prohibited)|inactive)$/);
+}
+
+sub is_active { return shift->has_not('inactive'); }
 
 ####################################################################################################
 1;

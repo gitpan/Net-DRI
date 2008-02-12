@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Registry messages commands (RFC4930)
 ##
-## Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -19,12 +19,10 @@ package Net::DRI::Protocol::EPP::Core::RegistryMessage;
 
 use strict;
 
-use DateTime::Format::ISO8601;
-
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -54,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -110,7 +108,7 @@ sub parse_poll
   $rd=$rinfo->{message}->{$msgid}; ## already partially filled by Message::parse()
  }
 
- if ($mes->errcode() == 1301 && (defined($mes->node_resdata()) || defined($mes->node_extension()) || defined($mes->node_msg()))) ## there was really a message with some content
+ if ($mes->result_code() == 1301 && (defined($mes->node_resdata()) || defined($mes->node_extension()) || defined($mes->node_msg()))) ## there was really a message with some content
  {
   my ($totype,$toaction,$toname); ## $toaction will remain undef, but could be $haction if only one
   my %info;

@@ -1,3 +1,5 @@
+#!/usr/bin/perl -w
+
 use Net::DRI;
 use Net::DRI::Data::Raw;
 

@@ -7,11 +7,8 @@ use DateTime::Duration;
 
 use Encode ();
 use Test::More tests => 110;
-eval { use Test::LongString max => 100; $Test::LongString::Context=50; };
-if ($@)
-{
- *{'main::is_string'}=\&main::is;
-}
+eval { no warnings; require Test::LongString; Test::LongString->import(max => 100); $Test::LongString::Context=50; };
+*{'main::is_string'}=\&main::is if $@;
 
 our $E1='<?xml version="1.0" encoding="UTF-8" standalone="no"?><epp xmlns="urn:ietf:params:xml:ns:epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="urn:ietf:params:xml:ns:epp-1.0 epp-1.0.xsd">';
 our $E2='</epp>';
@@ -254,7 +251,7 @@ is_string($R1,$E1.'<command><delete><defreg:delete xmlns:defreg="http://xmlns.do
 
 # p.75
 $ro=$dri->remote_object('defreg','DR38328');
-$rc=$ro->renew(DateTime::Duration->new(years=>2),DateTime->new(year=>2009,month=>01,day=>23));
+$rc=$ro->renew({duration=>DateTime::Duration->new(years=>2),current_expiration=>DateTime->new(year=>2009,month=>01,day=>23)});
 is_string($R1,$E1.'<command><renew><defreg:renew xmlns:defreg="http://xmlns.domini.cat/epp/defreg-1.0" xsi:schemaLocation="http://xmlns.domini.cat/epp/defreg-1.0 puntcat-defreg-1.0.xsd"><defreg:id>DR38328</defreg:id><defreg:curExpDate>2009-01-23</defreg:curExpDate><defreg:period unit="y">2</defreg:period></defreg:renew></renew><clTRID>ABC-12345</clTRID></command>'.$E2,'defreg_renew build');
 
 # p.76

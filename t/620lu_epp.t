@@ -3,9 +3,8 @@
 use Net::DRI;
 use Net::DRI::Data::Raw;
 
-use Test::More tests => 59;
-
-eval { use Test::LongString max => 100; $Test::LongString::Context=50; };
+use Test::More tests => 65;
+eval { no warnings; require Test::LongString; Test::LongString->import(max => 100); $Test::LongString::Context=50; };
 *{'main::is_string'}=\&main::is if $@;
 
 our $E1='<?xml version="1.0" encoding="UTF-8" standalone="no"?><epp xmlns="urn:ietf:params:xml:ns:epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="urn:ietf:params:xml:ns:epp-1.0 epp-1.0.xsd">';
@@ -46,6 +45,7 @@ is($dri->get_info('last_id','message','session'),1,'message get_info last_id 2')
 is($dri->get_info('id','message',1),1,'message get_info id');
 is(''.$dri->get_info('qdate','message',1),'2005-10-03T07:55:13','message get_info qdate');
 is($dri->get_info('lang','message',1),'en','message get_info lang');
+is($dri->get_info('type','message',1),1234,'message get_info type');
 is($dri->get_info('roid','message',1),'D123-DNSLU','message get_info roid');
 is($dri->get_info('object','message',1),'mydomain.lu','message get_info object');
 is($dri->get_info('clTRID','message',1),'89ABCDEF','message get_info clTRID');
@@ -170,7 +170,7 @@ my $ro=$dri->remote_object('domain');
 $rc=$ro->restore('domain.lu');
 is_string($R1,$E1.'<extension><dnslu:ext xmlns:dnslu="http://www.dns.lu/xml/epp/dnslu-1.0" xsi:schemaLocation="http://www.dns.lu/xml/epp/dnslu-1.0 dnslu-1.0.xsd"><dnslu:command><dnslu:restore><dnslu:domain><dnslu:name>domain.lu</dnslu:name></dnslu:domain></dnslu:restore></dnslu:command></dnslu:ext></extension>'.$E2,'domain_restore');
 
-## example seems wrong: wrong namespace (dnslu instead of domain) in non extension aprt
+## example seems wrong: wrong namespace (dnslu instead of domain) in non extension part
 $R2=$E1.'<response>'.r(1001,'Command completed successfully ; action pending').'<resData><domain:trnData xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>cafe.lu</domain:name><domain:trStatus>pending</domain:trStatus><domain:reID>restena-id</domain:reID><domain:reDate>2004-09-08T11:39:41Z</domain:reDate><domain:acDate>2004-09-15T11:39:41Z</domain:acDate></domain:trnData></resData><extension><dnslu:ext xmlns:dnslu="http://www.dns.lu/xml/epp/dnslu-1.0" xsi:schemaLocation ="http://www.dns.lu/xml/epp/dnslu-1.0 dnslu-1.0.xsd"><dnslu:resData><dnslu:trnData><dnslu:domain><dnslu:trDate>2004-09-18T10:00:00Z</dnslu:trDate></dnslu:domain></dnslu:trnData></dnslu:resData></dnslu:ext></extension>'.$TRID.'</response>'.$E2;
 $cs=$dri->local_object('contactset');
 $cs->set($dri->local_object('contact')->srid('H100'),'registrant');
@@ -245,6 +245,23 @@ is(''.$dri->get_info('trDate'),'2004-09-18T10:00:00','domain_transfer_restore_qu
 $R2='';
 $rc=$ro->transfer_restore_cancel('domain.lu');
 is_string($R1,$E1.'<extension><dnslu:ext xmlns:dnslu="http://www.dns.lu/xml/epp/dnslu-1.0" xsi:schemaLocation="http://www.dns.lu/xml/epp/dnslu-1.0 dnslu-1.0.xsd"><dnslu:command><dnslu:transferRestore op="cancel"><dnslu:domain><dnslu:name>domain.lu</dnslu:name></dnslu:domain></dnslu:transferRestore></dnslu:command></dnslu:ext></extension>'.$E2,'domain_transfer_restore_cancel build');
+
+## Registry uses an extra status « inactive »
+$R2='';
+$toc=$dri->local_object('changes');
+$toc->del('status',$dri->local_object('status')->no('active'));
+$rc=$dri->domain_update('registryviolatingepp.lu',$toc);
+is_string($R1,$E1.'<command><update><domain:update xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>registryviolatingepp.lu</domain:name></domain:update></update><extension><dnslu:ext xmlns:dnslu="http://www.dns.lu/xml/epp/dnslu-1.0" xsi:schemaLocation="http://www.dns.lu/xml/epp/dnslu-1.0 dnslu-1.0.xsd"><dnslu:update><dnslu:domain><dnslu:rem><dnslu:status s="inactive"/></dnslu:rem></dnslu:domain></dnslu:update></dnslu:ext></extension><clTRID>ABC-12345</clTRID></command></epp>','domain_update with status inactive (registry specific not in EPP)');
+
+
+## From http://www.bsdprojects.net/cgi-bin/archzoom.cgi/tonnerre@bsdprojects.net--2006/Net-DRI--tonnerre--0.81.1--patch-34/t/999epp_bugs.t.diff?diff
+
+$R2 = $E1.'<response><result code="1301"><msg>[1301] Command completed successfully; ack to dequeue</msg></result><msgQ count="1" id="104574"><qDate>2008-01-24T12:41:03.000Z</qDate><msg><dnslu:pollmsg type="13" xmlns:dnslu="http://www.dns.lu/xml/epp/dnslu-1.0" xsi:schemaLocation="http://www.dns.lu/xml/epp/dnslu-1.0 dnslu-1.0.xsd"><dnslu:roid>D41231-DNSLU</dnslu:roid><dnslu:object>blafasel.lu</dnslu:object><dnslu:clTRID>DNSLU-4123-1342324575404832</dnslu:clTRID><dnslu:svTRID>CAFEBABE:002A-DNSLU</dnslu:svTRID><dnslu:exDate>2009-01-24T12:41:03.000Z</dnslu:exDate><dnslu:ns name="any">Nameserver test succeeded</dnslu:ns></dnslu:pollmsg></msg></msgQ>'.$TRID.'</response>'.$E2;
+$rc=$dri->message_retrieve();
+is($rc->is_success(),1,'message polled successfully');
+is($dri->get_info('last_id'),104574, 'message get_info last_id');
+is($dri->get_info('type','message', 104574),13,'message get_info type');
+is($dri->get_info('roid','message', 104574),'D41231-DNSLU','message get_info roid');
 
 exit 0;
 

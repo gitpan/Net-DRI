@@ -1,6 +1,6 @@
 ## Domain Registry Interface, DNSBE EPP extensions
 ##
-## Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -13,7 +13,7 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::Protocol::EPP::Extensions::DNSBE;
 
@@ -24,13 +24,13 @@ use base qw/Net::DRI::Protocol::EPP/;
 use Net::DRI::Data::Contact::BE;
 use Net::DRI::Protocol::EPP::Extensions::DNSBE::Message;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Protocol::EPP::Extensions::DNSBE - DNSBE EPP extensions for Net::DRI
+Net::DRI::Protocol::EPP::Extensions::DNSBE - DNSBE (.BE) EPP extensions for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -54,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -67,6 +67,7 @@ See the LICENSE file that comes with this distribution for more details.
 =cut
 
 ####################################################################################################
+
 sub new
 {
  my $h=shift;
@@ -100,6 +101,8 @@ sub new
  bless($self,$c); ## rebless
  return $self;
 }
+
+sub core_contact_types { return ('admin','tech','billing','onsite'); }
 
 ####################################################################################################
 1;

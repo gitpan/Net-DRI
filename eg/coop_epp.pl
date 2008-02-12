@@ -7,7 +7,7 @@ use strict;
 
 use Net::DRI;
 use DateTime::Duration;
- 
+
 ## Fill these variables : your registrar id, password, and contact prefix
 my $CLID='';
 my $PASS='';
@@ -25,7 +25,7 @@ open(my $fh,'>>',$file) || die $!;
 print "Dumping XML exchange to $file\n";
 
 ## This connects to .COOP server for tests : make sure you have local files key.pem and cert.pem
-my $rc=$dri->target('COOP')->new_current_profile('profile1','Net::DRI::Transport::Socket',[{log_fh=>$fh,defer=>0,socktype=>'ssl',remote_host=>'217.10.159.121',remote_port=>700,ssl_cipher_list=>'TLSv1',ssl_key_file=>'./key.pem',ssl_cert_file=>'./cert.pem',ssl_ca_file=>'./cert.pem',protocol_connection=>'Net::DRI::Protocol::EPP::Connection',protocol_version=>1,client_login=>$CLID,client_password=>$PASS}],'Net::DRI::Protocol::EPP::Extensions::COOP',[]);
+my $rc=$dri->target('COOP')->new_current_profile('profile1','epp',[{log_fh=>$fh,ssl_key_file=>'./key.pem',ssl_cert_file=>'./cert.pem',ssl_ca_file=>'./cert.pem',client_login=>$CLID,client_password=>$PASS}],[]);
 
 die($rc) unless $rc->is_success(); ## Here we catch all errors during setup of transport, such as authentication errors
 

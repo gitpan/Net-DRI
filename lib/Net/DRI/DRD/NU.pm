@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .NU policies
 ##
-## Copyright (c) 2007 HEXONET Support GmbH, http://www.hexonet.com,
+## Copyright (c) 2007,2008 HEXONET Support GmbH, http://www.hexonet.com,
 ##                    Alexander Biehl <info@hexonet.com>.
 ##                    All rights reserved.
 ##
@@ -22,7 +22,7 @@ package Net::DRI::DRD::NU;
 use strict;
 use base qw/Net::DRI::DRD/;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -52,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007 HEXONET Support GmbH, E<lt>http://www.hexonet.comE<gt>,
+Copyright (c) 2007,2008 HEXONET Support GmbH, E<lt>http://www.hexonet.comE<gt>,
 Alexander Biehl <info@hexonet.com>.
 All rights reserved.
 
@@ -97,9 +97,9 @@ sub transport_protocol_compatible
 
 sub transport_protocol_default
 {
- my ($drd,$ndr,$type)=@_;
- $type='' if (!defined($type) || ref($type));
- return ('Net::DRI::Transport::Socket','Net::DRI::Protocol::EPP') unless ($type);
+ my ($drd,$ndr,$type,$ta,$pa)=@_;
+ $type='epp' if (!defined($type) || ref($type));
+ return Net::DRI::DRD::_transport_protocol_default_epp('Net::DRI::Protocol::EPP',$ta,$pa) if ($type eq 'epp');
 }
 
 ####################################################################################################

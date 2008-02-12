@@ -1,7 +1,7 @@
 ## Domain Registry Interface, Infrastructure ENUM.AT policy on reserved names
 ## Contributed by Michael Braunoeder from ENUM.AT <michael.braunoeder@enum.at>
 ##
-## Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -23,7 +23,7 @@ use base qw/Net::DRI::DRD/;
 
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -53,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -106,7 +106,9 @@ sub transport_protocol_compatible
 
 sub transport_protocol_default
 {
- return ('Net::DRI::Transport::Socket','Net::DRI::Protocol::EPP::Extensions::IENUMAT');
+ my ($drd,$ndr,$type,$ta,$pa)=@_;
+ $type='epp' if (!defined($type) || ref($type));
+ return Net::DRI::DRD::_transport_protocol_default_epp('Net::DRI::Protocol::EPP::Extensions::IENUMAT',$ta,$pa) if ($type eq 'epp');
 }
 
 ####################################################################################################

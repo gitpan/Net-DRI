@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP RGP Poll (EPP-RGP-Poll-Mapping.pdf)
 ##
-## Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -19,10 +19,11 @@ package Net::DRI::Protocol::EPP::Extensions::VeriSign::PollRGP;
 
 use strict;
 
+use DateTime::Format::ISO8601;
 use Net::DRI::Protocol::EPP;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -52,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -87,6 +88,7 @@ sub parse
  my $infdata=$mes->get_content('pollData','http://www.verisign.com/epp/rgp-poll-1.0',0);
  return unless $infdata;
 
+ my $pd=DateTime::Format::ISO8601->new();
  my %w=(action => 'rgp_notification');
  my $c=$infdata->getFirstChild();
  while ($c)
@@ -103,7 +105,7 @@ sub parse
    $w{status}=$po->create_local_object('status')->add(Net::DRI::Protocol::EPP::parse_status($c));
   } elsif ($name=~m/^(reqDate|reportDueDate)$/)
   {
-   $w{Net::DRI::Util::remcam($name)}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
+   $w{Net::DRI::Util::remcam($name)}=$pd->parse_datetime($c->getFirstChild()->getData());
   }
  } continue { $c=$c->getNextSibling(); }
 

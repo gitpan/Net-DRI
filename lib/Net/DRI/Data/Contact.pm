@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Handling of contact data
 ##
-## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -20,7 +20,7 @@ package Net::DRI::Data::Contact;
 
 use strict;
 use base qw(Class::Accessor::Chained); ## provides a new() method
-__PACKAGE__->mk_accessors(qw(name org street city sp pc cc email voice fax loid roid srid auth disclose _intfirst));
+__PACKAGE__->mk_accessors(qw(name org street city sp pc cc email voice fax loid roid srid auth disclose));
 
 use Net::DRI::Exception;
 use Net::DRI::Util;
@@ -28,7 +28,7 @@ use Net::DRI::Util;
 use Email::Valid;
 use Encode ();
 
-our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -152,7 +152,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -213,6 +213,17 @@ sub int2loc
  return $self;
 }
 
+sub has_loc { return shift->_has(0); }
+sub has_int  { return shift->_has(1); }
+sub _has
+{
+ my ($self,$pos)=@_;
+ my @d=map { ($self->$_())[$pos] } qw/name org city sp pc cc/;
+ my $s=($self->street())[$pos];
+ push @d,@$s if (defined($s) && ref($s));
+ return (grep { defined} @d)? 1 : 0;
+}
+
 sub validate ## See RFC4933,§4
 {
  my ($self,$change)=@_;
@@ -246,10 +257,10 @@ sub validate ## See RFC4933,§4
  push @errs,'voice' if ($self->voice() && !Net::DRI::Util::xml_is_token($self->voice(),undef,17) && $self->voice()!~m/^\+[0-9]{1,3}\.[0-9]{1,14}(?:x\d+)?$/);
  push @errs,'fax'   if ($self->fax()   && !Net::DRI::Util::xml_is_token($self->fax(),undef,17)   && $self->fax()!~m/^\+[0-9]{1,3}\.[0-9]{1,14}(?:x\d+)?$/);
  push @errs,'email' if ($self->email() && !Net::DRI::Util::xml_is_token($self->email(),1,undef) && !Email::Valid->rfc822($self->email()));
- 
+
  my $ra=$self->auth();
  push @errs,'auth' if ($ra && (ref($ra) eq 'HASH') && exists($ra->{pw}) && !Net::DRI::Util::xml_is_normalizedstring($ra->{pw}));
- 
+
  ## Nothing checked for disclose
 
  Net::DRI::Exception::usererr_invalid_parameters('Invalid contact information: '.join('/',@errs)) if @errs;

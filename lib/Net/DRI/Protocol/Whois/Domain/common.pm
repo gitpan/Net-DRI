@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Whois common parse subroutines
 ##
-## Copyright (c) 2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -26,7 +26,7 @@ use Net::DRI::Protocol::EPP::Core::Status;
 
 use DateTime::Format::Strptime;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -56,7 +56,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -117,14 +117,14 @@ sub epp_parse_dates
 sub epp_parse_status
 {
  my ($domain,$rr,$rinfo)=@_;
- my @s=map { my $s=$_; $s=~s/OK/ok/; $s; } @{$rr->{'Domain Status'}};
- if (@s)
+ my @s;
+ if (exists($rr->{'Domain Status'}))
  {
-  $rinfo->{domain}->{$domain}->{status}=Net::DRI::Protocol::EPP::Core::Status->new(\@s);
-  return;
+  @s=map { my $s=$_; $s=~s/OK/ok/; $s; } @{$rr->{'Domain Status'}};
+ } elsif (exists($rr->{'Status'})) ## .ORG/.INFO/.MOBI/.CAT variation
+ {
+  @s=map { my $t=lc($_); $t=~s/ (.)/uc($1)/eg; $t; } @{$rr->{'Status'}};
  }
- ## .ORG/.INFO/.MOBI variation
- @s=map { my $t=lc($_); $t=~s/ (.)/uc($1)/eg; $t; } @{$rr->{'Status'}};
  $rinfo->{domain}->{$domain}->{status}=Net::DRI::Protocol::EPP::Core::Status->new(\@s) if @s;
 }
 
@@ -184,6 +184,7 @@ sub epp_parse_tel
 sub epp_parse_ns
 {
  my ($domain,$rr,$rinfo)=@_;
+ return unless (exists($rr->{'Name Server'}));
  my @ns=grep { defined($_) && $_ } @{$rr->{'Name Server'}};
  $rinfo->{domain}->{$domain}->{ns}=Net::DRI::Data::Hosts->new_set(@ns) if @ns;
 }

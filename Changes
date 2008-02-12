@@ -1,4 +1,65 @@
+0.85 2008-02-12
+
++ .UK EPP support: only some operations for now, see t/626nominet_epp.t (not implemented for now: domain & account updates, domain creations, registry notifications)
++ .AU EPP support (submitted by Rony Meyer)
++ OVH : implemented resellers Web Services API (2 functions only for now: account_list_domains and domain_info), see t/623ovh_ws_live.t
++ BookMyName (aka Free/ProXad/Online/Dedibox/Iliad) : implemented resellers Web Services API (2 functions only for now: account_list_domains and domain_info), see t/624bookmyname_ws_live.t
++ Gandi : implemented resellers Web Services API (2 functions only for now: account_list_domains and domain_info), see t/625gandi_ws_live.t
++ Registry : yet another API for new_profile/new_current_profile ! This should have been the only one since the beginning. See files in eg/*
+                      Previous API may be deprecated in the future to keep only two: full one (profile name, transport name, transport params, protocol name, protocol params)
+                      and the new one (profile name, profile type, transport params, protocol params)
++ Added Whois support for: .LU .WS .SE .CAT .AT
++ Implemented RFC5076 (ENUM Validation Information) in Net::DRI::Protocol::EPP::Extensions::E164Validation and Net::DRI::Protocol::EPP::Extensions::E164Validation::RFC5076
+   (the RFC allows numerous ways to encode validation information,hence the example inside the RFC is handled in a separate module. Other examples from registries are welcome)
++ PIR IDNLanguage extension (work submitted by Tonnerre Lombard, added with modifications)
++ .NAME EmailFwd operations (work submitted by Tonnerre Lombard, added with modifications)
++ .US DRD module (work submitted by Tonnerre Lombard, added with modifications)
++ Added Data/Hosts::as_string() for debugging, and Data/Hosts::roid()
++ Additional API for domain_renew in line with other parts with just a domain name and an optional extension as ref hash; see example in t/622vnds_epp_e164validation.t
+= Better handling of EPP contacts internationalization : each DRD module can specify what the registry expects for contacts data.
+   By default, all 3 cases allowed, except for : .BE .EU .LU (localized only), .AT (internationalized only) and .BIZ (internationalized only or internationalized and localized together).
+   When needed the data is contructed with Contact::int2loc() and Contact::loc2int()
+   Contact::_intfirst() is thus removed as useless now
+= DRD/NAME : 1 year possible in periods() (reported by Alexander Biehl)
+= Protocol/EPP/Extensions/VeriSign/NameStore : taking into account .CC and .TV (reported by Tonnerre Lombard, added with modifications)
+= Protocol/EPP/Extensions/US/Contact : update to currently deployed version (work submitted by Tonnerre Lombard)
+= Protocol/EPP/Extensions/ASIA/CED : remove extraneous ced hash level in domain_create and fix retrieval of maintainerUrl information (work submitted by Tonnerre Lombard)
+= Protocol/EPP/Extensions/ASIA/IPR : add support for parsing domainRoid in domain:create, replace obsolete ipr:phase with ipr:type (work submitted by Tonnerre Lombard)
+= Protocol/EPP/Extensions/LU : fix fetching of DNSLU type parameter in certain cases (work submitted by Tonnerre Lombard)
+= Protocol/EPP/Extensions/AT : parse more information from .AT messages (work submitted by Tonnerre Lombard)
+= Protocol/EPP/Core/Contact : support registries violating EPP with an empty contact:clID (from original bugreport by Alexander Biehl)
+= Protocol/EPP : we correctly parse multiple results (in case of errors), and return them if asked for ;
+		this had consequences for result_extra_info, see comments in Message (Core+DNSBE+EURid), and NameStore
+= Protocol/EPP various parses : better use of date parsing
+= Protocol/EPP object can be instanciated with overriding core methods (needed for Nominet)
+= Protocol/EPP hosts parsing : we keep all IPs even private ones
+= ResultStatus : can handle more than one status, as a linked list (next() method)
+= Data/Hosts : we remove the final dot from names if present
+= Protocol::reaction : we create the result_status subkey for all elements in cache created by this action, not only the main element
+   (this is especially useful for registries giving back a lot of information, like Nominet during a domain:info call giving back information useful for a contact:info or host:info)
+= Registry::result_status() gives back the whole ResultStatus object
+= Added Registry::get_info_all() and Registry::get_info_keys()
+= Modules SOAP::Lite, Net::SMTP, MIME::Entity previously required are now optional because used only by some registries not EPP. t/004load_optional will test their presence,
+   warn which are needed for which Net::DRI use, and test their dependencies inside Net::DRI
+   Same for new modules: SOAP::WSDL (needs SOAP::Lite) and XMLRPC::Lite (provided by SOAP::Lite)
+   Later on, a Bundle::NetDRI could be created to install also all optional modules
+   This means for now less hard dependencies for default case, that is EPP registries
+= DRD->info() can be called through DRI (from initial report by Tonnerre Lombard)
+= Cache::get & Cache::set : we do not force the key in lowercase anymore, as contact IDs may be case sensitive
+= No more eval { require }, using UNIVERSAL::require instead
+- EPP contacts : use of EPP::Message::core_contact_types() to correctly handle case of .EU/.BE
+- Protocol/EPP/Extensions/ASIA/IPR : removing use of Date::Parse::str2time()
+- Protocol/EPP/Extensions/LU/Status : allow to use status 'inactive' (registry specific, not in EPP) (from original bugreport by Alexander Biehl), see last test in t/620lu_epp.t
+- Protocol/EPP/Extensions/LU/Poll : correctly retrieve the type attribute (from original bugreport by Alexander Biehl)
+- DRD/AT : bugfix for is_my_tld() (reported by Tonnerre Lombard)
+- README : typos (there is no Net::DRI::Data::Host module) (reported by Trond Haugen)
+- t/003critic : better loading of module Test::Perl::Critic which is optional (only needed for tests)
+- Gandi Web scraping : totally removed as it was deprecated since a long time, and thus Transport/Web and its WWW::Mechanize dependency (this can be added back later if needed)
+- DRD::is_thick : will carp if still used, deprecated
+- DRD::root_servers() removed, not used (was only in DRD/VNDS)
+
 0.81 2007-11-07
+
 = Updated all RFCs references related to EPP : RFCs 4930,4931,4932,4933,4934 are now obsoleting RFCs 3730,3731,3732,3733,3734
   xsi:schemaLocation is not removed in messages created, but may be removed in future releases
   we do not add an empty domain:chg any more for pure extension update commands
@@ -22,6 +83,7 @@
 - Protocol/EPP/* (various parses) : better handling of XML nodes/elements (from initial bugreport by Tonnerre Lombard for .LU)
 
 0.80 2007-04-19
+
 + DAS support for .EU & .BE : quick lookup of domain availability ; see eg/eurid_das.pl for an example (same interface as domain_check)
 + Whois support (RFC3912) for thick registries (full) and thin registries (only registry part) ; see eg/whois.pl for an example (same interface as domain_info) ;
    parse provided for .COM .NET .ORG .BIZ .INFO .AERO .EU
@@ -39,6 +101,7 @@
 - Protocol/EPP/Core/Host : bugfix in parsing IP addresses (bugreport from Rony Meyer)
 
 0.70 2007-03-12
+
 + .COOP full support : all operations with EPP, see included example in eg/coop_epp.pl and t/619coop_epp.t (with help from registry staff member Dan Maharry)
 + .AT full support : all operations with EPP, contributed by Michael Braunoeder from NIC.AT
 + .EU (DRD/EURid) : added Bulgaria and Romania
@@ -64,6 +127,7 @@
 - Transport : use true loops in send() and receive() (bugreport from Elias Sidenbladh)
 
 0.40 2006-09-22
+
 + .BE full support : all operations with EPP except agent update & info (with help from Roger Heykoop)
 + EPP : better support for <poll> results, we parse all replies for which we already have a parse function registered
 + EPP/Extensions : RGP Notification & Low Balance Notification for VeriSign (poll messages)
@@ -83,6 +147,7 @@
 - Protocol/EPP/Extensions/GracePeriod : correctly takes into account VeriSign breaking its own RFC (bug report by Rony Meyer)
 
 0.30 2006-06-15
+
 + .FR full support : all operations by email (form version 2.0.0 for both organizations & individuals)
 + .COM .NET full support in EPP with multiple VeriSign extensions:
            Sync (see t/610vnds_epp_sync.t)
@@ -113,6 +178,7 @@
 - Protocol/EPP : better handling of registries various XML namespaces
 
 0.22 2006-05-12
+
 + EPP Poll from prototype by Elias Sidenbladh (Protocol/EPP/Core/RegistryMessage) : new methods message_retrieve() (=poll request)
   message_delete() (=poll ack) and message_waiting() in Net::DRI
   Please see examples at the end of t/601vnds_epp.t on how to retrieve info on a message, and info on all messages (count & first id).
@@ -153,6 +219,7 @@
 - eg/eurid_epp.pl : the filehandle used for logging must be closed after $dri->end() not before
 
 0.20 2005-12-02
+
 + EURid/Sunrise : we automatically reconnect after each apply command (successful or not), when needed,
                   since the connection is dropped by registry (bug reported by Lucas Vossberg)
 + Transport/Socket : a client certificate is no more mandatory, the default verification level is lowered,
@@ -161,6 +228,7 @@
 = EURid : the sample provided (eurid_epp.pl) dumps all exchanges to a file
 
 0.19 2005-11-14
+
 + Updates for conformity with latest EURid specifications :
    # extra information in result of apply during Sunrise (reference, code, crDate)
    # new action apply_info during Sunrise to get back information on previously submitted applications

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Domain commands (RFC4931)
 ##
-## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -27,7 +27,7 @@ use Net::DRI::Protocol::EPP;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.15 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -57,7 +57,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -209,6 +209,7 @@ sub info_parse
  my (@s,@host);
  my $cs=Net::DRI::Data::ContactSet->new();
  my $cf=$po->factories()->{contact};
+ my $pd=DateTime::Format::ISO8601->new();
  my $c=$infdata->getFirstChild();
  while ($c)
  {
@@ -243,7 +244,7 @@ sub info_parse
    $rinfo->{domain}->{$oname}->{$1}=$c->getFirstChild()->getData();
   } elsif ($name=~m/^(crDate|upDate|trDate|exDate)$/)
   {
-   $rinfo->{domain}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
+   $rinfo->{domain}->{$oname}->{$1}=$pd->parse_datetime($c->getFirstChild()->getData());
   } elsif ($name eq 'authInfo')
   {
    my $pw=($c->getElementsByTagNameNS($mes->ns('domain'),'pw'))[0]; ## will be empty on domain:info request for objects we do not own
@@ -294,7 +295,7 @@ sub parse_ns ## RFC 4931 §1.1
      }
     }
    } continue { $nn=$nn->getNextSibling(); }
-   $ns->add($hostname,\@ip4,\@ip6);
+   $ns->add($hostname,\@ip4,\@ip6,1);
   }
  } continue { $n=$n->getNextSibling(); }
  return $ns;
@@ -318,6 +319,7 @@ sub transfer_parse
  my $trndata=$mes->get_content('trnData',$mes->ns('domain'));
  return unless $trndata;
 
+ my $pd=DateTime::Format::ISO8601->new();
  my $c=$trndata->getFirstChild();
  while ($c)
  {
@@ -335,7 +337,7 @@ sub transfer_parse
    $rinfo->{domain}->{$oname}->{$1}=$c->getFirstChild()->getData();
   } elsif ($name=~m/^(reDate|acDate|exDate)$/)
   {
-   $rinfo->{domain}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
+   $rinfo->{domain}->{$oname}->{$1}=$pd->parse_datetime($c->getFirstChild()->getData());
   }
  } continue { $c=$c->getNextSibling(); }
 }
@@ -376,7 +378,7 @@ sub create
   my $cs=$rd->{contact};
   my @o=$cs->get('registrant');
   push @d,['domain:registrant',$o[0]->srid()] if (@o);
-  push @d,build_contact_noregistrant($cs);
+  push @d,build_contact_noregistrant($epp,$cs);
  }
 
  ## AuthInfo
@@ -387,10 +389,11 @@ sub create
 
 sub build_contact_noregistrant
 {
- my $cs=shift;
+ my ($epp,$cs)=@_;
  my @d;
  # All nonstandard contacts go into the extension section
- foreach my $t (sort(grep { $_ eq 'admin' || $_ eq 'tech' || $_ eq 'billing' } $cs->types()))
+ my %r=map { $_ => 1 } $epp->core_contact_types();
+ foreach my $t (sort(grep { exists($r{$_}) } $cs->types()))
  {
   my @o=$cs->get($t);
   push @d,map { ['domain:contact',$_->srid(),{'type'=>$t}] } @o;
@@ -437,6 +440,7 @@ sub create_parse
  my $credata=$mes->get_content('creData',$mes->ns('domain'));
  return unless $credata;
 
+ my $pd=DateTime::Format::ISO8601->new();
  my $c=$credata->getFirstChild();
  while ($c)
  {
@@ -451,7 +455,7 @@ sub create_parse
    $rinfo->{domain}->{$oname}->{exist}=1;
   } elsif ($name=~m/^(crDate|exDate)$/)
   {
-   $rinfo->{domain}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
+   $rinfo->{domain}->{$oname}->{$1}=$pd->parse_datetime($c->getFirstChild()->getData());
   }
  } continue { $c=$c->getNextSibling(); }
 }
@@ -466,10 +470,12 @@ sub delete
 
 sub renew
 {
- my ($epp,$domain,$period,$curexp,$rd)=@_;
- Net::DRI::Exception::usererr_insufficient_parameters("current expiration year") unless defined($curexp);
+ my ($epp,$domain,$rd)=@_;
+ my $period=verify_rd($rd,'duration')? $rd->{duration} : undef;
+ my $curexp=verify_rd($rd,'current_expiration')? $rd->{current_expiration} : undef;
+ Net::DRI::Exception::usererr_insufficient_parameters('current expiration year') unless defined($curexp);
  $curexp=$curexp->set_time_zone('UTC')->strftime("%Y-%m-%d") if (ref($curexp) && UNIVERSAL::isa($curexp,'DateTime'));
- Net::DRI::Exception::usererr_invalid_parameters("current expiration year must be YYYY-MM-DD") unless $curexp=~m/^\d{4}-\d{2}-\d{2}$/;
+ Net::DRI::Exception::usererr_invalid_parameters('current expiration year must be YYYY-MM-DD') unless $curexp=~m/^\d{4}-\d{2}-\d{2}$/;
  
  my $mes=$epp->message();
  my @d=build_command($mes,'renew',$domain);
@@ -550,7 +556,7 @@ sub update
  my ($epp,$domain,$todo)=@_;
  my $mes=$epp->message();
 
- Net::DRI::Exception::usererr_invalid_parameters($todo." must be a Net::DRI::Data::Changes object") unless ($todo && UNIVERSAL::isa($todo,'Net::DRI::Data::Changes'));
+ Net::DRI::Exception::usererr_invalid_parameters($todo.' must be a Net::DRI::Data::Changes object') unless ($todo && UNIVERSAL::isa($todo,'Net::DRI::Data::Changes'));
 
  if ((grep { ! /^(?:add|del)$/ } $todo->types('ns')) ||
      (grep { ! /^(?:add|del)$/ } $todo->types('status')) ||
@@ -573,10 +579,10 @@ sub update
  my (@add,@del);
 
  push @add,build_ns($epp,$nsadd,$domain)            if $nsadd && !$nsadd->is_empty();
- push @add,build_contact_noregistrant($cadd)        if $cadd;
+ push @add,build_contact_noregistrant($epp,$cadd)   if $cadd;
  push @add,$sadd->build_xml('domain:status','core') if $sadd;
  push @del,build_ns($epp,$nsdel,$domain)            if $nsdel && !$nsdel->is_empty();
- push @del,build_contact_noregistrant($cdel)        if $cdel;
+ push @del,build_contact_noregistrant($epp,$cdel)   if $cdel;
  push @del,$sdel->build_xml('domain:status','core') if $sdel;
 
  push @d,['domain:add',@add] if @add;

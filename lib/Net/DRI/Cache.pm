@@ -1,6 +1,6 @@
 ## Domain Registry Interface, local global cache
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -22,7 +22,7 @@ use strict;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -52,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -64,12 +64,10 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
-###############################################################################################################
+####################################################################################################
 sub new
 {
- my $h=shift;
- my $c=ref($h) || $h;
-
+ my $c=shift;
  my ($ttl)=@_;
 
  my $self={
@@ -87,7 +85,7 @@ sub set
  Net::DRI::Exception::err_insufficient_parameters() unless Net::DRI::Util::all_valid($regname,$type,$key);
 
  $type=lc($type);
- $key=lc($key); ## ok in all cases ?
+# $key=lc($key); ## ok in all cases ?
 
  my $now=Net::DRI::Util::microtime();
  $ttl=$self->{ttl} unless defined($ttl);
@@ -123,7 +121,7 @@ sub get
  Net::DRI::Exception::err_insufficient_parameters() unless Net::DRI::Util::all_valid($type,$key);
 
  $type=lc($type);
- $key=lc($key);
+# $key=lc($key);
 
  return unless exists($self->{data}->{$type});
  return unless exists($self->{data}->{$type}->{$key});
@@ -134,7 +132,7 @@ sub get
  {
   delete($self->{data}->{$type}->{$key});
   return;
- } 
+ }
 
  return if (defined($from) && ($c->{_from} ne $from));
 
@@ -169,5 +167,5 @@ sub delete
  $self->{data}={};
 }
 
-##############################################################################
+####################################################################################################
 1;

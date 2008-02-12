@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .LU Domain EPP extension commands
 ##
-## Copyright (c) 2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -24,7 +24,7 @@ use Net::DRI::Util;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -54,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -115,6 +115,7 @@ sub info_parse
  my @c=$infdata->getElementsByTagNameNS($mes->ns('dnslu'),'domain');
  return unless @c;
 
+ my $pd=DateTime::Format::ISO8601->new();
  my $c=$c[0]->getFirstChild();
  while($c)
  {
@@ -133,7 +134,7 @@ sub info_parse
    $rinfo->{domain}->{$oname}->{$name}=$c->getFirstChild()->getData();  
   } elsif ($name=~m/^(crReqDate|delReqDate|delDate)$/)
   {
-   $rinfo->{domain}->{$oname}->{$name}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
+   $rinfo->{domain}->{$oname}->{$name}=$pd->parse_datetime($c->getFirstChild()->getData());
   }
 
  } continue { $c=$c->getNextSibling(); }
@@ -276,6 +277,7 @@ sub parse_transfer_trade_restore
  my @c=$infdata->getElementsByTagNameNS($mes->ns('dnslu'),'domain');
  return unless @c;
 
+ my $pd=DateTime::Format::ISO8601->new();
  my $c=$c[0]->getFirstChild();
  while($c)
  {
@@ -291,7 +293,7 @@ sub parse_transfer_trade_restore
    $rinfo->{domain}->{$oname}->{$name}=$c->getFirstChild()->getData();
   } elsif ($name=~m/^(reDate|acDate|trDate)$/)
   {
-   $rinfo->{domain}->{$oname}->{$name}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
+   $rinfo->{domain}->{$oname}->{$name}=$pd->parse_datetime($c->getFirstChild()->getData());
   }
  } continue { $c=$c->getNextSibling(); }
 }

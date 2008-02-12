@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .CAT Defensive Registration EPP extension commands
 ##
-## Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -24,7 +24,7 @@ use Net::DRI::Exception;
 use Net::DRI::Protocol::EPP::Core::Domain;
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -54,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -261,6 +261,7 @@ sub info_parse
  my (@s,%t);
  my $cs=Net::DRI::Data::ContactSet->new();
  my $cf=$po->factories()->{contact};
+ my $pd=DateTime::Format::ISO8601->new();
  my $c=$infdata->getFirstChild();
  while ($c)
  {
@@ -292,7 +293,7 @@ sub info_parse
    $rinfo->{defreg}->{$oname}->{$1}=$c->getFirstChild()->getData();
   } elsif ($name=~m/^(crDate|upDate|exDate)$/)
   {
-   $rinfo->{defreg}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
+   $rinfo->{defreg}->{$oname}->{$1}=$pd->parse_datetime($c->getFirstChild()->getData());
   } elsif ($name eq 'authInfo')
   {
    $rinfo->{defreg}->{$oname}->{auth}={pw=>($c->getElementsByTagNameNS($ns,'pw'))[0]->getFirstChild()->getData()};
@@ -312,7 +313,7 @@ sub info_parse
      $t{name}=$cc->getFirstChild()->getData();
     } elsif ($name2 eq 'issueDate')
     {
-     $t{issue_date}=DateTime::Format::ISO8601->new()->parse_datetime($cc->getFirstChild()->getData());
+     $t{issue_date}=$pd->parse_datetime($cc->getFirstChild()->getData());
     } elsif ($name2 eq 'country')
     {
      $t{country}=$cc->getFirstChild()->getData();
@@ -373,7 +374,9 @@ sub delete
 
 sub renew
 {
- my ($epp,$id,$period,$curexp)=@_;
+ my ($epp,$id,$rd)=@_;
+ my $period=(defined($rd) && (ref($rd) eq 'HASH') && exists($rd->{duration}))? $rd->{duration} : undef;
+ my $curexp=(defined($rd) && (ref($rd) eq 'HASH') && exists($rd->{current_expiration}))? $rd->{current_expiration} : undef;
  Net::DRI::Exception::usererr_insufficient_parameters('current expiration year') unless defined($curexp);
  $curexp=$curexp->set_time_zone('UTC')->strftime('%Y-%m-%d') if (ref($curexp) && UNIVERSAL::isa($curexp,'DateTime'));
  Net::DRI::Exception::usererr_invalid_parameters('current expiration year must be YYYY-MM-DD') unless $curexp=~m/^\d{4}-\d{2}-\d{2}$/;

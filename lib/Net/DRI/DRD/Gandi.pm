@@ -1,6 +1,6 @@
-## Domain Registry Interface, Gandi Registry Driver for .COM, .NET, .ORG, .INFO, .BIZ, .NAME, .BE
+## Domain Registry Interface, Gandi Registry Driver
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -20,21 +20,21 @@ package Net::DRI::DRD::Gandi;
 use strict;
 use base qw/Net::DRI::DRD/;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::DRD::Gandi - Gandi .COM/.NET/.ORG/.BIZ/.INFO/.NAME/.BE Registry driver for Net::DRI
+Net::DRI::DRD::Gandi - Gandi Registry driver for Net::DRI
 
 =head1 DESCRIPTION
 
 Please see the README file for details.
 
-=head2 CURRENT LIMITATIONS
+=head1 CURRENT LIMITATIONS
 
-Only domain_update_ns_* are provided
+Only domain_info and account_list_domains are implemented for now
 
 =head1 SUPPORT
 
@@ -54,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -80,11 +80,31 @@ sub transport_protocol_compatible
  my $pv=$po->version();
  my $tn=$to->name();
 
- return 1 if (($pn eq 'gandi_web') && ($tn eq 'web'));
+ return 1 if (($pn eq 'gandi_ws') && ($tn eq 'xmlrpclite'));
  return;
 }
 
-######################################################################################
+sub transport_protocol_default
+{
+ my ($drd,$ndr,$type,$ta,$pa)=@_;
+ $type='ws' if (!defined($type) || ref($type));
+ if ($type eq 'ws')
+ {
+  return ('Net::DRI::Transport::HTTP::XMLRPCLite','Net::DRI::Protocol::Gandi::WS') unless (defined($ta) && defined($pa));
+  my %ta=( has_login => 1,
+           has_logout => 0,
+           protocol_connection => 'Net::DRI::Protocol::Gandi::WS::Connection',
+           protocol_version => 1.0,
+           proxy_uri => 'https://api.gandi.net/xmlrpc/',
+           defer => 1,
+           (ref($ta) eq 'ARRAY')? %{$ta->[0]} : %$ta,
+        );
+  my @pa=(ref($pa) eq 'ARRAY' && @$pa)? @$pa : ('1.0');
+  return ('Net::DRI::Transport::HTTP::XMLRPCLite',[\%ta],'Net::DRI::Protocol::Gandi::WS',\@pa);
+ }
+}
+
+####################################################################################################
 
 sub verify_name_domain
 {
@@ -105,5 +125,20 @@ sub domain_operation_needs_is_mine
  return;
 }
 
-######################################################################################
+sub account_list_domains
+{
+ my ($self,$ndr)=@_;
+ my $rc;
+ if (defined($ndr->get_info('list','account','domains')))
+ {
+  $ndr->set_info_from_cache('account','domains');
+  $rc=$ndr->get_info('result_status');
+ } else
+ {
+  $rc=$ndr->process('account','list_domains');
+ }
+ return $rc;
+}
+
+####################################################################################################
 1;

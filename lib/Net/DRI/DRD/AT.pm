@@ -1,7 +1,7 @@
 ## Domain Registry Interface, .AT policy
 ## Contributed by Michael Braunoeder from NIC.AT <mib@nic.at>
 ##
-## Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -23,7 +23,7 @@ use base qw/Net::DRI::DRD/;
 
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -53,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -69,12 +69,10 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $proto=shift;
- my $class=ref($proto) || $proto;
-
+ my $class=shift;
  my $self=$class->SUPER::new(@_);
  $self->{info}->{host_as_attr}=2; ## this means we want IPs in all cases (even for nameservers in domain name)
-
+ $self->{info}->{contact_i18n}=2; ## INT only
  bless($self,$class);
  return $self;
 }
@@ -91,12 +89,16 @@ sub transport_protocol_compatible
  my $tn=$to->name();
 
  return 1 if (($pn eq 'EPP') && ($tn eq 'socket_inet'));
+ return 1 if (($pn eq 'Whois') && ($tn eq 'socket_inet'));
  return;
 }
 
 sub transport_protocol_default
 {
- return ('Net::DRI::Transport::Socket','Net::DRI::Protocol::EPP::Extensions::AT');
+ my ($drd,$ndr,$type,$ta,$pa)=@_;
+ $type='epp' if (!defined($type) || ref($type));
+ return Net::DRI::DRD::_transport_protocol_default_epp('Net::DRI::Protocol::EPP::Extensions::AT',$ta,$pa) if ($type eq 'epp');
+ return ('Net::DRI::Transport::Socket',[{%Net::DRI::DRD::PROTOCOL_DEFAULT_WHOIS,remote_host=>'whois.nic.at'}],'Net::DRI::Protocol::Whois',[]) if (lc($type) eq 'whois');
 }
 
 ####################################################################################################
@@ -119,7 +121,8 @@ sub verify_name_domain
 
 sub is_my_tld
 {
-   my ($self,$domain)=@_;
+   my ($self,$ndr,$domain)=@_;
+   ($domain)=($ndr) unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
    my ($tld) = uc($self->tlds());
 
    return 1 if (uc($domain) =~ /.*$tld$/);

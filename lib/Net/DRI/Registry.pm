@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Registry object
 ##
-## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -13,7 +13,7 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::Registry;
 
@@ -33,7 +33,7 @@ use Net::DRI::Data::Hosts;
 
 our $AUTOLOAD;
 
-our $VERSION=do { my @r=(q$Revision: 1.24 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.25 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -63,7 +63,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -75,8 +75,8 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
+####################################################################################################
 
-##############################################################################################
 sub new
 {
  my $proto=shift;
@@ -116,8 +116,8 @@ sub exist_profile
  return (defined($name) && exists($self->{profiles}->{$name}));
 }
 
-sub err_no_current_profile           { Net::DRI::Exception->die(0,'DRI',3,"No current profile available"); }
-sub err_profile_name_does_not_exist  { Net::DRI::Exception->die(0,'DRI',4,"Profile name $_[0] does not exist"); }
+sub err_no_current_profile           { Net::DRI::Exception->die(0,'DRI',3,'No current profile available'); }
+sub err_profile_name_does_not_exist  { Net::DRI::Exception->die(0,'DRI',4,'Profile name '.$_[0].' does not exist'); }
 
 sub remote_object
 {
@@ -154,21 +154,20 @@ sub local_object
  return unless $self && $f;
  return Net::DRI::Data::Changes->new(@_)    if $f eq 'changes';
  return Net::DRI::Data::ContactSet->new(@_) if $f eq 'contactset';
- return Net::DRI::Data::Hosts->new(@_)      if $f eq 'hosts'; 
+ return Net::DRI::Data::Hosts->new(@_)      if $f eq 'hosts';
  return $self->_current('protocol')->create_local_object($f,@_);
 }
-
 
 sub _result
 {
  my ($self,$f)=@_;
  my $p=$self->profile();
  err_no_current_profile() unless (defined($p));
- Net::DRI::Exception->die(0,'DRI',6,"No last status code available for current registry and profile") unless (exists($self->{profiles}->{$p}->{status}));
+ Net::DRI::Exception->die(0,'DRI',6,'No last status code available for current registry and profile') unless (exists($self->{profiles}->{$p}->{status}));
  my $rc=$self->{profiles}->{$p}->{status}; ## a Net::DRI::Protocol::ResultStatus object !
  Net::DRI::Exception->die(1,'DRI',5,'Status key if not a Net::DRI::Protocol::ResultStatus object') unless UNIVERSAL::isa($rc,'Net::DRI::Protocol::ResultStatus');
- Net::DRI::Exception->die(1,'DRI',5,"Method $f not implemented in Net::DRI::Protocol::ResultStatus") unless ($f && $rc->can($f));
-
+ return $rc if ($f eq 'self');
+ Net::DRI::Exception->die(1,'DRI',5,'Method '.$f.' not implemented in Net::DRI::Protocol::ResultStatus') unless ($f && $rc->can($f));
  return $rc->$f();
 }
 
@@ -178,7 +177,7 @@ sub result_code        { return shift->_result('code');        }
 sub result_native_code { return shift->_result('native_code'); }
 sub result_message     { return shift->_result('message');     }
 sub result_lang        { return shift->_result('lang');        }
-
+sub result_status { return shift->_result('self'); }
 
 sub cache_expire { return shift->{cache}->delete_expired(); }
 sub cache_clear  { return shift->{cache}->delete(); }
@@ -190,7 +189,7 @@ sub set_info
  err_no_current_profile() unless defined($p);
  my $regname=$self->name();
 
- my $c=$self->{cache}->set("${regname}.${p}",$type,$key,$data,$ttl);
+ my $c=$self->{cache}->set($regname.'.'.$p,$type,$key,$data,$ttl);
  $self->{last_data}=$c; ## the hash exists, since we called clear_info somewhere before 
 
  return $c;
@@ -226,7 +225,39 @@ sub get_info
  }
 }
 
-#####################################################################################################
+sub get_info_all
+{
+ my ($self,$type,$key)=@_;
+ my $rh;
+ if (Net::DRI::Util::all_valid($type,$key))
+ {
+  my $p=$self->profile();
+  err_no_current_profile() unless defined($p);
+  my $regname=$self->name();
+  $rh=$self->{cache}->get($type,$key,undef,$regname.'.'.$p);
+ } else
+ {
+  $rh=$self->{last_data};
+ }
+ if (defined($rh) && ref($rh) && keys(%$rh))
+ {
+  foreach my $k (grep { /^_/ } keys(%$rh)) { delete($rh->{$k}); }
+ } else
+ {
+  $rh={};
+ }
+ my %h=%$rh;
+ return \%h;
+}
+
+sub get_info_keys
+{
+ my ($self,$type,$key)=@_;
+ my $rh=$self->get_info_all($type,$key);
+ return sort { $a cmp $b } keys(%$rh);
+}
+
+####################################################################################################
 ## Change profile
 sub target
 {
@@ -274,31 +305,41 @@ sub new_profile
  my ($self,$name,$transport,$t_params,$protocol,$p_params)=@_;
  Net::DRI::Exception->die(0,'DRI',12,'New profile name already in use') if $self->exist_profile($name);
 
- if (!defined($protocol) && !defined($p_params) && $self->can('transport_protocol_default'))
+ ## This API is a mess, due to non-optimal initial design
+ ## This first case added last should have been the only one
+ if (!defined($p_params) && $self->can('transport_protocol_default'))
  {
-  $p_params=(defined($t_params) && ref($t_params) eq 'ARRAY')? $t_params : [];
-  $t_params=(defined($transport) && ref($transport) eq 'ARRAY')? $transport : [];
-  my @a=$self->transport_protocol_default($transport);
-  if (@a==2)
+  if (defined($protocol))
   {
-   ($transport,$protocol)=@a;
-  } elsif (@a==4)
+   ($transport,$t_params,$protocol,$p_params)=$self->transport_protocol_default($transport,$t_params,$protocol);
+   Net::DRI::Exception::usererr_invalid_parameters('New form of new_profile is not available for this DRD, please report') unless (defined($t_params) && ref($t_params) && defined($p_params) && ref($p_params));
+  } else
   {
-   ($transport,$protocol)=@a[0,2];
-   $t_params=$a[1] unless @$t_params;
-   $p_params=$a[3] unless @$p_params;
+   $p_params=(defined($t_params) && ref($t_params) eq 'ARRAY')? $t_params : [];
+   $t_params=(defined($transport) && ref($transport) eq 'ARRAY')? $transport : [];
+   my @a=$self->transport_protocol_default($transport);
+   if (@a==2) ## this case should be deprecated
+   {
+    ($transport,$protocol)=@a;
+   } elsif (@a==4)
+   {
+    ($transport,$protocol)=@a[0,2];
+    $t_params=$a[1] unless @$t_params;
+    $p_params=$a[3] unless @$p_params;
+   } else ## this case should not happen
+   {
+     Net::DRI::Exception::usererr_invalid_parameters();
+   }
   }
  }
- Net::DRI::Exception::err_insufficient_parameters() unless (Net::DRI::Util::all_valid($transport,$t_params,$protocol,$p_params));
- Net::DRI::Exception::err_invalid_parameters() unless ((ref($t_params) eq 'ARRAY') && (ref($p_params) eq 'ARRAY'));
+ Net::DRI::Exception::usererr_insufficient_parameters() unless (Net::DRI::Util::all_valid($transport,$t_params,$protocol,$p_params));
+ Net::DRI::Exception::usererr_invalid_parameters() unless ((ref($t_params) eq 'ARRAY') && (ref($p_params) eq 'ARRAY'));
 
  $transport='Net::DRI::Transport::'.$transport unless ($transport=~m/::/);
  $protocol ='Net::DRI::Protocol::'.$protocol   unless ($protocol=~m/::/);
 
- eval 'require '.$transport; ## no critic (ProhibitStringyEval)
- Net::DRI::Exception->die(1,'DRI',8,"Failed to load Perl module $transport : ".(ref($@)? $@->as_string() : $@)) if $@;
- eval 'require '.$protocol; ## no critic (ProhibitStringyEval)
- Net::DRI::Exception->die(1,'DRI',8,"Failed to load Perl module $protocol : ".(ref($@)? $@->as_string() : $@)) if $@;
+ $transport->require or Net::DRI::Exception::err_failed_load_module('DRI',$transport,$@);
+ $protocol->require  or Net::DRI::Exception::err_failed_load_module('DRI',$protocol,$@);
 
  my $drd=$self->{driver};
  my $po=$protocol->new($drd,@{$p_params}); ## Protocol must come first, as it may be needed during transport setup
@@ -323,7 +364,7 @@ sub new_profile
  Net::DRI::Exception->die(0,'DRI',13,'Transport & Protocol not compatible') unless $compat;
 
  $self->{profiles}->{$name}={ transport => $to, protocol => $po, status => undef };
- return Net::DRI::Protocol::ResultStatus->new_success('COMMAND_SUCCESSFUL',"Profile ${name} added successfully");
+ return Net::DRI::Protocol::ResultStatus->new_success('COMMAND_SUCCESSFUL','Profile '.$name.' added successfully');
 }
 
 sub new_current_profile
@@ -354,8 +395,8 @@ sub can
  return $self->UNIVERSAL::can($what) || $self->driver->can($what);
 }
 
-################################################################################################
-################################################################################################
+####################################################################################################
+####################################################################################################
 
 sub has_action
 {
@@ -382,7 +423,7 @@ sub process
   my $tosend=$po->action($otype,$oaction,$trid,@$pa);
   $self->{ops}->{$trid}=[0,$tosend]; ## 0 = todo, not sent ## This will be done in/with LocalStorage
 
-  $to->send($trid,$tosend,@$ta); ## if synchronous, store results somewhere in dri, keyed by trid, store also $tosend + params passed that created $tosend (domain name, etc...)
+  $to->send($trid,$tosend,@$ta); ## if synchronous, store results somewhere in dri, keyed by trid, store also $tosend + params passed that created $tosend (domain name, etc...) = LocalStorage + Exchange
 
   $self->{ops}->{$trid}->[0]=1; ## now it is sent
  };
@@ -394,7 +435,7 @@ sub process
    $self->status($@);
    return $@;
   }
-  $@=Net::DRI::Exception->new(1,'internal',0,"Error not handled: $@") unless ref($@);
+  $@=Net::DRI::Exception->new(1,'internal',0,'Error not handled: '.$@) unless ref($@);
   die($@);
  }
 
@@ -431,7 +472,7 @@ sub process_back
    $self->status($@);
    return $@;
   }
-  $@=Net::DRI::Exception->new(1,'internal',0,"Error not handled: $@") unless ref($@);
+  $@=Net::DRI::Exception->new(1,'internal',0,'Error not handled: '.$@) unless ref($@);
   die($@);
  }
 
@@ -467,9 +508,7 @@ sub process_back
  return $rc;
 }
 
-
-################################################################################################
-################################################################################################
+####################################################################################################
 
 sub protocol_capable
 {
@@ -492,7 +531,8 @@ sub protocol_capable
  return 0;
 }
 
-##############################################################################################
+####################################################################################################
+
 sub AUTOLOAD
 {
  my $self=shift;
@@ -501,11 +541,10 @@ sub AUTOLOAD
  return unless $attr=~m/[^A-Z]/; ## skip DESTROY and all-cap methods
 
  my $drd=$self->driver(); ## This is a DRD object
- Net::DRI::Exception::err_method_not_implemented("$attr in $drd") unless (ref($drd) && $drd->can($attr));
+ Net::DRI::Exception::err_method_not_implemented($attr.' in '.$drd) unless (ref($drd) && $drd->can($attr));
 
  return $drd->$attr($self,@_);
 }
 
-
-##############################################################################################
+####################################################################################################
 1;

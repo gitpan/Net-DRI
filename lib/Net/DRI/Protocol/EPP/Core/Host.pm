@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Host commands (RFC4932)
 ##
-## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -26,7 +26,7 @@ use Net::DRI::Protocol::EPP;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -56,7 +56,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -90,7 +90,7 @@ sub build_command
  my ($msg,$command,$hostname)=@_;
  my @n=map { UNIVERSAL::isa($_,'Net::DRI::Data::Hosts')? $_->get_names() : $_ } ((ref($hostname) eq 'ARRAY')? @$hostname : ($hostname));
 
- Net::DRI::Exception->die(1,'protocol/EPP',2,"Host name needed") unless @n;
+ Net::DRI::Exception->die(1,'protocol/EPP',2,'Host name needed') unless @n;
  foreach my $n (@n)
  {
   Net::DRI::Exception->die(1,'protocol/EPP',2,'Host name needed') unless defined($n) && $n;
@@ -164,6 +164,7 @@ sub info_parse
  return unless $infdata;
 
  my (@s,@ip4,@ip6);
+ my $pd=DateTime::Format::ISO8601->new();
  my $c=$infdata->getFirstChild();
  while ($c)
  {
@@ -181,7 +182,7 @@ sub info_parse
    $rinfo->{host}->{$oname}->{$1}=$c->getFirstChild()->getData();
   } elsif ($name=~m/^(crDate|upDate|trDate)$/)
   {
-   $rinfo->{host}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
+   $rinfo->{host}->{$oname}->{$1}=$pd->parse_datetime($c->getFirstChild()->getData());
   } elsif ($name eq 'roid')
   {
    $rinfo->{host}->{$oname}->{roid}=$c->getFirstChild()->getData();
@@ -199,7 +200,7 @@ sub info_parse
  } continue { $c=$c->getNextSibling(); }
 
  $rinfo->{host}->{$oname}->{status}=$po->create_local_object('status')->add(@s);
- $rinfo->{host}->{$oname}->{self}=Net::DRI::Data::Hosts->new($oname,\@ip4,\@ip6);
+ $rinfo->{host}->{$oname}->{self}=Net::DRI::Data::Hosts->new($oname,\@ip4,\@ip6,1);
 }
 
 ############ Transform commands
@@ -254,7 +255,7 @@ sub update
  my ($epp,$ns,$todo)=@_;
  my $mes=$epp->message();
 
- Net::DRI::Exception::usererr_invalid_parameters($todo." must be a Net::DRI::Data::Changes object") unless ($todo && UNIVERSAL::isa($todo,'Net::DRI::Data::Changes'));
+ Net::DRI::Exception::usererr_invalid_parameters($todo.' must be a Net::DRI::Data::Changes object') unless ($todo && UNIVERSAL::isa($todo,'Net::DRI::Data::Changes'));
  if ((grep { ! /^(?:add|del)$/ } $todo->types('ip')) ||
      (grep { ! /^(?:add|del)$/ } $todo->types('status')) ||
      (grep { ! /^(?:set)$/ } $todo->types('name'))

@@ -27,7 +27,7 @@ select(STDOUT);
 print "Dumping XML exchange to $file\n";
 
 ## This connects to .CAT server for tests
-my $rc=$dri->target('CAT')->new_current_profile('profile1',[{log_fh=>$fh,defer=>0,socktype=>'ssl',remote_host=>'epp.ote.puntcat.corenic.net',remote_port=>700,protocol_connection=>'Net::DRI::Protocol::EPP::Connection',protocol_version=>1,client_login=>$CLID,client_password=>$PASS}]);
+my $rc=$dri->target('CAT')->new_current_profile('profile1','epp',[{log_fh=>$fh,remote_host=>'epp.ote.puntcat.corenic.net',client_login=>$CLID,client_password=>$PASS}],[]);
 
 die($rc) unless $rc->is_success(); ## Here we catch all errors during setup of transport, such as authentication errors
 

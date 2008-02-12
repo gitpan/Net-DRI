@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Encapsulating result status, standardized on EPP codes
 ##
-## Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -20,9 +20,9 @@ package Net::DRI::Protocol::ResultStatus;
 use strict;
 
 use base qw(Class::Accessor::Chained::Fast);
-__PACKAGE__->mk_ro_accessors(qw(is_success native_code code message lang));
+__PACKAGE__->mk_ro_accessors(qw(is_success native_code code message lang next));
 
-our $VERSION=do { my @r=(q$Revision: 1.17 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.18 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -62,13 +62,17 @@ gives the language in which the message above is written
 
 gives back an array with additionnal data from registry, especially in case of errors. If no data, an empty array is returned
 
+=head2 as_string(EXTRA)
+
+returns a string with all details (with the info part if EXTRA is defined and true)
+
 =head2 print()
 
-print all details (except the info part) as a single line
+same as CORE::print($rs->as_string(0))
 
 =head2 print_full()
 
-print all details (including the infor part)
+same as CORE::print($rs->as_string(1))
 
 =head2 trid()
 
@@ -93,7 +97,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -104,6 +108,8 @@ the Free Software Foundation; either version 2 of the License, or
 See the LICENSE file that comes with this distribution for more details.
 
 =cut
+
+####################################################################################################
 
 ## We give symbolic names only to codes that are used in some modules
 our %EPP_CODES=(
@@ -130,6 +136,7 @@ sub new
         message     => $message || '',
         type        => $type, ## rrp/epp/afnic/etc...
         lang        => $lang || '?',
+	'next'	=> undef,
        );
 
  $s{code}=_eppcode($type,$code,$eppcode,$s{is_success});
@@ -145,7 +152,8 @@ sub trid
  return wantarray()? @{$self->{trid}} : $self->{trid}->[0];
 }
 
-sub _set_trid { my ($self,$v)=@_; $self->{trid}=$v; }
+sub _set_trid { my ($self,$v)=@_; $self->{'trid'}=$v; }
+sub _set_next { my ($self,$v)=@_; $self->{'next'}=$v; }
 sub _eppcode
 {
  my ($type,$code,$eppcode,$is_success)=@_;
@@ -168,19 +176,20 @@ sub info
  return (defined($self->{info}) && (ref($self->{info}) eq 'ARRAY'))? @{$self->{info}} : ();
 }
 
-sub print
+sub as_string
 {
- my $self=shift;
- printf("%s (%s/%s) %s",$self->message(),$self->code(),$self->native_code(),$self->is_success()? 'SUCCESS' : 'ERROR' );
+ my ($self,$withinfo)=@_;
+ my $b=sprintf('%s (%s/%s) %s',$self->message(),$self->code(),$self->native_code(),$self->is_success()? 'SUCCESS' : 'ERROR' );
+ if (defined($withinfo) && $withinfo)
+ {
+  my @i=$self->info();
+  $b.="\n".join("\n",@i) if @i;
+ }
+ return $b;
 }
 
-sub print_full
-{
- my $self=shift;
- $self->print();
- my @i=$self->info();
- print "\n".join("\n",@i) if @i;
-}
+sub print { print shift->as_string(0); }
+sub print_full { print shift->as_string(1); }
 
 sub is_pending
 {

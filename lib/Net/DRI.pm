@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Main entry point
 ##
-## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -17,15 +17,17 @@
 
 package Net::DRI;
 
+use strict;
+
+require UNIVERSAL::require;
+
 use Net::DRI::Cache;
 use Net::DRI::Registry;
 use Net::DRI::Util;
 
-use strict;
-
 our $AUTOLOAD;
-our $VERSION='0.81';
-our $CVS_REVISION=do { my @r=(q$Revision: 1.27 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION='0.85';
+our $CVS_REVISION=do { my @r=(q$Revision: 1.28 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -55,7 +57,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -95,22 +97,20 @@ sub add_registry
 
  my $reg=shift;
  $reg='Net::DRI::DRD::'.$reg unless ($reg=~m/::/);
-
- eval 'require '.$reg; ## no critic (ProhibitStringyEval)
- Net::DRI::Exception->die(1,'DRI',8,"Failed to load Perl module $reg ($@)") if $@;
+ $reg->require or Net::DRI::Exception::err_failed_load_module('DRI',$reg,$@);
 
  my $drd=$reg->new(@_);
- Net::DRI::Exception->die(1,'DRI',9,"Failed to initialize registry $reg") unless ($drd && ref($drd));
+ Net::DRI::Exception->die(1,'DRI',9,'Failed to initialize registry '.$reg) unless ($drd && ref($drd));
 
- Net::DRI::Exception::err_method_not_implemented("name() in $reg") unless $drd->can('name');
+ Net::DRI::Exception::err_method_not_implemented('name() in '.$reg) unless $drd->can('name');
  my $regname=$drd->name();
- Net::DRI::Exception->die(1,'DRI',10,"No dot allowed in registry name: $regname") unless (index($regname,'.')==-1);
- Net::DRI::Exception->die(1,'DRI',11,"New registry name already in use") if (exists($self->{registries}->{$regname}));
+ Net::DRI::Exception->die(1,'DRI',10,'No dot allowed in registry name: '.$regname) unless (index($regname,'.')==-1);
+ Net::DRI::Exception->die(1,'DRI',11,'New registry name already in use') if (exists($self->{registries}->{$regname}));
 
  my $ndr=Net::DRI::Registry->new($regname,$drd,$self->{cache},$self->{trid_factory});
  $self->{registries}->{$regname}=$ndr;
 
- Net::DRI::Exception::err_method_not_implemented("tlds() in $reg") unless $drd->can('tlds');
+ Net::DRI::Exception::err_method_not_implemented('tlds() in '.$reg) unless $drd->can('tlds');
  foreach my $tld ($drd->tlds())
  {
   $tld=lc($tld);
@@ -123,10 +123,10 @@ sub add_registry
 
 ####################################################################################################
 
-sub err_no_current_registry          { Net::DRI::Exception->die(0,'DRI',1,"No current registry available"); }
-sub err_registry_name_does_not_exist { Net::DRI::Exception->die(0,'DRI',2,"Registry name $_[0] does not exist"); }
-sub err_no_current_profile           { Net::DRI::Exception->die(0,'DRI',3,"No current profile available"); }
-sub err_profile_name_does_not_exist  { Net::DRI::Exception->die(0,'DRI',4,"Profile name $_[0] does not exist"); }
+sub err_no_current_registry          { Net::DRI::Exception->die(0,'DRI',1,'No current registry available'); }
+sub err_registry_name_does_not_exist { Net::DRI::Exception->die(0,'DRI',2,'Registry name '.$_[0].' does not exist'); }
+sub err_no_current_profile           { Net::DRI::Exception->die(0,'DRI',3,'No current profile available'); }
+sub err_profile_name_does_not_exist  { Net::DRI::Exception->die(0,'DRI',4,'Profile name '.$_[0].' does not exist'); }
 
 ####################################################################################################
 ## Accessor functions
@@ -164,7 +164,7 @@ sub target
  if (defined($driver) && !exists($self->{registries}->{$driver})) 
  {
   my @t=$self->tld2reg($driver);
-  Net::DRI::Exception->die(0,'DRI',7,"Registry not found for domain name/TLD $driver") unless (@t==1);
+  Net::DRI::Exception->die(0,'DRI',7,'Registry not found for domain name/TLD '.$driver) unless (@t==1);
   $driver=$t[0];
  }
 
@@ -191,7 +191,7 @@ sub AUTOLOAD
  return unless $attr=~m/[^A-Z]/; ## skip DESTROY and all-cap methods
 
  my $ndr=$self->registry(); ## This is a Net::DRI::Registry object
- Net::DRI::Exception::err_method_not_implemented("$attr in $ndr") unless (ref($ndr) && $ndr->can($attr));
+ Net::DRI::Exception::err_method_not_implemented($attr.' in '.$ndr) unless (ref($ndr) && $ndr->can($attr));
  return $ndr->$attr(@_); ## is goto beter here ?
 }
 

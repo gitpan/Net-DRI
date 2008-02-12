@@ -5,7 +5,7 @@ use Net::DRI::Data::Raw;
 
 use Encode;
 
-use Test::More tests=> 30;
+use Test::More tests=> 38;
 
 my $msg;
 my $s;
@@ -33,9 +33,9 @@ $s=Net::DRI::Data::Raw->new_from_string(<<EOF);
 EOF
 
 $msg->parse($s);
-is($msg->errcode(),1000,'parse (result,trid) errcode');
-is($msg->errmsg(),'Command completed successfully','parse (result,trid) errmsg');
-is($msg->errlang(),'en','parse (result,trid) errlang');
+is($msg->result_code(),1000,'parse (result,trid) result_code');
+is($msg->result_message(),'Command completed successfully','parse (result,trid) result_message');
+is($msg->result_lang(),'en','parse (result,trid) result_lang');
 is($msg->cltrid(),'ABC-12345','parse (result,trid) cltrid');
 is($msg->svtrid(),'54321-XYZ','parse (result,trid) svtrid');
 
@@ -66,10 +66,17 @@ $s=Net::DRI::Data::Raw->new_from_string(<<EOF);
 EOF
 
 $msg->parse($s);
-is($msg->errcode(),2005,'parse (result,2 errors) errcode');
-my $ri=$msg->result_extra_info();
-is_deeply($ri,['<value xmlns:obj="urn:ietf:params:xml:ns:obj"><obj:elem1>2525</obj:elem1></value>','<value xmlns:obj="urn:ietf:params:xml:ns:obj"><obj:elem2>ex(ample</obj:elem2></value>','<value xmlns:obj="urn:ietf:params:xml:ns:obj"><obj:elem3>abc.ex(ample</obj:elem3></value><reason>Invalid character found.</reason>'],'parse (result,2 errors) result_extra_info');
 
+is($msg->errcode(),2005,'parse (result,2 errors) errcode()'); ## old API
+is($msg->result_code(0),2004,'parse (result,2 errors) result_code(0)');
+is($msg->result_code(1),2005,'parse (result,2 errors) result_code(1)');
+$ri=$msg->result_extra_info(0);
+is_deeply($ri,['<value xmlns:obj="urn:ietf:params:xml:ns:obj"><obj:elem1>2525</obj:elem1></value>'],'parse (result,2 errors) result_extra_info(0)');
+$ri=$msg->result_extra_info(1);
+is_deeply($ri,['<value xmlns:obj="urn:ietf:params:xml:ns:obj"><obj:elem2>ex(ample</obj:elem2></value>','<value xmlns:obj="urn:ietf:params:xml:ns:obj"><obj:elem3>abc.ex(ample</obj:elem3></value><reason>Invalid character found.</reason>'],'parse (result,2 errors) result_extra_info(1)');
+is_deeply([$msg->results_code()],[2004,2005],'parse (result,2 errors) results_code');
+is_deeply([$msg->results_message()],['Parameter value range error','Parameter value syntax error'],'parse (result,2 errors) results_message');
+is_deeply([$msg->results_lang()],['en','en'],'parse (result,2 errors) results_lang');
 
 #################################################################################
 
@@ -335,12 +342,18 @@ $s=<<EOF;
 </epp>
 EOF
 
+$msg->version('1.0');
 my $m=$msg->as_string('tcp');
-ok(!Encode::is_utf8($m),'Unicode : XML string sent on network is bytes not characters');
+ok(!Encode::is_utf8($m),'Unicode : XML string sent on network is bytes not characters (version 1.0)');
 my $l=unpack('N',substr($m,0,4));
 $m=substr($m,4);
-is($l,4+length(_n($s)),'Unicode : XML string length');
-is($m,_n($s),'Unicode : string is ok after removing length');
+is($l,4+length(_n($s)),'Unicode : XML string length (version 1.0)');
+is($m,_n($s),'Unicode : string is ok after removing length (version 1.0)');
+$msg->version('0.4');
+$m=$msg->as_string('tcp');
+ok(!Encode::is_utf8($m),'Unicode : XML string sent on network is bytes not characters (version 0.4)');
+is($m,_n($s),'Unicode : string does not include length (version 0.4)');
+
 
 exit 0;
 

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, virtual superclass for all DRD modules
 ##
-## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -19,11 +19,18 @@ package Net::DRI::DRD;
 
 use strict;
 
+use Carp;
 use DateTime;
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.25 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.26 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+
+## Nice shortcuts used in various DRDs even if it should be in Protocol/* somewhere, from RFCs & IANA assignation
+our %PROTOCOL_DEFAULT_EPP=(defer => 0, socktype => 'ssl', ssl_cipher_list => 'TLSv1', remote_port => 700, protocol_connection => 'Net::DRI::Protocol::EPP::Connection', protocol_version => 1);
+our %PROTOCOL_DEFAULT_RRP=(defer => 0, socktype => 'ssl', ssl_cipher_list => 'TLSv1', remote_port => 648, protocol_connection => 'Net::DRI::Protocol::RRP::Connection', protocol_version => 1);
+our %PROTOCOL_DEFAULT_DAS=(defer=>1, close_after=>1, socktype=>'tcp', remote_port=>4343, protocol_connection=>'Net::DRI::Protocol::DAS::Connection', protocol_version=> 1);
+our %PROTOCOL_DEFAULT_WHOIS=(defer=>1, close_after=>1, socktype=>'tcp', remote_port=>43,protocol_connection=>'Net::DRI::Protocol::Whois::Connection',protocol_version=>1);
 
 =pod
 
@@ -53,7 +60,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -70,9 +77,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $proto=shift;
- my $class=ref($proto) || $proto;
- 
+ my $class=shift;
  my $self={ info => $_[0] };
 
  bless($self,$class);
@@ -81,7 +86,8 @@ sub new
 
 sub info
 {
- my ($self,$key)=@_;
+ my ($self,$ndr,$key)=@_;
+ $key=$ndr unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
  return unless defined($self->{info});
  return unless (defined($key) && exists($self->{info}->{$key}));
  return $self->{info}->{$key};
@@ -100,17 +106,25 @@ sub name     { Net::DRI::Exception::err_method_not_implemented('name in '.ref($_
 sub tlds     { Net::DRI::Exception::err_method_not_implemented('tlds in '.ref($_[0])); }
 sub object_types { Net::DRI::Exception::err_method_not_implemented('object_types in '.ref($_[0])); }
 sub periods  { Net::DRI::Exception::err_method_not_implemented('periods in '.ref($_[0])); } ## should return an array
-sub root_servers { Net::DRI::Exception::err_method_not_implemented('root_servers in '.ref($_[0])); }
-
 sub transport_protocol_compatible { Net::DRI::Exception::err_method_not_implemented('transport_protocol_compatible in '.ref($_[0])); }
+sub _transport_protocol_default_epp
+{
+ my ($pn,$ta,$pa)=@_;
+ return ('Net::DRI::Transport::Socket',$pn) unless (defined($ta) && defined($pa));
+ my %ta=( %PROTOCOL_DEFAULT_EPP,
+          (ref($ta) eq 'ARRAY')? %{$ta->[0]} : %$ta,
+        );
+ my @pa=(ref($pa) eq 'ARRAY' && @$pa)? @$pa : ('1.0');
+ return ('Net::DRI::Transport::Socket',[\%ta],$pn,\@pa);
+}
 
 ## We will need to deal with specific characters allowed/specific languages allowed
-sub has_idn { Net::DRI::Exception::err_method_not_implemented("has_idn in ".ref($_[0])); }
+sub has_idn { Net::DRI::Exception::err_method_not_implemented('has_idn in '.ref($_[0])); }
 
 sub verify_name_domain { Net::DRI::Exception::err_method_not_implemented('verify_name_domain in '.ref($_[0])); }
 sub domain_operation_needs_is_mine { Net::DRI::Exception::err_method_not_implemented('domain_operation_needs_is_mine in '.ref($_[0])); }
 
-sub is_thick { return shift->has_object('contact'); } ## DEPRECATED
+sub is_thick { carp(q{DRD::is_thick() is deprecated, please use DRD::hash_object('contact')}); return shift->has_object('contact'); } ## DEPRECATED
 
 sub has_object
 {
@@ -125,7 +139,7 @@ sub verify_name_host
 {
  my ($self,$ndr,$host,$checktld)=@_;
  $checktld||=0;
- $host=$ndr unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
+ ($host,$checktld)=($ndr,$host) unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
 
  $host=$host->get_names(1) if (ref($host));
  my $r=$self->check_name($host);
@@ -530,23 +544,34 @@ sub domain_update_contact
 
 sub domain_renew
 {
- my ($self,$ndr,$domain,$duration,$curexp,$deletedate,$rd)=@_;
+ my ($self,$ndr,$domain,$rd,@e)=@_; ## Previous API : ($self,$ndr,$domain,$duration,$curexp,$deletedate,$rd)
+ if (@e)
+ {
+  my ($duration,$curexp,$deletedate,$rd2)=($rd,@e);
+  $rd2={} unless (defined($rd2) && (ref($rd2) eq 'HASH'));
+  $rd2->{duration}=$duration if (defined($duration));
+  $rd2->{current_expiration}=$curexp if (defined($curexp));
+  ## deletedate should never have been there, a bug probably
+  $rd=$rd2;
+ } elsif (defined($rd) && (ref($rd) ne 'HASH'))
+ {
+  $rd={duration => $rd};
+ }
+
  err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'renew');
 
- Net::DRI::Util::check_isa($duration,'DateTime::Duration') if defined($duration);
- Net::DRI::Util::check_isa($curexp,'DateTime') if defined($curexp);
+ Net::DRI::Util::check_isa($rd->{duration},'DateTime::Duration') if defined($rd->{duration});
+ Net::DRI::Util::check_isa($rd->{current_expiration},'DateTime') if defined($rd->{current_expiration});
+ Net::DRI::Exception->die(0,'DRD',3,'Invalid duration') if $self->verify_duration_renew($rd->{duration},$domain,$rd->{current_expiration});
 
- Net::DRI::Exception->die(0,'DRD',3,'Invalid duration') if $self->verify_duration_renew($duration,$domain,$curexp);
-
- my $rc=$ndr->process('domain','renew',[$domain,$duration,$curexp,$deletedate,$rd]);
- return $rc;
+ return $ndr->process('domain','renew',[$domain,$rd]);
 }
 
 sub domain_transfer
 {
  my ($self,$ndr,$domain,$op,$rd)=@_;
  err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'transfer');
- Net::DRI::Exception::usererr_invalid_parameters("Transfer operation must be start,stop,accept,refuse or query") unless ($op=~m/^(?:start|stop|query|accept|refuse)$/);
+ Net::DRI::Exception::usererr_invalid_parameters('Transfer operation must be start,stop,accept,refuse or query') unless ($op=~m/^(?:start|stop|query|accept|refuse)$/);
 
  Net::DRI::Exception->die(0,'DRD',3,'Invalid duration') if $self->verify_duration_transfer($ndr,(defined($rd) && (ref($rd) eq 'HASH') && exists($rd->{duration}))? $rd->{duration} : undef,$domain,$op);
 

@@ -1,7 +1,8 @@
 ## Domain Registry Interface, nic.at domain transactions extension
 ## Contributed by Michael Braunoeder from NIC.AT <mib@nic.at>
+## Extended by Tonnerre Lombard 
 ##
-## Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -22,7 +23,7 @@ use strict;
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 our $NS='http://www.nic.at/xsd/at-ext-message-1.0';
 
@@ -54,7 +55,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -101,17 +102,104 @@ sub parse_poll
 {
  my ($po,$otype,$oaction,$oname,$rinfo)=@_;
  my $mes=$po->message();
+ my $eppNS = $mes->ns('_main');
+ my $resNS = 'http://www.nic.at/xsd/at-ext-result-1.0';
 
  return unless $mes->is_success();
- return if ($mes->{errcode} eq "1300");   # no messages in queue
-
+ return if ($mes->result_code() == 1300);   # no messages in queue
 
  my $msgid=$mes->msg_id();
  $rinfo->{message}->{session}->{last_id}=$msgid;
 
  my $mesdata=$mes->get_content('message',$NS,0);
- $rinfo->{domain}->{$oname}->{message}=$mesdata;
+ $rinfo->{$otype}->{$oname}->{message}=$mesdata;
  return unless $mesdata;
+
+ my ($epp,$rep,$ext,$ctag,@conds,@tags);
+ my $command=$mesdata->getAttribute('type');
+ @tags = $mesdata->getElementsByTagNameNS($NS, 'desc');
+
+ $rinfo->{message}->{$msgid}->{content} = $tags[0]->getFirstChild()->getData() if @tags;
+ @tags = $mesdata->getElementsByTagNameNS($NS, 'data');
+ return unless @tags;
+
+ my $data = $tags[0];
+ @tags = $data->getElementsByTagNameNS($NS, 'entry');
+
+ foreach my $entry (@tags)
+ {
+  next unless (defined($entry->getAttribute('name')));
+
+  if ($entry->getAttribute('name') eq 'objecttype')
+  {
+   $rinfo->{message}->{$msgid}->{object_type} = $entry->getFirstChild()->getData();
+  }
+  elsif ($entry->getAttribute('name') eq 'command')
+  {
+   $rinfo->{message}->{$msgid}->{action} = $entry->getFirstChild()->getData();
+  }
+  elsif ($entry->getAttribute('name') eq 'objectname')
+  {
+   $rinfo->{message}->{$msgid}->{object_id} = $entry->getFirstChild()->getData();
+  }
+  elsif ($entry->getAttribute('name') =~ /^(domain|contact|host)$/)
+  {
+   $rinfo->{message}->{$msgid}->{object_type}=$1;
+   $rinfo->{message}->{$msgid}->{object_id}=$entry->getFirstChild()->getData();
+  }
+ }
+
+ $rinfo->{message}->{$msgid}->{action} ||= $command;
+ @tags = $data->getElementsByTagNameNS($eppNS, 'epp');
+ return unless (@tags);
+ $epp = $tags[0];
+
+ @tags = $epp->getElementsByTagNameNS($eppNS, 'response');
+ return unless (@tags);
+ $rep = $tags[0];
+
+ @tags = $rep->getElementsByTagNameNS($eppNS, 'extension');
+ return unless (@tags);
+ $ext = $tags[0];
+
+ @tags = $ext->getElementsByTagNameNS($resNS, 'conditions');
+ return unless (@tags);
+ $ctag = $tags[0];
+
+ @tags = $ctag->getElementsByTagNameNS($resNS, 'condition');
+
+ foreach my $cond (@tags)
+ {
+  my %con;
+  my $c = $cond->getFirstChild();
+
+  $con{code} = $cond->getAttribute('code') if ($cond->getAttribute('code'));
+  $con{severity} = $cond->getAttribute('severity') if ($cond->getAttribute('severity'));
+
+  while ($c)
+  {
+   next unless ($c->nodeType() == 1); ## only for element nodes
+   my $name = $c->localname() || $c->nodeName();
+   next unless $name;
+
+   if ($name =~ m/^(msg|details)$/)
+   {
+    $con{$1} = $c->getFirstChild()->getData();
+   }
+   elsif ($name eq 'attributes')
+   {
+    foreach my $attr ($c->getChildrenByTagNameNS($NS,'attr'))
+    {
+     my $attrname = $attr->getAttribute('name');
+     $con{'attr ' . $attrname} = $attr->getFirstChild()->getData();
+    }
+   }
+  } continue { $c = $c->getNextSibling(); }
+
+  push(@conds, \%con);
+ }
+
+ $rinfo->{message}->{$msgid}->{conditions} = \@conds;
 }
 
 ####################################################################################################

@@ -1,7 +1,7 @@
 ## Domain Registry Interface, EURid Sunrise EPP extension for Net::DRI
 ## (from registration_guidelines_v1_0F-appendix2-sunrise.pdf )
 ##
-## Copyright (c) 2005,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -21,6 +21,7 @@ package Net::DRI::Protocol::EPP::Extensions::EURid::Sunrise;
 use strict;
 
 use Email::Valid;
+use DateTime::Format::ISO8601;
 
 use Net::DRI::Util;
 use Net::DRI::Exception;
@@ -28,7 +29,7 @@ use Net::DRI::Protocol::EPP::Core::Domain;
 use Net::DRI::Protocol::EPP::Extensions::EURid::Domain;
 use Net::DRI::DRD::EURid;
 
-our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -58,7 +59,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -113,6 +114,7 @@ sub info_parse
  my $cs=Net::DRI::Data::ContactSet->new();
  my $cf=$po->factories()->{contact};
 
+ my $pd=DateTime::Format::ISO8601->new();
  my $c=$infdata->firstChild();
  while ($c)
  {
@@ -128,7 +130,7 @@ sub info_parse
    $rinfo->{domain}->{$oname}->{application_status}=$c->firstChild->getData();
   } elsif ($name=~m/^domain:(crDate|docsReceivedDate)$/)
   {
-   $rinfo->{domain}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->firstChild->getData());
+   $rinfo->{domain}->{$oname}->{$1}=$pd->parse_datetime($c->firstChild->getData());
   } elsif ($name eq 'domain:registrant')
   {
    $cs->set($cf->()->srid($c->firstChild->getData()),'registrant');
@@ -194,7 +196,7 @@ sub apply
   my $cs=$rd->{contact};
   my @o=$cs->get('registrant');
   push @d,['domain:registrant',$o[0]->srid()] if (@o);
-  push @d,Net::DRI::Protocol::EPP::Core::Domain::build_contact_noregistrant($cs);
+  push @d,Net::DRI::Protocol::EPP::Core::Domain::build_contact_noregistrant($epp,$cs);
  }
 
  $mes->command_body(\@d);

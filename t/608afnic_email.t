@@ -2,8 +2,18 @@
 
 use Net::DRI;
 
-use Test::More tests => 8;
-eval { use Test::LongString max => 100; $Test::LongString::Context=50; };
+use Test::More;
+
+eval { require MIME::Entity; MIME::Entity->import(); };
+if ($@)
+{
+ plan skip_all => 'Module MIME::Entity is needed to test AFNIC email handling';
+} else
+{
+ plan tests => 8;
+}
+
+eval { no warnings; require Test::LongString; Test::LongString->import(max => 100); $Test::LongString::Context=50; };
 *{'main::is_string'}=\&main::is if $@;
 
 our $R1='';
@@ -68,7 +78,7 @@ Content-Type: text/plain; charset="iso-8859-15"
 Content-Disposition: inline
 Content-Transfer-Encoding: 8bit
 MIME-Version: 1.0
-X-Mailer: Net::DRI 0.81/1.01 via MIME-tools 5.417 (Entity 5.417)
+X-Mailer: Net::DRI 0.85/1.01 via MIME-tools 5.417 (Entity 5.417)
 From: test@localhost
 To: domain@nic.fr
 Subject: CLIENTID domain_create [TRID-12345]
@@ -117,7 +127,7 @@ Content-Type: text/plain; charset="iso-8859-15"
 Content-Disposition: inline
 Content-Transfer-Encoding: 8bit
 MIME-Version: 1.0
-X-Mailer: Net::DRI 0.81/1.01 via MIME-tools 5.417 (Entity 5.417)
+X-Mailer: Net::DRI 0.85/1.01 via MIME-tools 5.417 (Entity 5.417)
 From: test@localhost
 To: domain@nic.fr
 Subject: CLIENTID domain_create [TRID-12345]

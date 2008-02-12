@@ -1,7 +1,7 @@
 ## Domain Registry Interface, EURid Domain EPP extension commands
 ## (based on EURid registration_guidelines_v1_0E-epp.pdf)
 ##
-## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -28,7 +28,7 @@ use Net::DRI::Data::ContactSet;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -58,7 +58,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -172,11 +172,12 @@ sub info_parse
   next unless @s;
   $cs->add($s) if Net::DRI::Util::xml_parse_boolean($s[0]->getFirstChild()->getData()); ## should we also remove 'ok' status then ?
  }
+ my $pd=DateTime::Format::ISO8601->new();
  foreach my $d (qw/availableDate deletionDate/)
  {
   my @d=$infdata->getElementsByTagNameNS($mes->ns('eurid'),$d);
   next unless @d;
-  $rinfo->{domain}->{$oname}->{$d}=DateTime::Format::ISO8601->new()->parse_datetime($d[0]->getFirstChild()->getData());
+  $rinfo->{domain}->{$oname}->{$d}=$pd->parse_datetime($d[0]->getFirstChild()->getData());
  }
 
  my $pt=$infdata->getElementsByTagNameNS($mes->ns('eurid'),'pendingTransaction');
@@ -211,13 +212,13 @@ sub info_parse
        $cs2->set($cf->()->srid($cc->getFirstChild()->getData()),$name2);       
       } elsif ($name2=~m/^(trDate)$/)
       {
-       $p{$1}=DateTime::Format::ISO8601->new()->parse_datetime($cc->getFirstChild()->getData());
+       $p{$1}=$pd->parse_datetime($cc->getFirstChild()->getData());
       }
      } continue { $cc=$cc->getNextSibling(); }
      $p{contact}=$cs2;
     } elsif ($name=~m/^(initiationDate|unscreenedFax)$/)
     {
-     $p{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
+     $p{$1}=$pd->parse_datetime($c->getFirstChild()->getData());
     } elsif ($name=~m/^(status|replySeller|replyBuyer|replyOwner)$/)
     {
      $p{$1}=$c->getFirstChild()->getData();

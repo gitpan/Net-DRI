@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP NameStore Extension for Verisign
 ##
-## Copyright (c) 2006 Rony Meyer <perl@spot-light.ch>. All rights reserved.
+## Copyright (c) 2006,2008 Rony Meyer <perl@spot-light.ch>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -22,7 +22,7 @@ use strict;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 our $NS='http://www.verisign-grs.com/epp/namestoreExt-1.1';
 
 =pod
@@ -54,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006 Rony Meyer <perl@spot-light.ch>.
+Copyright (c) 2006,2008 Rony Meyer <perl@spot-light.ch>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -127,14 +127,14 @@ sub add_namestore_ext
   return;
  }
 
- ## We do not know what will happen in case of check_multi with different TLD
- if (ref($domain) eq 'ARRAY')
- {
-  $mes->command_extension($eid,['namestoreExt:subProduct',($domain->[0]=~m/\.net$/i)? 'dotNET' : 'dotCOM']);
- } else
- {
-  $mes->command_extension($eid,['namestoreExt:subProduct',($domain=~m/\.net$/i)? 'dotNET' : 'dotCOM']);
- }
+ ## We do not know what will happen in case of check_multi with multiple TLDs
+ my $ext='dotCOM';
+ $domain=$domain->[0] if (ref($domain) eq 'ARRAY');
+ $ext='dotNET' if ($domain=~m/\.net$/i);
+ $ext='dotCC' if ($domain=~m/\.cc$/i);
+ $ext='dotTV' if ($domain=~m/\.tv$/i);
+
+ $mes->command_extension($eid,['namestoreExt:subProduct',$ext]);
 }
 
 sub parse
@@ -158,7 +158,7 @@ sub parse_error
  my $mes=$po->message();
 
  ## Parse namestoreExt in case of errors
- return unless $mes->errcode() == 2306;
+ return unless $mes->result_code() == 2306;
 
  my $ext=$mes->node_extension();
  return unless $ext;
@@ -168,8 +168,8 @@ sub parse_error
  return unless $data;
  $data=$data->shift();
 
- ## It would be great to be able to put that somewhere in ResultStatus !
- push @{$mes->{result_extra_info}},sprintf('%s (code=%d)',$data->getFirstChild()->getData(),$data->getAttribute('code'));
+ ## We add it to the latest status extra_info seen.
+ push @{$mes->{results}->[-1]->{extra_info}},sprintf('%s (code=%d)',$data->getFirstChild()->getData(),$data->getAttribute('code'));
 }
 
 #########################################################################################################

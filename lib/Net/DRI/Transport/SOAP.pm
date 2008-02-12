@@ -24,7 +24,7 @@ use Net::DRI::Exception;
 
 use SOAP::Lite;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -170,8 +170,8 @@ sub soap_fault
 
 sub send
 {
- my ($self,$tosend)=@_;
- $self->SUPER::send($tosend,\&_soap_send,sub {});
+ my ($self,$trid,$tosend)=@_;
+ $self->SUPER::send($trid,$tosend,\&_soap_send,sub {});
 }
 
 sub _soap_send
@@ -192,8 +192,8 @@ sub _soap_send
 
 sub receive
 {
- my $self=shift;
- return $self->SUPER::receive(\&_soap_receive);
+ my ($self,$trid)=@_;
+ return $self->SUPER::receive($trid,\&_soap_receive);
 }
 
 sub _soap_receive
