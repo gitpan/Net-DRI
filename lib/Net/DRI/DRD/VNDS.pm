@@ -24,7 +24,7 @@ use Net::DRI::DRD::ICANN;
 use DateTime::Duration;
 use DateTime;
 
-our $VERSION=do { my @r=(q$Revision: 1.15 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.16 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -71,7 +71,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub periods      { return map { DateTime::Duration->new(years => $_) } (1..10); }
 sub name         { return 'VNDS'; }
-sub tlds         { return ('com','net','cc','tv'); } ## If this changes, VeriSign/NameStore will need to be updated also
+sub tlds         { return ('com','net','cc','tv','bz','jobs'); } ## If this changes, VeriSign/NameStore will need to be updated also
 sub object_types { return ('domain','ns'); }
 
 sub transport_protocol_compatible 

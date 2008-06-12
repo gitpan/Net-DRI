@@ -23,7 +23,7 @@ use strict;
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 our $NS='http://www.nic.at/xsd/at-ext-message-1.0';
 
@@ -144,8 +144,9 @@ sub parse_poll
   }
   elsif ($entry->getAttribute('name') =~ /^(domain|contact|host)$/)
   {
+   my $text = $entry->getFirstChild();
    $rinfo->{message}->{$msgid}->{object_type}=$1;
-   $rinfo->{message}->{$msgid}->{object_id}=$entry->getFirstChild()->getData();
+   $rinfo->{message}->{$msgid}->{object_id} = $text->getData() if (defined($text));
   }
  }
 

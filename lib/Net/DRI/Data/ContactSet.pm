@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Stores ordered list of contacts + type (registrant, admin, tech, bill, etc...)
 ##
-## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -20,7 +20,7 @@ package Net::DRI::Data::ContactSet;
 
 use strict;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -93,7 +93,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -141,7 +141,7 @@ sub _pos
  my ($self,$t,$id)=@_;
  my $c=$self->{c};
  my $l=$#{$c->{$t}};
- my @p=grep { $c->{$t}->[$_]->id() eq $id } (0..$l);
+ my @p=grep { my $i=$c->{$t}->[$_]->id(); (defined($i) && ($i eq $id))? 1 : 0 } (0..$l);
  return $p[0] if @p;
  return;
 }
@@ -156,14 +156,16 @@ sub add
  foreach my $k (keys(%$c))
  {
   next if (defined($ctype) && ($k ne $ctype));
-  my $p=$self->_pos($k,$id);
-  if (defined($p))
+  if ($id)
   {
-   $c->{$k}->[$p]=$cobj;
-  } else
-  {
-   push @{$c->{$k}},$cobj;
+   my $p=$self->_pos($k,$id);
+   if (defined($p))
+   {
+    $c->{$k}->[$p]=$cobj;
+    next;
+   }
   }
+  push @{$c->{$k}},$cobj;
  }
  return $self;
 }
@@ -175,6 +177,7 @@ sub del
  my $c=$self->{c};
  return if (defined($ctype) && !exists($c->{$ctype}));
  my $id=$cobj->id();
+ return unless $id;
  foreach my $k (keys(%$c))
  {
   next if (defined($ctype) && ($k ne $ctype));
@@ -243,6 +246,7 @@ sub has_contact
  my $c=$self->{c};
  return 0 if (defined($ctype) && !exists($c->{$ctype}));
  my $id=(ref($cobj))? $cobj->id() : $cobj;
+ return 0 unless (defined($id) && $id);
  foreach my $k (keys(%$c))
  {
   next if (defined($ctype) && ($k ne $ctype));

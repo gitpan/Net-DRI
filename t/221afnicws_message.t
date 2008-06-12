@@ -2,7 +2,7 @@
 
 use Net::DRI::Protocol::AFNIC::WS::Message;
 
-use Test::More tests=>14;
+use Test::More tests=>13;
 
 my $n;
 
@@ -18,7 +18,6 @@ $n->method('example');
 is($n->method(),'example','method() get/set');
 $n->method('check_domain');
 $n->params(['toto.fr']);
-is($n->get_name_from_message(),'toto.fr','get_name_from_message()');
 
 ## Parse
 

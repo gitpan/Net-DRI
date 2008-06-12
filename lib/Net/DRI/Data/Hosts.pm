@@ -19,11 +19,11 @@ package Net::DRI::Data::Hosts;
 
 use strict;
 use base qw(Class::Accessor::Chained::Fast);
-__PACKAGE__->mk_accessors(qw(name loid roid));
+__PACKAGE__->mk_accessors(qw(name loid));
 
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.15 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.16 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -94,10 +94,6 @@ this has nothing to do with the name(s) of the nameservers inside this object
 
 local id of this object
 
-=head2 roid()
-
-registry id of this object, only used by .UK for now
-
 =head2 get_names(limit)
 
 returns a list of nameservers' names included in this object ; if limit is provided
@@ -154,7 +150,7 @@ See the LICENSE file that comes with this distribution for more details.
 sub new
 {
  my $class=shift;
- my $self={ list => [] }; ## list=>[['',[ipv4],[ipv6]]+],options=>{}
+ my $self={ list => [] }; ## list=>[['',[ipv4],[ipv6],{}]+],options=>{}
  bless($self,$class);
  $self->add(@_) if (@_);
  return $self;
@@ -183,9 +179,10 @@ sub set
 
 sub add
 {
- my ($self,$in,$e1,$e2,$ipall)=@_;
+ my ($self,$in,$e1,$e2,$ipall,$rextra)=@_;
+ ($ipall,$rextra)=(undef,$ipall)  if (defined($ipall) && ref($ipall));
  return unless (defined($in) && $in);
-
+ 
  if (ref($in) eq 'ARRAY')
  {
   return $self->add(@$in);
@@ -193,17 +190,17 @@ sub add
 
  if (defined($e2) && $e2)
  {
-  $self->_push($in,$e1,$e2,$ipall);
+  $self->_push($in,$e1,$e2,$ipall,$rextra);
   return $self;
  }
 
  if (defined($e1) && $e1)
  {
-  $self->_push($in,_separate_ips($e1,$ipall));
+  $self->_push($in,_separate_ips($e1,$ipall),$ipall,$rextra);
   return $self;
  }
 
- $self->_push($in,[],[]);
+ $self->_push($in,[],[],1,$rextra);
  return $self;
 }
 
@@ -223,7 +220,7 @@ sub _separate_ips
 
 sub _push
 {
- my ($self,$name,$ipv4,$ipv6,$ipall)=@_;
+ my ($self,$name,$ipv4,$ipv6,$ipall,$rextra)=@_;
  $ipall=0 unless defined($ipall);
  chop($name) if (defined($name) && $name && $name=~m/\.$/);
  return unless Net::DRI::Util::is_hostname($name);
@@ -242,11 +239,15 @@ sub _push
    unshift @ipv6,@{$el->[2]};
    $el->[1]=_remove_dups_ip(\@ipv4);
    $el->[2]=_remove_dups_ip(\@ipv6);
+   if (defined($el->[3]) || defined($rextra))
+   {
+    $el->[3]={ defined($el->[3])? %{$el->[3]} : (), (defined($rextra) && (ref($rextra) eq 'HASH'))? %$rextra : () };
+   }
    last;
   }
  } else
  {
-  push @{$self->{list}},[$name,_remove_dups_ip(\@ipv4),_remove_dups_ip(\@ipv6)];
+  push @{$self->{list}},[$name,_remove_dups_ip(\@ipv4),_remove_dups_ip(\@ipv6),$rextra];
  }
 }
 
@@ -319,8 +320,11 @@ sub as_string
  my @s;
  foreach my $el (@{$self->{list}})
  {
+  my $s=$el->[0];
   my $ips=join(',',@{$el->[1]},@{$el->[2]});
-  push @s,$ips? $el->[0].' ['.$ips.']' : $el->[0];
+  $s.=' ['.$ips.']' if $ips;
+  $s.=' {'.join(' ',map { $_.'='.$el->[3]->{$_} } keys(%{$el->[3]})).'}' if (defined($el->[3]) && %{$el->[3]});
+  push @s,$s;
  }
  return join(' ',@s);
 }

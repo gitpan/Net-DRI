@@ -57,7 +57,7 @@ $cs->set($c1,'registrant');
 $cs->set($c2,'billing');
 $cs->set($c3,'tech');
 print "Attempting to create domain $dom\n";
-$rc=$dri->domain_create_only($dom,{duration=>DateTime::Duration->new(years =>1),ns=>$dri->local_object('hosts')->add('ns.example.com'),contact=>$cs});
+$rc=$dri->domain_create_only($dom,{duration=>DateTime::Duration->new(years =>1),ns=>$dri->local_object('hosts')->set('ns.example.com'),contact=>$cs});
 print "$dom created\n" if $rc->is_success();
 
 ## After the domain:create, the connection is dropped by the server
@@ -69,7 +69,7 @@ $rc=$dri->domain_info($dom);
 print "domain_info OK\n" if $rc->is_success();
 
 my $ns='ns.titi-'.time().'.fr';
-my $nso=$dri->local_object('hosts')->new($ns);
+my $nso=$dri->local_object('hosts')->set($ns);
 print "NS=$ns\n";
 
 if ($dri->has_object('host')) ## Should be false for EURid

@@ -2,6 +2,7 @@
 
 use Net::DRI;
 use Net::DRI::Data::Raw;
+use DateTime::Duration;
 
 use Test::More tests => 10;
 

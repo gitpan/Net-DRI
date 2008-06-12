@@ -1,7 +1,7 @@
 ## Domain Registry Interface, .SE EPP Domain/Contact Extensions for Net::DRI
 ## Contributed by Elias Sidenbladh from NIC SE
 ##
-## Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -23,7 +23,7 @@ use strict;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 our $NS='http://www.nic.se/xml/epp/ext-1.0';
 
 =pod
@@ -54,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -94,7 +94,7 @@ sub format_se
 
  my @c;
  if ($obj eq 'domain') {
-     if (($op eq 'create' || $op eq 'check') && (ref($e) eq 'HASH') && exists($e->{book})) {
+     if (($op eq 'create' || $op eq 'check') && Net::DRI::Util::has_key($e,'book')) {
 	 Net::DRI::Exception::usererr_invalid_parameters("Book can only be '1' or '0'") if ($e->{book}!~/^(0|1)$/);
 	 push @c,['ext:book',$e->{book}];
      } else {
@@ -102,7 +102,7 @@ sub format_se
      }
  } elsif ($obj eq 'contact') {
      if ($op eq 'create') {
-	 Net::DRI::Exception::usererr_insufficient_parameters('Attribute orgno must exist') unless ((ref($e) eq 'Net::DRI::Data::Contact::SE') && exists($e->{orgno}));
+	 Net::DRI::Exception::usererr_insufficient_parameters('Attribute orgno must exist') unless (Net::DRI::Util::isa_contact($e,'Net::DRI::Data::Contact::SE') && $e->orgno());
 	 push @c,['ext:orgno',$e->{orgno}];
      } else {
 	 Net::DRI::Exception::usererr_invalid_parameters('This operation has no extensions');

@@ -27,7 +27,7 @@ use Net::DRI::Protocol::EPP;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.15 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.16 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -96,7 +96,7 @@ sub build_command
 {
  my ($msg,$command,$domain,$domainattr)=@_;
  my @dom=(ref($domain))? @$domain : ($domain);
- Net::DRI::Exception->die(1,'protocol/EPP',2,"Domain name needed") unless @dom;
+ Net::DRI::Exception->die(1,'protocol/EPP',2,'Domain name needed') unless @dom;
  foreach my $d (@dom)
  {
   Net::DRI::Exception->die(1,'protocol/EPP',2,'Domain name needed') unless defined($d) && $d;
@@ -114,7 +114,8 @@ sub build_command
 
 sub build_authinfo
 {
- my $rauth=shift;
+ my ($epp,$rauth)=@_;
+ return ['domain:authInfo',['domain:null']] if ($rauth->{pw} eq '' && $epp->{usenullauth});
  return ['domain:authInfo',['domain:pw',$rauth->{pw},exists($rauth->{roid})? { 'roid' => $rauth->{roid} } : undef]];
 }
 
@@ -126,12 +127,12 @@ sub build_period
  my ($v,$u);
  if ($y)
  {
-  Net::DRI::Exception::usererr_invalid_parameters("years must be between 1 and 99") unless ($y >= 1 && $y <= 99);
+  Net::DRI::Exception::usererr_invalid_parameters('years must be between 1 and 99') unless ($y >= 1 && $y <= 99);
   $v=$y;
   $u='y';
  } else
  {
-  Net::DRI::Exception::usererr_invalid_parameters("months must be between 1 and 99") unless ($m >= 1 && $m <= 99);
+  Net::DRI::Exception::usererr_invalid_parameters('months must be between 1 and 99') unless ($m >= 1 && $m <= 99);
   $v=$m;
   $u='m';
  }
@@ -180,14 +181,6 @@ sub check_parse
  }
 }
 
-sub verify_rd
-{
- my ($rd,$key)=@_;
- return 0 unless (defined($key) && $key);
- return 0 unless (defined($rd) && (ref($rd) eq 'HASH') && exists($rd->{$key}) && defined($rd->{$key}));
- return 1;
-}
-
 sub info
 {
  my ($epp,$domain,$rd)=@_;
@@ -195,7 +188,7 @@ sub info
  my $hosts='all';
  $hosts=$rd->{hosts} if (defined($rd) && (ref($rd) eq 'HASH') && exists($rd->{hosts}) && ($rd->{hosts}=~m/^(?:all|del|sub|none)$/));
  my @d=build_command($mes,'info',$domain,{'hosts'=> $hosts});
- push @d,build_authinfo($rd->{auth}) if (verify_rd($rd,'auth') && (ref($rd->{auth}) eq 'HASH'));
+ push @d,build_authinfo($epp,$rd->{auth}) if Net::DRI::Util::has_auth($rd);
  $mes->command_body(\@d);
 }
 
@@ -245,10 +238,11 @@ sub info_parse
   } elsif ($name=~m/^(crDate|upDate|trDate|exDate)$/)
   {
    $rinfo->{domain}->{$oname}->{$1}=$pd->parse_datetime($c->getFirstChild()->getData());
-  } elsif ($name eq 'authInfo')
+  } elsif ($name eq 'authInfo') ## we only try to parse the authInfo version defined in the RFC, other cases are to be handled by extensions
   {
-   my $pw=($c->getElementsByTagNameNS($mes->ns('domain'),'pw'))[0]; ## will be empty on domain:info request for objects we do not own
-   $rinfo->{domain}->{$oname}->{auth}={pw => ($pw->hasChildNodes())? $pw->getFirstChild()->getData() : undef };
+   my $n=$c->getElementsByTagNameNS($mes->ns('domain'),'pw');
+   ## domain:pw may be there but will be empty on domain:info request for objects we do not own
+   $rinfo->{domain}->{$oname}->{auth}={pw => ($n->size() && $n->get_node(1)->hasChildNodes())? $n->shift()->getFirstChild()->getData() : undef};
   }
  } continue { $c=$c->getNextSibling(); }
 
@@ -306,7 +300,7 @@ sub transfer_query
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
  my @d=build_command($mes,['transfer',{'op'=>'query'}],$domain);
- push @d,build_authinfo($rd->{auth}) if (verify_rd($rd,'auth') && (ref($rd->{auth}) eq 'HASH'));
+ push @d,build_authinfo($epp,$rd->{auth}) if Net::DRI::Util::has_auth($rd);
  $mes->command_body(\@d);
 }
 
@@ -349,7 +343,7 @@ sub create
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
  my @d=build_command($mes,'create',$domain);
- 
+
  my $def=$epp->default_parameters();
  if ($def && (ref($def) eq 'HASH') && exists($def->{domain_create}) && (ref($def->{domain_create}) eq 'HASH'))
  {
@@ -362,18 +356,13 @@ sub create
  }
 
  ## Period, OPTIONAL
- if (verify_rd($rd,'duration'))
- {
-  my $period=$rd->{duration};
-  Net::DRI::Util::check_isa($period,'DateTime::Duration');
-  push @d,build_period($period);
- }
+ push @d,build_period($rd->{duration}) if Net::DRI::Util::has_duration($rd);
 
  ## Nameservers, OPTIONAL
- push @d,build_ns($epp,$rd->{ns},$domain) if (verify_rd($rd,'ns') && UNIVERSAL::isa($rd->{ns},'Net::DRI::Data::Hosts') && !$rd->{ns}->is_empty());
+ push @d,build_ns($epp,$rd->{ns},$domain) if Net::DRI::Util::has_ns($rd);
 
  ## Contacts, all OPTIONAL
- if (verify_rd($rd,'contact') && UNIVERSAL::isa($rd->{contact},'Net::DRI::Data::ContactSet'))
+ if (Net::DRI::Util::has_contact($rd))
  {
   my $cs=$rd->{contact};
   my @o=$cs->get('registrant');
@@ -382,8 +371,8 @@ sub create
  }
 
  ## AuthInfo
- Net::DRI::Exception::usererr_insufficient_parameters("authInfo is mandatory") unless (verify_rd($rd,'auth') && (ref($rd->{auth}) eq 'HASH'));
- push @d,build_authinfo($rd->{auth});
+ Net::DRI::Exception::usererr_insufficient_parameters('authInfo is mandatory') unless Net::DRI::Util::has_auth($rd);
+ push @d,build_authinfo($epp,$rd->{auth});
  $mes->command_body(\@d);
 }
 
@@ -471,20 +460,15 @@ sub delete
 sub renew
 {
  my ($epp,$domain,$rd)=@_;
- my $period=verify_rd($rd,'duration')? $rd->{duration} : undef;
- my $curexp=verify_rd($rd,'current_expiration')? $rd->{current_expiration} : undef;
+ my $curexp=Net::DRI::Util::has_key($rd,'current_expiration')? $rd->{current_expiration} : undef;
  Net::DRI::Exception::usererr_insufficient_parameters('current expiration year') unless defined($curexp);
- $curexp=$curexp->set_time_zone('UTC')->strftime("%Y-%m-%d") if (ref($curexp) && UNIVERSAL::isa($curexp,'DateTime'));
+ $curexp=$curexp->set_time_zone('UTC')->strftime('%Y-%m-%d') if (ref($curexp) && UNIVERSAL::isa($curexp,'DateTime'));
  Net::DRI::Exception::usererr_invalid_parameters('current expiration year must be YYYY-MM-DD') unless $curexp=~m/^\d{4}-\d{2}-\d{2}$/;
- 
+
  my $mes=$epp->message();
  my @d=build_command($mes,'renew',$domain);
  push @d,['domain:curExpDate',$curexp];
- if (defined($period))
- {
-  Net::DRI::Util::check_isa($period,'DateTime::Duration');
-  push @d,build_period($period);
- }
+ push @d,build_period($rd->{duration}) if Net::DRI::Util::has_duration($rd);
 
  $mes->command_body(\@d);
 }
@@ -523,13 +507,8 @@ sub transfer_request
  my $mes=$epp->message();
  my @d=build_command($mes,['transfer',{'op'=>'request'}],$domain);
 
- if (verify_rd($rd,'duration'))
- {
-  Net::DRI::Util::check_isa($rd->{duration},'DateTime::Duration');
-  push @d,build_period($rd->{duration});
- }
-
- push @d,build_authinfo($rd->{auth}) if (verify_rd($rd,'auth') && (ref($rd->{auth}) eq 'HASH'));
+ push @d,build_period($rd->{duration}) if Net::DRI::Util::has_duration($rd);
+ push @d,build_authinfo($epp,$rd->{auth}) if Net::DRI::Util::has_auth($rd);
  $mes->command_body(\@d);
 }
 
@@ -537,8 +516,8 @@ sub transfer_answer
 {
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
- my @d=build_command($mes,['transfer',{'op'=>(verify_rd($rd,'approve') && $rd->{approve})? 'approve' : 'reject'}],$domain);
- push @d,build_authinfo($rd->{auth}) if (verify_rd($rd,'auth') && (ref($rd->{auth}) eq 'HASH'));
+ my @d=build_command($mes,['transfer',{'op'=>(Net::DRI::Util::has_key($rd,'approve') && $rd->{approve})? 'approve' : 'reject'}],$domain);
+ push @d,build_authinfo($epp,$rd->{auth}) if Net::DRI::Util::has_auth($rd);
  $mes->command_body(\@d);
 }
 
@@ -547,7 +526,7 @@ sub transfer_cancel
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
  my @d=build_command($mes,['transfer',{'op'=>'cancel'}],$domain);
- push @d,build_authinfo($rd->{auth}) if (verify_rd($rd,'auth') && (ref($rd->{auth}) eq 'HASH'));
+ push @d,build_authinfo($epp,$rd->{auth}) if Net::DRI::Util::has_auth($rd);
  $mes->command_body(\@d);
 }
 
@@ -556,17 +535,7 @@ sub update
  my ($epp,$domain,$todo)=@_;
  my $mes=$epp->message();
 
- Net::DRI::Exception::usererr_invalid_parameters($todo.' must be a Net::DRI::Data::Changes object') unless ($todo && UNIVERSAL::isa($todo,'Net::DRI::Data::Changes'));
-
- if ((grep { ! /^(?:add|del)$/ } $todo->types('ns')) ||
-     (grep { ! /^(?:add|del)$/ } $todo->types('status')) ||
-     (grep { ! /^(?:add|del)$/ } $todo->types('contact')) ||
-     (grep { ! /^set$/ } $todo->types('registrant')) ||
-     (grep { ! /^set$/ } $todo->types('auth'))
-    )
- {
-  Net::DRI::Exception->die(0,'protocol/EPP',11,'Only ns/status/contact add/del or registrant/authinfo set available for domain');
- }
+ Net::DRI::Exception::usererr_invalid_parameters($todo.' must be a Net::DRI::Data::Changes object') unless Net::DRI::Util::isa_changes($todo);
 
  my @d=build_command($mes,'update',$domain);
 
@@ -590,9 +559,9 @@ sub update
 
  my $chg=$todo->set('registrant');
  my @chg;
- push @chg,['domain:registrant',$chg->srid()] if ($chg && ref($chg) && UNIVERSAL::can($chg,'srid'));
+ push @chg,['domain:registrant',$chg->srid()] if Net::DRI::Util::isa_contact($chg);
  $chg=$todo->set('auth');
- push @chg,build_authinfo($chg) if ($chg && ref($chg));
+ push @chg,build_authinfo($epp,$chg) if ($chg && ref($chg));
  push @d,['domain:chg',@chg] if @chg;
  $mes->command_body(\@d);
 }

@@ -20,9 +20,10 @@ package Net::DRI::DRD::BE;
 use strict;
 use base qw/Net::DRI::DRD/;
 
-use Net::DRI::Util;
+use Net::DRI::Exception;
+use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 

@@ -1,7 +1,7 @@
 ## Domain Registry Interface, EURid Contact EPP extension commands
 ## (based on EURid registration_guidelines_v1_0E-epp.pdf)
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -20,7 +20,7 @@ package Net::DRI::Protocol::EPP::Extensions::EURid::Contact;
 
 use strict;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -50,7 +50,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -70,7 +70,7 @@ sub register_commands
  my %tmp=( 
           create            => [ \&create, undef ],
           update            => [ \&update, undef ],
-          info              => [ undef, \&info_parse ],
+          info              => [ \&info, \&info_parse ],
          );
 
  return { 'contact' => \%tmp };
@@ -118,6 +118,14 @@ sub update
  $mes->command_extension($eid,['eurid:update',['eurid:contact',['eurid:chg',@n]]]);
 }
 
+sub info
+{
+ my ($epp,$contact)=@_;
+ my $mes=$epp->message();
+ my $eid=build_command_extension($mes,$epp,'eurid:ext');
+ $mes->command_extension($eid,['eurid:info',['eurid:contact',{version => '2.0'}]]);
+}
+
 sub info_parse
 {
  my ($po,$otype,$oaction,$oname,$rinfo)=@_;
@@ -135,6 +143,10 @@ sub info_parse
  $s->vat($el->get_node(1)->getFirstChild()->getData()) if defined($el->get_node(1));
  $el=$infdata->getElementsByTagNameNS($mes->ns('eurid'),'lang');
  $s->lang($el->get_node(1)->getFirstChild()->getData());
+ $el=$infdata->getElementsByTagNameNS($mes->ns('eurid'),'onhold');
+ $s->onhold($el->get_node(1)->getFirstChild()->getData()) if defined($el->get_node(1));
+ $el=$infdata->getElementsByTagNameNS($mes->ns('eurid'),'monitoringStatus');
+ $s->monitoring_status($el->get_node(1)->getFirstChild()->getData()) if defined($el->get_node(1));
 }
 
 ####################################################################################################

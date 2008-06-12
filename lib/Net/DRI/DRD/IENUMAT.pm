@@ -21,9 +21,11 @@ package Net::DRI::DRD::IENUMAT;
 use strict;
 use base qw/Net::DRI::DRD/;
 
+use Net::DRI::Exception;
 use Net::DRI::Util;
+use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -129,7 +131,7 @@ sub verify_name_domain
 
  my @d=split(/\./,$domain);
 
- return 11 if exists($Net::DRI::Util::CCA2{uc($d[0])});
+ return 14 if exists($Net::DRI::Util::CCA2{uc($d[0])});
 
  return 0;
 }

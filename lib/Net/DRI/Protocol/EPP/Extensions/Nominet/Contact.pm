@@ -25,7 +25,7 @@ use Net::DRI::Exception;;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -86,8 +86,8 @@ sub build_command
  my ($msg,$command,$contact)=@_;
  Net::DRI::Exception->die(1,'protocol/EPP',2,'Contact id needed') unless (defined($contact));
 
- my $id=UNIVERSAL::isa($contact,'Net::DRI::Data::Contact')? $contact->roid() : $contact;
- Net::DRI::Exception->die(1,'protocol/EPP',2,'Contact id needed') unless defined($id) && $id;
+ my $id=Net::DRI::Util::isa_contact($contact)? $contact->roid() : $contact;
+ Net::DRI::Exception->die(1,'protocol/EPP',2,'Contact id needed') unless (defined($id) && $id && !ref($id));
  Net::DRI::Exception->die(1,'protocol/EPP',10,'Invalid contact id: '.$id) unless Net::DRI::Util::xml_is_token($id,3,16); ## inherited from Core EPP
  my $tcommand=(ref($command))? $command->[0] : $command;
  my @ns=@{$msg->ns->{contact}};
@@ -172,6 +172,7 @@ sub build_cdata
  push @d,['contact:name',$contact->name()] if (defined($contact->name()));
  push @d,Net::DRI::Protocol::EPP::Core::Contact::build_tel('contact:phone',$contact->voice()) if (defined($contact->voice()));
  push @d,Net::DRI::Protocol::EPP::Core::Contact::build_tel('contact:fax',$contact->fax()) if (defined($contact->fax()));
+ push @d,Net::DRI::Protocol::EPP::Core::Contact::build_tel('contact:mobile',$contact->mobile()) if (defined($contact->mobile()));
  push @d,['contact:email',$contact->email()] if defined($contact->email());
  return @d;
 }
@@ -181,7 +182,7 @@ sub update
  my ($epp,$contact,$todo)=@_;
  my $mes=$epp->message();
 
- Net::DRI::Exception::usererr_invalid_parameters($todo.' must be a Net::DRI::Data::Changes object') unless ($todo && ref($todo) && $todo->isa('Net::DRI::Data::Changes'));
+ Net::DRI::Exception::usererr_invalid_parameters($todo.' must be a Net::DRI::Data::Changes object') unless Net::DRI::Util::isa_changes($todo);
  if (grep { ! /^(?:set)$/ } $todo->types('info'))
  {
   Net::DRI::Exception->die(0,'protocol/EPP',11,'Only info set available for contact in .UK');
@@ -191,7 +192,7 @@ sub update
  my $newc=$todo->set('info');
  if ($newc)
  {
-  Net::DRI::Exception->die(1,'protocol/EPP',10,'Invalid contact '.$newc) unless (UNIVERSAL::isa($newc,'Net::DRI::Data::Contact'));
+  Net::DRI::Exception->die(1,'protocol/EPP',10,'Invalid contact '.$newc) unless (Net::DRI::Util::isa_contact($newc));
   $newc->validate(1); ## will trigger an Exception if needed
   my @c=build_cdata($newc);
   if (@c)

@@ -22,10 +22,11 @@ use strict;
 use base qw/Net::DRI::DRD/;
 
 use Net::DRI::Util;
-
+use Net::DRI::Exception;
 use Net::DRI::Data::Contact::SE;
+use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -117,8 +118,8 @@ sub verify_name_domain
  return 10 unless $self->is_my_tld($domain);
 
  my @d=split(/\./,$domain);
- return 11 if exists($Net::DRI::Util::CCA2{uc($d[0])});
  return 12 if length($d[0]) < 2;
+ return 14 if exists($Net::DRI::Util::CCA2{uc($d[0])});
 
  return 0;
 }

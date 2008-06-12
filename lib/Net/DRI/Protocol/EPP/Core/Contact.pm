@@ -25,7 +25,7 @@ use Net::DRI::Protocol::EPP;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.14 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -93,7 +93,7 @@ sub build_command
 {
  my ($msg,$command,$contact)=@_;
  my @contact=(ref($contact) eq 'ARRAY')? @$contact : ($contact);
- my @c=map { UNIVERSAL::isa($_,'Net::DRI::Data::Contact')? $_->srid() : $_ } @contact;
+ my @c=map { Net::DRI::Util::isa_contact($_)? $_->srid() : $_ } @contact;
 
  Net::DRI::Exception->die(1,'protocol/EPP',2,'Contact id needed') unless @c;
  foreach my $n (@c)
@@ -108,7 +108,7 @@ sub build_command
 
  my @d=map { ['contact:id',$_] } @c;
 
- if (($tcommand=~m/^(?:info|transfer)$/) && ref($contact[0]) && UNIVERSAL::isa($contact[0],'Net::DRI::Data::Contact'))
+ if (($tcommand=~m/^(?:info|transfer)$/) && ref($contact[0]) && Net::DRI::Util::isa_contact($contact[0]))
  {
   my $az=$contact[0]->auth();
   if ($az && ref($az) && exists($az->{pw}))
@@ -218,11 +218,11 @@ sub info_parse
    $contact->fax(parse_tel($c));
   } elsif ($name eq 'postalInfo')
   {
-   parse_postalinfo($c,\%cd);
-  } elsif ($name eq 'authInfo')
+   parse_postalinfo($po,$c,\%cd);
+  } elsif ($name eq 'authInfo') ## we only try to parse the authInfo version defined in the RFC, other cases are to be handled by extensions
   {
-   my $pw=($c->getElementsByTagNameNS($mes->ns('contact'),'pw'))[0]->getFirstChild()->getData();
-   $contact->auth({pw => $pw});
+   my $n=$c->getElementsByTagNameNS($mes->ns('contact'),'pw');
+   $contact->auth({pw => $n->size()? $n->shift()->getFirstChild()->getData() : undef});
   } elsif ($name eq 'disclose')
   {
    $contact->disclose(parse_disclose($c));
@@ -258,8 +258,9 @@ sub get_data
 
 sub parse_postalinfo
 {
- my ($c,$rcd)=@_;
- my $type=$c->getAttribute('type'); ## int or loc
+ my ($epp,$c,$rcd)=@_;
+ my $type=$c->getAttribute('type'); ## int or loc, mandatory in EPP !
+ $type=$epp->{defaulti18ntype} if (!defined($type) && defined($epp->{defaulti18ntype}));
  my $ti={loc=>0,int=>1}->{$type};
 
  my $n=$c->getFirstChild();
@@ -475,7 +476,7 @@ sub create
  my $mes=$epp->message();
  my @d=build_command($mes,'create',$contact);
 
- Net::DRI::Exception->die(1,'protocol/EPP',10,'Invalid contact '.$contact) unless (UNIVERSAL::isa($contact,'Net::DRI::Data::Contact'));
+ Net::DRI::Exception->die(1,'protocol/EPP',10,'Invalid contact '.$contact) unless Net::DRI::Util::isa_contact($contact);
  $contact->validate(); ## will trigger an Exception if needed
  push @d,build_cdata($contact,$epp->{contacti18n});
  $mes->command_body(\@d);
@@ -547,7 +548,7 @@ sub update
  my ($epp,$contact,$todo)=@_;
  my $mes=$epp->message();
 
- Net::DRI::Exception::usererr_invalid_parameters($todo.' must be a Net::DRI::Data::Changes object') unless ($todo && ref($todo) && $todo->isa('Net::DRI::Data::Changes'));
+ Net::DRI::Exception::usererr_invalid_parameters($todo.' must be a Net::DRI::Data::Changes object') unless Net::DRI::Util::isa_changes($todo);
  if ((grep { ! /^(?:add|del)$/ } $todo->types('status')) ||
      (grep { ! /^(?:set)$/ } $todo->types('info'))
     )
@@ -565,7 +566,7 @@ sub update
  my $newc=$todo->set('info');
  if ($newc)
  {
-  Net::DRI::Exception->die(1,'protocol/EPP',10,'Invalid contact '.$newc) unless (UNIVERSAL::isa($newc,'Net::DRI::Data::Contact'));
+  Net::DRI::Exception->die(1,'protocol/EPP',10,'Invalid contact '.$newc) unless Net::DRI::Util::isa_contact($newc);
   $newc->validate(1); ## will trigger an Exception if needed
   my @c=build_cdata($newc,$epp->{contacti18n});
   push @d,['contact:chg',@c] if @c;

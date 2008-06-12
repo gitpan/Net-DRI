@@ -25,7 +25,7 @@ use Net::DRI::Data::Hosts;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -83,9 +83,9 @@ sub register_commands
 sub build_command
 {
  my ($msg,$command,$hostname)=@_;
- my $roid=UNIVERSAL::isa($hostname,'Net::DRI::Data::Hosts')? $hostname->roid() : $hostname;
- Net::DRI::Exception->die(1,'protocol/EPP',2,'Roid of NS object needed') unless defined($roid) && $roid;
- Net::DRI::Exception->die(1,'protocol/EPP',2,'Host name needed') unless ($roid=~m/^NS\d+(?:-UK)?$/);
+ my $roid=(Net::DRI::Util::isa_hosts($hostname))? $hostname->get_details(1)->[-1]->{roid} : $hostname;
+ Net::DRI::Exception->die(1,'protocol/EPP',2,'Roid of NS object needed') unless (defined($roid) && $roid && !ref($roid));
+ Net::DRI::Exception->die(1,'protocol/EPP',2,'Invalid ROID: '.$roid) unless ($roid=~m/^NS\d+(?:-UK)?$/);
 
  my @ns=@{$msg->ns->{ns}};
  $msg->command([$command,'ns:'.$command,sprintf('xmlns:ns="%s" xsi:schemaLocation="%s %s"',$ns[0],$ns[0],$ns[1])]);
@@ -156,7 +156,7 @@ sub parse_infdata
  {
   $rinfo->{host}->{$hostname}->{$k}=$rinfo->{host}->{$oname}->{$k}=$v;
  }
- $rinfo->{host}->{$hostname}->{self}=$rinfo->{host}->{$oname}->{self}=Net::DRI::Data::Hosts->new($hostname,\@ip4,\@ip6,1)->roid($oname);
+ $rinfo->{host}->{$hostname}->{self}=$rinfo->{host}->{$oname}->{self}=Net::DRI::Data::Hosts->new($hostname,\@ip4,\@ip6,1,{roid=>$oname});
  return $rinfo->{host}->{$hostname}->{self};
 }
 
@@ -167,7 +167,7 @@ sub update
  my ($epp,$ns,$todo)=@_;
  my $mes=$epp->message();
 
- Net::DRI::Exception::usererr_invalid_parameters($todo.' must be a Net::DRI::Data::Changes object') unless ($todo && UNIVERSAL::isa($todo,'Net::DRI::Data::Changes'));
+ Net::DRI::Exception::usererr_invalid_parameters($todo.' must be a Net::DRI::Data::Changes object') unless Net::DRI::Util::isa_changes($todo);
  if ((grep { ! /^(?:set)$/ } $todo->types('ip')) ||
      (grep { ! /^(?:set)$/ } $todo->types('name'))
     )
@@ -187,7 +187,7 @@ sub update
 
  if (defined($ipset) && $ipset)
  {
-  Net::DRI::Exception::usererr_invalid_parameters($todo.' must be a Net::DRI::Data::Hosts object') unless ($todo && UNIVERSAL::isa($todo,'Net::DRI::Data::Hosts'));
+  Net::DRI::Exception::usererr_invalid_parameters($todo.' must be a Net::DRI::Data::Hosts object') unless Net::DRI::Util::isa_hosts($todo);
   my ($name,$r4,$r6)=$ns->get_details(1);
   push @d,['ns:addr',{ip=>'v4'},$r4->[0]] if @$r4; ## it seems only one IP is allowed
   push @d,['ns:addr',{ip=>'v6'},$r6->[0]] if @$r6; ## ditto

@@ -5,7 +5,7 @@ use Test::More;
 
 unless ($ENV{TEST_OVH_WS_LIVE_CLIENTID} && $ENV{TEST_OVH_WS_LIVE_CLIENTPASS})
 {
- plan skip_all => 'Set TEST_OVH_WS_LIVE_CLIENTID and TEST_OVH_WS_LIVE_CLIENTPASS if you want (normally harmless) *live* tests for OVH';
+ plan skip_all => 'Set $ENV{TEST_OVH_WS_LIVE_CLIENTID} and $ENV{TEST_OVH_WS_LIVE_CLIENTPASS} if you want (normally harmless) *live* tests for OVH';
 } else
 {
  plan tests => 4;

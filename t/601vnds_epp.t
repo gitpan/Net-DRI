@@ -2,8 +2,10 @@
 
 use Net::DRI;
 use Net::DRI::Data::Raw;
+use DateTime;
+use DateTime::Duration;
 
-use Test::More tests => 231;
+use Test::More tests => 232;
 eval { no warnings; require Test::LongString; Test::LongString->import(max => 100); $Test::LongString::Context=50; };
 *{'main::is_string'}=\&main::is if $@;
 
@@ -468,10 +470,13 @@ is($rc->is_success(),1,'session login is_success');
 ####################################################################################################
 ## Registry Messages
 
-$R2=$E1.'<response>'.r().'<msgQ count="5" id="12345"/>'.$TRID.'</response>'.$E2;
-$rc=$dri->process('session','noop',[]);
+
+## Get information on pending messages with reply to any command
+$R2=$E1.'<response>'.r().'<msgQ count="5" id="12345"/><resData><domain:chkData xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:cd><domain:name avail="1">example33.com</domain:name></domain:cd></domain:chkData></resData>'.$TRID.'</response>'.$E2;
+$rc=$dri->domain_check('example33.com');
 is($dri->get_info('count','message','info'),5,'message count');
 is($dri->get_info('id','message','info'),12345,'message id');
+is($dri->message_count(),5,'direct message count');
 
 $R2=$E1.'<response>'.r(1301,'Command completed successfully; ack to dequeue').'<msgQ count="5" id="12345"><qDate>1999-04-04T22:01:00.0Z</qDate><msg>Pending action completed successfully.</msg></msgQ><resData><domain:panData xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name paResult="1">example.com</domain:name><domain:paTRID><clTRID>ABC-12345</clTRID><svTRID>54321-XYZ</svTRID></domain:paTRID><domain:paDate>1999-04-04T22:00:00.0Z</domain:paDate></domain:panData></resData>'.$TRID.'</response>'.$E2;
 $rc=$dri->message_retrieve();

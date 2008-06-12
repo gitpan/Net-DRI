@@ -28,7 +28,7 @@ use Net::DRI::Util;
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version errcode errmsg errlang command cltrid response response_raw));
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -131,13 +131,5 @@ sub parse
  $self->response_raw(\@d);
 }
 
-sub get_name_from_message
-{
- my ($self)=@_;
- my $d=$self->command();
- $d=$1 if ($d=~m/\S (\S+)$/);
- return lc($d);
-}
-
-########################################################################
+####################################################################################################
 1;

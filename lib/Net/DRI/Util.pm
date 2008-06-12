@@ -22,7 +22,7 @@ use strict;
 use Time::HiRes ();
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.15 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.16 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -80,7 +80,8 @@ sub all_valid
 
 sub hash_merge
 {
- my ($rmaster,$rtoadd)=@_;
+ my ($rmaster,$rtoadd,$ver)=@_;
+ $ver||=0;
  while(my ($k,$v)=each(%$rtoadd))
  {
   $rmaster->{$k}={} unless exists($rmaster->{$k});
@@ -88,7 +89,7 @@ sub hash_merge
   {
    $rmaster->{$k}->{$kk}=[] unless exists($rmaster->{$k}->{$kk});
    my @t=@$vv;
-   push @{$rmaster->{$k}->{$kk}},\@t;
+   push @{$rmaster->{$k}->{$kk}},$ver? @t : \@t;
   }
  }
 }
@@ -118,6 +119,75 @@ sub check_isa
  my ($what,$isa)=@_;
  Net::DRI::Exception::usererr_invalid_parameters((${what} || 'parameter').' must be a '.$isa.' object') unless ($what && UNIVERSAL::isa($what,$isa));
  return 1;
+}
+
+sub isa_contactset
+{
+ my $cs=shift;
+ return (defined($cs) && UNIVERSAL::isa($cs, 'Net::DRI::Data::ContactSet') && !$cs->is_empty())? 1 : 0;
+}
+
+sub isa_contact
+{
+ my ($c,$class)=@_;
+ $class='Net::DRI::Data::Contact' unless defined($class);
+ return (defined($c) && UNIVERSAL::isa($c,$class))? 1 : 0; ## no way to check if it is empty or not ? Contact->validate() is too strong as it may die, Contact->roid() maybe not ok always
+}
+
+sub isa_hosts
+{
+ my $h=shift;
+ return (defined($h) && UNIVERSAL::isa($h, 'Net::DRI::Data::Hosts') && !$h->is_empty())? 1 : 0;
+}
+
+sub isa_nsgroup
+{
+ my $h=shift;
+ return (defined($h) && UNIVERSAL::isa($h, 'Net::DRI::Data::Hosts'))? 1 : 0;
+}
+
+sub isa_changes
+{
+ my $c=shift;
+ return (defined($c) && UNIVERSAL::isa($c, 'Net::DRI::Data::Changes') && !$c->is_empty())? 1 : 0;
+}
+
+sub isa_statuslist
+{
+ my $s=shift;
+ return (defined($s) && UNIVERSAL::isa($s,'Net::DRI::Data::StatusList') && !$s->is_empty())? 1 : 0;
+}
+
+sub has_key
+{
+ my ($rh,$key)=@_;
+ return 0 unless (defined($key) && $key);
+ return 0 unless (defined($rh) && (ref($rh) eq 'HASH') && exists($rh->{$key}) && defined($rh->{$key}));
+ return 1;
+}
+
+sub has_contact
+{
+ my $rh=shift;
+ return has_key($rh,'contact') && isa_contactset($rh->{contact});
+}
+
+sub has_ns
+{
+ my $rh=shift;
+ return has_key($rh,'ns') && isa_hosts($rh->{ns});
+}
+
+sub has_duration
+{
+ my $rh=shift;
+ return has_key($rh,'duration') && check_isa($rh->{'duration'},'DateTime::Duration'); ## check_isa throws an Exception if not
+}
+
+sub has_auth
+{
+ my $rh=shift;
+ return (has_key($rh,'auth') && (ref($rh->{'auth'}) eq 'HASH'))? 1 : 0;
 }
 
 ####################################################################################################
@@ -153,7 +223,7 @@ sub is_hostname ## RFC952/1123
  return 1;
 }
 
-sub is_ipv4 
+sub is_ipv4
 {
  my ($ip,$checkpublic)=@_;
 

@@ -25,7 +25,7 @@ use base qw/Net::DRI::Protocol::EPP/;
 use Net::DRI::Protocol::EPP::Message;
 use Net::DRI::Data::Contact::Nominet;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -85,12 +85,13 @@ sub new
  }
 
  my $rcapa=$self->capabilities();
- delete($rcapa->{contact_update}->{status});
- delete($rcapa->{domain_update}->{status});
+ $rcapa->{domain_update}={ map { $_ => ['set'] } qw/ns contact first-bill recur-bill auto-bill next-bill notes/ };
+ $rcapa->{contact_update}={ info => ['set'] };
  $rcapa->{host_update}={ ip => ['set'], name => ['set'] };
+ $rcapa->{account_update}={ contact => ['set'] };
 
  my $rfact=$self->factories();
- $rfact->{contact}=sub { return Net::DRI::Data::Contact::Nominet->new()->srid('ABCD') };
+ $rfact->{contact}=sub { return Net::DRI::Data::Contact::Nominet->new(); };
  $rfact->{message}=sub { my $m=Net::DRI::Protocol::EPP::Message->new(@_); $m->ns($self->{ns}); $m->version($version); return $m;}; ## needed for change of XML NS
 
  $self->default_parameters({domain_create => { auth => { pw => '' } } }); ## domain:authInfo is not used by Nominet

@@ -3,7 +3,7 @@
 use Net::DRI::Protocol::RRP::Message;
 use Encode;
 
-use Test::More tests=>30;
+use Test::More tests=>28;
 
 my $n;
 
@@ -12,14 +12,12 @@ my $n;
 $n=Net::DRI::Protocol::RRP::Message->new()->command('add')->entities('EntityName','Domain')->entities('DomainName','example.com')->options('Period',10);
 is($n->as_string(),"add\r\nEntityName:Domain\r\nDomainName:example.com\r\n-Period:10\r\n.\r\n",'RRP Message create domain add 1 string');
 is($n->command(),'add','RRP Message create domain add 1 command');
-is($n->get_name_from_message(),'EXAMPLE.COM','RRP Message create domain add 1 get_name_from_message');
 
 $n=Net::DRI::Protocol::RRP::Message->new()->command('add')->entities('EntityName','Domain')->entities('DomainName','example.com')->entities('NameServer',['ns1.example.com','ns2.example.com'])->options('Period',10);
 is($n->as_string(),"add\r\nEntityName:Domain\r\nDomainName:example.com\r\n-Period:10\r\nNameServer:ns1.example.com\r\nNameServer:ns2.example.com\r\n.\r\n",'RRP Message create domain add 2');
 
 $n=Net::DRI::Protocol::RRP::Message->new()->command('add')->entities('EntityName','NameServer')->entities('NameServer','ns1.example.com')->entities('IPAddress','198.41.1.11');
 is($n->as_string(),"add\r\nEntityName:NameServer\r\nNameServer:ns1.example.com\r\nIPAddress:198.41.1.11\r\n.\r\n",'RRP Message create nameserver add string');
-is($n->get_name_from_message(),'NS1.EXAMPLE.COM','RRP Message create nameserver add get_name_from_message');
 
 $n=Net::DRI::Protocol::RRP::Message->new()->command('check')->entities('EntityName','Domain')->entities('DomainName','example.com');
 is($n->as_string(),"check\r\nEntityName:Domain\r\nDomainName:example.com\r\n.\r\n",'RRP Message create domain check');

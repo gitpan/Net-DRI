@@ -28,8 +28,8 @@ Net::DRI::DRD::AFNIC
 Net::DRI::DRD::LU
 	* implement startTLS extension ?
 
-Net::DRI::DRD::UK
-	* implement all other operations, and also DAS and Whois
+Net::DRI::DRD::Nominet
+	* implement DAS and Whois
 
 Net::DRI::Transport::HTTP::*
 	* implement default logging: output data at wire level (SOAP envelope) or higher ?

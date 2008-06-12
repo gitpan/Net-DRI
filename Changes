@@ -1,3 +1,47 @@
+0.90 2008-06-12
+
++ .EU EPP support: updates for Registration guidelines version 1.1B (changes in contact info/update) + release 5.5 (13 May 2008)
+      Added proper methods in DRD/EURid so that remote_object is not needed for .EU operations like transfer from quarantine, trade, undelete, etc.
+      See t/606eurid_epp.t especially for trade operations because of change in API
++ .UK full support (except registry notifications, not available at registry), including domain creations, domain updates and account updates
++ .NO ccTLD EPP support added, see t/633norid_epp. Also added a command line EPP client for .NO with some POD documentation, see eg/epp_client_no.pl and also a filter utility eg/xmlfilter.pl to present the xml-sequences (submitted by Trond Haugen)
++ .DE support (contributed by Tonnerre Lombard)
++ .CH/.LI support (contributed by Tonnerre Lombard)
++ .HN/.SC/.VC/.AG/.BZ/.LC/.MN support with Afilias extensions IDNLanguage & Restore (from original work by Tonnerre Lombard)
++ .ME and .CZ support (contributed by Tonnerre Lombard)
++ .TRAVEL UIN support (contributed by Tonnerre Lombard)
++ .TRAVEL whois support (see eg/whois.pl)
+= Protocol/EPP/Extensions/PIR* renamed to Protocol/EPP/Extensions/Afilias
+= Remove use of remote_object by creating appropriate extra methods in DRD/LU (the same should be done for extensions defining new actions/subjects)
+= EPP/Message : better handling of pure extension messages (no command)
+= EPP/Core/{Domain,Contact} : better handling of authinfo (2 variants during built when empty, and only parsing RFC defined version during info)
+= EPP/Core/{Domain,Contact} : for update() do not bother checking pending changes, this has to be done earlier, in DRD, to make sure all extension cases are taken into account
+= EPP/Core/Contact : handling registries not followin EPP RFC by omitting the type parameter for postalinfo data (like .CZ)
+= EPP/Message : better handling of pure extension messages (without a command node)
+= DRD/ICANN : some gTLD registries are now allowed to create one or two characters domain names
+= DRD/VNDS : add .bz/.jobs (contributed by Tonnerre Lombard)
+= DRD/*::verify_name_domain() : homogenize error codes (if your code depends on them, please update it based on new values)
+= EPP/Extensions/{DNSBE,EURid}/Domain::transferq_request() : use key 'duration' instead of 'period'
+= EPP/Extensions/AT/Domain : use of Message cltrid, no need to create a new one
+= Transport/Socket : handle registries without greeting, like DENIC
+= Data/Changes : added method is_empty()
+= Data/Hosts : removal of the roid() accesor, added extra parameters for each nameserver, as a ref hash, which can have, for example, a roid key
+= DRD::is_my_tld() is more strict in default case
+= DRD::check_name() allow to check multiple cases of number of dots in name being checked
+= DRD::*_update() : better take into account all capabilities to check the content of the changes being done (from original bugreport by Tonnerre Lombard)
+= DRD::message_count(): we try to use information already gathered (as EPP registries can give information with msgQ during any command response) before attempting a new message retrieve; same for message_waiting which calls message_count ; see end of t/601vnds_epp for example
+= DRD::err_invalid_* are now proper class methods
+= EPP/Core/RegistryMessage various optimizations
+- Updated examples in eg/ for correct use of local_object() : no need to call new() on it
+- DRD : fix host_create not to check TLD of hostname being created (from original bugreport by Magnus Lind)
+- DRD/NAME : contact internationalization (reported by Tonnerre Lombard)
+- DRD::is_thick() removed
+- DRD, DRD/NAME : fix test of domain names in registries with multiple zones (number of dots)
+- .EPP/Extensions/{AT,ASIA} various bugfixes (contributed by Tonnerre Lombard)
+- .FR various bugfixes on domain operations
+- Removal of all Protocol/*/Message::get_name_from_message() ugly hack for something less ugly but still kind of an hack.
+- Factorization of various verify_rd() methods into Net::DRI::Util::has_key,has_contactset,has_ns,has_auth,has_duration,isa_contactset,isa_contact,isa_hosts,isa_changes ; this simplifies of lot of code under Protocol/*
+
 0.85 2008-02-12
 
 + .UK EPP support: only some operations for now, see t/626nominet_epp.t (not implemented for now: domain & account updates, domain creations, registry notifications)

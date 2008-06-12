@@ -33,7 +33,7 @@ use Net::DRI::Data::Hosts;
 
 our $AUTOLOAD;
 
-our $VERSION=do { my @r=(q$Revision: 1.25 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.26 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -147,7 +147,7 @@ sub status    { return shift->_current('status',@_); }
 sub protocol_transport { my $self=shift; return ($self->protocol(),$self->transport()); }
 sub create_status { return shift->_current('protocol')->create_local_object('status',@_); }
 
-sub local_object 
+sub local_object
 {
  my $self=shift;
  my $f=shift;
@@ -410,7 +410,7 @@ sub process
  my ($self,$otype,$oaction)=@_[0,1,2];
  my $pa=$_[3] || []; ## store them ?
  my $ta=$_[4] || [];
- $self->{last_process}=[$otype,$oaction,$pa,$ta];
+ $self->{last_process}=[$otype,$oaction,$pa,$ta]; ## should be handled more generally by LocalStorage/Exchange
 
  ## Automated switch, if enabled
  $self->profile_auto_switch($otype,$oaction);
@@ -447,21 +447,22 @@ sub process
  return $rc;
 }
 
-## also called directly , when we found something to do for asynchronous case, through TRID
+## also called directly , when we found something to do for asynchronous case, through TRID (TO FIX)
 sub process_back
 {
  my ($self,$trid,$po,$to,$otype,$oaction)=@_;
 
  $self->clear_info(); ## make sure we will overwrite current latest info
- my ($rc,$ri,$oname);
- 
+ my ($rc,$ri);
+ my $oname=_extract_oname($otype,$oaction,$self->{last_process}->[2]); ## lc() would be good here but this breaks a lot of things !
+
  eval
  {
   ## transport parameters ?
   my $res=$to->receive($trid); ## a Net::DRI::Data::Raw or die inside
   ###  return $self->protocol()->new_from_reply($tosend,$gotback);
   ###  ## $tosend needed to propagate EPP version, for example
-  ($rc,$ri,$oname)=$po->reaction($otype,$oaction,$res,$self->{ops}->{$trid}->[1]);
+  ($rc,$ri)=$po->reaction($otype,$oaction,$res,$self->{ops}->{$trid}->[1],$oname);
   $rc->_set_trid([ $trid ]) unless $rc->trid(); ## if not done inside Protocol::*::Message::result_status, make sure we save at least our transaction id
  };
 
@@ -506,6 +507,20 @@ sub process_back
 
  delete($self->{ops}->{$trid});
  return $rc;
+}
+
+sub _extract_oname
+{
+ my ($otype,$oaction,$pa)=@_;
+
+ return 'domains' if ($otype eq 'account' && $oaction eq 'list_domains');
+ my $o=$pa->[0];
+ return 'session' unless defined($o);
+ $o=$o->[1] if (ref($o) eq 'ARRAY'); ## should be enough for _multi but still a little strange
+ return $o unless ref($o);
+ return ($otype eq 'nsgroup')? $o->name() : $o->get_details(1) if Net::DRI::Util::isa_hosts($o);
+ return $o->srid() if Net::DRI::Util::isa_contact($o);
+ return 'session';
 }
 
 ####################################################################################################

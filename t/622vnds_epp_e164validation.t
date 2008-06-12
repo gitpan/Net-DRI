@@ -2,7 +2,8 @@
 
 use Net::DRI;
 use Net::DRI::Data::Raw;
-
+use DateTime;
+use DateTime::Duration;
 use Test::More tests => 6;
 
 eval { no warnings; require Test::LongString; Test::LongString->import(max => 100); $Test::LongString::Context=50; };

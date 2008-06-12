@@ -96,7 +96,7 @@ is_string($R1,$E1.'<command><update><domain:update xmlns:domain="urn:ietf:params
 
 $R2=$E1.'<response>'.r(1001,'Command completed successfully.').'<resData><domain:trnData xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example9.com</domain:name><domain:trStatus>approved</domain:trStatus></domain:trnData></resData>'.$TRID.'</response>'.$E2;
 my $ro=$dri->remote_object('domain');
-$rc=$ro->release('example9.com',{clID=>H12345});
+$rc=$ro->release('example9.com',{clID=>H12345}); ## should be properly handled in a DRD module
 is_string($R1,$E1.'<command><transfer op="release"><domain:transfer xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example9.com</domain:name><domain:clID>H12345</domain:clID></domain:transfer></transfer><clTRID>ABC-12345</clTRID></command>'.$E2,'Release extension: domain_release build');
 is($rc->is_success(),1,'Release extension: domain_release is_success');
 is($rc->is_pending(),1,'Release extension: domain_release is_pending');

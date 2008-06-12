@@ -1,7 +1,7 @@
 ## Domain Registry Interface, DNSBE Domain EPP extension commands
 ## (based on Registration_guidelines_v4_7_2-Part_4-epp.pdf)
 ##
-## Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -25,7 +25,9 @@ use Net::DRI::Exception;
 use Net::DRI::Protocol::EPP::Core::Domain;
 use Net::DRI::Data::Hosts;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+use Carp;
+
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -55,7 +57,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -109,8 +111,7 @@ sub create
 
  ## Registrant contact is mandatory (optional in EPP), already added in Core, we just verify here
  Net::DRI::Exception->die(0,'protocol/EPP',11,'Registrant contact is mandatory in domain_create')
-     unless (defined($rd) && (ref($rd) eq 'HASH') && exists($rd->{contact}) && UNIVERSAL::isa($rd->{contact},'Net::DRI::Data::ContactSet') 
-           && $rd->{contact}->get('registrant')->srid());
+     unless (Net::DRI::Util::has_contact($rd) &&  $rd->{contact}->get('registrant')->srid());
 
  return unless exists($rd->{nsgroup});
  my @n=add_nsgroup($rd->{nsgroup});
@@ -188,30 +189,30 @@ sub add_transfer
 {
  my ($epp,$mes,$domain,$rd)=@_;
 
- Net::DRI::Exception::usererr_insufficient_parameters('registrant and billing are mandatory') unless (defined($rd) && (ref($rd) eq 'HASH') && exists($rd->{contact}) && UNIVERSAL::isa($rd->{contact},'Net::DRI::Data::ContactSet') && $rd->{contact}->has_type('registrant') && $rd->{contact}->has_type('billing'));
+ Net::DRI::Exception::usererr_insufficient_parameters('registrant and billing are mandatory') unless (Net::DRI::Util::has_contact($rd) && $rd->{contact}->has_type('registrant') && $rd->{contact}->has_type('billing'));
 
  my $cs=$rd->{contact};
  my @n;
 
  my $creg=$cs->get('registrant');
- Net::DRI::Exception::usererr_invalid_parameters('registrant must be a contact object or #AUTO#') unless (UNIVERSAL::isa($creg,'Net::DRI::Data::Contact') || (!ref($creg) && ($creg eq '#AUTO#')));
+ Net::DRI::Exception::usererr_invalid_parameters('registrant must be a contact object or #AUTO#') unless (Net::DRI::Util::isa_contact($creg,'Net::DRI::Data::Contact') || (!ref($creg) && ($creg eq '#AUTO#')));
  push @n,['dnsbe:registrant',ref($creg)? $creg->srid() : '#AUTO#' ];
 
  if (exists($rd->{trDate}))
  {
   Net::DRI::Util::check_isa($rd->{trDate},'DateTime');
-  push @n,['dnsbe:trDate',$rd->{trDate}->set_time_zone('UTC')->strftime("%Y-%m-%dT%T.%NZ")];
+  push @n,['dnsbe:trDate',$rd->{trDate}->set_time_zone('UTC')->strftime('%Y-%m-%dT%T.%NZ')];
  }
 
  my $cbill=$cs->get('billing');
- Net::DRI::Exception::usererr_invalid_parameters('billing must be a contact object') unless UNIVERSAL::isa($cbill,'Net::DRI::Data::Contact');
+ Net::DRI::Exception::usererr_invalid_parameters('billing must be a contact object') unless Net::DRI::Util::isa_contact($cbill);
  push @n,['dnsbe:billing',$cbill->srid()];
 
  push @n,add_contact('accmgr',$cs,1) if $cs->has_type('accmgr');
  push @n,add_contact('tech',$cs,9) if $cs->has_type('tech');
  push @n,add_contact('onsite',$cs,5) if $cs->has_type('onsite');
 
- if (exists($rd->{ns}) && (UNIVERSAL::isa($rd->{ns},'Net::DRI::Data::Hosts')) && !$rd->{ns}->is_empty())
+ if (Net::DRI::Util::has_ns($rd))
  {
   my $n=Net::DRI::Protocol::EPP::Core::Domain::build_ns($epp,$rd->{ns},$domain,'dnsbe');
   my @ns=@{$mes->ns->{domain}};
@@ -227,7 +228,7 @@ sub add_nsgroup
 {
  my ($nsg)=@_;
  return unless (defined($nsg) && $nsg);
- my @a=grep { defined($_) && Net::DRI::Util::xml_is_normalizedstring($_,1,100) } map { UNIVERSAL::isa($_,'Net::DRI::Data::Hosts')? $_->name() : $_ } (ref($nsg) eq 'ARRAY')? @$nsg : ($nsg);
+ my @a=grep { defined($_) && $_ && !ref($_) && Net::DRI::Util::xml_is_normalizedstring($_,1,100) } map { Net::DRI::Util::isa_hosts($_)? $_->name() : $_ } (ref($nsg) eq 'ARRAY')? @$nsg : ($nsg);
  return map { ['dnsbe:nsgroup',$_] } grep {defined} @a[0..8];
 }
 
@@ -235,7 +236,7 @@ sub add_contact
 {
  my ($type,$cs,$max)=@_;
  $max--;
- my @r=grep { UNIVERSAL::isa($_,'Net::DRI::Data::Contact') } ($cs->get($type));
+ my @r=grep { Net::DRI::Util::isa_contact($_) } ($cs->get($type));
  return map { ['dnsbe:'.$type,$_->srid()] } grep {defined} @r[0..$max];
 }
 
@@ -253,12 +254,8 @@ sub transferq_request
  my $mes=$epp->message();
  my @d=Net::DRI::Protocol::EPP::Core::Domain::build_command($mes,['transferq',{'op'=>'request'}],$domain);
 
- if (Net::DRI::Protocol::EPP::Core::Domain::verify_rd($rd,'period'))
- {
-  Net::DRI::Util::check_isa($rd->{period},'DateTime::Duration');
-  push @d,Net::DRI::Protocol::EPP::Core::Domain::build_period($rd->{period});
- }
-
+ croak('Key « period » should be key « duration »') if Net::DRI::Util::has_key($rd,'period');
+ push @d,Net::DRI::Protocol::EPP::Core::Domain::build_period($rd->{period}) if Net::DRI::Util::has_duration($rd);
  $mes->command_body(\@d);
 
  my @n=add_transfer($epp,$mes,$domain,$rd);

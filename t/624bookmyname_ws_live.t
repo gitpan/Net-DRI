@@ -5,7 +5,7 @@ use Test::More;
 
 unless ($ENV{TEST_BOOKMYNAME_WS_LIVE_CLIENTID} && $ENV{TEST_BOOKMYNAME_WS_LIVE_CLIENTPASS})
 {
- plan skip_all => 'Set TEST_BOOKMYNAME_WS_LIVE_CLIENTID and TEST_BOOKMYNAME_WS_LIVE_CLIENTPASS if you want (normally harmless) *live* tests for BookMyName';
+ plan skip_all => 'Set $ENV{TEST_BOOKMYNAME_WS_LIVE_CLIENTID} and $ENV{TEST_BOOKMYNAME_WS_LIVE_CLIENTPASS} if you want (normally harmless) *live* tests for BookMyName';
 } else
 {
  plan tests => 4;

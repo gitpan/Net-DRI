@@ -3,6 +3,7 @@
 use Net::DRI;
 use Net::DRI::Data::Raw;
 use Net::DRI::Data::Changes;
+use DateTime;
 
 use Test::More tests => 8;
 

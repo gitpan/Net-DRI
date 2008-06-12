@@ -24,7 +24,7 @@ use Net::DRI::Exception;
 use Net::DRI::Protocol::EPP::Core::Domain;
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -103,7 +103,7 @@ sub build_command
  my @id;
  foreach my $n ( grep { defined } (ref($id) eq 'ARRAY')? @$id : ($id))
  {
-  Net::DRI::Exception->die(1,'protocol/EPP',10,'Invalid defensive registration id '.$n) unless ($n && Net::DRI::Util::xml_is_token($n,3,16));
+  Net::DRI::Exception->die(1,'protocol/EPP',10,'Invalid defensive registration id '.$n) unless ($n && !ref($n) && Net::DRI::Util::xml_is_token($n,3,16));
   push @id,$n;
  }
 
@@ -126,7 +126,7 @@ sub build_contact
 {
  my ($d,$type)=@_;
  Net::DRI::Exception::usererr_insufficient_parameters($type.' contact is mandatory') unless (defined($d) && $d);
- $d=$d->srid() if UNIVERSAL::isa($d,'Net::DRI::Data::Contact');
+ $d=$d->srid() if Net::DRI::Util::isa_contact($d);
  Net::DRI::Exception->die(1,'protocol/EPP',10,"Invalid $type contact id: $d") unless Net::DRI::Util::xml_is_token($d,3,16);
  return ($type eq 'registrant')? ['defreg:registrant',$d] : ['defreg:contact',$d,{type => $type}];
 }
@@ -244,7 +244,7 @@ sub info
 {
  my ($epp,$id,$rd)=@_;
  my @d=build_command($epp,'info',$id);
- push @d,build_authinfo($rd->{auth}) if (defined($rd) && (ref($rd) eq 'HASH') && exists($rd->{auth}) && (ref($rd->{auth}) eq 'HASH'));
+ push @d,build_authinfo($rd->{auth}) if Net::DRI::Util::has_auth($rd);
  $epp->message->command_body(\@d);
 }
 
@@ -352,7 +352,7 @@ sub create
 
  Net::DRI::Exception::usererr_invalid_parameters('pattern must be an XML token between 1 and 63 chars long') unless (exists($ri->{pattern}) && $ri->{pattern} && Net::DRI::Util::xml_is_token($ri->{pattern},1,63));
  push @d,['defreg:pattern',$ri->{pattern}];
- Net::DRI::Exception::usererr_invalid_parameters('a valid contactset object must be given in contact attribute') unless (exists($ri->{contact}) && UNIVERSAL::isa($ri->{contact},'Net::DRI::Data::ContactSet'));
+ Net::DRI::Exception::usererr_invalid_parameters('a valid contactset object must be given in contact attribute') unless Net::DRI::Util::has_contact($ri);
  my $cs=$ri->{contact};
  push @d,build_contact($cs->get('registrant'),'registrant');
  push @d,build_contact($cs->get('billing'),'billing');
@@ -397,7 +397,7 @@ sub update
  my ($epp,$id,$todo)=@_;
  my $mes=$epp->message();
 
- Net::DRI::Exception::usererr_invalid_parameters($todo." must be a Net::DRI::Data::Changes object") unless ($todo && UNIVERSAL::isa($todo,'Net::DRI::Data::Changes'));
+ Net::DRI::Exception::usererr_invalid_parameters($todo.' must be a Net::DRI::Data::Changes object') unless Net::DRI::Util::isa_changes($todo);
 
   if ((grep { ! /^(?:add|del)$/ } $todo->types('status')) ||
      (grep { ! /^(?:add|del)$/ } $todo->types('contact')) ||
@@ -429,7 +429,7 @@ sub update
  my (@chg,$chg);
 
  $chg=$todo->set('registrant');
- push @chg,['defreg:registrant',$chg->srid()] if ($chg && ref($chg) && UNIVERSAL::can($chg,'srid'));
+ push @chg,['defreg:registrant',$chg->srid()] if Net::DRI::Util::isa_contact($chg);
  $chg=$todo->set('auth');
  push @chg,build_authinfo($chg) if ($chg && ref($chg));
  $chg=$todo->set('maintainer');

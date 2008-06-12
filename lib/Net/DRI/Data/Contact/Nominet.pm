@@ -27,7 +27,7 @@ use Net::DRI::Util;
 
 use Email::Valid;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -97,17 +97,17 @@ sub validate
 
  if (!$change)
  {
-  Net::DRI::Exception::usererr_insufficient_parameters('Invalid contact information: name/srid mandatory') unless ($self->name() && $self->srid());
-  push @errs,'srid' unless ($self->srid()=~m/^C?\d+(?:-UK)?$/); ## C for contacts, nothing for registrant/account
+  Net::DRI::Exception::usererr_insufficient_parameters('Invalid contact information: name mandatory') unless ($self->name());
  }
 
+ push @errs,'srid' if (defined($self->srid()) && $change && $self->srid()!~m/^C?\d+(?:-UK)?$/); ## C for contacts, nothing for registrant/account
  push @errs,'name' if (defined($self->name()) && !Net::DRI::Util::xml_is_token($self->name(),1,255));
  push @errs,'org' if (defined($self->org()) && !Net::DRI::Util::xml_is_token($self->org(),1,255));
  ## See http://www.nominet.org.uk/registrars/systems/data/regtype/
  push @errs,'type' if (defined($self->type()) && $self->type()!~m/^(?:LTD|PLC|IND|FIND|RCHAR|SCH|LLP|STRA|PTNR|GOV|CRC|STAT|FCORP|IP|FOTHER|OTHER|UNKNOWN)$/);
  push @errs,'co_no' if (defined($self->co_no()) && !Net::DRI::Util::xml_is_token($self->co_no(),undef,255));
  ## TO FIX : co_no is mandatory for registrations in .net, .ltd and .plc SLDs
- push @errs,'opt_out' if (defined($self->opt_out()) && $self->out_out()!~m/^[YN]$/i);
+ push @errs,'opt_out' if (defined($self->opt_out()) && $self->opt_out()!~m/^[YN]$/i);
 
  push @errs,'voice' if (defined($self->voice()) && !Net::DRI::Util::xml_is_token($self->voice(),undef,17) && $self->voice()!~m/^\+[0-9]{1,3}\.[0-9]{1,14}(?:x\d+)?$/);
  push @errs,'fax'   if (defined($self->fax())   && !Net::DRI::Util::xml_is_token($self->fax(),undef,17)   && $self->fax()!~m/^\+[0-9]{1,3}\.[0-9]{1,14}(?:x\d+)?$/);

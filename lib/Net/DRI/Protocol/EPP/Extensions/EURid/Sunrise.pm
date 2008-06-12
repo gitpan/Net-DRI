@@ -29,7 +29,7 @@ use Net::DRI::Protocol::EPP::Core::Domain;
 use Net::DRI::Protocol::EPP::Extensions::EURid::Domain;
 use Net::DRI::DRD::EURid;
 
-our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -188,10 +188,10 @@ sub apply
 
 
  ## Nameservers, OPTIONAL
- push @d,Net::DRI::Protocol::EPP::Core::Domain::build_ns($epp,$rd->{ns},$domain,'domain') if (exists($rd->{ns}) && UNIVERSAL::isa($rd->{ns},'Net::DRI::Data::Hosts') && !$rd->{ns}->is_empty());
+ push @d,Net::DRI::Protocol::EPP::Core::Domain::build_ns($epp,$rd->{ns},$domain,'domain') if Net::DRI::Util::has_ns($rd);
 
  ## Contacts, all OPTIONAL
- if (exists($rd->{contact}) && UNIVERSAL::isa($rd->{contact},'Net::DRI::Data::ContactSet'))
+ if (Net::DRI::Util::has_contact($rd))
  {
   my $cs=$rd->{contact};
   my @o=$cs->get('registrant');

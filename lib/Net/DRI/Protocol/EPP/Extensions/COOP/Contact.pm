@@ -1,7 +1,7 @@
 ## Domain Registry Interface, .COOP Contact EPP extension commands
 ## (based on document: EPP Extensions for the .coop TLD Registrant Verification version 1.6)
 ##
-## Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -20,7 +20,10 @@ package Net::DRI::Protocol::EPP::Extensions::COOP::Contact;
 
 use strict;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+use Net::DRI::Exception;
+use Net::DRI::Util;
+
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 our $NS='http://www.nic.coop/contactCoopExt-1.0';
 
@@ -52,7 +55,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -166,9 +169,7 @@ sub domain_create
 {
  my ($epp,$domain,$rd)=@_;
 
- Net::DRI::Exception::usererr_insufficient_parameters('registrant is mandatory') unless (defined($rd) && (ref($rd) eq 'HASH') && exists($rd->{contact}) 
-                                                                                         && UNIVERSAL::isa($rd->{contact},'Net::DRI::Data::ContactSet')
-                                                                                         && $rd->{contact}->get('registrant'));
+ Net::DRI::Exception::usererr_insufficient_parameters('registrant is mandatory') unless (Net::DRI::Util::has_contact($rd) && $rd->{contact}->get('registrant'));
  Net::DRI::Exception::usererr_insufficient_parameters('registrant org is mandatory') unless $rd->{contact}->get('registrant')->org();
 }
 

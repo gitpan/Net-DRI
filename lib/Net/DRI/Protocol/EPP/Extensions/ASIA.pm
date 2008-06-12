@@ -1,6 +1,6 @@
 ## Domain Registry Interface, ASIA EPP extensions
 ##
-## Copyright (c) 2007 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
+## Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -22,7 +22,7 @@ use strict;
 use Net::DRI::Data::Contact::ASIA;
 use base qw/Net::DRI::Protocol::EPP/;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -53,7 +53,7 @@ Tonnerre Lombard E<lt>tonnerre.lombard@sygroup.chE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -89,6 +89,10 @@ sub new
   my $rfact=$self->factories();
   $rfact->{contact}=sub { return Net::DRI::Data::Contact::ASIA->new(@_); };
  }
+
+ my $rcapa = $self->capabilities();
+ $rcapa->{domain_update}->{url} = ['set'];
+ $rcapa->{domain_update}->{contact} = ['add','set','del'];
 
  bless($self,$c); ## rebless
  return $self;

@@ -25,13 +25,13 @@ use Net::DRI::Exception;
 
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::DRD::UK - .UK (Nominet) policies for Net::DRI
+Net::DRI::DRD::Nominet - .UK (Nominet) policies for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -146,7 +146,7 @@ sub host_info
 {
  my ($self,$ndr,$dh,$rh)=@_;
 
- my $roid=(UNIVERSAL::isa($dh,'Net::DRI::Data::Hosts'))? $dh->roid() : $dh;
+ my $roid=Net::DRI::Util::isa_hosts($dh)? $dh->roid() : $dh;
 
  my ($rc,$exist);
 ## when we do a domain:info we get all info needed to later on reply to a host:info (cache delay permitting)
@@ -168,8 +168,8 @@ sub host_update
  my ($self,$ndr,$dh,$tochange)=@_;
  my $fp=$ndr->protocol->nameversion();
 
- my $name=(UNIVERSAL::isa($dh,'Net::DRI::Data::Hosts'))? $dh->get_details(1) : $dh;
- err_invalid_host_name($name) if $self->verify_name_host($name);
+ my $name=Net::DRI::Util::isa_hosts($dh)? $dh->get_details(1) : $dh;
+ $self->err_invalid_host_name($name) if $self->verify_name_host($name);
  Net::DRI::Util::check_isa($tochange,'Net::DRI::Data::Changes');
 
  foreach my $t ($tochange->types())
@@ -183,7 +183,7 @@ sub host_update
            'name'   => [ $tochange->all_defined('name') ],
           );
  foreach (@{$what{ip}})     { Net::DRI::Util::check_isa($_,'Net::DRI::Data::Hosts'); }
- foreach (@{$what{name}})   { err_invalid_host_name($_) if $self->verify_name_host($_); }
+ foreach (@{$what{name}})   { $self->err_invalid_host_name($_) if $self->verify_name_host($_); }
 
  foreach my $w (keys(%what))
  {
@@ -209,9 +209,15 @@ sub host_update
 
 sub account_info
 {
- my ($self,$ndr,$cs)=@_;
- return $ndr->process('account','info',[$cs]);
+ my ($self,$ndr,$c)=@_;
+ return $ndr->process('account','info',[$c]);
  }
+
+sub account_update
+{
+ my ($self,$ndr,$c,$cs)=@_;
+ return $ndr->process('account','update',[$c,$cs]);
+}
 
 ####################################################################################################
 
@@ -264,7 +270,6 @@ sub contact_delete { Net::DRI::Exception->die(0,'DRD',4,'No contact delete avail
 ## No direct contact/host create
 sub host_create { Net::DRI::Exception->die(0,'DRD',4,'No direct host creation possible in .UK'); }
 sub contact_create { Net::DRI::Exception->die(0,'DRD',4,'No direct contact creation possible in .UK'); }
-## domain_create ??? which calls host_create
 
 ####################################################################################################
 1;

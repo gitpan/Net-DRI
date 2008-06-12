@@ -79,7 +79,7 @@ foreach my $ns (qw/ns1.example.com ns2.example.com/)
 my $dom='toto-'.time().'.coop';
 $rc=$dri->domain_check($dom);
 print "$dom exists: ".($dri->get_info('exist')? 'YES' : 'NO')."\n";
-my $cs=$dri->local_object('contactset')->new();
+my $cs=$dri->local_object('contactset');
 $cs->set($c3,'registrant');
 $cs->set($c4,'billing');
 $cs->set($c4,'tech');

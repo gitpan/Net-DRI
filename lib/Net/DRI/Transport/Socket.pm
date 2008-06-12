@@ -29,7 +29,7 @@ use Net::DRI::Exception;
 use Net::DRI::Util;
 use Net::DRI::Data::Raw;
 
-our $VERSION=do { my @r=(q$Revision: 1.25 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.26 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -253,18 +253,24 @@ sub send_login
  my $sock=$self->sock();
  my $pc=$t->{pc};
 
- return unless ($pc->can('parse_greeting') && $pc->can('login') && $pc->can('parse_login'));
+ return unless ($pc->can('login') && $pc->can('parse_login'));
  foreach my $p (qw/client_login client_password/)
  {
   Net::DRI::Exception::usererr_insufficient_parameters($p.' must be defined') unless (exists($t->{$p}) && $t->{$p});
  }
 
- ## Get registry greeting
+ ## Get registry greeting, if available
  my $cltrid=$t->{trid_factory}->($self->name());
- my $dr=$pc->get_data($self,$sock);
- $self->logging($cltrid,1,1,1,$dr);
- my $rc1=$pc->parse_greeting($dr); ## gives back a Net::DRI::Protocol::ResultStatus
- die($rc1) unless $rc1->is_success();
+ my $dr;
+
+ if ($pc->can('parse_greeting'))
+ {
+  $dr=$pc->get_data($self,$sock);
+  $self->logging($cltrid,1,1,1,$dr);
+  my $rc1=$pc->parse_greeting($dr); ## gives back a Net::DRI::Protocol::ResultStatus
+  die($rc1) unless $rc1->is_success();
+ }
+
  my $login=$pc->login($t->{message_factory},$t->{client_login},$t->{client_password},$cltrid,$dr,$t->{client_newpassword},$t->{protocol_data});
  $self->logging($cltrid,1,0,1,$login);
  Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send login message') unless ($sock->print($login));

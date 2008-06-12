@@ -24,7 +24,7 @@ use Net::DRI::Protocol::ResultStatus;
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version method params result errcode errmsg));
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -137,7 +137,7 @@ sub result_status
   } elsif ($code=~m/30$/)
   {
    $eppcode=2004;
-   } elsif ($code=~m/3[14]$/)
+  } elsif ($code=~m/3[14]$/)
   {
    $eppcode=2306;
   } elsif ($code=~m/32$/)
@@ -162,19 +162,6 @@ sub result_status
  }
 
  return Net::DRI::Protocol::ResultStatus->new('gandi_ws',$code,$eppcode,0,$msg,'en');
-}
-
-####################################################################################################
-
-sub get_name_from_message
-{
- my ($self)=@_;
- my $c=$self->method();
- my $rp=$self->params();
-
- return 'domains' if ($c eq 'domain_list');
- return $rp->[1] if ($c=~m/^domain/);
- return 'session';
 }
 
 ####################################################################################################

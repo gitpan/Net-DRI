@@ -30,7 +30,7 @@ use Net::DRI::Util;
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version command command_body cltrid svtrid msg_id node_resdata node_extension node_msg result_greeting));
 
-our $VERSION=do { my @r=(q$Revision: 1.19 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.20 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -177,20 +177,16 @@ sub as_string
  my @d;
  push @d,'<?xml version="1.0" encoding="UTF-8" standalone="no"?>';
  push @d,'<epp '.$ens.'>';
- my ($cmd,$ocmd,$ons)=@{$self->command()};
- my $nocommand=(!ref($cmd) && (($cmd eq 'hello') || ($cmd eq 'nocommand')));
- push @d,'<command>' unless $nocommand;
- my $attr;
- if (ref($cmd))
- {
-  ($cmd,$attr)=($cmd->[0],' '.join(' ',map { $_.'="'.$cmd->[1]->{$_}.'"' } keys(%{$cmd->[1]})));
- } else
- {
-  $attr='';
- }
+ my ($cmd,$ocmd,$ons);
+ my $rc=$self->command();
+ ($cmd,$ocmd,$ons)=@$rc if (defined($rc) && ref($rc));
 
- if ($cmd ne 'nocommand')
+ my $attr='';
+ ($cmd,$attr)=($cmd->[0],' '.join(' ',map { $_.'="'.$cmd->[1]->{$_}.'"' } keys(%{$cmd->[1]}))) if (defined($cmd) && ref($cmd));
+
+ if (defined($cmd))
  {
+  push @d,'<command>' if ($cmd ne 'hello');
   my $body=$self->command_body();
   if (defined($ocmd) && $ocmd)
   {
@@ -236,8 +232,11 @@ sub as_string
 
  ## OPTIONAL clTRID
  my $cltrid=$self->cltrid();
- push @d,'<clTRID>'.$cltrid.'</clTRID>' if (defined($cltrid) && $cltrid && Net::DRI::Util::xml_is_token($cltrid,3,64) && !$nocommand);
- push @d,'</command>' unless $nocommand;
+ if (defined($cmd) && ($cmd ne 'hello'))
+ {
+  push @d,'<clTRID>'.$cltrid.'</clTRID>' if (defined($cltrid) && $cltrid && Net::DRI::Util::xml_is_token($cltrid,3,64));
+  push @d,'</command>';
+ }
  push @d,'</epp>';
 
  my $m=Encode::encode('utf8',join('',@d));
@@ -454,22 +453,6 @@ sub parse_greeting
  } continue { $c=$c->getNextSibling(); }
 
  return \%tmp;
-}
-
-####################################################################################################
-
-sub get_name_from_message
-{
- my ($self)=@_;
- my $cb=$self->command_body();
- return 'session' unless (defined($cb) && ref($cb)); ## TO FIX
- foreach my $e (@$cb)
- {
-  return $e->[1] if ($e->[0]=~m/^(?:domain|host|nsgroup):name$/); ## TO FIX (notably in case of check_multi)
-  return $e->[1] if ($e->[0]=~m/^(?:contact|defreg):id$/); ## TO FIX
-  return $e->[1] if ($e->[0]=~m/^(?:contact|ns|account):roid$/); ## Needed for .UK (ok here since this whole function should (must!) disappear)
- }
- return 'session'; ## TO FIX
 }
 
 ####################################################################################################

@@ -22,7 +22,7 @@ use strict;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -105,7 +105,7 @@ sub create
  my ($epp,$contact)=@_;
  my $mes=$epp->message();
 
- return unless (UNIVERSAL::isa($contact,'Net::DRI::Data::Contact::US'));
+ return unless Net::DRI::Util::isa_contact($contact,'Net::DRI::Data::Contact::US');
 
  my $str=sprintf('AppPurpose=%s NexusCategory=%s',$contact->application_purpose(),$contact->nexus_category());
  my $eid=$mes->command_extension_register('neulevel:extension','xmlns:neulevel="urn:ietf:params:xml:ns:neulevel-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:neulevel-1.0 neulevel-1.0.xsd"');
@@ -118,7 +118,7 @@ sub update
  my $mes=$epp->message();
 
  my $newc=$todo->set('info');
- return unless $newc && UNIVERSAL::isa($newc,'Net::DRI::Data::Contact::US');
+ return unless Net::DRI::Util::isa_contact($newc,'Net::DRI::Data::Contact::US');
 
  my @tmp;
  push @tmp,'AppPurpose='.$newc->application_purpose() if (defined($newc->application_purpose()));

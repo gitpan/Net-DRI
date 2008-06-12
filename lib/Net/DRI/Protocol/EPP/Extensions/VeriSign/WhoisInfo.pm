@@ -22,7 +22,7 @@ use strict;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -84,13 +84,13 @@ sub info
  my $mes=$epp->message();
 
  my $wi;
- if (defined($rd) && (ref($rd) && 'HASH') && exists($rd->{whois_info}))
+ if (Net::DRI::Util::has_key($rd,'whois_info'))
  {
   $wi=$rd->{whois_info};
  } else
  {
   my $def=$epp->default_parameters();
-  if ($def && (ref($def) eq 'HASH') && exists($def->{whois_info}))
+  if (Net::DRI::Util::has_key($def,'whois_info'))
   {
    $wi=$def->{whois_info};
   } else

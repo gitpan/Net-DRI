@@ -1,7 +1,7 @@
 ## Domain Registry Interface, nic.at domain transactions extension
 ## Contributed by Michael Braunoeder from NIC.AT <mib@nic.at>
 ##
-## Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -21,9 +21,9 @@ package Net::DRI::Protocol::EPP::Extensions::AT::Domain;
 use strict;
 
 use Net::DRI::Util;
-use Net::DRI::Protocol::EPP::Core::Domain;
+use Net::DRI::Exception;
 
-our $VERSION = do { my @r = ( q$Revision: 1.3 $ =~ /\d+/g ); sprintf( "%d" . ".%02d" x $#r, @r ); };
+our $VERSION = do { my @r = ( q$Revision: 1.4 $ =~ /\d+/g ); sprintf( "%d" . ".%02d" x $#r, @r ); };
 our $NS = 'http://www.nic.at/xsd/at-ext-domain-1.0';
 our $ExtNS = 'http://www.nic.at/xsd/at-ext-epp-1.0';
 
@@ -31,7 +31,7 @@ our $ExtNS = 'http://www.nic.at/xsd/at-ext-epp-1.0';
 
 =head1 NAME
 
-Net::DRI::Protocol::EPP::Extensions::AT::Domain - NIC.AT EPP Domain extension
+Net::DRI::Protocol::EPP::Extensions::AT::Domain - NIC.AT EPP Domain extension for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -55,7 +55,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -93,11 +93,10 @@ sub extonly {
 
        my $mes = $epp->message();
 
-       my @d =
-         Net::DRI::Protocol::EPP::Core::Domain::build_command( $mes, 'nocommand',
-               $domain );
-       $mes->command_body( \@d );
-
+      Net::DRI::Exception->die(1,'protocol/EPP',2,'Domain name needed') unless defined($domain) && $domain;
+      Net::DRI::Exception->die(1,'protocol/EPP',10,'Invalid domain name: '.$domain) unless Net::DRI::Util::is_hostname($domain);
+      ##$mes->command_body([['domain:name',$domain]]); ## Useless if pure extension
+ 
        my $eid = $mes->command_extension_register( 'command',
                    'xmlns="' . $ExtNS
                  . '" xsi:schemaLocation="'
@@ -105,9 +104,7 @@ sub extonly {
                  . ' at-ext-epp-1.0.xsd"' );
 
 
-       # we have to create the cltrid
-
-       my $cltrid=Net::DRI::Util::create_trid_1('NICAT');
+       my $cltrid=$mes->cltrid();
 
        if ( $transaction eq 'withdraw' ) {
 
@@ -206,7 +203,7 @@ sub transfer_request {
                  . ' at-ext-domain-1.0.xsd"' );
 
        my %entryname;
-       $entryname{name} = "Registrarinfo";
+       $entryname{name} = 'Registrarinfo';
        $mes->command_extension( $eid,
                [ 'at-ext-domain:entry', \%entryname, $registrarinfo ] );
 

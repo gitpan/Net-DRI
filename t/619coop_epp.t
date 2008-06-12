@@ -2,7 +2,7 @@
 
 use Net::DRI;
 use Net::DRI::Data::Raw;
-
+use DateTime::Duration;
 use Test::More tests => 28;
 eval { no warnings; require Test::LongString; Test::LongString->import(max => 100); $Test::LongString::Context=50; };
 *{'main::is_string'}=\&main::is if $@;

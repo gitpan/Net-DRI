@@ -27,8 +27,9 @@ use Net::DRI::Data::Hosts;
 use Net::DRI::Data::ContactSet;
 
 use DateTime::Format::ISO8601;
+use Carp;
 
-our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -82,10 +83,14 @@ sub register_commands
 	  check             => [ \&check, \&check_parse ],
           delete            => [ \&delete, undef ],
           transfer_request  => [ \&transfer_request, undef ],
+          transfer_cancel   => [ \&transfer_cancel, undef ],
           undelete          => [ \&undelete, undef ],
           transferq_request => [ \&transferq_request, undef ],
-          trade             => [ \&trade, undef ],
+          transferq_cancel  => [ \&transferq_cancel, undef ],
+          trade_request     => [ \&trade_request, undef ],
+          trade_cancel      => [ \&trade_cancel, undef ],
           reactivate        => [ \&reactivate, undef ],
+          check_contact_for_transfer => [ \&checkcontact, \&checkcontact_parse ],
          );
 
  return { 'domain' => \%tmp };
@@ -111,7 +116,7 @@ sub create
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
 
- return unless exists($rd->{nsgroup});
+ return unless Net::DRI::Util::has_key($rd,'nsgroup');
  my @n=add_nsgroup($rd->{nsgroup});
 
  my $eid=build_command_extension($mes,$epp,'eurid:ext');
@@ -272,7 +277,6 @@ sub check_parse
  }
 }
 
-
 sub delete
 {
  my ($epp,$domain,$rd)=@_;
@@ -283,7 +287,7 @@ sub delete
  Net::DRI::Util::check_isa($rd->{deleteDate},'DateTime');
 
  my $eid=build_command_extension($mes,$epp,'eurid:ext');
- my @n=('eurid:delete',['eurid:domain',['eurid:deleteDate',$rd->{deleteDate}->set_time_zone('UTC')->strftime("%Y-%m-%dT%T.%NZ")]]);
+ my @n=('eurid:delete',['eurid:domain',['eurid:deleteDate',$rd->{deleteDate}->set_time_zone('UTC')->strftime('%Y-%m-%dT%T.%NZ')]]);
  $mes->command_extension($eid,\@n);
 }
 
@@ -291,39 +295,50 @@ sub transfer_request
 {
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
-
- my @n=add_transfer($epp,$mes,$domain,$rd);
+ my @n=(['eurid:domain',add_transfer($epp,$mes,$domain,$rd)]);
+ push @n,['eurid:ownerAuthCode',$rd->{owner_auth_code}] if (exists($rd->{owner_auth_code}) && defined($rd->{owner_auth_code}) && $rd->{owner_auth_code}=~m/^\d{15}$/);
  my $eid=build_command_extension($mes,$epp,'eurid:ext');
- $mes->command_extension($eid,['eurid:transfer',['eurid:domain',@n]]);
+ $mes->command_extension($eid,['eurid:transfer',@n]);
+}
+
+sub transfer_cancel
+{
+ my ($epp,$domain,$rd)=@_;
+ my $mes=$epp->message();
+
+ Net::DRI::Exception::usererr_insufficient_parameters('reason is mandatory for transfer_cancel') unless (Net::DRI::Util::has_key($rd,'reason') && $rd->{reason});
+
+ my $eid=build_command_extension($mes,$epp,'eurid:ext');
+ $mes->command_extension($eid,['eurid:cancel',['eurid:reason',$rd->{reason}]]);
 }
 
 sub add_transfer
 {
  my ($epp,$mes,$domain,$rd)=@_;
 
- Net::DRI::Exception::usererr_insufficient_parameters('registrant and billing are mandatory') unless (defined($rd) && (ref($rd) eq 'HASH') && exists($rd->{contact}) && UNIVERSAL::isa($rd->{contact},'Net::DRI::Data::ContactSet') && $rd->{contact}->has_type('registrant') && $rd->{contact}->has_type('billing'));
+ Net::DRI::Exception::usererr_insufficient_parameters('registrant and billing are mandatory') unless (Net::DRI::Util::has_contact($rd) && $rd->{contact}->has_type('registrant') && $rd->{contact}->has_type('billing'));
 
  my $cs=$rd->{contact};
  my @n;
 
  my $creg=$cs->get('registrant');
- Net::DRI::Exception::usererr_invalid_parameters('registrant must be a contact object or #AUTO#') unless (UNIVERSAL::isa($creg,'Net::DRI::Data::Contact') || (!ref($creg) && ($creg eq '#AUTO#')));
+ Net::DRI::Exception::usererr_invalid_parameters('registrant must be a contact object or the string #AUTO#') unless (Net::DRI::Util::isa_contact($creg) || (!ref($creg) && (uc($creg) eq '#AUTO#')));
  push @n,['eurid:registrant',ref($creg)? $creg->srid() : '#AUTO#' ];
 
  if (exists($rd->{trDate}))
  {
   Net::DRI::Util::check_isa($rd->{trDate},'DateTime');
-  push @n,['eurid:trDate',$rd->{trDate}->set_time_zone('UTC')->strftime("%Y-%m-%dT%T.%NZ")];
+  push @n,['eurid:trDate',$rd->{trDate}->set_time_zone('UTC')->strftime('%Y-%m-%dT%T.%NZ')];
  }
 
  my $cbill=$cs->get('billing');
- Net::DRI::Exception::usererr_invalid_parameters('billing must be a contact object') unless UNIVERSAL::isa($cbill,'Net::DRI::Data::Contact');
+ Net::DRI::Exception::usererr_invalid_parameters('billing must be a contact object') unless Net::DRI::Util::isa_contact($cbill);
  push @n,['eurid:billing',$cbill->srid()];
 
  push @n,add_contact('tech',$cs,9) if $cs->has_type('tech');
  push @n,add_contact('onsite',$cs,5) if $cs->has_type('onsite');
 
- if (exists($rd->{ns}) && (UNIVERSAL::isa($rd->{ns},'Net::DRI::Data::Hosts')) && !$rd->{ns}->is_empty())
+ if (Net::DRI::Util::has_ns($rd))
  {
   my $n=Net::DRI::Protocol::EPP::Core::Domain::build_ns($epp,$rd->{ns},$domain,'eurid');
   my @ns=@{$mes->ns->{domain}};
@@ -331,7 +346,7 @@ sub add_transfer
   push @n,$n;
  }
 
- push @n,add_nsgroup($rd->{nsgroup}) if (exists($rd->{nsgroup}));
+ push @n,add_nsgroup($rd->{nsgroup}) if Net::DRI::Util::has_key($rd,'nsgroup');
  return @n;
 }
 
@@ -339,7 +354,7 @@ sub add_nsgroup
 {
  my ($nsg)=@_;
  return unless (defined($nsg) && $nsg);
- my @a=grep { defined($_) && Net::DRI::Util::xml_is_normalizedstring($_,1,100) } map { UNIVERSAL::isa($_,'Net::DRI::Data::Hosts')? $_->name() : $_ } (ref($nsg) eq 'ARRAY')? @$nsg : ($nsg);
+ my @a=grep { defined($_) && $_ && !ref($_) && Net::DRI::Util::xml_is_normalizedstring($_,1,100) } map { Net::DRI::Util::isa_nsgroup($_)? $_->name() : $_ } (ref($nsg) eq 'ARRAY')? @$nsg : ($nsg);
  return map { ['eurid:nsgroup',$_] } grep {defined} @a[0..8];
 }
 
@@ -347,7 +362,7 @@ sub add_contact
 {
  my ($type,$cs,$max)=@_;
  $max--;
- my @r=grep { UNIVERSAL::isa($_,'Net::DRI::Data::Contact') } ($cs->get($type));
+ my @r=grep { Net::DRI::Util::isa_contact($_) } ($cs->get($type));
  return map { ['eurid:'.$type,$_->srid()] } grep {defined} @r[0..$max];
 }
 
@@ -365,12 +380,8 @@ sub transferq_request
  my $mes=$epp->message();
  my @d=Net::DRI::Protocol::EPP::Core::Domain::build_command($mes,['transferq',{'op'=>'request'}],$domain);
 
- if (Net::DRI::Protocol::EPP::Core::Domain::verify_rd($rd,'period'))
- {
-  Net::DRI::Util::check_isa($rd->{period},'DateTime::Duration');
-  push @d,Net::DRI::Protocol::EPP::Core::Domain::build_period($rd->{period});
- }
-
+ croak('Key « period » should be key « duration »') if Net::DRI::Util::has_key($rd,'period');
+ push @d,Net::DRI::Protocol::EPP::Core::Domain::build_period($rd->{period}) if Net::DRI::Util::has_duration($rd);
  $mes->command_body(\@d);
 
  my @n=add_transfer($epp,$mes,$domain,$rd);
@@ -378,16 +389,42 @@ sub transferq_request
  $mes->command_extension($eid,['eurid:transferq',['eurid:domain',@n]]);
 }
 
-sub trade
+sub transferq_cancel
 {
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
- my @d=Net::DRI::Protocol::EPP::Core::Domain::build_command($mes,'trade',$domain);
+ my @d=Net::DRI::Protocol::EPP::Core::Domain::build_command($mes,['transferq',{'op'=>'cancel'}],$domain);
+ $mes->command_body(\@d);
+
+ Net::DRI::Exception::usererr_insufficient_parameters('reason is mandatory for transferq_cancel') unless (Net::DRI::Util::has_key($rd,'reason') && $rd->{reason});
+
+ my $eid=build_command_extension($mes,$epp,'eurid:ext');
+ $mes->command_extension($eid,['eurid:cancel',['eurid:reason',$rd->{reason}]]);
+}
+
+sub trade_request
+{
+ my ($epp,$domain,$rd)=@_;
+ my $mes=$epp->message();
+ my @d=Net::DRI::Protocol::EPP::Core::Domain::build_command($mes,['trade',{'op'=>'request'}],$domain);
  $mes->command_body(\@d);
 
  my @n=add_transfer($epp,$mes,$domain,$rd);
  my $eid=build_command_extension($mes,$epp,'eurid:ext');
  $mes->command_extension($eid,['eurid:trade',['eurid:domain',@n]]);
+}
+
+sub trade_cancel
+{
+ my ($epp,$domain,$rd)=@_;
+ my $mes=$epp->message();
+ my @d=Net::DRI::Protocol::EPP::Core::Domain::build_command($mes,['trade',{'op'=>'cancel'}],$domain);
+ $mes->command_body(\@d);
+
+ Net::DRI::Exception::usererr_insufficient_parameters('reason is mandatory for trade_cancel') unless (Net::DRI::Util::has_key($rd,'reason') && $rd->{reason});
+
+ my $eid=build_command_extension($mes,$epp,'eurid:ext');
+ $mes->command_extension($eid,['eurid:cancel',['eurid:reason',$rd->{reason}]]);
 }
 
 sub reactivate
@@ -396,6 +433,37 @@ sub reactivate
  my $mes=$epp->message();
  my @d=Net::DRI::Protocol::EPP::Core::Domain::build_command($mes,'reactivate',$domain);
  $mes->command_body(\@d);
+}
+
+sub checkcontact
+{
+ my ($epp,$domain,$rd)=@_;
+ my $mes=$epp->message();
+
+ Net::DRI::Exception->die(1,'protocol/EPP',2,'Domain name needed') unless defined($domain) && $domain;
+ Net::DRI::Exception->die(1,'protocol/EPP',10,'Invalid domain name: '.$domain) unless Net::DRI::Util::is_hostname($domain);
+ my @d=(['eurid:domainName',$domain]);
+
+ Net::DRI::Exception::usererr_insufficient_parameters('registrant key is mandatory for check_contact_for_transfer') unless Net::DRI::Util::has_key($rd,'registrant');
+ Net::DRI::Exception::usererr_invalid_parameters('registrant must be a contact object') unless Net::DRI::Util::isa_contact($rd->{registrant});
+ push @d,['eurid:registrant',$rd->{registrant}->srid()];
+
+ my $eid=build_command_extension($mes,$epp,'eurid:ext');
+ $mes->command_extension($eid,['eurid:command',['eurid:checkContactForTransfer',@d]]);
+}
+
+sub checkcontact_parse
+{
+ my ($po,$otype,$oaction,$oname,$rinfo)=@_;
+ my $mes=$po->message();
+ return unless $mes->is_success();
+
+ my $chkdata=$mes->get_content('checkContactForTransfer',$mes->ns('eurid'),1);
+ return unless $chkdata;
+
+ my @d=$chkdata->getElementsByTagNameNS($mes->ns('eurid'),'percentage');
+ return unless @d;
+ $rinfo->{domain}->{$oname}->{'percentage'}=$d[0]->getFirstChild()->getData();
 }
 
 ####################################################################################################

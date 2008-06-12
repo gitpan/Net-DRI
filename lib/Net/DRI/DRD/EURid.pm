@@ -21,8 +21,10 @@ use strict;
 use base qw/Net::DRI::DRD/;
 
 use Net::DRI::Util;
+use Net::DRI::Exception;
+use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -67,7 +69,7 @@ See the LICENSE file that comes with this distribution for more details.
 #####################################################################################
 
 our %CCA2_EU=map { $_ => 1 } qw/AT BE BG CZ CY DE DK ES EE FI FR GR GB HU IE IT LT LU LV MT NL PL PT RO SE SK SI AX GF GI GP MQ RE/;
-our %LANGA2_EU=map { $_ => 1 } qw/bg cs da de el en es et fi fr hu it lt lv mt nl pl pt ro sk sl sv/;
+our %LANGA2_EU=map { $_ => 1 } qw/bg cs da de el en es et fi fr ga hu it lt lv mt nl pl pt ro sk sl sv/;
 
 sub new
 {
@@ -128,9 +130,9 @@ sub verify_name_domain
  return 10 unless $self->is_my_tld($domain);
 
  my @d=split(/\./,$domain);
- return 11 if exists($Net::DRI::Util::CCA2{uc($d[0])});
  return 12 if length($d[0]) < 2;
  return 13 if substr($d[0],2,2) eq '--';
+ return 14 if exists($Net::DRI::Util::CCA2{uc($d[0])});
 
  return 0;
 }
@@ -156,8 +158,6 @@ sub domain_operation_needs_is_mine
  return;
 }
 
-## Only transfer requests are possible
-sub domain_transfer_stop    { Net::DRI::Exception->die(0,'DRD',4,'No domain transfer cancel available in .EU'); }
 sub domain_transfer_query   { Net::DRI::Exception->die(0,'DRD',4,'No domain transfer query available in .EU'); }
 sub domain_transfer_accept  { Net::DRI::Exception->die(0,'DRD',4,'No domain transfer approve available in .EU'); }
 sub domain_transfer_refuse  { Net::DRI::Exception->die(0,'DRD',4,'No domain transfer reject in .EU'); }
@@ -169,6 +169,74 @@ sub message_retrieve    { Net::DRI::Exception->die(0,'DRD',4,'No poll features a
 sub message_delete      { Net::DRI::Exception->die(0,'DRD',4,'No poll features available in .EU'); }
 sub message_waiting     { Net::DRI::Exception->die(0,'DRD',4,'No poll features available in .EU'); }
 sub message_count       { Net::DRI::Exception->die(0,'DRD',4,'No poll features available in .EU'); }
+
+
+sub domain_undelete
+{
+ my ($self,$ndr,$domain,$rd)=@_;
+ $self->err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'undelete');
+
+ my $rc=$ndr->process('domain','undelete',[$domain,$rd]);
+ return $rc;
+}
+
+sub domain_transfer_quarantine
+{
+ my ($self,$ndr,$domain,$op,$rd)=@_;
+ $self->err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'transfer');
+ Net::DRI::Exception::usererr_invalid_parameters('Transfer from quarantine operation must be start or stop') unless ($op=~m/^(?:start|stop)$/);
+
+ my $rc;
+ if ($op eq 'start')
+ {
+  $rc=$ndr->process('domain','transferq_request',[$domain,$rd]);
+ } elsif ($op eq 'stop')
+ {
+  $rc=$ndr->process('domain','transferq_cancel',[$domain,$rd]);
+ }
+ return $rc;
+}
+
+sub domain_transfer_quarantine_start { my ($self,$ndr,$domain,$rd)=@_; return $self->domain_transfer_quarantine($ndr,$domain,'start',$rd); }
+sub domain_transfer_quarantine_stop  { my ($self,$ndr,$domain,$rd)=@_; return $self->domain_transfer_quarantine($ndr,$domain,'stop',$rd); }
+
+
+sub domain_trade_start
+{
+ my ($self,$ndr,$domain,$rd)=@_;
+ $self->err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'trade');
+
+ my $rc=$ndr->process('domain','trade_request',[$domain,$rd]);
+ return $rc;
+}
+
+sub domain_trade_stop
+{
+ my ($self,$ndr,$domain,$rd)=@_;
+ $self->err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'trade');
+
+ my $rc=$ndr->process('domain','trade_cancel',[$domain,$rd]);
+ return $rc;
+}
+
+sub domain_reactivate
+{
+ my ($self,$ndr,$domain,$rd)=@_;
+ $self->err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'reactivate');
+
+ my $rc=$ndr->process('domain','reactivate',[$domain,$rd]);
+ return $rc;
+}
+
+sub domain_check_contact_for_transfer
+{
+ my ($self,$ndr,$domain,$rd)=@_;
+ $self->err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'check_contact_for_transfer');
+
+ my $rc=$ndr->process('domain','check_contact_for_transfer',[$domain,$rd]);
+ return $rc;
+}
+
 
 #################################################################################################################
 1;

@@ -27,7 +27,7 @@ use Net::DRI::Exception;;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -76,6 +76,7 @@ sub register_commands
  my ($class,$version)=@_;
  my %tmp=( 
 	 	info   => [ \&info, \&info_parse ],
+		update => [ \&update ],
 	);
 
  return { 'account' => \%tmp };
@@ -87,23 +88,24 @@ sub build_command
  Net::DRI::Exception->die(1,'protocol/EPP',2,'Contact id needed') unless (defined($contact));
 
  my $id;
- if (UNIVERSAL::isa($contact,'Net::DRI::Data::ContactSet'))
+ if (Net::DRI::Util::isa_contactset($contact))
  {
   my $c=$contact->get('registrant');
-  Net::DRI::Exception->die(1,'protocol/EPP',2,'ContactSet must contain a registrant contact') unless (defined($c));
+  Net::DRI::Exception->die(1,'protocol/EPP',2,'ContactSet must contain a registrant contact object') unless (Net::DRI::Util::isa_contact($c));
   $id=$c->roid();
- } elsif (UNIVERSAL::isa($contact,'Net::DRI::Data::Contact'))
+ } elsif (Net::DRI::Util::isa_contact($contact))
  {
   $id=$contact->roid();
  } else
  {
   $id=$contact;
  }
- Net::DRI::Exception->die(1,'protocol/EPP',2,'Contact id needed') unless defined($id) && $id;
+ Net::DRI::Exception->die(1,'protocol/EPP',2,'Contact id needed') unless (defined($id) && $id && !ref($id));
  Net::DRI::Exception->die(1,'protocol/EPP',10,'Invalid contact id: '.$id) unless Net::DRI::Util::xml_is_token($id,3,16); ## inherited from Core EPP
  my $tcommand=(ref($command))? $command->[0] : $command;
- my @ns=@{$msg->ns->{account}};
- $msg->command([$command,'account:'.$tcommand,sprintf('xmlns:account="%s" xsi:schemaLocation="%s %s"',$ns[0],$ns[0],$ns[1])]);
+ my @ns=@{$msg->ns()->{account}};
+ my $ns=($command eq 'update')? sprintf('xmlns:account="%s" xmlns:contact="%s" xsi:schemaLocation="%s %s"',$ns[0],$msg->ns()->{contact}->[0],$ns[0],$ns[1]) : sprintf('xmlns:account="%s" xsi:schemaLocation="%s %s"',$ns[0],$ns[0],$ns[1]);
+ $msg->command([$command,'account:'.$tcommand,$ns]);
  return (['account:roid',$id]);
 }
 
@@ -233,6 +235,83 @@ sub parse_addr
  } continue { $n=$n->getNextSibling(); }
 
  $c->street(\@street);
+}
+
+sub build_addr
+{
+ my ($c,$type)=@_;
+ my @d;
+ my @s=$c->street();
+ if (@s)
+ {
+  @s=@{$s[0]};
+  push @d,['account:street',$s[0]];
+  push @d,['account:locality',$s[1]];
+ }
+ push @d,['account:city',$c->city()] if $c->city();
+ push @d,['account:county',$c->sp()] if $c->sp();
+ push @d,['account:postcode',$c->pc()] if $c->pc();
+ push @d,['account:country',$c->cc()] if $c->cc();
+ return @d? ['account:addr',{type=>$type},@d] : ();
+}
+
+sub add_account_data
+{
+ my ($mes,$cs,$ischange)=@_;
+ my $modtype=$ischange? 'update' : 'create';
+ my @a;
+ my @o=$cs->get('registrant');
+ if (Net::DRI::Util::isa_contact($o[0]))
+ {
+  $o[0]->validate($ischange);
+  push @a,['account:name',$o[0]->name()] unless $ischange;
+  push @a,['account:trad-name',$o[0]->org()] if $o[0]->org();
+  push @a,['account:type',$o[0]->type()] if (!$ischange || $o[0]->type());
+  push @a,['account:co-no',$o[0]->co_no()] if $o[0]->co_no();
+  push @a,['account:opt-out',$o[0]->opt_out()] if (!$ischange || $o[0]->opt_out());
+  push @a,build_addr($o[0],'admin');
+ } else
+ {
+  Net::DRI::Exception::usererr_insufficient_parameters('registrant data is mandatory') unless $ischange;
+ }
+
+ if (Net::DRI::Util::isa_contact($o[1]))
+ {
+  $o[1]->validate() unless $ischange;
+  my @t=build_addr($o[1],'billing');
+  push @a,($ischange && !@t)? ['account:addr',{type=>'billing'}] : @t;
+ }
+
+ @o=$cs->get('admin');
+ Net::DRI::Exception::usererr_insufficient_parameters('admin data is mandatory') unless ($ischange || Net::DRI::Util::isa_contact($o[0]));
+ foreach my $o (0..2)
+ {
+   last unless defined($o[$o]);
+   my @t=Net::DRI::Protocol::EPP::Extensions::Nominet::Contact::build_cdata($o[$o]);
+   my $contype=$ischange? (($o[$o]->srid())? 'update' : 'create') : $modtype;
+   push @a,['account:contact',{type=>'admin',order=>$o+1},($ischange && !@t)? () : ['contact:'.$contype,@t]];
+ }
+ @o=$cs->get('billing');
+ foreach my $o (0..2)
+ {
+   last unless defined($o[$o]);
+   my @t=Net::DRI::Protocol::EPP::Extensions::Nominet::Contact::build_cdata($o[$o]);
+   my $contype=$ischange? (($o[$o]->srid())? 'update' : 'create') : $modtype;
+   push @a,['account:contact',{type=>'billing',order=>$o+1},($ischange && !@t)? () : ['contact:'.$contype,@t]];
+ }
+ return @a;
+}
+
+sub update
+{
+ my ($epp,$c,$todo)=@_;
+ my $mes=$epp->message();
+ Net::DRI::Exception::usererr_invalid_parameters($todo.' must be a Net::DRI::Data::Changes object') unless Net::DRI::Util::isa_changes($todo);
+ my $cs=$todo->set('contact');
+ Net::DRI::Exception::usererr_invalid_parameters($cs.' must be a Net::DRI::Data::ContactSet object') unless Net::DRI::Util::isa_contactset($cs);
+ my @d=build_command($mes,'update',$c);
+ push @d,add_account_data($mes,$cs,1);
+ $mes->command_body(\@d);
 }
 
 ####################################################################################################

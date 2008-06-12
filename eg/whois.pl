@@ -79,6 +79,10 @@ $rc=$dri->target('AT')->new_current_profile('profile1','whois');
 die($rc) unless $rc->is_success();
 display('stare.at',$dri);
 
+$dri->add_registry('TRAVEL',{});
+$rc=$dri->target('TRAVEL')->new_current_profile('profile1','whois');
+die($rc) unless $rc->is_success();
+display('paris.travel',$dri);
 
 $dri->end();
 };

@@ -3,7 +3,7 @@
 use Net::DRI;
 use Net::DRI::Data::Raw;
 
-use Test::More tests => 25;
+use Test::More tests => 30;
 eval { no warnings; require Test::LongString; Test::LongString->import(max => 100); $Test::LongString::Context=50; };
 *{'main::is_string'}=\&main::is if $@;
 
@@ -78,6 +78,15 @@ is($dri->get_info('last_id'), 375424692, 'message get_info last_id 1');
 is($dri->get_info('object_type', 'message', 375424692), 'domain','message get_info object_type');
 is($dri->get_info('object_id', 'message', 375424692), 'weingeist.at','message get_info object_id');
 is($dri->get_info('action', 'message', 375424692), 'domain-info-lock-customer','message get_info action');
+
+
+$R2 = $E1 . '<response><result code="1301"><msg>Command completed successfully; ack to dequeue</msg></result><msgQ count="18" id="390336246"><qDate>2008-03-14T11:42:23.64Z</qDate><msg>Transfer process cancelled for domain: (transfer-request with client-id [NICAT-1234-1242342543566334] and server-id [20080307124235423353F9-4-nicat])</msg></msgQ><resData><message xmlns="http://www.nic.at/xsd/at-ext-message-1.0" type="domain-transfer-aborted" xsi:schemaLocation="http://www.nic.at/xsd/at-ext-message-1.0 at-ext-message-1.0.xsd"><desc>Transfer process cancelled for domain: (transfer-request with client-id [NICAT-1234-1242342543566334] and server-id [20080307124235423353F9-4-nicat])</desc><reftrID><clTRID>NICAT-1234-1242342543566334</clTRID><svTRID>20080307124235423353F9-4-nicat</svTRID></reftrID><data><entry name="domain"/></data></message></resData>' . $TRID . '</response>' . $E2;
+$rc = $dri->message_retrieve();
+is($rc->is_success(), 1, 'message polled successfully');
+is($dri->get_info('last_id'), 390336246, 'message get_info last_id 1');
+is($dri->get_info('object_type', 'message', 390336246), 'domain', 'message get_info object_type');
+is($dri->get_info('object_id', 'message', 390336246), undef, 'message get_info object_id');
+is($dri->get_info('action', 'message', 390336246), 'domain-transfer-aborted', 'message get_info action');
 
 exit 0;
 

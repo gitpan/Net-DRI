@@ -26,8 +26,8 @@ use Net::DRI::Registry;
 use Net::DRI::Util;
 
 our $AUTOLOAD;
-our $VERSION='0.85';
-our $CVS_REVISION=do { my @r=(q$Revision: 1.28 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION='0.90';
+our $CVS_REVISION=do { my @r=(q$Revision: 1.30 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -73,8 +73,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $proto=shift;
- my $class=ref($proto) || $proto;
+ my $class=shift;
  my ($cachettl,$globaltimeout)=@_;
  $cachettl=0 unless defined($cachettl);
 
@@ -170,7 +169,7 @@ sub target
 
  $driver=$self->registry_name() unless defined($driver);
  err_registry_name_does_not_exist($driver) unless defined($driver) && $driver;
- 
+
  if (defined($profile))
  {
   $self->{registries}->{$driver}->target($profile);

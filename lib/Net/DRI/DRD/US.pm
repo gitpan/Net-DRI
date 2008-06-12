@@ -22,8 +22,9 @@ use strict;
 use base qw/Net::DRI::DRD/;
 
 use Net::DRI::DRD::ICANN;
+use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 

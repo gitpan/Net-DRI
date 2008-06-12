@@ -27,7 +27,7 @@ use Net::DRI::Protocol::EPP::Message;
 use Net::DRI::Protocol::EPP::Core::Status;
 use Net::DRI::Data::Contact;
 
-our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -88,6 +88,8 @@ sub new
 
  $self->{hostasattr}=$drd->info('host_as_attr') || 0;
  $self->{contacti18n}=$drd->info('contact_i18n') || 7; ## bitwise OR with 1=LOC only, 2=INT only, 4=LOC+INT only
+ $self->{defaulti18ntype}=undef; ## only needed for registries not following truely EPP standard, like .CZ
+ $self->{usenullauth}=$drd->info('use_null_auth') || 0; ## See RFC4931 §3.2.5
  $self->{ns}={ _main   => ['urn:ietf:params:xml:ns:epp-1.0','epp-1.0.xsd'],
                domain  => ['urn:ietf:params:xml:ns:domain-1.0','domain-1.0.xsd'],
                host    => ['urn:ietf:params:xml:ns:host-1.0','host-1.0.xsd'],

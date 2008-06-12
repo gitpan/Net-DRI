@@ -20,9 +20,9 @@ package Net::DRI::DRD::LU;
 use strict;
 use base qw/Net::DRI::DRD/;
 
-use Net::DRI::Util;
+use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -111,7 +111,8 @@ sub verify_name_domain
  return $r if ($r);
  return 10 unless $self->is_my_tld($domain);
  my ($d,undef)=split(/\./,$domain);
- return 11 if (length($d)<3 || (substr($d,2,2) eq '--'));
+ return 12 if (length($d) < 3);
+ return 13 if (substr($d,2,2) eq '--');
  return 0;
 }
 
@@ -163,6 +164,76 @@ sub contact_transfer_stop   { Net::DRI::Exception->die(0,'DRD',4,'No contact tra
 sub contact_transfer_query  { Net::DRI::Exception->die(0,'DRD',4,'No contact transfer query available in .LU'); }
 sub contact_transfer_accept { Net::DRI::Exception->die(0,'DRD',4,'No contact transfer approve available in .LU'); }
 sub contact_transfer_refuse { Net::DRI::Exception->die(0,'DRD',4,'No contact transfer reject in .LU'); }
+
+sub domain_restore
+{
+ my ($self,$ndr,$domain)=@_;
+ $self->err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'restore');
+ return $ndr->process('domain','restore',[$domain]);
+}
+
+sub domain_trade_start
+{
+ my ($self,$ndr,$domain,$rd)=@_;
+ $self->err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'trade');
+ return $ndr->process('domain','trade_request',[$domain,$rd]);
+}
+
+sub domain_trade_query
+{
+ my ($self,$ndr,$domain)=@_;
+ $self->err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'trade');
+ return $ndr->process('domain','trade_query',[$domain]);
+}
+
+sub domain_trade_stop
+{
+ my ($self,$ndr,$domain)=@_;
+ $self->err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'trade');
+ return $ndr->process('domain','trade_cancel',[$domain]);
+}
+
+sub domain_transfer_trade_start
+{
+ my ($self,$ndr,$domain,$rd)=@_;
+ $self->err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'transfer_trade');
+ return $ndr->process('domain','transfer_trade_request',[$domain,$rd]);
+}
+
+sub domain_transfer_trade_query
+{
+ my ($self,$ndr,$domain)=@_;
+ $self->err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'transfer_trade');
+ return $ndr->process('domain','transfer_trade_query',[$domain]);
+}
+
+sub domain_transfer_trade_stop
+{
+ my ($self,$ndr,$domain)=@_;
+ $self->err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'transfer_trade');
+ return $ndr->process('domain','transfer_trade_cancel',[$domain]);
+}
+
+sub domain_transfer_restore_start
+{
+ my ($self,$ndr,$domain,$rd)=@_;
+ $self->err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'transfer_restore');
+ return $ndr->process('domain','transfer_restore_request',[$domain,$rd]);
+}
+
+sub domain_transfer_restore_query
+{
+ my ($self,$ndr,$domain)=@_;
+ $self->err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'transfer_restore');
+ return $ndr->process('domain','transfer_restore_query',[$domain]);
+}
+
+sub domain_transfer_restore_stop
+{
+ my ($self,$ndr,$domain)=@_;
+ $self->err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'transfer_restore');
+ return $ndr->process('domain','transfer_restore_cancel',[$domain]);
+}
 
 ####################################################################################################
 1;

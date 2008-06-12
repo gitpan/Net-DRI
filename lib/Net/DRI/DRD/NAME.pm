@@ -24,8 +24,11 @@ use strict;
 use base qw/Net::DRI::DRD/;
 
 use Net::DRI::DRD::ICANN;
+use Net::DRI::Exception;
+use Net::DRI::Util;
+use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -78,6 +81,7 @@ sub new
 
  my $self=$class->SUPER::new(@_);
  $self->{info}->{host_as_attr}=0;
+ $self->{info}->{contact_i18n}=2;	## INT only
 
  bless($self,$class);
  return $self;
@@ -115,9 +119,9 @@ sub verify_name_domain
  my ($self,$ndr,$domain,$op)=@_;
  ($domain,$op)=($ndr,$domain) unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
 
- my $r=$self->SUPER::check_name($domain,1);
+ my $r=$self->SUPER::check_name($domain,[1,2]);
  return $r if ($r);
- return 10 unless $self->is_my_tld($domain);
+ return 10 unless $self->is_my_tld($domain,0); ## we need less strict checks because in X.Y.name domain names both X and Y are variables
  return 11 if Net::DRI::DRD::ICANN::is_reserved_name($domain,$op);
 
  return 0;

@@ -226,7 +226,6 @@ $cs->set($c1,'billing');
 $rc=$ro->create('test28-id',{duration=>DateTime::Duration->new(years=>2),pattern=>'coca-cola',contact=>$cs,auth=>{pw=>'123456'},maintainer=>'myDomains Inc',trademark=>{name=>'Coca Cola',issue_date=>DateTime->new(year=>1923,month=>12,day=>30),country=>'US',number=>12345}});
 is_string($R1,$E1.'<command><create><defreg:create xmlns:defreg="http://xmlns.domini.cat/epp/defreg-1.0" xsi:schemaLocation="http://xmlns.domini.cat/epp/defreg-1.0 puntcat-defreg-1.0.xsd"><defreg:id>test28-id</defreg:id><defreg:period unit="y">2</defreg:period><defreg:pattern>coca-cola</defreg:pattern><defreg:registrant>C100004</defreg:registrant><defreg:contact type="billing">C100004</defreg:contact><defreg:contact type="admin">C100004</defreg:contact><defreg:authInfo><defreg:pw>123456</defreg:pw></defreg:authInfo><defreg:maintainer>myDomains Inc</defreg:maintainer><defreg:trademark><defreg:name>Coca Cola</defreg:name><defreg:issueDate>1923-12-30</defreg:issueDate><defreg:country>US</defreg:country><defreg:number>12345</defreg:number></defreg:trademark></defreg:create></create><clTRID>ABC-12345</clTRID></command>'.$E2,'defreg_create build');
 
-
 # p.73
 $ro=$dri->remote_object('defreg','test18-id');
 $toc=$dri->local_object('changes');

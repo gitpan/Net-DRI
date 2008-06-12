@@ -25,7 +25,7 @@ use Net::DRI::Protocol::ResultStatus;
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version method params operation result retcode retval));
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -120,19 +120,6 @@ sub result_status
  my $k=$rc.','.$rv;
  my $eppcode=(exists($CODES{$op}) && (ref($CODES{$op}) eq 'HASH') && keys(%{$CODES{$op}}) && exists($CODES{$op}->{$k}))? $CODES{$op}->{$k}  : 'GENERIC_ERROR';
  return Net::DRI::Protocol::ResultStatus->new('bookmyname_ws',100*$rc+$rv,$ok? 'COMMAND_SUCCESSFUL' : $eppcode,$ok,'retcode='.$rc.' retval='.$rv,'en');
-}
-
-####################################################################################################
-
-sub get_name_from_message
-{
- my ($self)=@_;
- my $c=$self->method();
- my $rp=$self->params();
-
- return 'domains' if ($c eq 'domain_list');
- return $rp->[2] if ($c=~m/^domain/);
- return 'session';
 }
 
 ####################################################################################################

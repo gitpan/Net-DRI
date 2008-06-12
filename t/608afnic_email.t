@@ -78,7 +78,7 @@ Content-Type: text/plain; charset="iso-8859-15"
 Content-Disposition: inline
 Content-Transfer-Encoding: 8bit
 MIME-Version: 1.0
-X-Mailer: Net::DRI 0.85/1.01 via MIME-tools 5.417 (Entity 5.417)
+X-Mailer: Net::DRI 0.90/1.01 via MIME-tools 5.417 (Entity 5.417)
 From: test@localhost
 To: domain@nic.fr
 Subject: CLIENTID domain_create [TRID-12345]
@@ -97,7 +97,7 @@ Subject: CLIENTID domain_create [TRID-12345]
 3g..: FR
 3h..: S
 3j..: 111222333
-3t..: +33 123456789
+3t..: +33 1 23 45 67 89
 3v..: test@example.com
 3w..: PM
 3y..: ABCD
@@ -106,6 +106,8 @@ Subject: CLIENTID domain_create [TRID-12345]
 6a..: ns.toto.fr
 6b..: 123.45.67.89
 7a..: ns.toto.com
+8a..: A
+9a..: E
 EOF
 
 is_string(munge_xmailer($R1),munge_xmailer($E1),'domain_create_only build');
@@ -127,7 +129,7 @@ Content-Type: text/plain; charset="iso-8859-15"
 Content-Disposition: inline
 Content-Transfer-Encoding: 8bit
 MIME-Version: 1.0
-X-Mailer: Net::DRI 0.85/1.01 via MIME-tools 5.417 (Entity 5.417)
+X-Mailer: Net::DRI 0.90/1.01 via MIME-tools 5.417 (Entity 5.417)
 From: test@localhost
 To: domain@nic.fr
 Subject: CLIENTID domain_create [TRID-12345]
@@ -145,6 +147,8 @@ Subject: CLIENTID domain_create [TRID-12345]
 6a..: ns.toto.fr
 6b..: 123.45.67.89
 7a..: ns.toto.com
+8a..: A
+9a..: E
 EOF
 
 is_string(munge_xmailer($R1),munge_xmailer($E2),'domain_create_only PPreduced build');

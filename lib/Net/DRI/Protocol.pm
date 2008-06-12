@@ -25,7 +25,7 @@ __PACKAGE__->mk_accessors(qw(name version factories commands message capabilitie
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.17 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.18 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -109,7 +109,7 @@ sub _load
   if ($class->can('capabilities_add'))
   {
    my $rca=$class->capabilities_add();
-   Net::DRI::Util::hash_merge($rcapa,$rca);
+   Net::DRI::Util::hash_merge($rcapa,$rca,1);
   }
   $done{$class}=1;
  }
@@ -166,7 +166,7 @@ sub action
 
 sub reaction
 {
- my ($self,$otype,$oaction,$dr,$sent)=@_;
+ my ($self,$otype,$oaction,$dr,$sent,$oname)=@_;
  my $h=$self->_load_commands($otype,$oaction);
  my $f=$self->factories();
  my $msg=$f->{message}->();
@@ -175,10 +175,7 @@ sub reaction
  my %info;
  $msg->parse($dr,\%info,$otype,$oaction,$sent); ## will trigger an Exception by itself if problem ## TODO : add  later the whole LocalStorage stuff done when sending ? (instead of otype/oaction/message sent)
  $self->message($msg); ## store it for later use (in loop below)
-
- my $oname; ## Should be done by retrieving information from sent object (will be with LocalStorage) ## WARNING : what about messages for multiple names, like check_multi ? and messages with no names at all ?
- $oname=$sent->get_name_from_message() if $sent->can('get_name_from_message');
- $info{$otype}->{$oname}->{name}=$oname if (defined($oname) && $oname);
+ $info{$otype}->{$oname}->{name}=$oname;
 
  foreach my $t (@{$h->{$otype}->{$oaction}})
  {
@@ -188,13 +185,16 @@ sub reaction
  }
 
  my $rc=$msg->result_status();
- foreach my $v1 (values(%info))
+ if (defined($rc))
  {
-  next unless (ref($v1) eq 'HASH' && keys(%$v1));
-  foreach my $v2 (values(%{$v1}))
+  foreach my $v1 (values(%info))
   {
-   next unless (ref($v2) eq 'HASH' && keys(%$v2)); ## yes, this can happen, with must_reconnect for example
-   $v2->{result_status}=$rc;
+   next unless (ref($v1) eq 'HASH' && keys(%$v1));
+   foreach my $v2 (values(%{$v1}))
+   {
+    next unless (ref($v2) eq 'HASH' && keys(%$v2)); ## yes, this can happen, with must_reconnect for example
+    $v2->{result_status}=$rc;
+   }
   }
  }
  $self->message(undef); ## needed ? useful ?

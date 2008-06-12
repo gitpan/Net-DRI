@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Handling of contact data for EURid
 ##
-## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -19,13 +19,13 @@ package Net::DRI::Data::Contact::EURid;
 
 use strict;
 use base qw/Net::DRI::Data::Contact/;
-__PACKAGE__->mk_accessors(qw(type vat lang));
+__PACKAGE__->mk_accessors(qw(type vat lang onhold monitoring_status));
 
 use Net::DRI::DRD::EURid;
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -54,6 +54,14 @@ vat number of contact
 
 language of contact, must be in Europe (mandatory)
 
+=head2 onhold()
+
+returned by registry during a contact:info operation
+
+=head2 monitoring_status()
+
+returned by registry during a contact:info operation
+
 =head1 SUPPORT
 
 For now, support questions should be sent to:
@@ -72,7 +80,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -101,7 +109,7 @@ sub validate
 
  ## Lower limits than in EPP (other checks already done in superclass)
  push @errs,'name' if ($self->name() && grep { length($_) > 50 }  ($self->name()));
- push @errs,'org'  if ($self->org()  && grep { length($_) > 100 } ($self->org())); ## docs says only that it will be truncated if more than 100 characters
+ push @errs,'org'  if ($self->org()  && grep { length($_) > 100 } ($self->org()));
 
 
  push @errs,'type' if ($self->type() && $self->type()!~m/^(?:billing|tech|registrant|onsite)$/);

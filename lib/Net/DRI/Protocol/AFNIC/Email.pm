@@ -27,7 +27,7 @@ use Net::DRI::Exception;
 use Net::DRI::Protocol::AFNIC::Email::Message;
 use Net::DRI::Data::Contact::AFNIC;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -78,10 +78,10 @@ sub new
 
  my ($drd,$clientid,$clientpw,$emailfrom)=@_;
 
- Net::DRI::Exception::usererr_insufficient_parameters("client id must be defined") unless $clientid;
- Net::DRI::Exception::usererr_insufficient_parameters("client password must be defined") unless $clientpw;
- Net::DRI::Exception::usererr_insufficient_parameters("from email must be defined") unless $emailfrom;
- Net::DRI::Exception::usererr_invalid_parameters($emailfrom." is not a valid email address") unless Email::Valid->rfc822($emailfrom);
+ Net::DRI::Exception::usererr_insufficient_parameters('client id must be defined') unless $clientid;
+ Net::DRI::Exception::usererr_insufficient_parameters('client password must be defined') unless $clientpw;
+ Net::DRI::Exception::usererr_insufficient_parameters('from email must be defined') unless $emailfrom;
+ Net::DRI::Exception::usererr_invalid_parameters($emailfrom.' is not a valid email address') unless Email::Valid->rfc822($emailfrom);
 
  my $self=$c->SUPER::new(); ## we are now officially a Net::DRI::Protocol object
  $self->name('afnic_email');
@@ -103,7 +103,7 @@ sub _load
 {
  my ($self)=@_;
 
- my @class=map { "Net::DRI::Protocol::AFNIC::Email::".$_ } ('Domain');
+ my @class=map { 'Net::DRI::Protocol::AFNIC::Email::'.$_ } ('Domain');
 
  $self->SUPER::_load(@class);
 }

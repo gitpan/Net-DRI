@@ -87,7 +87,7 @@ $rc=$dri->domain_info($dom);
 print "domain_info OK\n" if $rc->is_success();
 
 my $ns='ns.titi-'.time().'.fr';
-$nso=$dri->local_object('hosts')->new('ns.titi-'.time().'.fr');
+$nso=$dri->local_object('hosts')->set('ns.titi-'.time().'.fr');
 print "NS=$ns\n";
 
 print "Creating $ns\n";

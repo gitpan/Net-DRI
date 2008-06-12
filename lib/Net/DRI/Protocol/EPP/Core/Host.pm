@@ -26,7 +26,7 @@ use Net::DRI::Protocol::EPP;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -88,12 +88,12 @@ sub register_commands
 sub build_command
 {
  my ($msg,$command,$hostname)=@_;
- my @n=map { UNIVERSAL::isa($_,'Net::DRI::Data::Hosts')? $_->get_names() : $_ } ((ref($hostname) eq 'ARRAY')? @$hostname : ($hostname));
+ my @n=map { Net::DRI::Util::isa_hosts($_)? $_->get_names() : $_ } ((ref($hostname) eq 'ARRAY')? @$hostname : ($hostname));
 
  Net::DRI::Exception->die(1,'protocol/EPP',2,'Host name needed') unless @n;
  foreach my $n (@n)
  {
-  Net::DRI::Exception->die(1,'protocol/EPP',2,'Host name needed') unless defined($n) && $n;
+  Net::DRI::Exception->die(1,'protocol/EPP',2,'Host name needed') unless (defined($n) && $n && !ref($n));
   Net::DRI::Exception->die(1,'protocol/EPP',10,'Invalid host name: '.$n) unless Net::DRI::Util::is_hostname($n);
  }
 
@@ -255,7 +255,7 @@ sub update
  my ($epp,$ns,$todo)=@_;
  my $mes=$epp->message();
 
- Net::DRI::Exception::usererr_invalid_parameters($todo.' must be a Net::DRI::Data::Changes object') unless ($todo && UNIVERSAL::isa($todo,'Net::DRI::Data::Changes'));
+ Net::DRI::Exception::usererr_invalid_parameters($todo.' must be a Net::DRI::Data::Changes object') unless Net::DRI::Util::isa_changes($todo);
  if ((grep { ! /^(?:add|del)$/ } $todo->types('ip')) ||
      (grep { ! /^(?:add|del)$/ } $todo->types('status')) ||
      (grep { ! /^(?:set)$/ } $todo->types('name'))

@@ -1,7 +1,7 @@
 ## Domain Registry Interface, EPP NSgroup extension commands
 ## (based on .BE Registration_guidelines_v4_7_1)
 ##
-## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -24,7 +24,7 @@ use Net::DRI::Util;
 use Net::DRI::Exception;
 use Net::DRI::Data::Hosts;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -54,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -101,8 +101,8 @@ sub build_command
  my @gn;
  foreach my $h ( grep { defined } (ref($hosts) eq 'ARRAY')? @$hosts : ($hosts))
  {
-  my $gn=UNIVERSAL::isa($h,'Net::DRI::Data::Hosts')? $h->name() : $h;
-  Net::DRI::Exception->die(1,'protocol/EPP',10,'Invalid NSgroup name: '.$gn) unless ($gn && Net::DRI::Util::xml_is_normalizedstring($gn,1,100));
+  my $gn=Net::DRI::Util::isa_nsgroup($h)? $h->name() : $h;
+  Net::DRI::Exception->die(1,'protocol/EPP',10,'Invalid NSgroup name: '.$gn) unless (defined($gn) && $gn && !ref($gn) && Net::DRI::Util::xml_is_normalizedstring($gn,1,100));
   push @gn,$gn;
  }
 
@@ -125,7 +125,7 @@ sub add_nsname
  } elsif (ref($ns) eq 'ARRAY')
  {
   @a=@$ns;
- } elsif (UNIVERSAL::isa($ns,'Net::DRI::Data::Hosts'))
+ } elsif (Net::DRI::Util::isa_nsgroup($ns))
  {
   @a=$ns->get_names();
  }
@@ -242,7 +242,7 @@ sub update
  my ($epp,$hosts,$todo)=@_;
  my $mes=$epp->message();
 
- Net::DRI::Exception::usererr_invalid_parameters($todo." must be a Net::DRI::Data::Changes object") unless ($todo && UNIVERSAL::isa($todo,'Net::DRI::Data::Changes'));
+ Net::DRI::Exception::usererr_invalid_parameters($todo.' must be a Net::DRI::Data::Changes object') unless Net::DRI::Util::isa_changes($todo);
 
  if ((grep { ! /^(?:ns)$/ } $todo->types()) || (grep { ! /^(?:set)$/ } $todo->types('ns') ))
  {

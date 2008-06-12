@@ -21,13 +21,13 @@ use strict;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Protocol::EPP::Extensions::ASIA::IPR - .ASIA EPP IPR extensions
+Net::DRI::Protocol::EPP::Extensions::ASIA::IPR - .ASIA EPP IPR extensions for Net::DRI
 
 =head1 DESCRIPTION
 

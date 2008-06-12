@@ -2,8 +2,8 @@
 
 use Net::DRI;
 use Net::DRI::Data::Raw;
-
-use Test::More tests => 219;
+use DateTime::Duration;
+use Test::More tests => 253;
 eval { no warnings; require Test::LongString; Test::LongString->import(max => 100); $Test::LongString::Context=50; };
 *{'main::is_string'}=\&main::is if $@;
 
@@ -195,6 +195,111 @@ is_string($R1,$E1.'<command><transfer op="reject"><n:rcCase xmlns:n="http://www.
 is($rc->is_success(),1,'domain_transfer_refuse is_success');
 
 
+
+$R2=$E1.'<response>'.r().'<resData><domain:creData xmlns:domain="http://www.nominet.org.uk/epp/xml/nom-domain-1.0" xmlns:account="http://www.nominet.org.uk/epp/xml/nom-account-1.0" xmlns:contact="http://www.nominet.org.uk/epp/xml/nom-contact-1.0" xsi:schemaLocation="http://www.nominet.org.uk/epp/xml/nom-domain-1.0 nom-domain-1.0.xsd"><domain:name>whatever.co.uk</domain:name><domain:account><account:creData><account:roid>100029-UK</account:roid><account:name>Mr R. Strant</account:name><account:contact type="admin" order="1"><contact:creData><contact:roid>C100081-UK</contact:roid><contact:name>Mr R. Strant</contact:name></contact:creData></account:contact><account:contact type="billing" order="1"><contact:creData><contact:roid>C100082-UK</contact:roid><contact:name>A. Ccountant</contact:name></contact:creData></account:contact><account:contact type="admin" order="2"><contact:creData><contact:roid>C100083-UK</contact:roid><contact:name>Ms S. Strant</contact:name></contact:creData></account:contact></account:creData></domain:account><domain:crDate>2005-10-14T13:40:50</domain:crDate><domain:exDate>2007-10-14T13:40:50</domain:exDate></domain:creData></resData>'.$TRID.'</response>'.$E2;
+
+$dh=$dri->local_object('hosts');
+$dh->add('ns0.whatever.co.uk',['1.2.3.4']);
+$dh->add('ns3.example.net');
+my $cs=$dri->local_object('contactset');
+$co=$dri->local_object('contact');
+$co->name('Mr R. Strant');
+$co->org('R. S. Industries');
+$co->type('LTD');
+$co->co_no('NI123456');
+$co->opt_out('N');
+$co->street(['2102 High Street','Carfax']);
+$co->city('Oxford');
+$co->sp('Oxfordshire');
+$co->pc('OX1 1DF');
+$co->cc('GB');
+$cs->set($co,'registrant');
+$co=$dri->local_object('contact');
+$co->name('Mr R. Strant');
+$co->voice('01865 123456');
+$co->fax('01865 123456');
+$co->email('r.strant@strant.co.uk');
+$cs->set($co,'admin');
+$co=$dri->local_object('contact');
+$co->name('Ms S. Strant');
+$co->voice('01865 123457');
+$co->fax('01865 123456');
+$co->email('s.strant@strant.co.uk');
+$cs->add($co,'admin');
+$co=$dri->local_object('contact');
+$co->name('A. Ccountant');
+$co->voice('01865 657893');
+$co->email('acc@billing.co.uk');
+$cs->set($co,'billing');
+$rc=$dri->domain_create_only('whatever.co.uk',{duration=>DateTime::Duration->new(years=>2),ns=>$dh,contact=>$cs,'recur-bill'=>'bc'});
+is_string($R1,$E1.'<command><create><domain:create xmlns:domain="http://www.nominet.org.uk/epp/xml/nom-domain-1.0" xsi:schemaLocation="http://www.nominet.org.uk/epp/xml/nom-domain-1.0 nom-domain-1.0.xsd"><domain:name>whatever.co.uk</domain:name><domain:period unit="y">2</domain:period><domain:account><account:create xmlns:account="http://www.nominet.org.uk/epp/xml/nom-account-1.0" xmlns:contact="http://www.nominet.org.uk/epp/xml/nom-contact-1.0"><account:name>Mr R. Strant</account:name><account:trad-name>R. S. Industries</account:trad-name><account:type>LTD</account:type><account:co-no>NI123456</account:co-no><account:opt-out>N</account:opt-out><account:addr type="admin"><account:street>2102 High Street</account:street><account:locality>Carfax</account:locality><account:city>Oxford</account:city><account:county>Oxfordshire</account:county><account:postcode>OX1 1DF</account:postcode><account:country>GB</account:country></account:addr><account:contact order="1" type="admin"><contact:create><contact:name>Mr R. Strant</contact:name><contact:phone>01865 123456</contact:phone><contact:fax>01865 123456</contact:fax><contact:email>r.strant@strant.co.uk</contact:email></contact:create></account:contact><account:contact order="2" type="admin"><contact:create><contact:name>Ms S. Strant</contact:name><contact:phone>01865 123457</contact:phone><contact:fax>01865 123456</contact:fax><contact:email>s.strant@strant.co.uk</contact:email></contact:create></account:contact><account:contact order="1" type="billing"><contact:create><contact:name>A. Ccountant</contact:name><contact:phone>01865 657893</contact:phone><contact:email>acc@billing.co.uk</contact:email></contact:create></account:contact></account:create></domain:account><domain:ns xmlns:ns="http://www.nominet.org.uk/epp/xml/nom-ns-1.0"><ns:create><ns:name>ns0.whatever.co.uk</ns:name><ns:addr ip="v4">1.2.3.4</ns:addr></ns:create><ns:create><ns:name>ns3.example.net</ns:name></ns:create></domain:ns><domain:recur-bill>bc</domain:recur-bill></domain:create></create><clTRID>ABC-12345</clTRID></command>'.$E2,'domain_create_only build with new account');
+is($rc->is_success(),1,'domain_create_only is_success');
+$cs=$dri->get_info('contact');
+isa_ok($cs,'Net::DRI::Data::ContactSet');
+is_deeply([$cs->types()],['admin','billing','registrant'],'get_info(contact) has 3 types');
+$co=$cs->get('registrant');
+isa_ok($co,'Net::DRI::Data::Contact::Nominet');
+is($co->srid(),'100029-UK','get_info(contact) registrant srid');
+is($co->name(),'Mr R. Strant','get_info(contact) registrant name');
+my @co=$cs->get('admin');
+is(scalar(@co),2,'get_info(contact) admin count');
+isa_ok($co[0],'Net::DRI::Data::Contact::Nominet');
+is($co[0]->srid(),'C100081-UK','get_info(contact) admin1 srid');
+is($co[0]->name(),'Mr R. Strant','get_info(contact) admin1 name');
+isa_ok($co[1],'Net::DRI::Data::Contact::Nominet');
+is($co[1]->srid(),'C100083-UK','get_info(contact) admin2 srid');
+is($co[1]->name(),'Ms S. Strant','get_info(contact) admin2 name');
+$co=$cs->get('billing');
+isa_ok($co,'Net::DRI::Data::Contact::Nominet');
+is($co->srid(),'C100082-UK','get_info(contact) billing srid');
+is($co->name(),'A. Ccountant','get_info(contact) billing name');
+
+is($dri->get_info('exist','contact','C100082-UK'),1,'get_info(exist,contact,C100082-UK)');
+is($dri->get_info('roid','contact','C100082-UK'),'C100082-UK','get_info(roid,contact,C100082-UK)');
+my $co2=$dri->get_info('self','contact','C100082-UK');
+is_deeply($co2,$co,'get_info(self,contact,C100082-UK');
+
+$d=$dri->get_info('crDate');
+isa_ok($d,'DateTime','domain_create_only get_info(crDate)');
+is($d.'','2005-10-14T13:40:50','domain_create_only get_info(crDate) value');
+$d=$dri->get_info('exDate');
+isa_ok($d,'DateTime','domain_create_only get_info(exDate)');
+is($d.'','2007-10-14T13:40:50','domain_create_only get_info(exDate) value');
+
+
+$R2=$E1.'<response>'.r().'<resData><domain:creData xmlns:domain="http://www.nominet.org.uk/epp/xml/nom-domain-1.0" xsi:schemaLocation="http://www.nominet.org.uk/epp/xml/nom-domain-1.0 nom-domain-1.0.xsd"><domain:name>whatever1.co.uk</domain:name><domain:crDate>2005-10-14T13:30:48</domain:crDate><domain:exDate>2007-10-14T13:30:48</domain:exDate></domain:creData></resData>'.$TRID.'</response>'.$E2;
+$dh=$dri->local_object('hosts');
+$dh->add('NS1001',undef,undef,{roid => 'NS1001'});
+$dh->add('NS1002',undef,undef,{roid => 'NS1002'});
+$rc=$dri->domain_create_only('whatever1.co.uk',{ns=>$dh,contact=>'1000','recur-bill'=>'bc'});
+is_string($R1,$E1.'<command><create><domain:create xmlns:domain="http://www.nominet.org.uk/epp/xml/nom-domain-1.0" xsi:schemaLocation="http://www.nominet.org.uk/epp/xml/nom-domain-1.0 nom-domain-1.0.xsd"><domain:name>whatever1.co.uk</domain:name><domain:account><domain:account-id>1000</domain:account-id></domain:account><domain:ns><domain:nsObj>NS1001</domain:nsObj><domain:nsObj>NS1002</domain:nsObj></domain:ns><domain:recur-bill>bc</domain:recur-bill></domain:create></create><clTRID>ABC-12345</clTRID></command>'.$E2,'domain_create_only build with existing account information');
+is($rc->is_success(),1,'domain_create_only is_success');
+$d=$dri->get_info('crDate');
+isa_ok($d,'DateTime','domain_create_only get_info(crDate)');
+is($d.'','2005-10-14T13:30:48','domain_create_only get_info(crDate) value');
+$d=$dri->get_info('exDate');
+isa_ok($d,'DateTime','domain_create_only get_info(exDate)');
+is($d.'','2007-10-14T13:30:48','domain_create_only get_info(exDate) value');
+
+
+my $toc=$dri->local_object('changes');
+$cs=$dri->local_object('contactset');
+$co=$dri->local_object('contact');
+$co->srid(1);  ## just make it any true value to make sure it is a contact:update and not a contact:create ; the value itself is not used during account:update anyway
+$co->email('admin@strant.co.uk');
+$cs->set($co,'admin');
+$toc->set('contact',$cs);
+$dh=$dri->local_object('hosts');
+$dh->add('ns2.example1.co.uk');
+$dh->add('NS1001',undef,undef,{roid => 'NS1001'});
+$toc->set('ns',$dh);
+$toc->set('auto-bill','');
+$toc->set('next-bill',5);
+$rc=$dri->domain_update('whatever.co.uk',$toc);
+is_string($R1,$E1.'<command><update><domain:update xmlns:domain="http://www.nominet.org.uk/epp/xml/nom-domain-1.0" xsi:schemaLocation="http://www.nominet.org.uk/epp/xml/nom-domain-1.0 nom-domain-1.0.xsd"><domain:name>whatever.co.uk</domain:name><domain:account><account:update xmlns:account="http://www.nominet.org.uk/epp/xml/nom-account-1.0" xmlns:contact="http://www.nominet.org.uk/epp/xml/nom-contact-1.0"><account:contact order="1" type="admin"><contact:update><contact:email>admin@strant.co.uk</contact:email></contact:update></account:contact></account:update></domain:account><domain:ns xmlns:ns="http://www.nominet.org.uk/epp/xml/nom-ns-1.0"><ns:create><ns:name>ns2.example1.co.uk</ns:name></ns:create><domain:nsObj>NS1001</domain:nsObj></domain:ns><domain:auto-bill/><domain:next-bill>5</domain:next-bill></domain:update></update><clTRID>ABC-12345</clTRID></command>'.$E2,'domain_update_build');
+is($rc->is_success(),1,'domain_update is_success');
+
+
 $dri->cache_clear(); ## this is needed to make sure that calls below to host_info & contact_info do in fact do the query and not take results from cache
 
 ##################################################################################################################
@@ -208,9 +313,10 @@ is($dri->get_info('exist'),1,'host_info get_info(exist)');
 is($dri->get_info('roid'),'NS12345','host_info get_info(roid)');
 $s=$dri->get_info('self');
 isa_ok($s,'Net::DRI::Data::Hosts','host_info get_info(self)');
-my ($name,$ip4,$ip6)=$s->get_details(1);
+my ($name,$ip4,$ip6,$rextra)=$s->get_details(1);
 is($name,'ns1.example.co.uk','host_info self name');
-is($s->roid(),'NS12345','host_info self roid');
+isa_ok($rextra,'HASH','host_info self extra info');
+is($rextra->{roid},'NS12345','host_info self roid');
 is_deeply($ip4,['10.10.10.10'],'host_info self ip4');
 is($dri->get_info('clID'),'TEST','host_info get_info(clID)');
 is($dri->get_info('crID'),'TEST','host_info get_info(crID)');
@@ -223,7 +329,7 @@ isa_ok($d,'DateTime','host_info get_info(upDate)');
 is($d.'','1999-12-03T09:00:00','host_info get_info(upDate) value');
 
 $R2=$E1.'<response>'.r().$TRID.'</response>'.$E2;
-my $toc=$dri->local_object('changes');
+$toc=$dri->local_object('changes');
 $toc->set('name','ns0.example2.co.uk');
 $rc=$dri->host_update('NS1001',$toc);
 is_string($R1,$E1.'<command><update><ns:update xmlns:ns="http://www.nominet.org.uk/epp/xml/nom-ns-1.0" xsi:schemaLocation="http://www.nominet.org.uk/epp/xml/nom-ns-1.0 nom-ns-1.0.xsd"><ns:roid>NS1001</ns:roid><ns:name>ns0.example2.co.uk</ns:name></ns:update></update><clTRID>ABC-12345</clTRID></command>'.$E2,'host_update build');
@@ -366,6 +472,34 @@ is($dri->get_info('upID'),'domains@isp.com','account_info get_info(upID)');
 $d=$dri->get_info('upDate');
 isa_ok($d,'DateTime','account_info get_info(upDate)');
 is(''.$d,'1999-12-03T09:00:00','account_info get_info(upDate) value');
+
+
+
+$toc=$dri->local_object('changes');
+$cs=$dri->local_object('contactset');
+$co=$dri->local_object('contact');
+$co->org('R. S. Industries');
+$co->type('STRA');
+$co->co_no('NI123456');
+$cs->set($co,'registrant');
+$co=$dri->local_object('contact');
+$cs->add($co,'registrant'); ## second empty slot is for the billing addr
+$co=$dri->local_object('contact');
+$co->name('Ms S. Strant');
+$co->voice('01865 123457');
+$co->fax('01865 123456');
+$co->email('s.strant@strant.co.uk');
+$cs->set($co,'admin');
+$co=$dri->local_object('contact');
+$cs->set($co,'billing');
+$co=$dri->local_object('contact');
+$co->srid(1);  ## just make it any true value to make sure it is a contact:update and not a contact:create ; the value itself is not used during account:update anyway
+$co->voice('01865 232564');
+$cs->add($co,'admin');
+$toc->set('contact',$cs);
+$rc=$dri->account_update('286467',$toc);
+is_string($R1,$E1.'<command><update><account:update xmlns:account="http://www.nominet.org.uk/epp/xml/nom-account-1.0" xmlns:contact="http://www.nominet.org.uk/epp/xml/nom-contact-1.0" xsi:schemaLocation="http://www.nominet.org.uk/epp/xml/nom-account-1.0 nom-account-1.0.xsd"><account:roid>286467</account:roid><account:trad-name>R. S. Industries</account:trad-name><account:type>STRA</account:type><account:co-no>NI123456</account:co-no><account:addr type="billing"/><account:contact order="1" type="admin"><contact:create><contact:name>Ms S. Strant</contact:name><contact:phone>01865 123457</contact:phone><contact:fax>01865 123456</contact:fax><contact:email>s.strant@strant.co.uk</contact:email></contact:create></account:contact><account:contact order="2" type="admin"><contact:update><contact:phone>01865 232564</contact:phone></contact:update></account:contact><account:contact order="1" type="billing"/></account:update></update><clTRID>ABC-12345</clTRID></command>'.$E2,'account_update build');
+
 
 exit 0;
 

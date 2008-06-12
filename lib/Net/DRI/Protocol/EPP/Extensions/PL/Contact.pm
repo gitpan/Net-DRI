@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .PL Contact EPP extension commands
 ##
-## Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -19,7 +19,9 @@ package Net::DRI::Protocol::EPP::Extensions::PL::Contact;
 
 use strict;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+use Net::DRI::Util;
+
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -49,7 +51,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -122,7 +124,7 @@ sub info
  my ($epp,$contact,$ep)=@_;
  my $mes=$epp->message();
 
- return unless (defined($ep) && (ref($ep) eq 'HASH') && exists($ep->{auth}) && (ref($ep->{auth}) eq 'HASH') && exists($ep->{auth}->{pw}));
+ return unless (Net::DRI::Util::has_auth($ep) && exists($ep->{auth}->{pw}));
 
  my $eid=build_command_extension($mes,$epp,'extcon:info');
  $mes->command_extension($eid,[['extcon:authInfo',['extcon:pw',$ep->{auth}->{pw}]]]);

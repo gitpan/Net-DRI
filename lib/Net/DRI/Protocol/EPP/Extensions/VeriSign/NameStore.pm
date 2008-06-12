@@ -22,7 +22,7 @@ use strict;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 our $NS='http://www.verisign-grs.com/epp/namestoreExt-1.1';
 
 =pod
@@ -115,7 +115,7 @@ sub add_namestore_ext
 
  my $eid=$mes->command_extension_register('namestoreExt:namestoreExt',sprintf('xmlns:namestoreExt="%s" xsi:schemaLocation="%s namestoreExt-1.1.xsd"',$NS,$NS));
 
- if (defined($rd) && (ref($rd) eq 'HASH') && exists($rd->{subproductid}) && $rd->{subproductid})
+ if (Net::DRI::Util::has_key($rd,'subproductid') && $rd->{subproductid})
  {
   $mes->command_extension($eid,['namestoreExt:subProduct',$rd->{subproductid}]);
   return;
@@ -133,6 +133,8 @@ sub add_namestore_ext
  $ext='dotNET' if ($domain=~m/\.net$/i);
  $ext='dotCC' if ($domain=~m/\.cc$/i);
  $ext='dotTV' if ($domain=~m/\.tv$/i);
+ $ext='dotBZ' if ($domain=~m/\.bz$/i);
+ $ext='dotJOBS' if ($domain=~m/\.jobs$/i);
 
  $mes->command_extension($eid,['namestoreExt:subProduct',$ext]);
 }

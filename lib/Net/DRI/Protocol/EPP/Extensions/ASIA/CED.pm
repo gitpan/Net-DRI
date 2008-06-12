@@ -19,13 +19,13 @@ package Net::DRI::Protocol::EPP::Extensions::ASIA::CED;
 
 use strict;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Protocol::EPP::Extensions::ASIA::CED - .ASIA EPP CED extensions
+Net::DRI::Protocol::EPP::Extensions::ASIA::CED - .ASIA EPP CED extensions for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -69,6 +69,7 @@ sub register_commands
  my ($class,$version)=@_;
  my %domtmp=(
            create =>		[ \&dom_create, undef ],
+           update =>		[ \&dom_update, undef ],
 	   info =>		[ undef, \&dom_parse ]
          );
  my %contacttmp=(
@@ -117,6 +118,41 @@ sub dom_create
  }
 }
 
+sub dom_update
+{
+	my ($epp, $domain, $todo) = @_;
+	my $mes = $epp->message();
+	my $url = $todo->set('url');
+	my $cs = $todo->set('contact');
+	my @ceddata;
+
+	push(@ceddata, ['asia:maintainerUrl', $url]) if (defined($url));
+
+	if (defined($cs))
+	{
+		foreach my $type ($cs->types())
+		{
+			# Skip standard types
+			next if (grep { $_ eq $type } qw(registrant admin tech billing));
+
+			foreach my $c ($cs->get($type))
+			{
+				push(@ceddata, ['asia:contact',
+					{type => $type}, $c->srid()]);
+			}
+		}
+	}
+
+	if (@ceddata)
+	{
+		my $eid = $mes->command_extension_register('asia:create',
+			'xmlns:asia="urn:afilias:params:xml:ns:asia-1.0" ' .
+			'xsi:schemaLocation="urn:afilias:params:xml:ns:' .
+			'asia-1.0 asia-1.0.xsd"');
+		$mes->command_extension($eid, ['asia:chg', @ceddata]);
+	}
+}
+
 sub dom_parse
 {
  my ($po,$otype,$oaction,$oname,$rinfo)=@_;
@@ -126,7 +162,11 @@ sub dom_parse
  my $ct;
  my $c;
 
- return unless ($ceddata);
+ $cs = $rinfo->{$otype}->{$oname}->{contact}
+	if (defined($otype) && defined($oname) && defined($rinfo) &&
+	    defined($rinfo->{$otype}) && defined($rinfo->{$otype}->{$oname}) &&
+	    defined($rinfo->{$otype}->{$oname}->{contact}));;
+ return unless ($ceddata && $cs);
 
  $c = $ceddata->getElementsByTagNameNS('urn:afilias:params:xml:ns:asia-1.0',
 	'maintainerUrl');
@@ -150,7 +190,7 @@ sub user_create
  my $mes=$epp->message();
  my @ceddata;
 
- return unless (UNIVERSAL::isa($contact, 'Net::DRI::Data::Contact::ASIA'));
+ return unless Net::DRI::Util::isa_contact($contact, 'Net::DRI::Data::Contact::ASIA');
 
  push(@ceddata, ['asia:ccLocality', $contact->cedcc()])
 	if (UNIVERSAL::can($contact, 'cedcc') && defined($contact->cedcc()) && length($contact->cedcc()));

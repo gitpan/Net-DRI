@@ -25,7 +25,7 @@ use Net::DRI::Protocol::ResultStatus;
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version method params result errcode errmsg));
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -172,19 +172,6 @@ sub result_status
 
  my $eppcode=(defined($code) && exists($CODES{$code}))? $CODES{$code} : 'GENERIC_ERROR';
  return Net::DRI::Protocol::ResultStatus->new('ovh_ws',$code,$ok? 'COMMAND_SUCCESSFUL' : $eppcode,$ok,$msg,'en');
-}
-
-####################################################################################################
-
-sub get_name_from_message
-{
- my ($self)=@_;
- my $c=$self->method();
- my $rp=$self->params();
-
- return 'domains' if ($c eq 'domainList');
- return $rp->{domain} if ($c=~m/^domain/);
- return 'session';
 }
 
 ####################################################################################################

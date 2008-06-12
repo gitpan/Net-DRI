@@ -46,31 +46,29 @@ Currently Net::DRI ships with:
   * CentralNic extensions: Release, TTL, WebForwarding
   * Domain/Contact/Host and other extensions needed for extra services in various TLD:
     .EU .COM .NET .MOBI .AERO .CAT .US .PL .SE .BE .AT .COOP .LU .ASIA .AU .NAME .ORG .UK
+    .DE .CH .LI .HN .SC .VC .AG .BZ .LC .MN .ME .CZ .TRAVEL .NO
 - a full DAS (Domain Availability Service) implementation for .BE & .EU
 - a full Whois implementation (RFC 3912) for thin and thick registries :
-     support included for domain names in .COM .NET .ORG .BIZ .INFO .AERO 
-     .EU .MOBI .NAME .LU .WS .SE .CAT .AT
+     support included for domain names in .COM .NET .ORG .BIZ .INFO .AERO
+     .EU .MOBI .NAME .LU .WS .SE .CAT .AT .TRAVEL
 - a TCP/TLS socket transport
 - various SOAP transports over HTTP/HTTPS
 - an SMTP transport
 - Net::DRI::DRD::* modules for : .EU .COM .NET .TV .CC .WS .SE .PL .US .CAT 
 		.BE .MOBI .INFO .ORG .AT .LU .BIZ .NAME .NU .UK .AU .AERO .ASIA .COOP
-		IENUMAT
+		IENUMAT .DE .CH .LI .HN .SC .VC .AG .BZ .LC .MN .ME .CZ .TRAVEL
 - a Net::DRI::DRD::AFNIC covering AFNIC registry for .FR
      (only domain_check through web services and all operations by email)
 - Net::DRI::DRD::* modules to use registrars API for Gandi, OVH, BookMyName
 
-
-Work is underway to provide full support for asynchronous registries,
-as well as advanced features such as defered send.
 
 If you are a registry/registrar/reseller, we would welcome
 the opportunity to be able to test Net::DRI against your system. Please
 drop a note to the authors of Net::DRI and do not hesitate to provide
 this framework to your clients (see license file).
 
-If you are already using Net::DRI or planning to do so, please let us 
-know also. Do not hesitate to let others know and if you want make a link
+If you are already using Net::DRI or planning to do so, please let us also know.
+Do not hesitate to let others know and if you want, you are welcome to make a link
 back to our website at <http://www.dotandco.com/services/software/Net-DRI/index.en>
 
 Perl modules needed
@@ -110,7 +108,8 @@ Use the standard procedure:
 perl Makefile.PL ; make ; make test ; make install
 Or just copy the content of the lib/ directory somewhere in your path.
 You can use tests available in t/ to make sure everything is well.
-(all tests are done locally and do not require a network connection)
+(all tests are done locally and do not require a network connection ; 
+those who require a network connection are not enabled by default)
 
 How to use
 ----------
@@ -124,6 +123,7 @@ ws_rrp.pl    : as registrar, to connect to .WS using RRP
 eurid_epp.pl : as registrar, connect to EURid test systems
 cat_epp.pl   : as registrar, connect to .CAT test systems
 coop_epp.pl  : as registrar, connect to .COOP test systems
+epp_client_no.pl (+ xmlfilter.pl) : as registrar, do operations with the .NO registry
 
 eurid_das.pl : for anyone, to check domain availability in .EU
 whois.pl     : for anyone, to do whois queries for some TLDs.
@@ -165,7 +165,7 @@ Typical use of this library would go along those lines:
    set the default profile to the one being created)
   OR
   $dri->new_profile('profilename','profiletype',[transport params],[protocol params])
-  to use registry driver default for profiletype (see transport_protocol_default in each DRD)
+  to use registry driver default for profiletype (see transport_protocol_default in each DRD modules)
   for transport & protocol classes.
 
   Each registry driver is used through a specific profile. Each driver can have at the same time
@@ -210,7 +210,7 @@ Typical use of this library would go along those lines:
  to get back the same information (if not given by the methods or if you want to discard output)
 
  Information that has been sent by registry will be available through $dri->get_info(...)
- with a specific key. The key to use depends on the operation, but should be registry-independent.
+ with a specific key. The key to use depends on the operation, but should be mostly registry-independent.
  get_info() gives back information related to the latest operation.
  If you use target() and later get_info() you will get information related to the latest operation
  for the registry/profile specified in the target() call.
@@ -227,11 +227,6 @@ If you pass a true value to ping(), it will automatically reconnect if the conne
 
 Available API
 -------------
-
-* is_thick()
-
- gives 1 if the current registry stores contacts (thick registry)
- [DEPRECATED, use has_object('contact')]
 
 * has_object($type)
 
@@ -251,7 +246,7 @@ Available API
 
  completely delete cache for current registry and current profile
 
-* verify_name_domain() verify_name_host() 
+* verify_name_domain() verify_name_host()
 
  gives 0 if the given argument is a correct name for a domain name or an hostname
  at the current registry.
@@ -265,8 +260,8 @@ Available API
 
  Create a domain at the current registry and current profile.
  A domain name and an hash ref should be provided.
- The hash ref can have a ``duration'' key with its value being a DateTime::Duration object,
- and a ``ns'' key with its value being a Net::DRI::Data::Hosts object.
+ The hash ref can have a "duration" key with its value being a DateTime::Duration object,
+ and a "ns" key with its value being a Net::DRI::Data::Hosts object.
  If nameservers are given, they must already exist at registry.
 
  You may use get_info with the following keys to get more information:

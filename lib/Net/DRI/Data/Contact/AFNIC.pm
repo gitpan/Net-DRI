@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Handling of contact data for AFNIC
 ##
-## Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -24,7 +24,7 @@ __PACKAGE__->mk_accessors(qw(legal_form legal_form_other legal_id jo trademark k
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -94,7 +94,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -109,7 +109,7 @@ See the LICENSE file that comes with this distribution for more details.
 ####################################################################################################
 
 our $LETTRES=qr{A-ZÀÂÇÈÉÊËÎÏÔÙÛÜ¾Æ¼a-zàâçèéêëîïôùûüÿæ½};
-our $NOM_LIBRE_ITEM=qr{[${LETTRES}0-9\(\)\.\[\]\?\+\*#&/!\@',><":-]+'};
+our $NOM_LIBRE_ITEM=qr{[${LETTRES}0-9\(\)\.\[\]\?\+\*#&/!\@',><":-]+};
 our $NOM_PROPRE_ITEM=qr{[${LETTRES}]+(('?(?:[${LETTRES}]+(?:\-?[${LETTRES}]+)?)+)|(?:\.?))};
 our $NOM_PROPRE=qr{${NOM_PROPRE_ITEM}( +${NOM_PROPRE_ITEM})*};
 our $ADRESSE_ITEM=qr{[${LETTRES}0-9\(\)\./',"#-]+};

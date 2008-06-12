@@ -2,7 +2,7 @@
 
 use Net::DRI;
 use Net::DRI::Data::Raw;
-
+use DateTime;
 use Test::More tests => 65;
 eval { no warnings; require Test::LongString; Test::LongString->import(max => 100); $Test::LongString::Context=50; };
 *{'main::is_string'}=\&main::is if $@;
@@ -166,8 +166,7 @@ is_string($R1,$E1.'<command><delete><domain:delete xmlns:domain="urn:ietf:params
 
 ## clTRID seems wrong in example
 $R2='';
-my $ro=$dri->remote_object('domain');
-$rc=$ro->restore('domain.lu');
+$rc=$dri->domain_restore('domain.lu');
 is_string($R1,$E1.'<extension><dnslu:ext xmlns:dnslu="http://www.dns.lu/xml/epp/dnslu-1.0" xsi:schemaLocation="http://www.dns.lu/xml/epp/dnslu-1.0 dnslu-1.0.xsd"><dnslu:command><dnslu:restore><dnslu:domain><dnslu:name>domain.lu</dnslu:name></dnslu:domain></dnslu:restore></dnslu:command></dnslu:ext></extension>'.$E2,'domain_restore');
 
 ## example seems wrong: wrong namespace (dnslu instead of domain) in non extension part
@@ -176,7 +175,7 @@ $cs=$dri->local_object('contactset');
 $cs->set($dri->local_object('contact')->srid('H100'),'registrant');
 $cs->set($dri->local_object('contact')->srid('C100'),'admin');
 $cs->set($dri->local_object('contact')->srid('C100'),'tech');
-$rc=$ro->transfer_request('cafe.lu',{ns=>$dri->local_object('hosts')->set(['ns1.restena.lu'],['ns2.restena.lu'],['ns3.restena.lu']),contact=>$cs,status=>$dri->local_object('status')->no('publish'),trDate=>DateTime->new(year=>2004,month=>6,day=>30)});
+$rc=$dri->domain_transfer_start('cafe.lu',{ns=>$dri->local_object('hosts')->set(['ns1.restena.lu'],['ns2.restena.lu'],['ns3.restena.lu']),contact=>$cs,status=>$dri->local_object('status')->no('publish'),trDate=>DateTime->new(year=>2004,month=>6,day=>30)});
 is_string($R1,$E1.'<command><transfer op="request"><domain:transfer xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>cafe.lu</domain:name></domain:transfer></transfer><extension><dnslu:ext xmlns:dnslu="http://www.dns.lu/xml/epp/dnslu-1.0" xsi:schemaLocation="http://www.dns.lu/xml/epp/dnslu-1.0 dnslu-1.0.xsd"><dnslu:transfer><dnslu:domain><dnslu:ns><dnslu:hostObj>ns1.restena.lu</dnslu:hostObj><dnslu:hostObj>ns2.restena.lu</dnslu:hostObj><dnslu:hostObj>ns3.restena.lu</dnslu:hostObj></dnslu:ns><dnslu:registrant>H100</dnslu:registrant><dnslu:contact type="admin">C100</dnslu:contact><dnslu:contact type="tech">C100</dnslu:contact><dnslu:status s="clientHold"/><dnslu:trDate>2004-06-30</dnslu:trDate></dnslu:domain></dnslu:transfer></dnslu:ext></extension><clTRID>ABC-12345</clTRID></command>'.$E2,'domain_transfer_request build'); 
 is(''.$dri->get_info('trDate'),'2004-09-18T10:00:00','domain_transfer_request get_info(trDate)');
 
@@ -185,11 +184,11 @@ $cs=$dri->local_object('contactset');
 $cs->set($dri->local_object('contact')->srid('H100'),'registrant');
 $cs->set($dri->local_object('contact')->srid('C100'),'admin');
 $cs->set($dri->local_object('contact')->srid('C100'),'tech');
-$rc=$ro->trade_request('cafe.lu',{ns=>$dri->local_object('hosts')->set(['ns1.restena.lu'],['ns2.restena.lu'],['ns3.restena.lu']),contact=>$cs,status=>$dri->local_object('status')->no('publish'),trDate=>DateTime->new(year=>2004,month=>6,day=>30)});
+$rc=$dri->domain_trade_start('cafe.lu',{ns=>$dri->local_object('hosts')->set(['ns1.restena.lu'],['ns2.restena.lu'],['ns3.restena.lu']),contact=>$cs,status=>$dri->local_object('status')->no('publish'),trDate=>DateTime->new(year=>2004,month=>6,day=>30)});
 is_string($R1,$E1.'<extension><dnslu:ext xmlns:dnslu="http://www.dns.lu/xml/epp/dnslu-1.0" xsi:schemaLocation="http://www.dns.lu/xml/epp/dnslu-1.0 dnslu-1.0.xsd"><dnslu:command><dnslu:trade op="request"><dnslu:domain><dnslu:name>cafe.lu</dnslu:name><dnslu:ns><dnslu:hostObj>ns1.restena.lu</dnslu:hostObj><dnslu:hostObj>ns2.restena.lu</dnslu:hostObj><dnslu:hostObj>ns3.restena.lu</dnslu:hostObj></dnslu:ns><dnslu:registrant>H100</dnslu:registrant><dnslu:contact type="admin">C100</dnslu:contact><dnslu:contact type="tech">C100</dnslu:contact><dnslu:status s="clientHold"/><dnslu:trDate>2004-06-30</dnslu:trDate></dnslu:domain></dnslu:trade></dnslu:command></dnslu:ext></extension>'.$E2,'domain_trade_request build');
 
 $R2=$E1.'<response>'.r().'<extension><dnslu:ext xmlns:dnslu="http://www.dns.lu/xml/epp/dnslu-1.0" xsi:schemaLocation ="http://www.dns.lu/xml/epp/dnslu-1.0 dnslu-1.0.xsd"><dnslu:resData><dnslu:traData><dnslu:domain><dnslu:name>cafe.lu</dnslu:name><dnslu:trStatus>pending</dnslu:trStatus><dnslu:reID>restena-id</dnslu:reID><dnslu:reDate>2004-09-08T11:39:41Z</dnslu:reDate><dnslu:acDate>2004-09-15T11:39:41Z</dnslu:acDate><dnslu:trDate>2004-09-18T10:00:00Z</dnslu:trDate></dnslu:domain></dnslu:traData></dnslu:resData></dnslu:ext></extension>'.$TRID.'</response>'.$E2;
-$rc=$ro->trade_query('cafe.lu');
+$rc=$dri->domain_trade_query('cafe.lu');
 is_string($R1,$E1.'<extension><dnslu:ext xmlns:dnslu="http://www.dns.lu/xml/epp/dnslu-1.0" xsi:schemaLocation="http://www.dns.lu/xml/epp/dnslu-1.0 dnslu-1.0.xsd"><dnslu:command><dnslu:trade op="query"><dnslu:domain><dnslu:name>cafe.lu</dnslu:name></dnslu:domain></dnslu:trade></dnslu:command></dnslu:ext></extension>'.$E2,'domain_trade_query build');
 is($dri->get_info('trStatus'),'pending','domain_trade_query get_info(trStatus)');
 is($dri->get_info('reID'),'restena-id','domain_trade_query get_info(reID)');
@@ -199,7 +198,7 @@ is(''.$dri->get_info('trDate'),'2004-09-18T10:00:00','domain_trade_query get_inf
 
 
 $R2='';
-$rc=$ro->trade_cancel('domain.lu');
+$rc=$dri->domain_trade_stop('domain.lu');
 is_string($R1,$E1.'<extension><dnslu:ext xmlns:dnslu="http://www.dns.lu/xml/epp/dnslu-1.0" xsi:schemaLocation="http://www.dns.lu/xml/epp/dnslu-1.0 dnslu-1.0.xsd"><dnslu:command><dnslu:trade op="cancel"><dnslu:domain><dnslu:name>domain.lu</dnslu:name></dnslu:domain></dnslu:trade></dnslu:command></dnslu:ext></extension>'.$E2,'domain_trade_cancel build');
 
 
@@ -208,11 +207,11 @@ $cs=$dri->local_object('contactset');
 $cs->set($dri->local_object('contact')->srid('H100'),'registrant');
 $cs->set($dri->local_object('contact')->srid('C100'),'admin');
 $cs->set($dri->local_object('contact')->srid('C100'),'tech');
-$rc=$ro->transfer_trade_request('cafe.lu',{ns=>$dri->local_object('hosts')->set(['ns1.restena.lu'],['ns2.restena.lu'],['ns3.restena.lu']),contact=>$cs,status=>$dri->local_object('status')->no('publish'),trDate=>DateTime->new(year=>2004,month=>6,day=>30)});
+$rc=$dri->domain_transfer_trade_start('cafe.lu',{ns=>$dri->local_object('hosts')->set(['ns1.restena.lu'],['ns2.restena.lu'],['ns3.restena.lu']),contact=>$cs,status=>$dri->local_object('status')->no('publish'),trDate=>DateTime->new(year=>2004,month=>6,day=>30)});
 is_string($R1,$E1.'<extension><dnslu:ext xmlns:dnslu="http://www.dns.lu/xml/epp/dnslu-1.0" xsi:schemaLocation="http://www.dns.lu/xml/epp/dnslu-1.0 dnslu-1.0.xsd"><dnslu:command><dnslu:transferTrade op="request"><dnslu:domain><dnslu:name>cafe.lu</dnslu:name><dnslu:ns><dnslu:hostObj>ns1.restena.lu</dnslu:hostObj><dnslu:hostObj>ns2.restena.lu</dnslu:hostObj><dnslu:hostObj>ns3.restena.lu</dnslu:hostObj></dnslu:ns><dnslu:registrant>H100</dnslu:registrant><dnslu:contact type="admin">C100</dnslu:contact><dnslu:contact type="tech">C100</dnslu:contact><dnslu:status s="clientHold"/><dnslu:trDate>2004-06-30</dnslu:trDate></dnslu:domain></dnslu:transferTrade></dnslu:command></dnslu:ext></extension>'.$E2,'domain_transfer_trade_request build');
 
 $R2=$E1.'<response>'.r().'<extension><dnslu:ext xmlns:dnslu="http://www.dns.lu/xml/epp/dnslu-1.0" xsi:schemaLocation ="http://www.dns.lu/xml/epp/dnslu-1.0 dnslu-1.0.xsd"><dnslu:resData><dnslu:trnTraData><dnslu:domain><dnslu:name>cafe.lu</dnslu:name><dnslu:trStatus>pending</dnslu:trStatus><dnslu:reID>restena-id</dnslu:reID><dnslu:reDate>2004-09-08T11:39:41Z</dnslu:reDate><dnslu:acDate>2004-09-15T11:39:41Z</dnslu:acDate><dnslu:trDate>2004-09-18T10:00:00Z</dnslu:trDate></dnslu:domain></dnslu:trnTraData></dnslu:resData></dnslu:ext></extension>'.$TRID.'</response>'.$E2;
-$rc=$ro->transfer_trade_query('cafe.lu');
+$rc=$dri->domain_transfer_trade_query('cafe.lu');
 is_string($R1,$E1.'<extension><dnslu:ext xmlns:dnslu="http://www.dns.lu/xml/epp/dnslu-1.0" xsi:schemaLocation="http://www.dns.lu/xml/epp/dnslu-1.0 dnslu-1.0.xsd"><dnslu:command><dnslu:transferTrade op="query"><dnslu:domain><dnslu:name>cafe.lu</dnslu:name></dnslu:domain></dnslu:transferTrade></dnslu:command></dnslu:ext></extension>'.$E2,'domain_transfer_trade_query build');
 is($dri->get_info('trStatus'),'pending','domain_transfer_trade_query get_info(trStatus)');
 is($dri->get_info('reID'),'restena-id','domain_transfer_trade_query get_info(reID)');
@@ -221,7 +220,7 @@ is(''.$dri->get_info('acDate'),'2004-09-15T11:39:41','domain_transfer_trade_quer
 is(''.$dri->get_info('trDate'),'2004-09-18T10:00:00','domain_transfer_trade_query get_info(trDate)');
 
 $R2='';
-$rc=$ro->transfer_trade_cancel('domain.lu');
+$rc=$dri->domain_transfer_trade_stop('domain.lu');
 is_string($R1,$E1.'<extension><dnslu:ext xmlns:dnslu="http://www.dns.lu/xml/epp/dnslu-1.0" xsi:schemaLocation="http://www.dns.lu/xml/epp/dnslu-1.0 dnslu-1.0.xsd"><dnslu:command><dnslu:transferTrade op="cancel"><dnslu:domain><dnslu:name>domain.lu</dnslu:name></dnslu:domain></dnslu:transferTrade></dnslu:command></dnslu:ext></extension>'.$E2,'domain_transfer_trade_cancel build');
 
 
@@ -230,11 +229,11 @@ $cs=$dri->local_object('contactset');
 $cs->set($dri->local_object('contact')->srid('H100'),'registrant');
 $cs->set($dri->local_object('contact')->srid('C100'),'admin');
 $cs->set($dri->local_object('contact')->srid('C100'),'tech');
-$rc=$ro->transfer_restore_request('cafe.lu',{ns=>$dri->local_object('hosts')->set(['ns1.restena.lu'],['ns2.restena.lu'],['ns3.restena.lu']),contact=>$cs,status=>$dri->local_object('status')->no('publish'),trDate=>DateTime->new(year=>2004,month=>6,day=>30)});
+$rc=$dri->domain_transfer_restore_start('cafe.lu',{ns=>$dri->local_object('hosts')->set(['ns1.restena.lu'],['ns2.restena.lu'],['ns3.restena.lu']),contact=>$cs,status=>$dri->local_object('status')->no('publish'),trDate=>DateTime->new(year=>2004,month=>6,day=>30)});
 is_string($R1,$E1.'<extension><dnslu:ext xmlns:dnslu="http://www.dns.lu/xml/epp/dnslu-1.0" xsi:schemaLocation="http://www.dns.lu/xml/epp/dnslu-1.0 dnslu-1.0.xsd"><dnslu:command><dnslu:transferRestore op="request"><dnslu:domain><dnslu:name>cafe.lu</dnslu:name><dnslu:ns><dnslu:hostObj>ns1.restena.lu</dnslu:hostObj><dnslu:hostObj>ns2.restena.lu</dnslu:hostObj><dnslu:hostObj>ns3.restena.lu</dnslu:hostObj></dnslu:ns><dnslu:registrant>H100</dnslu:registrant><dnslu:contact type="admin">C100</dnslu:contact><dnslu:contact type="tech">C100</dnslu:contact><dnslu:status s="clientHold"/><dnslu:trDate>2004-06-30</dnslu:trDate></dnslu:domain></dnslu:transferRestore></dnslu:command></dnslu:ext></extension>'.$E2,'domain_transfer_restore_request build');
 
 $R2=$E1.'<response>'.r().'<extension><dnslu:ext xmlns:dnslu="http://www.dns.lu/xml/epp/dnslu-1.0" xsi:schemaLocation ="http://www.dns.lu/xml/epp/dnslu-1.0 dnslu-1.0.xsd"><dnslu:resData><dnslu:trnResData><dnslu:domain><dnslu:name>cafe.lu</dnslu:name><dnslu:trStatus>pending</dnslu:trStatus><dnslu:reID>restena-id</dnslu:reID><dnslu:reDate>2004-09-08T11:39:41Z</dnslu:reDate><dnslu:acDate>2004-09-15T11:39:41Z</dnslu:acDate><dnslu:trDate>2004-09-18T10:00:00Z</dnslu:trDate></dnslu:domain></dnslu:trnResData></dnslu:resData></dnslu:ext></extension>'.$TRID.'</response>'.$E2;
-$rc=$ro->transfer_restore_query('cafe.lu');
+$rc=$dri->domain_transfer_restore_query('cafe.lu');
 is_string($R1,$E1.'<extension><dnslu:ext xmlns:dnslu="http://www.dns.lu/xml/epp/dnslu-1.0" xsi:schemaLocation="http://www.dns.lu/xml/epp/dnslu-1.0 dnslu-1.0.xsd"><dnslu:command><dnslu:transferRestore op="query"><dnslu:domain><dnslu:name>cafe.lu</dnslu:name></dnslu:domain></dnslu:transferRestore></dnslu:command></dnslu:ext></extension>'.$E2,'domain_transfer_restore_query build');
 is($dri->get_info('trStatus'),'pending','domain_transfer_restore_query get_info(trStatus)');
 is($dri->get_info('reID'),'restena-id','domain_transfer_restore_query get_info(reID)');
@@ -243,7 +242,7 @@ is(''.$dri->get_info('acDate'),'2004-09-15T11:39:41','domain_transfer_restore_qu
 is(''.$dri->get_info('trDate'),'2004-09-18T10:00:00','domain_transfer_restore_query get_info(trDate)');
 
 $R2='';
-$rc=$ro->transfer_restore_cancel('domain.lu');
+$rc=$dri->domain_transfer_restore_stop('domain.lu');
 is_string($R1,$E1.'<extension><dnslu:ext xmlns:dnslu="http://www.dns.lu/xml/epp/dnslu-1.0" xsi:schemaLocation="http://www.dns.lu/xml/epp/dnslu-1.0 dnslu-1.0.xsd"><dnslu:command><dnslu:transferRestore op="cancel"><dnslu:domain><dnslu:name>domain.lu</dnslu:name></dnslu:domain></dnslu:transferRestore></dnslu:command></dnslu:ext></extension>'.$E2,'domain_transfer_restore_cancel build');
 
 ## Registry uses an extra status « inactive »

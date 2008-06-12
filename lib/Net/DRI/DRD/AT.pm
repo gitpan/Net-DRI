@@ -21,9 +21,10 @@ package Net::DRI::DRD::AT;
 use strict;
 use base qw/Net::DRI::DRD/;
 
-use Net::DRI::Util;
+use Net::DRI::Exception;
+use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -153,7 +154,7 @@ sub domain_operation_needs_is_mine
 sub domain_withdraw
 {
  my ($self,$ndr,$domain,$rd)=@_;
- err_invalid_domain_name($domain) if $self->verify_name_domain($domain);
+ $self->err_invalid_domain_name($domain) if $self->verify_name_domain($domain);
 
  $rd={} unless (defined($rd) && (ref($rd) eq 'HASH'));
  $rd->{transactionname} = 'withdraw';
@@ -165,7 +166,7 @@ sub domain_withdraw
 sub domain_transfer_execute
 {
  my ($self,$ndr,$domain,$rd)=@_;
- err_invalid_domain_name($domain) if $self->verify_name_domain($domain);
+ $self->err_invalid_domain_name($domain) if $self->verify_name_domain($domain);
 
  $rd={} unless (defined($rd) && (ref($rd) eq 'HASH'));
  $rd->{transactionname} = 'transfer_execute';

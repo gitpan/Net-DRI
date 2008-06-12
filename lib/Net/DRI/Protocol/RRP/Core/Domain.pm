@@ -24,7 +24,7 @@ use Net::DRI::Protocol::RRP::Core::Status;
 use Net::DRI::Protocol::RRP;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -103,14 +103,14 @@ sub add
  build_msg($mes,'add',$domain);
 
  ## (MAY)
- if (exists($rd->{duration}) && defined($rd->{duration}) && (ref($rd->{duration}) eq 'DateTime::Duration'))
+ if (Net::DRI::Util::has_duration($rd))
  {
   my $period=$rd->{duration}->years();
-  Net::DRI::Exceptions::usererr_invalid_parameters("period must be an integer") unless Net::DRI::Util::isint($period);
+  Net::DRI::Exceptions::usererr_invalid_parameters('period must be an integer') unless Net::DRI::Util::isint($period);
   $mes->options('Period',$period);
  }
  ## (MAY) 1 to 13 nameservers
- if (exists($rd->{ns}) && defined($rd->{ns}) && (ref($rd->{ns}) eq 'Net::DRI::Data::Hosts') && !$rd->{ns}->is_empty()) 
+ if (Net::DRI::Util::has_ns($rd))
  {
   foreach ($rd->{ns}->get_names(13)) { $mes->entities('NameServer',$_); }
  }
@@ -209,7 +209,7 @@ sub mod
  my $mes=$rrp->message();
  build_msg($mes,'mod',$domain);
 
- Net::DRI::Exception::usererr_invalid_parameters($todo." must be a Net::DRI::Data::Changes object") unless ($todo && UNIVERSAL::isa($todo,'Net::DRI::Data::Changes'));
+ Net::DRI::Exception::usererr_invalid_parameters($todo.' must be a Net::DRI::Data::Changes object') unless Net::DRI::Util::isa_changes($todo);
  if ((grep { ! /^(?:ns|status)$/ } $todo->types()) ||
      (grep { ! /^(?:add|del)$/ } $todo->types('ns')) ||
      (grep { ! /^(?:add|del)$/ } $todo->types('status'))

@@ -2,7 +2,7 @@
 
 use Net::DRI::Data::Hosts;
 
-use Test::More tests => 22;
+use Test::More tests => 25;
 
 my $d=Net::DRI::Data::Hosts->new();
 isa_ok($d,'Net::DRI::Data::Hosts');
@@ -52,9 +52,16 @@ is($d->count(),1,'count() after set()');
 @c=$d->get_details(1);
 is_deeply($c[1],['1.2.3.4','1.2.3.5'],'get_details(integer) ip address after set()');
 
+$d->add('test.extra.parameters',[],[],{key1=>'v1',key2=>2});
+@c=$d->get_details(2);
+isa_ok($c[-1],'HASH');
+is_deeply($c[-1],{key1=>'v1',key2=>2},'correct retrieval of extra parameters');
+$d->add('test.extra.parameters',[],[],{key2=>22,key3=>'whatever'});
+@c=$d->get_details(2);
+is_deeply($c[-1],{key1=>'v1',key2=>22,key3=>'whatever'},'correct retrieval of extra parameters after merge');
 
 TODO: {
-        local $TODO="tests on add() with other params, new_set(), is_empty()";
+        local $TODO='tests on add() with other params, new_set(), is_empty()';
         ok(0);
 }
 

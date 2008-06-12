@@ -1,6 +1,6 @@
-## Domain Registry Interface, EPP IDN Language (EPP-IDN-Lang-Mapping.pdf)
+## Domain Registry Interface, Afilias EPP extensions
 ##
-## Copyright (c) 2007 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
+## Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -15,12 +15,11 @@
 #
 ####################################################################################################
 
-package Net::DRI::Protocol::EPP::Extensions::PIR::IDNLanguage;
+package Net::DRI::Protocol::EPP::Extensions::Afilias;
 
 use strict;
 
-use Net::DRI::Util;
-use Net::DRI::Exception;
+use base qw/Net::DRI::Protocol::EPP/;
 
 our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
@@ -28,7 +27,7 @@ our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r,
 
 =head1 NAME
 
-Net::DRI::Protocol::EPP::Extensions::PIR::IDNLanguage - PIR (.ORG) EPP IDN Language commands (EPP-IDN-Lang-Mapping.pdf) for Net::DRI
+Net::DRI::Protocol::EPP::Extensions::Afilias - Afilias (.ORG & various ccTLDs) EPP extensions for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -45,7 +44,7 @@ Please also see the SUPPORT file in the distribution.
 =head1 SEE ALSO
 
 E<lt>http://www.dotandco.com/services/software/Net-DRI/E<gt> and
-E<lt>http://oss.bdsprojects.net/projects/netdri/E<gt>
+E<lt>http://oss.bsdprojects.net/projects/netdri/E<gt>
 
 =head1 AUTHOR
 
@@ -53,7 +52,7 @@ Tonnerre Lombard E<lt>tonnerre.lombard@sygroup.chE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -67,41 +66,26 @@ See the LICENSE file that comes with this distribution for more details.
 
 ####################################################################################################
 
-sub register_commands
+sub new
 {
- my ($class,$version)=@_;
- my %tmp=(
-           create => [ \&create, undef ],
-           check =>  [ \&check, undef ],
-         );
+ my $c=shift;
+ my ($drd,$version,$extrah,$defproduct)=@_;
+ my %e=map { $_ => 1 } (defined($extrah)? (ref($extrah)? @$extrah : ($extrah)) : ());
 
- return { 'domain' => \%tmp };
-}
-
-####################################################################################################
-
-sub add_language
-{
- my ($tag,$epp,$domain,$rd)=@_;
- my $mes=$epp->message();
-
- if (defined($rd) && (ref($rd) eq 'HASH') && exists($rd->{language}))
+ ## We do no load automatically IDNLanguage as we do not know if it is
+ ## mandatory
+ if (exists($e{':full'})) ## useful shortcut, modeled after Perl itself
  {
-  Net::DRI::Exception::usererr_invalid_parameters('IDN language tag must be of type XML schema language') unless Net::DRI::Util::xml_is_language($rd->{language});
-
-  my $eid=$mes->command_extension_register($tag,'xmlns:idn="urn:iana:xml:ns:idn" xsi:schemaLocation="urn:iana:xml:ns:idn idn.xsd"');
-  $mes->command_extension($eid,['idn:script', $rd->{language}]);
+  delete($e{':full'});
+  $e{'Net::DRI::Protocol::EPP::Extensions::Afilias::IDNLanguage'}=1;
+  $e{'Net::DRI::Protocol::EPP::Extensions::Afilias::Restore'}=1;
+  $e{'Net::DRI::Protocol::EPP::Extensions::GracePeriod'}=1;
  }
-}
 
-sub create
-{
- return add_language('idn:create',@_);
-}
+ my $self=$c->SUPER::new($drd,$version,[keys(%e)]); ## we are now officially a Net::DRI::Protocol::EPP object
 
-sub check
-{
- return add_language('idn:check',@_);
+ bless($self,$c); ## rebless
+ return $self;
 }
 
 ####################################################################################################
