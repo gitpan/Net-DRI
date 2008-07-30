@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .AU EPP extensions
 ##
-## Copyright (c) 2007 Distribute.IT Pty Ltd, www.distributeit.com.au, Rony Meyer <perl@spot-light.ch>. All rights reserved.
+## Copyright (c) 2007,2008 Distribute.IT Pty Ltd, www.distributeit.com.au, Rony Meyer <perl@spot-light.ch>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -21,7 +21,7 @@ use strict;
 
 use base qw/Net::DRI::Protocol::EPP/;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -51,7 +51,7 @@ Rony Meyer, E<lt>perl@spot-light.chE<gt>
  
 =head1 COPYRIGHT
 
-Copyright (c) 2007 Distribute.IT Pty Ltd, E<lt>http://www.distributeit.com.auE<gt>, Rony Meyer <perl@spot-light.ch>.
+Copyright (c) 2007,2008 Distribute.IT Pty Ltd, E<lt>http://www.distributeit.com.auE<gt>, Rony Meyer <perl@spot-light.ch>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -66,20 +66,16 @@ See the LICENSE file that comes with this distribution for more details.
 ####################################################################################################
 sub new
 {
- my $h=shift;
- my $c=ref($h) || $h;
-
- my ($drd,$version,$extrah)=@_;
+ my ($c,$drd,$version,$extrah)=@_;
  my %e=map { $_ => 1 } (defined($extrah)? (ref($extrah)? @$extrah : ($extrah)) : ());
 
  $e{'Net::DRI::Protocol::EPP::Extensions::AU::Domain'}=1;
 
- my $self=$c->SUPER::new($drd,$version,[keys(%e)]); ## we are now officially a Net::DRI::Protocol::EPP object
-
- $self->{ns}->{auext}=['urn:au:params:xml:ns:auext-1.0','auext-1.0.xsd'];
- $self->{ns}->{auextnew}=['urn:X-au:params:xml:ns:auext-1.1','auext-1.1.xsd'];
-
- bless($self,$c); ## rebless
+ my $self=$c->SUPER::new($drd,$version,[keys(%e)]);
+ $self->ns({auext   => ['urn:au:params:xml:ns:auext-1.0','auext-1.0.xsd'],
+            auextnew=> ['urn:X-au:params:xml:ns:auext-1.1','auext-1.1.xsd'],
+          });
+ $self->capabilities('domain_update','maintainer_url',['set']);
  return $self;
 }
 

@@ -27,7 +27,7 @@ use Net::DRI::Data::ContactSet;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -91,21 +91,11 @@ sub register_commands
 	return { 'nsset' => \%tmp1 };
 }
 
-sub capabilities_add
-{
-	return { 'nsset_update' => {
-		'ns' =>			['add', 'del'],
-		'contact' =>		['add', 'del'],
-		'auth' =>		['set'],
-		'reportlevel' =>	['set']
-	} };
-}
-
 sub ns
 {
 	my ($mes) = @_;
-	return (exists($mes->ns->{nsset})) ? $mes->ns->{nsset}->[0] :
-		'http://www.nic.cz/xml/epp/nsset-1.2';
+        my $ns=$mes->ns('nsset');
+        return defined($ns)? $ns : 'http://www.nic.cz/xml/epp/nsset-1.2';
 }
 
 sub build_command
@@ -130,11 +120,10 @@ sub build_command
 	Net::DRI::Exception->die(1, 'protocol/EPP', 2, 'NSgroup name needed')
 		unless @gn;
 
-	my @ns = exists($msg->ns->{nsset}) ? @{$msg->ns->{nsset}} :
-		('http://www.nic.cz/xml/epp/nsset-1.2', 'nsset-1.2.xsd');
+        my @ns=$msg->nsattrs('nsset');
+        @ns=qw(http://www.nic.cz/xml/epp/nsset-1.2 http://www.nic.cz/xml/epp/nsset-1.2 nsset-1.2.xsd) unless @ns;
 	$msg->command([$command, 'nsset:' . $tcommand,
-		sprintf('xmlns:nsset="%s" xsi:schemaLocation="%s %s"',
-			$ns[0], $ns[0], $ns[1])]);
+		sprintf('xmlns:nsset="%s" xsi:schemaLocation="%s %s"',@ns)]);
 
 	return map { ['nsset:id', $_] } @gn;
 }
@@ -220,7 +209,7 @@ sub check_parse
 	return unless $mes->is_success();
 
 	my $ns = ns($mes);
-	my $chkdata = $mes->get_content('chkData', $ns);
+	my $chkdata = $mes->get_response($ns,'chkData');
 	return unless $chkdata;
 
 	foreach my $cd ($chkdata->getElementsByTagNameNS($ns, 'cd'))
@@ -260,7 +249,7 @@ sub info_parse
 	my $mes = $po->message();
 	return unless $mes->is_success();
 
-	my $infdata = $mes->get_content('infData', ns($mes));
+	my $infdata = $mes->get_response(ns($mes),'infData');
 	return unless $infdata;
 
 	my $ns = Net::DRI::Data::Hosts->new();

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Whois Protocol
 ##
-## Copyright (c) 2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -25,7 +25,7 @@ use Net::DRI::Util;
 use Net::DRI::Exception;
 use Net::DRI::Protocol::Whois::Message;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -55,7 +55,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -71,21 +71,15 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $h=shift;
- my $c=ref($h) || $h;
-
- my ($drd,$version,$extrah)=@_;
-
- my $self=$c->SUPER::new(); ## we are now officially a Net::DRI::Protocol object
+ my ($c,$drd,$version,$extrah)=@_;
+ my $self=$c->SUPER::new();
  $self->name('Whois');
  $version=Net::DRI::Util::check_equal($version,['1.0'],'1.0');
  $self->version($version);
 
- bless($self,$c); ## rebless
-
  my @tlds=$drd->tlds();
  Net::DRI::Exception::usererr_invalid_parameters('Whois can not be used for registry handling multiple TLDs: '.join(',',@tlds)) unless (@tlds==1 || lc($tlds[0]) eq 'com');
- $self->factories({ message => sub { return Net::DRI::Protocol::Whois::Message->new(@_)->version($version); } });
+ $self->factories('message',sub { return Net::DRI::Protocol::Whois::Message->new(@_)->version($version); });
  $self->_load(uc($tlds[0]),$extrah);
  return $self;
 }
@@ -96,5 +90,5 @@ sub _load
  $self->SUPER::_load('Net::DRI::Protocol::Whois::Domain::'.$tld);
 }
 
-############################################################################################
+####################################################################################################
 1;

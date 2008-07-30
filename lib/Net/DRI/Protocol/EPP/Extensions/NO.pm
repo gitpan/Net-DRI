@@ -15,7 +15,7 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::Protocol::EPP::Extensions::NO;
 
@@ -25,7 +25,7 @@ use base qw/Net::DRI::Protocol::EPP/;
 
 use Net::DRI::Data::Contact::NO;
 
-our $VERSION = do { my @r = ( q$Revision: 1.2 $ =~ /\d+/gmx ); sprintf( "%d" . ".%02d" x $#r, @r ); };
+our $VERSION = do { my @r = ( q$Revision: 1.3 $ =~ /\d+/gmx ); sprintf( "%d" . ".%02d" x $#r, @r ); };
 
 =pod
 
@@ -70,10 +70,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 ####################################################################################################
 sub new {
-    my $h = shift;
-    my $c = ref($h) || $h;
-
-    my ( $drd, $version, $extrah ) = @_;
+    my ( $c, $drd, $version, $extrah ) = @_;
     my %e = map { $_ => 1 }
         ( defined($extrah) ? ( ref($extrah) ? @$extrah : ($extrah) ) : () );
 
@@ -83,46 +80,20 @@ sub new {
     $e{'Net::DRI::Protocol::EPP::Extensions::NO::Result'}  = 1;
     $e{'Net::DRI::Protocol::EPP::Extensions::NO::Message'} = 1;
 
-    my $self = $c->SUPER::new( $drd, $version, [ keys(%e) ] )
-        ;    ## we are now officially a Net::DRI::Protocol::EPP object
+    my $self = $c->SUPER::new( $drd, $version, [ keys(%e) ] );
+    $self->ns({ no_contact => [ 'http://www.norid.no/xsd/no-ext-contact-1.0','no-ext-contact-1.0.xsd' ],
+                no_domain  => [ 'http://www.norid.no/xsd/no-ext-domain-1.0','no-ext-domain-1.0.xsd' ],
+                no_host    => [ 'http://www.norid.no/xsd/no-ext-host-1.0','no-ext-host-1.0.xsd' ],
+                no_result  => [ 'http://www.norid.no/xsd/no-ext-result-1.0','no-ext-result-1.0.xsd' ],
+                no_epp     => [ 'http://www.norid.no/xsd/no-ext-epp-1.0','no-ext-epp-1.0.xsd' ],
+             });
 
-    $self->{ns}->{no_contact} = [
-        'http://www.norid.no/xsd/no-ext-contact-1.0',
-        'no-ext-contact-1.0.xsd'
-    ];
 
-    $self->{ns}->{no_domain} = [
-        'http://www.norid.no/xsd/no-ext-domain-1.0',
-        'no-ext-domain-1.0.xsd'
-    ];
+    foreach my $o (qw/mobilephone identity xdisclose/)  { $self->capabilities('contact_update',$o,['set']); }
+    foreach my $o (qw/organization rolecontact xemail/) { $self->capabilities('contact_update',$o,['add','del']); }
+    $self->capabilities('host_update','contact',['set']);
+    $self->factories('contact',sub { return Net::DRI::Data::Contact::NO->new(); });
 
-    $self->{ns}->{no_host} = [ 'http://www.norid.no/xsd/no-ext-host-1.0',
-        'no-ext-host-1.0.xsd' ];
-
-    $self->{ns}->{no_result} = [
-        'http://www.norid.no/xsd/no-ext-result-1.0',
-        'no-ext-result-1.0.xsd'
-    ];
-
-    $self->{ns}->{no_epp}
-        = [ 'http://www.norid.no/xsd/no-ext-epp-1.0', 'no-ext-epp-1.0.xsd' ];
-
-    my $rcapa = $self->capabilities();
-
-  # delete($rcapa->{host_update}->{name}); # .NO will accept host name changes
-
-# set contact_update capabilities here instead of in Extensions/NO/Contact.pm which did not work
-    $rcapa->{contact_update}->{mobilephone}  = ['set'];
-    $rcapa->{contact_update}->{identity}     = ['set'];
-    $rcapa->{contact_update}->{xdisclose}    = ['set'];
-    $rcapa->{contact_update}->{organization} = [ 'add', 'del' ];
-    $rcapa->{contact_update}->{rolecontact}  = [ 'add', 'del' ];
-    $rcapa->{contact_update}->{xemail}       = [ 'add', 'del' ];
-
-    my $rfact = $self->factories();
-    $rfact->{contact} = sub { return Net::DRI::Data::Contact::NO->new(); };
-
-    bless( $self, $c );    ## rebless
     return $self;
 }
 

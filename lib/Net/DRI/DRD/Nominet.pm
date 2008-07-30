@@ -13,7 +13,7 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::DRD::Nominet;
 
@@ -25,7 +25,7 @@ use Net::DRI::Exception;
 
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -67,7 +67,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
-#####################################################################################
+####################################################################################################
 
 sub new
 {
@@ -232,16 +232,16 @@ sub domain_status_allows_transfer { Net::DRI::Exception->die(0,'DRD',4,'No domai
 sub domain_status_allows_renew { Net::DRI::Exception->die(0,'DRD',4,'No domain status update available in .UK'); }
 sub domain_status_allows { Net::DRI::Exception->die(0,'DRD',4,'No domain status update available in .UK'); }
 sub domain_current_status { Net::DRI::Exception->die(0,'DRD',4,'No domain status update available in .UK'); }
-sub host_update_status_add { Net::DRI::Exception->die(0,'DRD',4,'No domain status update available in .UK'); }
-sub host_update_status_del { Net::DRI::Exception->die(0,'DRD',4,'No domain status update available in .UK'); }
-sub host_update_status_set { Net::DRI::Exception->die(0,'DRD',4,'No domain status update available in .UK'); }
-sub host_update_status { Net::DRI::Exception->die(0,'DRD',4,'No domain status update available in .UK'); }
-sub host_current_status { Net::DRI::Exception->die(0,'DRD',4,'No domain status update available in .UK'); }
-sub contact_update_status_add { Net::DRI::Exception->die(0,'DRD',4,'No domain status update available in .UK'); }
-sub contact_update_status_del { Net::DRI::Exception->die(0,'DRD',4,'No domain status update available in .UK'); }
-sub contact_update_status_set { Net::DRI::Exception->die(0,'DRD',4,'No domain status update available in .UK'); }
-sub contact_update_status { Net::DRI::Exception->die(0,'DRD',4,'No domain status update available in .UK'); }
-sub contact_current_status { Net::DRI::Exception->die(0,'DRD',4,'No domain status update available in .UK'); }
+sub host_update_status_add { Net::DRI::Exception->die(0,'DRD',4,'No host status update available in .UK'); }
+sub host_update_status_del { Net::DRI::Exception->die(0,'DRD',4,'No host status update available in .UK'); }
+sub host_update_status_set { Net::DRI::Exception->die(0,'DRD',4,'No host status update available in .UK'); }
+sub host_update_status { Net::DRI::Exception->die(0,'DRD',4,'No host status update available in .UK'); }
+sub host_current_status { Net::DRI::Exception->die(0,'DRD',4,'No host status update available in .UK'); }
+sub contact_update_status_add { Net::DRI::Exception->die(0,'DRD',4,'No contact status update available in .UK'); }
+sub contact_update_status_del { Net::DRI::Exception->die(0,'DRD',4,'No contact status update available in .UK'); }
+sub contact_update_status_set { Net::DRI::Exception->die(0,'DRD',4,'No contact status update available in .UK'); }
+sub contact_update_status { Net::DRI::Exception->die(0,'DRD',4,'No contact status update available in .UK'); }
+sub contact_current_status { Net::DRI::Exception->die(0,'DRD',4,'No contact status update available in .UK'); }
 
 ## Only domain:check is available
 sub host_check { Net::DRI::Exception->die(0,'DRD',4,'No host check available in .UK'); }

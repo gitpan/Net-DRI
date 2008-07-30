@@ -25,7 +25,7 @@ use Net::DRI::Data::Hosts;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -87,8 +87,7 @@ sub build_command
  Net::DRI::Exception->die(1,'protocol/EPP',2,'Roid of NS object needed') unless (defined($roid) && $roid && !ref($roid));
  Net::DRI::Exception->die(1,'protocol/EPP',2,'Invalid ROID: '.$roid) unless ($roid=~m/^NS\d+(?:-UK)?$/);
 
- my @ns=@{$msg->ns->{ns}};
- $msg->command([$command,'ns:'.$command,sprintf('xmlns:ns="%s" xsi:schemaLocation="%s %s"',$ns[0],$ns[0],$ns[1])]);
+ $msg->command([$command,'ns:'.$command,sprintf('xmlns:ns="%s" xsi:schemaLocation="%s %s"',$msg->nsattrs('ns'))]);
  return (['ns:roid',$roid]);
 }
 
@@ -109,7 +108,7 @@ sub info_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $infdata=$mes->get_content('infData',$mes->ns('ns'));
+ my $infdata=$mes->get_response('ns','infData');
  return unless $infdata;
  parse_infdata($po,$mes,$infdata,$oname,$rinfo);
 }

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP IDN Language (EPP-IDN-Lang-Mapping.pdf)
 ##
-## Copyright (c) 2007 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
+## Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -22,7 +22,7 @@ use strict;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -53,7 +53,7 @@ Tonnerre Lombard E<lt>tonnerre.lombard@sygroup.chE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -85,10 +85,9 @@ sub add_language
  my ($tag,$epp,$domain,$rd)=@_;
  my $mes=$epp->message();
 
- if (defined($rd) && (ref($rd) eq 'HASH') && exists($rd->{language}))
+ if (Net::DRI::Util::has_key($rd,'language'))
  {
   Net::DRI::Exception::usererr_invalid_parameters('IDN language tag must be of type XML schema language') unless Net::DRI::Util::xml_is_language($rd->{language});
-
   my $eid=$mes->command_extension_register($tag,'xmlns:idn="urn:iana:xml:ns:idn" xsi:schemaLocation="urn:iana:xml:ns:idn idn.xsd"');
   $mes->command_extension($eid,['idn:script', $rd->{language}]);
  }

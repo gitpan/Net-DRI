@@ -29,7 +29,7 @@ use Net::DRI::Protocol::EPP::Core::Domain;
 use Net::DRI::Protocol::EPP::Extensions::EURid::Domain;
 use Net::DRI::DRD::EURid;
 
-our $VERSION=do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -97,8 +97,7 @@ sub info
  Net::DRI::Exception::usererr_insufficient_parameters('Apply_info action needs a reference') unless defined($reference) && $reference;
  Net::DRI::Exception::usererr_invalid_parameters('reference must be a xml normalizedstring from 1 to 100 characters long') unless Net::DRI::Util::xml_is_normalizedstring($reference,1,100);
 
- my @ns=@{$mes->ns->{domain}};
- $mes->command(['apply-info','domain:apply-info',sprintf('xmlns:domain="%s" xsi:schemaLocation="%s %s"',$ns[0],$ns[0],$ns[1])]);
+ $mes->command(['apply-info','domain:apply-info',sprintf('xmlns:domain="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('domain'))]);
  $mes->command_body([['domain:reference',$reference]]);
 }
 
@@ -108,7 +107,7 @@ sub info_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $infdata=$mes->get_content('appInfoData',$mes->ns('domain'));
+ my $infdata=$mes->get_response('domain','appInfoData');
  return unless $infdata;
 
  my $cs=Net::DRI::Data::ContactSet->new();
@@ -217,7 +216,7 @@ sub apply_parse
  $rinfo->{_internal}->{must_reconnect}=1; ## All apply commands (successful or not) close the connection
  return unless $mes->is_success();
 
- my $credata=$mes->get_content('appData',$mes->ns('domain'));
+ my $credata=$mes->get_response('domain','appData');
  return unless $credata;
 
  $rinfo->{domain}->{$oname}->{exist}=1;

@@ -19,7 +19,7 @@ package Net::DRI::Protocol::EPP::Extensions::ASIA::CED;
 
 use strict;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -113,7 +113,7 @@ sub dom_create
 
  if (@ceddata)
  {
-  my $eid=$mes->command_extension_register('asia:create','xmlns:asia="urn:afilias:params:xml:ns:asia-1.0" xsi:schemaLocation="urn:afilias:params:xml:ns:asia-1.0 asia-1.0.xsd"');
+  my $eid=$mes->command_extension_register('asia:create',sprintf('xmlns:asia="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('asia')));
   $mes->command_extension($eid,[@ceddata]);
  }
 }
@@ -145,10 +145,7 @@ sub dom_update
 
 	if (@ceddata)
 	{
-		my $eid = $mes->command_extension_register('asia:create',
-			'xmlns:asia="urn:afilias:params:xml:ns:asia-1.0" ' .
-			'xsi:schemaLocation="urn:afilias:params:xml:ns:' .
-			'asia-1.0 asia-1.0.xsd"');
+                my $eid=$mes->command_extension_register('asia:create',sprintf('xmlns:asia="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('asia')));
 		$mes->command_extension($eid, ['asia:chg', @ceddata]);
 	}
 }
@@ -157,7 +154,7 @@ sub dom_parse
 {
  my ($po,$otype,$oaction,$oname,$rinfo)=@_;
  my $mes=$po->message();
- my $ceddata=$mes->get_content('infData', 'urn:afilias:params:xml:ns:asia-1.0', 1);
+ my $ceddata=$mes->get_extension('asia','infData');
  my $cs = $rinfo->{$otype}->{$oname}->{contact};
  my $ct;
  my $c;
@@ -168,12 +165,11 @@ sub dom_parse
 	    defined($rinfo->{$otype}->{$oname}->{contact}));;
  return unless ($ceddata && $cs);
 
- $c = $ceddata->getElementsByTagNameNS('urn:afilias:params:xml:ns:asia-1.0',
-	'maintainerUrl');
+ $c = $ceddata->getElementsByTagNameNS($mes->ns('asia'),'maintainerUrl');
  $rinfo->{$otype}->{$oname}->{url} = $c->shift()->getFirstChild()->getData()
 	if ($c);
 
- foreach my $ct ($ceddata->getElementsByTagNameNS('urn:afilias:params:xml:ns:asia-1.0', 'contact'))
+ foreach my $ct ($ceddata->getElementsByTagNameNS($mes->ns('asia'),'contact'))
  {
   my $contact = $po->create_local_object('contact');
   my $type = $ct->getAttribute('type');
@@ -211,9 +207,7 @@ sub user_create
 
  return unless (@ceddata);
 
- my $eid=$mes->command_extension_register('asia:create',
-	'xmlns:asia="urn:afilias:params:xml:ns:asia-1.0" ' .
-	'xsi:schemaLocation="urn:afilias:params:xml:ns:asia-1.0 asia-1.0.xsd"');
+ my $eid=$mes->command_extension_register('asia:create',sprintf('xmlns:asia="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('asia')));
  $mes->command_extension($eid,['asia:cedData', @ceddata]);
 }
 
@@ -249,9 +243,7 @@ sub user_update
 
  return unless (@ceddata);
 
- my $eid=$mes->command_extension_register('asia:update',
-	'xmlns:asia="urn:afilias:params:xml:ns:asia-1.0" ' .
-	'xsi:schemaLocation="urn:afilias:params:xml:ns:asia-1.0 asia-1.0.xsd"');
+ my $eid=$mes->command_extension_register('asia:update',sprintf('xmlns:asia="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('asia')));
  $mes->command_extension($eid,['asia:chg', ['asia:cedData', @ceddata]]);
 }
 
@@ -259,45 +251,37 @@ sub user_info
 {
  my ($po,$otype,$oaction,$oname,$rinfo)=@_;
  my $mes=$po->message();
- my $infdata=$mes->get_content('infData', 'urn:afilias:params:xml:ns:asia-1.0', 1);
+ my $infdata=$mes->get_extension('asia','infData');
  my $ceddata;
  my $contact = $rinfo->{$otype}->{$oname}->{self};
  my $c;
 
- $ceddata = $infdata->getElementsByTagNameNS('urn:afilias:params:xml:ns:asia-1.0', 'cedData')->shift()
-	if (defined($infdata));
+ my $ns=$mes->ns('asia');
+ $ceddata = $infdata->getElementsByTagNameNS($ns, 'cedData')->shift() if (defined($infdata));
  return unless ($ceddata);
 
- $c = $ceddata->getElementsByTagNameNS('urn:afilias:params:xml:ns:asia-1.0',
-	'ccLocality');
+ $c = $ceddata->getElementsByTagNameNS($ns,'ccLocality');
  $contact->cedcc($c->shift()->getFirstChild()->getData()) if ($c);
 
- $c = $ceddata->getElementsByTagNameNS('urn:afilias:params:xml:ns:asia-1.0',
-	'localitySp');
+ $c = $ceddata->getElementsByTagNameNS($ns,'localitySp');
  $contact->cedsp($c->shift()->getFirstChild()->getData()) if ($c);
 
- $c = $ceddata->getElementsByTagNameNS('urn:afilias:params:xml:ns:asia-1.0',
-	'localityCity');
+ $c = $ceddata->getElementsByTagNameNS($ns,'localityCity');
  $contact->cedcity($c->shift()->getFirstChild()->getData()) if ($c);
 
- $c = $ceddata->getElementsByTagNameNS('urn:afilias:params:xml:ns:asia-1.0',
-	'legalEntityType');
+ $c = $ceddata->getElementsByTagNameNS($ns,'legalEntityType');
  $contact->cedetype($c->shift()->getFirstChild()->getData()) if ($c);
 
- $c = $ceddata->getElementsByTagNameNS('urn:afilias:params:xml:ns:asia-1.0',
-	'identForm');
+ $c = $ceddata->getElementsByTagNameNS($ns,'identForm');
  $contact->cediform($c->shift()->getFirstChild()->getData()) if ($c);
 
- $c = $ceddata->getElementsByTagNameNS('urn:afilias:params:xml:ns:asia-1.0',
-	'identNumber');
+ $c = $ceddata->getElementsByTagNameNS($ns,'identNumber');
  $contact->cedinum($c->shift()->getFirstChild()->getData()) if ($c);
 
- $c = $ceddata->getElementsByTagNameNS('urn:afilias:params:xml:ns:asia-1.0',
-	'otherLEType');
+ $c = $ceddata->getElementsByTagNameNS($ns,'otherLEType');
  $contact->cedothertype($c->shift()->getFirstChild()->getData()) if ($c);
 
- $c = $ceddata->getElementsByTagNameNS('urn:afilias:params:xml:ns:asia-1.0',
-	'otherIdentForm');
+ $c = $ceddata->getElementsByTagNameNS($ns,'otherIdentForm');
  $contact->cedoiform($c->shift()->getFirstChild()->getData()) if ($c);
 }
 

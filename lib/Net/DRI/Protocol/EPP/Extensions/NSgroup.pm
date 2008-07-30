@@ -24,7 +24,7 @@ use Net::DRI::Util;
 use Net::DRI::Exception;
 use Net::DRI::Data::Hosts;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -83,15 +83,13 @@ sub register_commands
  return { 'nsgroup' => \%tmp1 };
 }
 
-sub capabilities_add
-{
- return { 'nsgroup_update' => { 'ns' => ['set'] } };
-}
+sub capabilities_add { return ('nsgroup_update','ns',['set']); }
 
 sub ns
 {
  my ($mes)=@_;
- return (exists($mes->ns->{nsgroup}))? $mes->ns->{nsgroup}->[0] : 'http://www.dns.be/xml/epp/nsgroup-1.0';
+ my $ns=$mes->ns('nsgroup');
+ return defined($ns)? $ns : 'http://www.dns.be/xml/epp/nsgroup-1.0';
 }
 
 sub build_command
@@ -108,8 +106,9 @@ sub build_command
 
  Net::DRI::Exception->die(1,'protocol/EPP',2,'NSgroup name needed') unless @gn;
 
- my @ns=exists($msg->ns->{nsgroup})? @{$msg->ns->{nsgroup}} : ('http://www.dns.be/xml/epp/nsgroup-1.0','nsgroup-1.0.xsd');
- $msg->command([$command,'nsgroup:'.$command,sprintf('xmlns:nsgroup="%s" xsi:schemaLocation="%s %s"',$ns[0],$ns[0],$ns[1])]);
+ my @ns=$msg->nsattrs('nsgroup');
+ @ns=qw(http://www.dns.be/xml/epp/nsgroup-1.0 http://www.dns.be/xml/epp/nsgroup-1.0 nsgroup-1.0.xsd) unless @ns;
+ $msg->command([$command,'nsgroup:'.$command,sprintf('xmlns:nsgroup="%s" xsi:schemaLocation="%s %s"',@ns)]);
 
  return map { ['nsgroup:name',$_] } @gn;
 }
@@ -158,9 +157,9 @@ sub check_parse
  return unless $mes->is_success();
 
  my $ns=ns($mes);
- my $chkdata=$mes->get_content('chkData',$ns);
+ my $chkdata=$mes->get_response($ns,'chkData');
  return unless $chkdata;
- foreach my $cd ($chkdata->getElementsByTagNameNS($ns,'cd'))
+ foreach my $cd ($chkdata->getChildrenByTagNameNS($ns,'cd'))
  {
   my $c=$cd->getFirstChild();
   my $nsgroup;
@@ -192,7 +191,7 @@ sub info_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $infdata=$mes->get_content('infData',ns($mes));
+ my $infdata=$mes->get_response(ns($mes),'infData');
  return unless $infdata;
 
  my $ns=Net::DRI::Data::Hosts->new();

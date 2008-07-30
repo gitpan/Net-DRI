@@ -23,7 +23,7 @@ use strict;
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -69,11 +69,8 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $proto=shift;
- my $class=ref($proto) || $proto;
-
+ my $class=shift;
  my $self=$class->SUPER::new('epp','1.0');
- bless($self,$class);
 
  my %s=('delete'   => 'clientDeleteProhibited',
         'renew'    => 'clientRenewProhibited',
@@ -134,6 +131,5 @@ sub can_renew    { return shift->has_not('clientRenewProhibited','serverRenewPro
 sub can_update   { return shift->has_not('clientUpdateProhibited','serverUpdateProhibited'); }
 sub can_transfer { return shift->has_not('clientTransferProhibited','serverTransferProhibited'); }
 
-
-####################################################################################################################
+####################################################################################################
 1;

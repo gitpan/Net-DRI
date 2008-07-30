@@ -1,6 +1,6 @@
 ## Domain Registry Interface, RRP Protocol
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -31,7 +31,7 @@ use DateTime;
 use DateTime::TimeZone;
 use DateTime::Format::Strptime;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -61,7 +61,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -89,24 +89,17 @@ our %IDS=('registrar'  => 'clID',
 
 sub new
 {
- my $h=shift;
- my $c=ref($h) || $h;
-
- my ($drd,$version,$extrah)=@_;
-
- my $self=$c->SUPER::new(); ## we are now officially a Net::DRI::Protocol object
+ my ($c,$drd,$version,$extrah)=@_;
+ my $self=$c->SUPER::new();
  $self->name('RRP');
- $version=Net::DRI::Util::check_equal($version,["1.1","2.0"],"1.1"); ## 1.1 (RFC #2832) or 2.0 (RFC #3632)
+ $version=Net::DRI::Util::check_equal($version,['1.1','2.0'],'2.0'); ## 1.1 (RFC #2832) or 2.0 (RFC #3632)
  $self->version($version);
-
- $self->capabilities({ 'host_update'   => { 'ip' => ['add','del'], 'name' => ['set'] },
-                       'domain_update' => { 'ns' => ['add','del'], 'status' => ['add','del'] },
-                     });
-
- $self->factories({ 
-                    message => sub { my $m=Net::DRI::Protocol::RRP::Message->new(@_); $m->version($version); return $m; },
-                    status  => sub { return Net::DRI::Protocol::RRP::Core::Status->new(); },
-                  });
+ $self->capabilities('host_update','ip',['add','del']);
+ $self->capabilities('host_update','name',['set']);
+ $self->capabilities('domain_update','ns',['add','del']);
+ $self->capabilities('domain_update','status',['add','del']);
+ $self->factories('message',sub { my $m=Net::DRI::Protocol::RRP::Message->new(@_); $m->version($version); return $m; });
+ $self->factories('status',sub { return Net::DRI::Protocol::RRP::Core::Status->new(); });
 
  ## Verify that we have the timezone of the registry, since dates in RRP are local to registries
  my $tzname=$drd->info('tz');
@@ -119,8 +112,6 @@ sub new
  Net::DRI::Exception::usererr_invalid_parameters("invalid registry timezone ($tzname)") unless (defined($dtp) && ref($dtp));
  $self->{dt_parse}=$dtp;
  
- bless($self,$c); ## rebless
-
  $self->_load($extrah);
  return $self;
 }

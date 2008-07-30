@@ -23,7 +23,7 @@ use DateTime::Format::ISO8601;
 use Net::DRI::Protocol::EPP;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -85,7 +85,7 @@ sub parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $infdata=$mes->get_content('pollData','http://www.verisign.com/epp/rgp-poll-1.0',0);
+ my $infdata=$mes->get_response('http://www.verisign.com/epp/rgp-poll-1.0','pollData');
  return unless $infdata;
 
  my $pd=DateTime::Format::ISO8601->new();

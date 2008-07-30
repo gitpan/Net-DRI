@@ -20,7 +20,6 @@ package Net::DRI::Protocol::RRI::Message;
 use strict;
 
 use XML::LibXML ();
-use Encode ();
 
 use Net::DRI::Protocol::ResultStatus;
 use Net::DRI::Exception;
@@ -30,7 +29,7 @@ use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version command command_body cltrid svtrid result
 	errcode errmsg node_resdata result_extra_info));
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -172,9 +171,7 @@ sub as_string
 		Net::DRI::Util::xml_is_token($cltrid,3,64));
  push @d,'</registry-request>';
 
- my $m=Encode::encode('utf8',join('',@d));
- my $l = pack('N', length($m)); ## DENIC-11
- return (defined($to) && ($to eq 'tcp') ? $l . $m : $m);
+ return join('',@d);
 }
 
 sub _toxml
@@ -203,20 +200,11 @@ sub _toxml
   } else
   {
    push @t,'<'.$tag.$attr.'>';
-   push @t,(@c==1 && !ref($c[0]))? xml_escape($c[0]) : _toxml(\@c);
+   push @t,(@c==1 && !ref($c[0]))? Net::DRI::Util::xml_escape($c[0]) : _toxml(\@c);
    push @t,'</'.$tag.'>';
   }
  }
  return @t;
-}
-
-sub xml_escape
-{
- my $in=shift;
- $in=~s/&/&amp;/g;
- $in=~s/</&lt;/g;
- $in=~s/>/&gt;/g;
- return $in;
 }
 
 sub topns { return shift->ns->{_main}->[0]; }

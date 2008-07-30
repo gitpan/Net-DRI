@@ -24,7 +24,7 @@ __PACKAGE__->mk_accessors(qw(legal_form legal_form_other legal_id jo trademark k
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -40,6 +40,11 @@ AFNIC specific data.
 =head1 METHODS
 
 The following accessors/mutators can be called in chain, as they all return the object itself.
+
+=head2 name()
+
+Please note that for AFNIC data, the name() must be of the following form: Firstname, Lastname
+(the comma is mandatory)
 
 =head2 roid()
 
@@ -127,7 +132,7 @@ sub validate
 ## NIC handle
  push @errs,'roid' if ($self->roid() && $self->roid()!~m/^[A-Z]+(?:[1-9][0-9]*)?-FRNIC$/i);
 
- push @errs,'name' if ($self->name() && $self->name()!~m/^${NOM_PROPRE} *, *${NOM_PROPRE}$/);
+ ##push @errs,'name' if ($self->name() && $self->name()!~m/^${NOM_PROPRE} *, *${NOM_PROPRE}$/); TODO
  push @errs,'org'  if ($self->org()  && ! is_nom_libre($self->org()));
 
  my $rs=$self->street();
@@ -154,7 +159,7 @@ sub validate
   }
  }
 
- push @errs,'legal_form'       if ($self->legal_form()       && $self->legal_form()!~m/^[AS]$/);
+ push @errs,'legal_form'       if ($self->legal_form()       && $self->legal_form()!~m/^(?:A|S|company|association|other)$/); ## AS for email, the rest for EPP
  push @errs,'legal_form_other' if ($self->legal_form_other() && $self->legal_form_other()!~m/^${NOM_PROPRE}$/);
  push @errs,'legal_id'         if ($self->legal_id()         && $self->legal_id()!~m/^[0-9]{9}(?:[0-9]{5})?$/);
 
@@ -163,10 +168,10 @@ sub validate
  {
   if ((ref($jo) eq 'HASH') && exists($jo->{date_declaration}) && exists($jo->{date_publication}) && exists($jo->{number}) && exists ($jo->{page}))
   {
-   push @errs,'jo' unless $jo->{date_declaration}=~m!^[0-9]{2}/[0-9]{2}/[0-9]{4}$!;
-   push @errs,'jo' unless $jo->{date_publication}=~m!^[0-9]{2}/[0-9]{2}/[0-9]{4}$!;
-   push @errs,'jo' unless $jo->{number}=~m/^[1-9][0-9]+$/;
-   push @errs,'jo' unless $jo->{page}=~m/^[1-9][0-9]+$/;
+   push @errs,'jo' unless ($jo->{date_declaration}=~m!^[0-9]{2}/[0-9]{2}/[0-9]{4}$! || $jo->{date_declaration}=~m!^[0-9]{4}-[0-9]{2}-[0-9]{2}$!);
+   push @errs,'jo' unless ($jo->{date_publication}=~m!^[0-9]{2}/[0-9]{2}/[0-9]{4}$! || $jo->{date_publication}=~m!^[0-9]{4}-[0-9]{2}-[0-9]{2}$!);
+   push @errs,'jo' unless $jo->{number}=~m/^[1-9][0-9]*$/;
+   push @errs,'jo' unless $jo->{page}=~m/^[1-9][0-9]*$/;
   } else
   {
    push @errs,'jo';
@@ -182,7 +187,7 @@ sub validate
  {
   if ((ref($birth) eq 'HASH') && exists($birth->{date}) && exists($birth->{place}))
   {
-   push @errs,'birth' unless ((ref($birth->{date}) eq 'DateTime') || $birth->{date}=~m!^[0-9]{2}/[0-9]{2}/[0-9]{4}$!);
+   push @errs,'birth' unless ((ref($birth->{date}) eq 'DateTime') || $birth->{date}=~m!^[0-9]{4}-[0-9]{2}-[0-9]{2}$! || $birth->{date}=~m!^[0-9]{2}/[0-9]{2}/[0-9]{4}$!);
    push @errs,'birth' unless $birth->{place}=~m!^(?:[A-Za-z]{2}|[0-9]{2}(?:[0-9]{3})* *, *${NOM_PROPRE})$!;
   } else
   {
@@ -205,7 +210,7 @@ sub validate
 
  ## No need to test type, we will set it up automatically when needed (organisation empty => PP, otherwise PM)
  ## Maintainer is not tied to contact
- 
+
  push @errs,'disclose' if ($self->disclose() && $self->disclose()!~m/^[ONY]$/i);
 
  Net::DRI::Exception::usererr_invalid_parameters('Invalid contact information: '.join('/',@errs)) if @errs;

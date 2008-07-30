@@ -5,7 +5,7 @@ use Net::DRI::Data::Raw;
 
 use Encode;
 
-use Test::More tests=> 38;
+use Test::More tests=> 32;
 
 my $msg;
 my $s;
@@ -67,7 +67,6 @@ EOF
 
 $msg->parse($s);
 
-is($msg->errcode(),2005,'parse (result,2 errors) errcode()'); ## old API
 is($msg->result_code(0),2004,'parse (result,2 errors) result_code(0)');
 is($msg->result_code(1),2005,'parse (result,2 errors) result_code(1)');
 $ri=$msg->result_extra_info(0);
@@ -150,7 +149,7 @@ $s=Net::DRI::Data::Raw->new_from_string(<<EOF);
 EOF
 
 $msg->parse($s);
-my $nn=$msg->get_content('chkData','urn:ietf:params:xml:ns:host-1.0');
+my $nn=$msg->get_response('urn:ietf:params:xml:ns:host-1.0','chkData');
 my $o=$nn->firstChild();
 $o=$o->getNextSibling();
 is($o->nodeName(),'host:cd','parse host:chkData  1');
@@ -310,50 +309,6 @@ $s=<<EOF;
 EOF
 
 is($msg->as_string(),_n($s),'build host update [RFC 4932 §3.2.5]');
-
-
-
-$msg=Net::DRI::Protocol::EPP::Message->new();
-$msg->ns({ _main => ['urn:ietf:params:xml:ns:epp-1.0','epp-1.0.xsd'] });
-$msg->command(['check','host:check','xmlns:host="urn:ietf:params:xml:ns:host-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:host-1.0 host-1.0.xsd"']);
-
-$msg->command_body([['host:name','ns1.example.com'],['host:name','ns2.example.com'],['host:name','ns3.example.com']]);
-$msg->cltrid('ABC-12345');
-
-$s=<<EOF;
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<epp xmlns="urn:ietf:params:xml:ns:epp-1.0"
-     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-     xsi:schemaLocation="urn:ietf:params:xml:ns:epp-1.0
-     epp-1.0.xsd">
-  <command>
-    <check>
-      <host:check
-       xmlns:host="urn:ietf:params:xml:ns:host-1.0"
-       xsi:schemaLocation="urn:ietf:params:xml:ns:host-1.0
-       host-1.0.xsd">
-        <host:name>ns1.example.com</host:name>
-        <host:name>ns2.example.com</host:name>
-        <host:name>ns3.example.com</host:name>
-      </host:check>
-    </check>
-    <clTRID>ABC-12345</clTRID>
-  </command>
-</epp>
-EOF
-
-$msg->version('1.0');
-my $m=$msg->as_string('tcp');
-ok(!Encode::is_utf8($m),'Unicode : XML string sent on network is bytes not characters (version 1.0)');
-my $l=unpack('N',substr($m,0,4));
-$m=substr($m,4);
-is($l,4+length(_n($s)),'Unicode : XML string length (version 1.0)');
-is($m,_n($s),'Unicode : string is ok after removing length (version 1.0)');
-$msg->version('0.4');
-$m=$msg->as_string('tcp');
-ok(!Encode::is_utf8($m),'Unicode : XML string sent on network is bytes not characters (version 0.4)');
-is($m,_n($s),'Unicode : string does not include length (version 0.4)');
-
 
 exit 0;
 

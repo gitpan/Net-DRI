@@ -13,7 +13,7 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::Protocol::ResultStatus;
 
@@ -22,7 +22,7 @@ use strict;
 use base qw(Class::Accessor::Chained::Fast);
 __PACKAGE__->mk_ro_accessors(qw(is_success native_code code message lang next));
 
-our $VERSION=do { my @r=(q$Revision: 1.18 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.19 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -122,6 +122,7 @@ our %EPP_CODES=(
                 AUTHORIZATION_ERROR => 2201,
                 OBJECT_EXISTS   => 2302,
                 OBJECT_DOES_NOT_EXIST => 2303,
+                COMMAND_FAILED => 2400, ## Internal server error not related to the protocol
 
                 GENERIC_SUCCESS => 1900, ## these codes are not defined in EPP RFCs, but provide a nice extension
                 GENERIC_ERROR   => 2900, ##     19XX for ok (1900=Undefined success), 29XX for errors (2900=Undefined error)
@@ -197,5 +198,5 @@ sub is_pending
  return ($self->code()==$EPP_CODES{COMMAND_SUCCESSFUL_PENDING});
 }
 
-###################################################################################################################
+####################################################################################################
 1;

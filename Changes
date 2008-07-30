@@ -1,3 +1,37 @@
+0.91 2008-07-30
+
++ .BR EPP support, with Domain and Organization extensions (see t/635br_epp.t)
++ OpenSRS XCP protocol (resellers interface): preliminary implementation, only domain_info and account_list_domains (see t/639opensrs_xcp.t and t/704opensrs_xcp_live.t)
++ .US whois support
++ Experimental Net::DRI shell limited to domain check operations for now, see Net::DRI::Shell for details
++ Net::DRI::TrapExceptions, for easier tests/debugging (not considered to be part of official API, to use only inside t/*)
++ EPP/Core/RegistryMessage : for poll responses (all registries), info is now also available through keys related to the object queried,
+  and not only just through the message retrieved. See tests around message_retrieve in t/635br_epp.t for examples
++ .JOBS Contact support and NameStore domain extension for contacts (contributed by Tonnerre Lombard)
++ .PRO support, with domain activations (contributed by Tonnerre Lombard)
++ .AT Domain keydate extension support (contributed by Tonnerre Lombard)
++ .NO updates (submitted by Trond Haugen)
++ Transport/HTTP : new transport needed for pure HTTP/HTTPS registries (OpenSRS, .PL, .ES, etc.)
++ EPP/Extensions/PL/Connection : needed to be able to use HTTPS transport for .PL EPP
++ .FR EPP extensions (currently not in production at the registry) and related needed updates in DRD/AFNIC and Data/Contact/AFNIC
+= */Connection Transport/Socket : get_data is now read_data, and write_message is mandatory (done previously somehow in corresponding Message classes) ; other methods expect the transport object as first parameter
+= */Connection : EPP error code COMMAND_FAILED instead of COMMAND_SYNTAX_ERROR in most places
+= DRD/PL : use EPP over HTTPS not over TLS
+= EPP/Extensions/PL : updated to latest registry specifications (contributed by Tonnerre Lombard)
+= Protocol : new API for factories() and capabilities()
+= DRD : extra parameters allowed in input API for all contact_* methods (needed by some registries)
+= EPP/Message : internal API (for EPP extensions) changes, removal of get_content(), addition of nsattrs()
+                all EPP modules were modified to fit this new API ; extensions developers should sync their work and always use current EPP/Core/* modules as guidelines
+= EPP/Core/Domain : no need to provide IPs of nameservers during update in the rem section
+= EPP/Connection : fix message retrieval for broken registries that send carriage returns (contributed by Tonnerre Lombard)
+= Contact/FR : take into account various ways to have a date (needed for new EPP extensions)
+= Data/StatusList : new rem() method to remove a status from the list when really needed
+- EPP/Message : correct parse of trID blocks in case of multiple occurences (from original bug report by Trond Haugen) ;
+                this prompted a review of various EPP XML parse methods (Core and Extensions), where getElementsByTagNameNS have been changed to getChildrenByTagNameNS,
+                which should improve correctness and speed.
+- EPP/Core/Domain : domain:null variant should only be used during update and not in other case (from original bug report by Trond Haugen)
+- EPP/Extensions/{DNSBE,EURid} : correctly handle version 1.0 (from original bug report on .BE by Andreas Wittkemper)
+
 0.90 2008-06-12
 
 + .EU EPP support: updates for Registration guidelines version 1.1B (changes in contact info/update) + release 5.5 (13 May 2008)
@@ -16,7 +50,7 @@
 = EPP/Message : better handling of pure extension messages (no command)
 = EPP/Core/{Domain,Contact} : better handling of authinfo (2 variants during built when empty, and only parsing RFC defined version during info)
 = EPP/Core/{Domain,Contact} : for update() do not bother checking pending changes, this has to be done earlier, in DRD, to make sure all extension cases are taken into account
-= EPP/Core/Contact : handling registries not followin EPP RFC by omitting the type parameter for postalinfo data (like .CZ)
+= EPP/Core/Contact : handling registries not following EPP RFC by omitting the type parameter for postalinfo data (like .CZ)
 = EPP/Message : better handling of pure extension messages (without a command node)
 = DRD/ICANN : some gTLD registries are now allowed to create one or two characters domain names
 = DRD/VNDS : add .bz/.jobs (contributed by Tonnerre Lombard)
@@ -37,7 +71,7 @@
 - DRD/NAME : contact internationalization (reported by Tonnerre Lombard)
 - DRD::is_thick() removed
 - DRD, DRD/NAME : fix test of domain names in registries with multiple zones (number of dots)
-- .EPP/Extensions/{AT,ASIA} various bugfixes (contributed by Tonnerre Lombard)
+- EPP/Extensions/{AT,ASIA} various bugfixes (contributed by Tonnerre Lombard)
 - .FR various bugfixes on domain operations
 - Removal of all Protocol/*/Message::get_name_from_message() ugly hack for something less ugly but still kind of an hack.
 - Factorization of various verify_rd() methods into Net::DRI::Util::has_key,has_contactset,has_ns,has_auth,has_duration,isa_contactset,isa_contact,isa_hosts,isa_changes ; this simplifies of lot of code under Protocol/*

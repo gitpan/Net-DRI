@@ -27,7 +27,7 @@ sub myrecv
  return Net::DRI::Data::Raw->new_from_string($R2? $R2 : $E1.'<response>'.r().$TRID.'</response>'.$E2);
 }
 
-my $dri=Net::DRI->new(10);
+my $dri=Net::DRI::TrapExceptions->new(10);
 $dri->{trid_factory}=sub { return 'ABC-12345'; };
 $dri->add_registry('VNDS');
 $dri->target('VNDS')->new_current_profile('p1','Net::DRI::Transport::Dummy',[{f_send=>\&mysend,f_recv=>\&myrecv}],'Net::DRI::Protocol::EPP',[]);
@@ -488,7 +488,7 @@ is($dri->get_info('content','message',12345),'Pending action completed successfu
 is($dri->get_info('lang','message',12345),'en','message get_info lang');
 is($dri->get_info('object_type','message','12345'),'domain','message get_info object_type');
 is($dri->get_info('object_id','message','12345'),'example.com','message get_info id');
-is($dri->get_info('action','message','12345'),'create_review','message get_info action'); ## with this, we know what action has triggered this delayed message
+is($dri->get_info('action','message','12345'),'review','message get_info action'); ## with this, we know what action has triggered this delayed message
 is($dri->get_info('result','message','12345'),1,'message get_info result');
 is($dri->get_info('trid','message','12345'),'ABC-12345','message get_info trid');
 is($dri->get_info('svtrid','message','12345'),'54321-XYZ','message get_info svtrid');

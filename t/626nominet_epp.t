@@ -25,7 +25,7 @@ sub myrecv
  return Net::DRI::Data::Raw->new_from_string($R2? $R2 : $E1.'<response>'.r().$TRID.'</response>'.$E2);
 }
 
-my $dri=Net::DRI->new(10);
+my $dri=Net::DRI::TrapExceptions->new(10);
 $dri->{trid_factory}=sub { return 'ABC-12345'; };
 $dri->add_registry('Nominet');
 $dri->target('Nominet')->new_current_profile('p1','Net::DRI::Transport::Dummy',[{f_send=>\&mysend,f_recv=>\&myrecv}],'Net::DRI::Protocol::EPP::Extensions::Nominet',[]);
@@ -498,7 +498,7 @@ $co->voice('01865 232564');
 $cs->add($co,'admin');
 $toc->set('contact',$cs);
 $rc=$dri->account_update('286467',$toc);
-is_string($R1,$E1.'<command><update><account:update xmlns:account="http://www.nominet.org.uk/epp/xml/nom-account-1.0" xmlns:contact="http://www.nominet.org.uk/epp/xml/nom-contact-1.0" xsi:schemaLocation="http://www.nominet.org.uk/epp/xml/nom-account-1.0 nom-account-1.0.xsd"><account:roid>286467</account:roid><account:trad-name>R. S. Industries</account:trad-name><account:type>STRA</account:type><account:co-no>NI123456</account:co-no><account:addr type="billing"/><account:contact order="1" type="admin"><contact:create><contact:name>Ms S. Strant</contact:name><contact:phone>01865 123457</contact:phone><contact:fax>01865 123456</contact:fax><contact:email>s.strant@strant.co.uk</contact:email></contact:create></account:contact><account:contact order="2" type="admin"><contact:update><contact:phone>01865 232564</contact:phone></contact:update></account:contact><account:contact order="1" type="billing"/></account:update></update><clTRID>ABC-12345</clTRID></command>'.$E2,'account_update build');
+is_string($R1,$E1.'<command><update><account:update xmlns:contact="http://www.nominet.org.uk/epp/xml/nom-contact-1.0" xmlns:account="http://www.nominet.org.uk/epp/xml/nom-account-1.0" xsi:schemaLocation="http://www.nominet.org.uk/epp/xml/nom-account-1.0 nom-account-1.0.xsd"><account:roid>286467</account:roid><account:trad-name>R. S. Industries</account:trad-name><account:type>STRA</account:type><account:co-no>NI123456</account:co-no><account:addr type="billing"/><account:contact order="1" type="admin"><contact:create><contact:name>Ms S. Strant</contact:name><contact:phone>01865 123457</contact:phone><contact:fax>01865 123456</contact:fax><contact:email>s.strant@strant.co.uk</contact:email></contact:create></account:contact><account:contact order="2" type="admin"><contact:update><contact:phone>01865 232564</contact:phone></contact:update></account:contact><account:contact order="1" type="billing"/></account:update></update><clTRID>ABC-12345</clTRID></command>'.$E2,'account_update build');
 
 
 exit 0;

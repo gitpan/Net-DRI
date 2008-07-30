@@ -23,7 +23,7 @@ use Email::Valid;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -79,19 +79,12 @@ sub register_commands
  return { 'domain' => \%tmp };
 }
 
-sub capabilities_add
-{
- return { 'domain_update' => { 'name_variant' => ['add','del'], 'lang' => ['set'], 'maintainer' => ['set'], 'intended_use' => ['set'] } };
-}
-
 ####################################################################################################
 
 sub build_command_extension
 {
  my ($mes,$epp,$tag)=@_;
- 
- my @ns=@{$mes->ns()->{'puntcat_domain'}};
- return $mes->command_extension_register($tag,sprintf('xmlns:dx="%s" xsi:schemaLocation="%s %s"',$ns[0],$ns[0],$ns[1]));
+ return $mes->command_extension_register($tag,sprintf('xmlns:dx="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('puntcat_domain')));
 }
 
 sub add_name_variant
@@ -246,7 +239,7 @@ sub info_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $infdata=$mes->get_content('infData',$mes->ns('puntcat_domain'),1);
+ my $infdata=$mes->get_extension('puntcat_domain','infData');
  return unless $infdata;
 
  my $c=$infdata->getFirstChild();
@@ -279,7 +272,7 @@ sub info_parse
      $ens{auth}={ id => $cc->getAttribute('id') };
     } elsif ($name2 eq 'sponsoring')
     {
-     $ens{sponsor}=[ map { $_->getFirstChild()->getData() } $cc->getElementsByTagNameNS($mes->ns('puntcat_domain'),'sponsor') ]; 
+     $ens{sponsor}=[ map { $_->getFirstChild()->getData() } $cc->getChildrenByTagNameNS($mes->ns('puntcat_domain'),'sponsor') ]; 
     } elsif ($name2 eq 'refURL')
     {
      $ens{ref_url}=$cc->getFirstChild()->getData();

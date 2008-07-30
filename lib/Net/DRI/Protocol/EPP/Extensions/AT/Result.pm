@@ -23,7 +23,7 @@ use strict;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 our $NS='http://www.enum.at/rxsd/ienum43-result-1.0';
 
 =pod
@@ -93,7 +93,7 @@ sub condition_parse
  my ($po,$otype,$oaction,$oname,$rinfo)=@_;
  my $mes=$po->message();
 
- my $condata=$mes->get_content('conditions',$NS,1);
+ my $condata=$mes->get_extension($NS,'conditions');
  return unless $condata;
 
  my @conditions;

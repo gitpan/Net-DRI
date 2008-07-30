@@ -29,7 +29,7 @@ use Net::DRI::Data::ContactSet;
 use DateTime::Format::ISO8601;
 use Carp;
 
-our $VERSION=do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -96,19 +96,12 @@ sub register_commands
  return { 'domain' => \%tmp };
 }
 
-sub capabilities_add
-{
- return { 'domain_update' => { 'nsgroup' => [ 'add','del']} };
-}
-
 ####################################################################################################
 
 sub build_command_extension
 {
  my ($mes,$epp,$tag)=@_;
- 
- my @ns=@{$mes->ns->{eurid}};
- return $mes->command_extension_register($tag,sprintf('xmlns:eurid="%s" xsi:schemaLocation="%s %s"',$ns[0],$ns[0],$ns[1]));
+ return $mes->command_extension_register($tag,sprintf('xmlns:eurid="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('eurid')));
 }
 
 sub create
@@ -159,11 +152,18 @@ sub info_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $infdata=$mes->get_content('infData',$mes->ns('eurid'),1);
+ my $infdata=$mes->get_extension('eurid','ext');
  return unless $infdata;
+ my $ns=$mes->ns('eurid');
+ $infdata=$infdata->getChildrenByTagNameNS($ns,'infData');
+ return unless $infdata->size();
+ $infdata=$infdata->shift();
+ $infdata=$infdata->getChildrenByTagNameNS($ns,'domain');
+ return unless $infdata->size();
+ $infdata=$infdata->shift();
 
  my @c;
- foreach my $el ($infdata->getElementsByTagNameNS($mes->ns('eurid'),'nsgroup'))
+ foreach my $el ($infdata->getChildrenByTagNameNS($ns,'nsgroup'))
  {
   push @c,Net::DRI::Data::Hosts->new()->name($el->getFirstChild()->getData());
  }
@@ -173,25 +173,26 @@ sub info_parse
  my $cs=$rinfo->{domain}->{$oname}->{status};
  foreach my $s (qw/onhold quarantined/) ## onhold here has nothing to do with EPP client|serverHold, unfortunately
  {
-  my @s=$infdata->getElementsByTagNameNS($mes->ns('eurid'),$s);
+  my @s=$infdata->getChildrenByTagNameNS($ns,$s);
   next unless @s;
   $cs->add($s) if Net::DRI::Util::xml_parse_boolean($s[0]->getFirstChild()->getData()); ## should we also remove 'ok' status then ?
  }
  my $pd=DateTime::Format::ISO8601->new();
  foreach my $d (qw/availableDate deletionDate/)
  {
-  my @d=$infdata->getElementsByTagNameNS($mes->ns('eurid'),$d);
+  my @d=$infdata->getChildrenByTagNameNS($ns,$d);
   next unless @d;
   $rinfo->{domain}->{$oname}->{$d}=$pd->parse_datetime($d[0]->getFirstChild()->getData());
  }
 
- my $pt=$infdata->getElementsByTagNameNS($mes->ns('eurid'),'pendingTransaction');
+ my $pt=$infdata->getChildrenByTagNameNS($ns,'pendingTransaction');
  if ($pt->size())
  {
+  $pt=$pt->shift();
   my %p;
   foreach my $t (qw/trade transfer transferq/)
   {
-   my $r=$infdata->getElementsByTagNameNS($mes->ns('eurid'),$t);
+   my $r=$pt->getChildrenByTagNameNS($ns,$t);
    next unless $r->size();
    $p{type}=$t;
    $cs->add(($t eq 'trade')? 'pendingUpdate' : 'pendingTransfer');
@@ -249,10 +250,17 @@ sub check_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $chkdata=$mes->get_content('chkData',$mes->ns('eurid'),1);
+ my $chkdata=$mes->get_extension('eurid','ext');
  return unless $chkdata;
+ my $ns=$mes->ns('eurid');
+ $chkdata=$chkdata->getChildrenByTagNameNS($ns,'chkData');
+ return unless $chkdata->size();
+ $chkdata=$chkdata->shift();
+ $chkdata=$chkdata->getChildrenByTagNameNS($ns,'domain');
+ return unless $chkdata->size();
+ $chkdata=$chkdata->shift();
 
- foreach my $cd ($chkdata->getElementsByTagNameNS($mes->ns('eurid'),'cd'))
+ foreach my $cd ($chkdata->getChildrenByTagNameNS($ns,'cd'))
  {
   my $c=$cd->getFirstChild();
   my $domain;
@@ -341,8 +349,8 @@ sub add_transfer
  if (Net::DRI::Util::has_ns($rd))
  {
   my $n=Net::DRI::Protocol::EPP::Core::Domain::build_ns($epp,$rd->{ns},$domain,'eurid');
-  my @ns=@{$mes->ns->{domain}};
-  push @$n,{'xmlns:domain'=>$ns[0],'xsi:schemaLocation'=>sprintf('%s %s',@ns)};
+  my @ns=$mes->nsattrs('domain');
+  push @$n,{'xmlns:domain'=>shift(@ns),'xsi:schemaLocation'=>sprintf('%s %s',@ns)};
   push @n,$n;
  }
 
@@ -458,10 +466,17 @@ sub checkcontact_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $chkdata=$mes->get_content('checkContactForTransfer',$mes->ns('eurid'),1);
+ my $chkdata=$mes->get_extension('eurid','ext');
  return unless $chkdata;
+ my $ns=$mes->ns('eurid');
+ $chkdata=$chkdata->getChildrenByTagNameNS($ns,'response');
+ return unless $chkdata->size();
+ $chkdata=$chkdata->shift();
+ $chkdata=$chkdata->getChildrenByTagNameNS($ns,'checkContactForTransfer');
+ return unless $chkdata->size();
+ $chkdata=$chkdata->shift();
 
- my @d=$chkdata->getElementsByTagNameNS($mes->ns('eurid'),'percentage');
+ my @d=$chkdata->getChildrenByTagNameNS($ns,'percentage');
  return unless @d;
  $rinfo->{domain}->{$oname}->{'percentage'}=$d[0]->getFirstChild()->getData();
 }

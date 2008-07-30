@@ -27,7 +27,7 @@ use Net::DRI::Protocol::EPP;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.16 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.17 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -104,8 +104,7 @@ sub build_command
  }
 
  my $tcommand=(ref($command))? $command->[0] : $command;
- my @ns=@{$msg->ns->{domain}};
- $msg->command([$command,'domain:'.$tcommand,sprintf('xmlns:domain="%s" xsi:schemaLocation="%s %s"',$ns[0],$ns[0],$ns[1])]);
+ $msg->command([$command,'domain:'.$tcommand,sprintf('xmlns:domain="%s" xsi:schemaLocation="%s %s"',$msg->nsattrs('domain'))]);
 
 
  my @d=map { ['domain:name',$_,$domainattr] } @dom;
@@ -114,8 +113,8 @@ sub build_command
 
 sub build_authinfo
 {
- my ($epp,$rauth)=@_;
- return ['domain:authInfo',['domain:null']] if ($rauth->{pw} eq '' && $epp->{usenullauth});
+ my ($epp,$rauth,$isupdate)=@_;
+ return ['domain:authInfo',['domain:null']] if ($rauth->{pw} eq '' && $epp->{usenullauth} && (defined($isupdate) && $isupdate));
  return ['domain:authInfo',['domain:pw',$rauth->{pw},exists($rauth->{roid})? { 'roid' => $rauth->{roid} } : undef]];
 }
 
@@ -158,9 +157,9 @@ sub check_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $chkdata=$mes->get_content('chkData',$mes->ns('domain'));
+ my $chkdata=$mes->get_response('domain','chkData');
  return unless $chkdata;
- foreach my $cd ($chkdata->getElementsByTagNameNS($mes->ns('domain'),'cd'))
+ foreach my $cd ($chkdata->getChildrenByTagNameNS($mes->ns('domain'),'cd'))
  {
   my $c=$cd->getFirstChild();
   my $domain;
@@ -197,7 +196,7 @@ sub info_parse
  my ($po,$otype,$oaction,$oname,$rinfo)=@_;
  my $mes=$po->message();
  return unless $mes->is_success();
- my $infdata=$mes->get_content('infData',$mes->ns('domain'));
+ my $infdata=$mes->get_response('domain','infData');
  return unless $infdata;
  my (@s,@host);
  my $cs=Net::DRI::Data::ContactSet->new();
@@ -240,7 +239,7 @@ sub info_parse
    $rinfo->{domain}->{$oname}->{$1}=$pd->parse_datetime($c->getFirstChild()->getData());
   } elsif ($name eq 'authInfo') ## we only try to parse the authInfo version defined in the RFC, other cases are to be handled by extensions
   {
-   my $n=$c->getElementsByTagNameNS($mes->ns('domain'),'pw');
+   my $n=$c->getChildrenByTagNameNS($mes->ns('domain'),'pw');
    ## domain:pw may be there but will be empty on domain:info request for objects we do not own
    $rinfo->{domain}->{$oname}->{auth}={pw => ($n->size() && $n->get_node(1)->hasChildNodes())? $n->shift()->getFirstChild()->getData() : undef};
   }
@@ -310,7 +309,7 @@ sub transfer_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $trndata=$mes->get_content('trnData',$mes->ns('domain'));
+ my $trndata=$mes->get_response('domain','trnData');
  return unless $trndata;
 
  my $pd=DateTime::Format::ISO8601->new();
@@ -392,7 +391,7 @@ sub build_contact_noregistrant
 
 sub build_ns
 {
- my ($epp,$ns,$domain,$xmlns)=@_;
+ my ($epp,$ns,$domain,$xmlns,$noip)=@_;
 
  my @d;
  my $asattr=$epp->{hostasattr};
@@ -404,7 +403,7 @@ sub build_ns
    my ($n,$r4,$r6)=$ns->get_details($i);
    my @h;
    push @h,['domain:hostName',$n];
-   if (($n=~m/\S+\.${domain}$/i) || (lc($n) eq lc($domain)) || ($asattr==2))
+   if ((($n=~m/\S+\.${domain}$/i) || (lc($n) eq lc($domain)) || ($asattr==2)) && (!defined($noip) || !$noip))
    {
     push @h,map { ['domain:hostAddr',$_,{ip=>'v4'}] } @$r4 if @$r4;
     push @h,map { ['domain:hostAddr',$_,{ip=>'v6'}] } @$r6 if @$r6;
@@ -426,7 +425,7 @@ sub create_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $credata=$mes->get_content('creData',$mes->ns('domain'));
+ my $credata=$mes->get_response('domain','creData');
  return unless $credata;
 
  my $pd=DateTime::Format::ISO8601->new();
@@ -479,7 +478,7 @@ sub renew_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $rendata=$mes->get_content('renData',$mes->ns('domain'));
+ my $rendata=$mes->get_response('domain','renData');
  return unless $rendata;
 
  my $c=$rendata->getFirstChild();
@@ -550,7 +549,7 @@ sub update
  push @add,build_ns($epp,$nsadd,$domain)            if $nsadd && !$nsadd->is_empty();
  push @add,build_contact_noregistrant($epp,$cadd)   if $cadd;
  push @add,$sadd->build_xml('domain:status','core') if $sadd;
- push @del,build_ns($epp,$nsdel,$domain)            if $nsdel && !$nsdel->is_empty();
+ push @del,build_ns($epp,$nsdel,$domain,undef,1)    if $nsdel && !$nsdel->is_empty();
  push @del,build_contact_noregistrant($epp,$cdel)   if $cdel;
  push @del,$sdel->build_xml('domain:status','core') if $sdel;
 
@@ -561,7 +560,7 @@ sub update
  my @chg;
  push @chg,['domain:registrant',$chg->srid()] if Net::DRI::Util::isa_contact($chg);
  $chg=$todo->set('auth');
- push @chg,build_authinfo($epp,$chg) if ($chg && ref($chg));
+ push @chg,build_authinfo($epp,$chg,1) if ($chg && ref($chg));
  push @d,['domain:chg',@chg] if @chg;
  $mes->command_body(\@d);
 }
@@ -575,7 +574,7 @@ sub pandata_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $pandata=$mes->get_content('panData',$mes->ns('domain'));
+ my $pandata=$mes->get_response('domain','panData');
  return unless $pandata;
 
  my $c=$pandata->firstChild();
@@ -588,14 +587,14 @@ sub pandata_parse
   if ($name eq 'name')
   {
    $oname=lc($c->getFirstChild()->getData());
-   $rinfo->{domain}->{$oname}->{action}='create_review';
+   $rinfo->{domain}->{$oname}->{action}='review';
    $rinfo->{domain}->{$oname}->{result}=Net::DRI::Util::xml_parse_boolean($c->getAttribute('paResult'));
    $rinfo->{domain}->{$oname}->{exist}=$rinfo->{domain}->{$oname}->{result};
   } elsif ($name eq 'paTRID')
   {
-   my @tmp=$c->getElementsByTagNameNS($mes->ns('_main'),'clTRID');
+   my @tmp=$c->getChildrenByTagNameNS($mes->ns('_main'),'clTRID');
    $rinfo->{domain}->{$oname}->{trid}=$tmp[0]->getFirstChild()->getData() if (@tmp && $tmp[0]);
-   $rinfo->{domain}->{$oname}->{svtrid}=($c->getElementsByTagNameNS($mes->ns('_main'),'svTRID'))[0]->getFirstChild()->getData();
+   $rinfo->{domain}->{$oname}->{svtrid}=($c->getChildrenByTagNameNS($mes->ns('_main'),'svTRID'))[0]->getFirstChild()->getData();
   } elsif ($name eq 'paDate')
   {
    $rinfo->{domain}->{$oname}->{date}=DateTime::Format::ISO8601->new()->parse_datetime($c->firstChild->getData());

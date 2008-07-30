@@ -1,7 +1,7 @@
 ## Domain Registry Interface, CentralNic EPP extensions
 ## (http://labs.centralnic.com/epp/ext/)
 ##
-## Copyright (c) 2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -22,7 +22,7 @@ use strict;
 
 use base qw/Net::DRI::Protocol::EPP/;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -52,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -68,19 +68,19 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $h=shift;
- my $c=ref($h) || $h;
-
- my ($drd,$version,$extrah,$defproduct)=@_;
+ my ($c,$drd,$version,$extrah,$defproduct)=@_;
  my %e=map { $_ => 1 } (defined($extrah)? (ref($extrah)? @$extrah : ($extrah)) : ());
 
  $e{'Net::DRI::Protocol::EPP::Extensions::CentralNic::TTL'}=1;
  $e{'Net::DRI::Protocol::EPP::Extensions::CentralNic::WebForwarding'}=1;
  $e{'Net::DRI::Protocol::EPP::Extensions::CentralNic::Release'}=1;
 
- my $self=$c->SUPER::new($drd,$version,[keys(%e)]); ## we are now officially a Net::DRI::Protocol::EPP object
-
- bless($self,$c); ## rebless
+ my $self=$c->SUPER::new($drd,$version,[keys(%e)]);
+ $self->ns({ttl => ['urn:centralnic:params:xml:ns:ttl-1.0','ttl-1.0.xsd'],
+            wf  => ['urn:centralnic:params:xml:ns:wf-1.0','wf-1.0.xsd'],
+          });
+ $self->capabilities('domain_update','ttl',['set']);
+ $self->capabilities('domain_update','web_forwarding',['set']);
  return $self;
 }
 

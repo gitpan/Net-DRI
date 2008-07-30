@@ -22,8 +22,7 @@ sub myrecv
 {
  return Net::DRI::Data::Raw->new_from_string($R2? $R2 : $E1.'<response>'.r().$TRID.'</response>'.$E2);
 }
-
-my $dri=Net::DRI->new(10);
+my $dri=Net::DRI::TrapExceptions->new(10);
 $dri->add_registry('VNDS');
 $dri->target('VNDS')->new_current_profile('p1','Net::DRI::Transport::Dummy',[{f_send=>\&mysend,f_recv=>\&myrecv}],'Net::DRI::Protocol::EPP',['1.0',['NSgroup']]);
 my ($rc,$toc);

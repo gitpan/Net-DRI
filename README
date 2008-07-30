@@ -6,7 +6,7 @@ Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>
 with help and bugfix from various individuals
 (see Changes file and our website)
 
-DRI stands for Domain Registry Interface and aims to be,
+DRI stands for Domain Registration Interface and aims to be,
 for domain name registries/registrars/resellers
 what Perl DBI is for databases.
 
@@ -46,20 +46,21 @@ Currently Net::DRI ships with:
   * CentralNic extensions: Release, TTL, WebForwarding
   * Domain/Contact/Host and other extensions needed for extra services in various TLD:
     .EU .COM .NET .MOBI .AERO .CAT .US .PL .SE .BE .AT .COOP .LU .ASIA .AU .NAME .ORG .UK
-    .DE .CH .LI .HN .SC .VC .AG .BZ .LC .MN .ME .CZ .TRAVEL .NO
+    .DE .CH .LI .HN .SC .VC .AG .BZ .LC .MN .ME .CZ .TRAVEL .NO .BR .JOBS .PRO .FR
 - a full DAS (Domain Availability Service) implementation for .BE & .EU
 - a full Whois implementation (RFC 3912) for thin and thick registries :
      support included for domain names in .COM .NET .ORG .BIZ .INFO .AERO
-     .EU .MOBI .NAME .LU .WS .SE .CAT .AT .TRAVEL
+     .EU .MOBI .NAME .LU .WS .SE .CAT .AT .TRAVEL .US
 - a TCP/TLS socket transport
+- an HTTP/HTTPS transport
 - various SOAP transports over HTTP/HTTPS
 - an SMTP transport
-- Net::DRI::DRD::* modules for : .EU .COM .NET .TV .CC .WS .SE .PL .US .CAT 
+- Net::DRI::DRD::* modules for : .EU .COM .NET .TV .CC .WS .SE .PL .US .CAT
 		.BE .MOBI .INFO .ORG .AT .LU .BIZ .NAME .NU .UK .AU .AERO .ASIA .COOP
 		IENUMAT .DE .CH .LI .HN .SC .VC .AG .BZ .LC .MN .ME .CZ .TRAVEL
 - a Net::DRI::DRD::AFNIC covering AFNIC registry for .FR
      (only domain_check through web services and all operations by email)
-- Net::DRI::DRD::* modules to use registrars API for Gandi, OVH, BookMyName
+- Net::DRI::DRD::* modules to use registrars API for Gandi, OVH, BookMyName, OpenSRS
 
 
 If you are a registry/registrar/reseller, we would welcome
@@ -93,9 +94,12 @@ IO::Socket::INET (Perl internal)
 IO::Socket::SSL (>=0.90)
 XML::LibXML
 UNIVERSAL::require
-SOAP::Lite  (needed only for AFNIC, BookMyName, OVH, Gandi webservices)
+SOAP::Lite (needed only for AFNIC, BookMyName, OVH, Gandi webservices)
+SOAP::WSDL (needed only for OVH webservices)
 MIME::Entity (needed only for AFNIC emails)
 Net::SMTP (needed only for AFNIC emails)
+LWP::UserAgent (needed only for OpenSRS, and .PL)
+Digest::MD5 (needed only for OpenSRS)
 
 
 (*) all dates and durations exchanged with Net::DRI should be

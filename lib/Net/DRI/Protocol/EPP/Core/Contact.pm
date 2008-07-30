@@ -25,7 +25,7 @@ use Net::DRI::Protocol::EPP;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.14 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.15 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -103,8 +103,7 @@ sub build_command
  }
 
  my $tcommand=(ref($command))? $command->[0] : $command;
- my @ns=@{$msg->ns->{contact}};
- $msg->command([$command,'contact:'.$tcommand,sprintf('xmlns:contact="%s" xsi:schemaLocation="%s %s"',$ns[0],$ns[0],$ns[1])]);
+ $msg->command([$command,'contact:'.$tcommand,sprintf('xmlns:contact="%s" xsi:schemaLocation="%s %s"',$msg->nsattrs('contact'))]);
 
  my @d=map { ['contact:id',$_] } @c;
 
@@ -137,9 +136,9 @@ sub check_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $chkdata=$mes->get_content('chkData',$mes->ns('contact'));
+ my $chkdata=$mes->get_response('contact','chkData');
  return unless $chkdata;
- foreach my $cd ($chkdata->getElementsByTagNameNS($mes->ns('contact'),'cd'))
+ foreach my $cd ($chkdata->getChildrenByTagNameNS($mes->ns('contact'),'cd'))
  {
   my $c=$cd->getFirstChild();
   my $contact;
@@ -175,7 +174,7 @@ sub info_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $infdata=$mes->get_content('infData',$mes->ns('contact'));
+ my $infdata=$mes->get_response('contact','infData');
  return unless $infdata;
 
  my %cd=map { $_ => [] } qw/name org street city sp pc cc/;
@@ -221,7 +220,7 @@ sub info_parse
    parse_postalinfo($po,$c,\%cd);
   } elsif ($name eq 'authInfo') ## we only try to parse the authInfo version defined in the RFC, other cases are to be handled by extensions
   {
-   my $n=$c->getElementsByTagNameNS($mes->ns('contact'),'pw');
+   my $n=$c->getChildrenByTagNameNS($mes->ns('contact'),'pw');
    $contact->auth({pw => $n->size()? $n->shift()->getFirstChild()->getData() : undef});
   } elsif ($name eq 'disclose')
   {
@@ -343,7 +342,7 @@ sub transfer_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $trndata=$mes->get_content('trnData',$mes->ns('contact'));
+ my $trndata=$mes->get_response('contact','trnData');
  return unless $trndata;
 
  my $pd=DateTime::Format::ISO8601->new();
@@ -488,7 +487,7 @@ sub create_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $credata=$mes->get_content('creData',$mes->ns('contact'));
+ my $credata=$mes->get_response('contact','creData');
  return unless $credata;
 
  my $c=$credata->getFirstChild();
@@ -583,7 +582,7 @@ sub pandata_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $pandata=$mes->get_content('panData',$mes->ns('contact'));
+ my $pandata=$mes->get_response('contact','panData');
  return unless $pandata;
 
  my $c=$pandata->firstChild();
@@ -596,14 +595,14 @@ sub pandata_parse
   if ($name eq 'id')
   {
    $oname=$c->getFirstChild()->getData();
-   $rinfo->{contact}->{$oname}->{action}='create_review';
+   $rinfo->{contact}->{$oname}->{action}='review';
    $rinfo->{contact}->{$oname}->{result}=Net::DRI::Util::xml_parse_boolean($c->getAttribute('paResult'));
    $rinfo->{contact}->{$oname}->{exist}=$rinfo->{contact}->{$oname}->{result};
   } elsif ($name eq 'paTRID')
   {
-   my @tmp=$c->getElementsByTagNameNS($mes->ns('_main'),'clTRID');
+   my @tmp=$c->getChildrenByTagNameNS($mes->ns('_main'),'clTRID');
    $rinfo->{contact}->{$oname}->{trid}=$tmp[0]->getFirstChild()->getData() if (@tmp && $tmp[0]);
-   $rinfo->{contact}->{$oname}->{svtrid}=($c->getElementsByTagNameNS($mes->ns('_main'),'svTRID'))[0]->getFirstChild()->getData();
+   $rinfo->{contact}->{$oname}->{svtrid}=($c->getChildrenByTagNameNS($mes->ns('_main'),'svTRID'))[0]->getFirstChild()->getData();
   } elsif ($name eq 'paDate')
   {
    $rinfo->{contact}->{$oname}->{date}=DateTime::Format::ISO8601->new()->parse_datetime($c->firstChild->getData());

@@ -30,7 +30,7 @@ use Net::DRI::Protocol::EPP::Extensions::Nominet::Host;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -108,7 +108,7 @@ sub info_parse
  my ($po,$otype,$oaction,$oname,$rinfo)=@_;
  my $mes=$po->message();
  return unless $mes->is_success();
- my $infdata=$mes->get_content('infData',$mes->ns('domain'));
+ my $infdata=$mes->get_response('domain','infData');
  return unless $infdata;
 
  my $pd=DateTime::Format::ISO8601->new();
@@ -130,11 +130,11 @@ sub info_parse
    $rinfo->{domain}->{$oname}->{$1}=$c->getFirstChild()->getData();
   } elsif ($name eq 'account')
   {
-   my $cs=Net::DRI::Protocol::EPP::Extensions::Nominet::Account::parse_infdata($po,$mes,$c->getElementsByTagNameNS($mes->ns('account'),'infData')->shift(),undef,$rinfo);
+   my $cs=Net::DRI::Protocol::EPP::Extensions::Nominet::Account::parse_infdata($po,$mes,$c->getChildrenByTagNameNS($mes->ns('account'),'infData')->shift(),undef,$rinfo);
    $rinfo->{domain}->{$oname}->{contact}=$cs;
   } elsif ($name eq 'ns')
   {
-   foreach my $nsinf ($c->getElementsByTagNameNS($mes->ns('ns'),'infData'))
+   foreach my $nsinf ($c->getChildrenByTagNameNS($mes->ns('ns'),'infData'))
    {
     my $dh=Net::DRI::Protocol::EPP::Extensions::Nominet::Host::parse_infdata($po,$mes,$nsinf,undef,$rinfo);
     my @a=$dh->get_details(1);
@@ -262,7 +262,7 @@ sub create_parse
  my ($po,$otype,$oaction,$oname,$rinfo)=@_;
  my $mes=$po->message();
  return unless $mes->is_success();
- my $credata=$mes->get_content('creData',$mes->ns('domain'));
+ my $credata=$mes->get_response('domain','creData');
  return unless $credata;
 
  my $pd=DateTime::Format::ISO8601->new();
@@ -284,22 +284,22 @@ sub create_parse
   } elsif ($name eq 'account')
   {
    my $nsa=$mes->ns('account');
-   my $node=$c->getElementsByTagNameNS($nsa,'creData')->shift();
-   my $roid=$node->getElementsByTagNameNS($nsa,'roid')->shift()->getFirstChild()->getData();
-   my $name=$node->getElementsByTagNameNS($nsa,'name')->shift()->getFirstChild()->getData();
+   my $node=$c->getChildrenByTagNameNS($nsa,'creData')->shift();
+   my $roid=$node->getChildrenByTagNameNS($nsa,'roid')->shift()->getFirstChild()->getData();
+   my $name=$node->getChildrenByTagNameNS($nsa,'name')->shift()->getFirstChild()->getData();
    my $co=$cf->()->srid($roid)->name($name);
    $cs->set($co,'registrant');
    $rinfo->{contact}->{$roid}->{exist}=1;
    $rinfo->{contact}->{$roid}->{roid}=$roid;
    $rinfo->{contact}->{$roid}->{self}=$co;
    my $nsc=$mes->ns('contact');
-   foreach my $ac ($node->getElementsByTagNameNS($nsa,'contact'))
+   foreach my $ac ($node->getChildrenByTagNameNS($nsa,'contact'))
    {
     my $type=$ac->getAttribute('type');
     my $order=$ac->getAttribute('order');
-    my $credata=$ac->getElementsByTagNameNS($nsc,'creData')->shift();
-    $roid=$credata->getElementsByTagNameNS($nsc,'roid')->shift()->getFirstChild()->getData();
-    $name=$credata->getElementsByTagNameNS($nsc,'name')->shift()->getFirstChild()->getData();
+    my $credata=$ac->getChildrenByTagNameNS($nsc,'creData')->shift();
+    $roid=$credata->getChildrenByTagNameNS($nsc,'roid')->shift()->getFirstChild()->getData();
+    $name=$credata->getChildrenByTagNameNS($nsc,'name')->shift()->getFirstChild()->getData();
     $co=$cf->()->srid($roid)->name($name);
     $c{$type}->{$order}=$co;
     $rinfo->{contact}->{$roid}->{exist}=1;
@@ -313,10 +313,10 @@ sub create_parse
   {
     my $ns=Net::DRI::Data::Hosts->new();
     my $nsns=$mes->ns('ns');
-    foreach my $node ($c->getElementsByTagNameNS($nsns,'creData'))
+    foreach my $node ($c->getChildrenByTagNameNS($nsns,'creData'))
     {
-     my $roid=$node->getElementsByTagNameNS($nsns,'roid')->shift()->getFirstChild()->getData();
-     my $name=$node->getElementsByTagNameNS($nsns,'name')->shift()->getFirstChild()->getData();
+     my $roid=$node->getChildrenByTagNameNS($nsns,'roid')->shift()->getFirstChild()->getData();
+     my $name=$node->getChildrenByTagNameNS($nsns,'name')->shift()->getFirstChild()->getData();
      $ns->add($name,[],[],undef,{roid => $roid});
      ## See Host::parse_infdata
      $rinfo->{host}->{$name}->{exist}=$rinfo->{host}->{$roid}->{exist}=1;

@@ -26,8 +26,8 @@ use Net::DRI::Registry;
 use Net::DRI::Util;
 
 our $AUTOLOAD;
-our $VERSION='0.90';
-our $CVS_REVISION=do { my @r=(q$Revision: 1.30 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION='0.91';
+our $CVS_REVISION=do { my @r=(q$Revision: 1.31 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -37,7 +37,28 @@ Net::DRI - Interface to Domain Name Registries/Registrars/Resellers
 
 =head1 DESCRIPTION
 
-Please see the README file for details.
+Net::DRI is a Perl library to access services offered by domain name
+providers, such as registries or registrars. DRI stands for
+Domain Registration Interface and it aims to be
+for domain name registries/registrars/resellers what DBI is for databases:
+an abstraction over multiple providers, with multiple policies, transports
+and protocols all used through a uniform API.
+
+It is an object-oriented framework implementing RRP (RFC 2832/3632),
+EPP (core EPP in RFC 4930/4931/4932/4933/4934, extensions in
+RFC 3915/4114/4310/5076 and various extensions of ccTLDs/gTLDs
+- currently more than 30 TLDs are directly supported with extensions),
+RRI (.DE registration protocol), Whois, DAS (Domain Availability Service used by .BE, .EU),
+.FR/.RE email and webservices interface, and resellers interface of some registrars
+(Gandi, OpenSRS, etc.).
+It has transports for connecting with TCP/TLS, HTTP/HTTPS, 
+Web Services (XML-RPC and SOAP with/without WSDL),
+or SMTP-based registries/registrars.
+
+It is not limited to handling of domain names, it can be easily extended.
+For example, it supports ENUM registrations and validations, or DNSSEC provisioning.
+
+Please see the included README file for full details.
 
 =head1 SUPPORT
 
@@ -49,11 +70,12 @@ Please also see the SUPPORT file in the distribution.
 
 =head1 SEE ALSO
 
-E<lt>http://www.dotandco.com/services/software/Net-DRI/E<gt>
+L<http://www.dotandco.com/services/software/Net-DRI/>
 
 =head1 AUTHOR
 
 Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
+and various contributors (see Changes file and web page above)
 
 =head1 COPYRIGHT
 
@@ -130,7 +152,17 @@ sub err_profile_name_does_not_exist  { Net::DRI::Exception->die(0,'DRI',4,'Profi
 ####################################################################################################
 ## Accessor functions
 
-sub available_registries { return keys(%{shift->{registries}}); }
+sub available_registries { return sort(keys(%{shift->{registries}})); }
+sub available_registries_profiles
+{
+ my $self=shift;
+ my %r;
+ foreach my $reg (keys(%{$self->{registries}}))
+ {
+  $r{$reg}=[ $self->{registries}->{$reg}->available_profiles() ];
+ }
+ return \%r;
+}
 sub registry_name { return shift->{current_registry}; }
 
 sub registry
@@ -209,6 +241,30 @@ sub end
 }
 
 sub DESTROY { shift->end(); }
+
+####################################################################################################
+
+package Net::DRI::TrapExceptions;
+
+use base qw/Net::DRI/;
+
+our $AUTOLOAD;
+
+## Some methods may die in Net::DRI, we specifically trap them
+sub add_registry { my $r; eval { $r=shift->SUPER::add_registry(@_); }; return $r unless $@; die(ref($@)? $@->as_string() : $@); }
+sub registry { my $r; eval { $r=shift->SUPER::registry(@_); }; return $r unless $@; die(ref($@)? $@->as_string() : $@); }
+sub target { my $r; eval { $r=shift->SUPER::target(@_); }; return $r unless $@; die(ref($@)? $@->as_string() : $@); }
+sub end { my $r; eval { $r=shift->SUPER::end(@_); }; return $r unless $@; die(ref($@)? $@->as_string() : $@); }
+
+sub AUTOLOAD
+{
+ my $self=shift;
+ my $r;
+ $Net::DRI::AUTOLOAD=$AUTOLOAD;
+ eval { $r=$self->SUPER::AUTOLOAD(@_); };
+ return $r unless $@;
+ die(ref($@)? $@->as_string() : $@);
+}
 
 ####################################################################################################
 1;

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Whois Connection handling
 ##
-## Copyright (c) 2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -13,7 +13,7 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::Protocol::Whois::Connection;
 
@@ -21,7 +21,7 @@ use strict;
 use Net::DRI::Data::Raw;
 use Net::DRI::Protocol::ResultStatus;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -51,7 +51,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -65,10 +65,9 @@ See the LICENSE file that comes with this distribution for more details.
 
 ####################################################################################################
 
-sub get_data
+sub read_data
 {
- shift if ($_[0] eq __PACKAGE__);
- my ($to,$sock)=@_;
+ my ($class,$to,$sock)=@_;
 
  my @a;
  while(my $l=$sock->getline())
@@ -77,8 +76,14 @@ sub get_data
   push @a,$l if $l;
  }
 
- die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_SYNTAX_ERROR','Unable to read answer (connection closed by registry ?)','en')) unless (@a > 5);
+ die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED','Unable to read answer (connection closed by registry ?)','en')) unless (@a > 5);
  return Net::DRI::Data::Raw->new_from_array(\@a);
+}
+
+sub write_message
+{
+ my ($class,$to,$msg)=@_;
+ return $msg->as_string();
 }
 
 ####################################################################################################

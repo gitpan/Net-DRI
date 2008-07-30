@@ -2,6 +2,7 @@
 
 use Net::DRI;
 use Net::DRI::Data::Raw;
+use Net::DRI::Protocol::EPP::Connection;
 use DateTime;
 use DateTime::Duration;
 
@@ -18,7 +19,7 @@ our $R1;
 sub mysend
 {
  my ($transport,$count,$msg)=@_;
- $R1=$msg->as_string();
+ $R1=substr(Net::DRI::Protocol::EPP::Connection->write_message(undef,$msg),4);
  return 1;
 }
 

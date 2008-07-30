@@ -1,6 +1,6 @@
 ## Domain Registry Interface, RRP Connection handling
 ##
-## Copyright (c) 2005,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -13,16 +13,19 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::Protocol::RRP::Connection;
 
 use strict;
+
 use Net::DRI::Protocol::RRP::Message;
 use Net::DRI::Protocol::ResultStatus;
 use Net::DRI::Data::Raw;
 
-our $VERSION=do { my @r=(q$Revision: 1.14 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+use Encode ();
+
+our $VERSION=do { my @r=(q$Revision: 1.15 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -64,38 +67,36 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
-
-###############################################################################
-
+####################################################################################################
 
 sub login
 {
- shift if ($_[0] eq __PACKAGE__);
- my ($id,$pass,$cltrid,$dr,$newpass)=@_;
+ my ($class,$to,$cm,$id,$pass,$cltrid,$dr,$newpass)=@_;
  my %h=(Id => $id, Password => $pass);
  $h{NewPassword}=$newpass if (defined($newpass) && $newpass);
  my $mes=Net::DRI::Protocol::RRP::Message->new({ command => 'session', options => \%h});
- return $mes->as_string();
+ return $class->write_message($to,$mes);
 }
 
 sub logout
 {
+ my ($class,$to,$cm,$cltrid)=@_;
  my $mes=Net::DRI::Protocol::RRP::Message->new({ command => 'quit' });
- return $mes->as_string();
+ return $class->write_message($to,$mes);
 }
 
 sub keepalive
 {
+ my ($class,$to,$cm,$cltrid)=@_;
  my $mes=Net::DRI::Protocol::RRP::Message->new({ command => 'describe' });
- return $mes->as_string();
+ return $class->write_message($to,$mes);
 }
 
-########################################################################
+####################################################################################################
 
-sub get_data
+sub read_data
 {
- shift if ($_[0] eq __PACKAGE__);
- my ($to,$sock)=@_;
+ my ($class,$to,$sock)=@_;
 
  my (@l);
  while(my $l=$sock->getline())
@@ -103,14 +104,19 @@ sub get_data
   push @l,$l;
   last if ($l=~m/^\.\s*\n?$/);
  }
- die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_SYNTAX_ERROR',@l? $l[0] : '<empty message from server>','en')) unless (@l && $l[-1]=~m/^\.\s*\n?$/);
+ die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED',@l? $l[0] : '<empty message from server>','en')) unless (@l && $l[-1]=~m/^\.\s*\n?$/);
  return Net::DRI::Data::Raw->new_from_array(\@l);
+}
+
+sub write_message
+{
+ my ($self,$to,$msg)=@_;
+ return Encode::encode('ascii',$msg->as_string());
 }
 
 sub parse_greeting
 {
- shift if ($_[0] eq __PACKAGE__);
- my $dc=shift;
+ my ($class,$dc)=@_;
  my ($code,$msg)=find_code($dc);
  unless (defined($code) && ($code==0))
  {
@@ -123,8 +129,7 @@ sub parse_greeting
 
 sub parse_login
 {
- shift if ($_[0] eq __PACKAGE__);
- my $dc=shift;
+ my ($class,$dc)=@_;
  my ($code,$msg)=find_code($dc);
  unless (defined($code) && ($code==200))
  {
@@ -138,8 +143,7 @@ sub parse_login
 
 sub parse_logout
 {
- shift if ($_[0] eq __PACKAGE__);
- my $dc=shift;
+ my ($class,$dc)=@_;
  my ($code,$msg)=find_code($dc);
  unless (defined($code) && ($code==220))
  {
@@ -162,5 +166,5 @@ sub find_code
  return (0+$1,$2);
 }
 
-###################################################################################################################:
+####################################################################################################
 1;

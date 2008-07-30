@@ -1,7 +1,7 @@
 ## Domain Registry Interface, CentralNic Release EPP extension
 ## (http://labs.centralnic.com/epp/ext/release.php)
 ##
-## Copyright (c) 2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -24,7 +24,7 @@ use Net::DRI::Util;
 use Net::DRI::Exception;
 use Net::DRI::Protocol::EPP::Core::Domain;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -54,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -87,11 +87,8 @@ sub release
 
  Net::DRI::Exception::usererr_invalid_parameters('release operation needs a clID') unless (defined($rd) && (ref($rd) eq 'HASH') && exists($rd->{clID}) && defined($rd->{clID}) && $rd->{clID});
 
- my @ns=@{$mes->ns->{domain}};
- $mes->command([['transfer',{'op'=>'release'}],'domain:transfer',sprintf('xmlns:domain="%s" xsi:schemaLocation="%s %s"',$ns[0],$ns[0],$ns[1])]);
-
- my @d=(['domain:name',$domain]);
- push @d,['domain:clID',$rd->{clID}];
+ $mes->command([['transfer',{'op'=>'release'}],'domain:transfer',sprintf('xmlns:domain="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('domain'))]);
+ my @d=(['domain:name',$domain],['domain:clID',$rd->{clID}]);
  $mes->command_body(\@d);
 }
 

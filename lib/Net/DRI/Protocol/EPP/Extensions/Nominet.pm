@@ -22,10 +22,9 @@ use strict;
 
 use base qw/Net::DRI::Protocol::EPP/;
 
-use Net::DRI::Protocol::EPP::Message;
 use Net::DRI::Data::Contact::Nominet;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -71,32 +70,24 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $c=shift;
- my ($drd,$version,$extrah)=@_;
+ my ($c,$drd,$version,$extrah)=@_;
  my %e=map { $_ => 1 } (defined($extrah)? (ref($extrah)? @$extrah : ($extrah)) : ());
 
  my @c=map { 'Net::DRI::Protocol::EPP::Extensions::Nominet::'.$_ } qw/Domain Contact Host Account/;
  push @c,'Session';
- my $self=$c->SUPER::new($drd,$version,[keys(%e)],\@c); ## we are now officially a Net::DRI::Protocol::EPP object
-
+ my $self=$c->SUPER::new($drd,$version,[keys(%e)],\@c);
  foreach my $w (qw/domain contact ns account notifications/)
  {
-  $self->{ns}->{$w}=['http://www.nominet.org.uk/epp/xml/nom-'.$w.'-1.0','nom-'.$w.'-1.0.xsd'];
+  $self->ns({$w => ['http://www.nominet.org.uk/epp/xml/nom-'.$w.'-1.0','nom-'.$w.'-1.0.xsd'] });
  }
 
- my $rcapa=$self->capabilities();
- $rcapa->{domain_update}={ map { $_ => ['set'] } qw/ns contact first-bill recur-bill auto-bill next-bill notes/ };
- $rcapa->{contact_update}={ info => ['set'] };
- $rcapa->{host_update}={ ip => ['set'], name => ['set'] };
- $rcapa->{account_update}={ contact => ['set'] };
-
- my $rfact=$self->factories();
- $rfact->{contact}=sub { return Net::DRI::Data::Contact::Nominet->new(); };
- $rfact->{message}=sub { my $m=Net::DRI::Protocol::EPP::Message->new(@_); $m->ns($self->{ns}); $m->version($version); return $m;}; ## needed for change of XML NS
-
+ foreach my $o (qw/ns contact first-bill recur-bill auto-bill next-bill notes/) { $self->capabilities('domain_update',$o,['set']); }
+ $self->capabilities('contact_update','info',['set']);
+ $self->capabilities('host_update','ip',['set']);
+ $self->capabilities('host_update','name',['set']);
+ $self->capabilities('account_update','contact',['set']);
+ $self->factories('contact',sub { return Net::DRI::Data::Contact::Nominet->new(); });
  $self->default_parameters({domain_create => { auth => { pw => '' } } }); ## domain:authInfo is not used by Nominet
-
- bless($self,$c); ## rebless
  return $self;
 }
 

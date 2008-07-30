@@ -21,7 +21,7 @@ use strict;
 
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -82,9 +82,7 @@ sub register_commands
 sub build_command_extension
 {
  my ($mes,$epp,$tag)=@_;
-
- my @ns=@{$mes->ns->{pl_contact}};
- return $mes->command_extension_register($tag,sprintf('xmlns:extcon="%s" xsi:schemaLocation="%s %s"',$ns[0],$ns[0],$ns[1]));
+ return $mes->command_extension_register($tag,sprintf('xmlns:extcon="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('pl_contact')));
 }
 
 sub add_individual_and_consent

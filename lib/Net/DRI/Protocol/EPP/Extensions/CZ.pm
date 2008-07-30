@@ -22,7 +22,7 @@ use strict;
 
 use base qw/Net::DRI::Protocol::EPP/;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -69,8 +69,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $c = shift;
- my ($drd, $version, $extrah) = @_;
+ my ($c, $drd, $version, $extrah) = @_;
  my %e = map { $_ => 1 } (defined($extrah) ? (ref($extrah) ? @$extrah :
 	($extrah)) : ());
 
@@ -79,20 +78,17 @@ sub new
  $e{'Net::DRI::Protocol::EPP::Extensions::CZ::Domain'} = 1;
  $e{'Net::DRI::Protocol::EPP::Extensions::NSgroup'} = 1;
 
- ## we are now officially a Net::DRI::Protocol::EPP object
  my $self = $c->SUPER::new($drd,$version,[keys(%e)]);
-
  $self->{defaulti18ntype}='loc'; # The registry does not provide contact postalinfo i18n type, although it is mandatory by EPP
- $self->{ns}->{domain} = ['http://www.nic.cz/xml/epp/domain-1.3',
-	'domain-1.3.xsd'];
- $self->{ns}->{contact} = ['http://www.nic.cz/xml/epp/contact-1.4',
-	'contact-1.4.xsd'];
-
- my $rcapa = $self->capabilities();
- delete($rcapa->{domain_update}->{status});
- $rcapa->{domain_update}->{nsset} = ['set'];
-
- bless($self, $c); ## rebless
+ $self->ns({ domain  => ['http://www.nic.cz/xml/epp/domain-1.3','domain-1.3.xsd'],
+             contact => ['http://www.nic.cz/xml/epp/contact-1.4','contact-1.4.xsd'],
+          });
+ $self->capabilities('domain_update','status',undef);
+ $self->capabilities('domain_update','nsset',['set']);
+ $self->capabilities('nsset_update','ns',['add','del']);
+ $self->capabilities('nsset_update','contact',['add','del']);
+ $self->capabilities('nsset_update','auth',['set']);
+ $self->capabilities('nsset_update','reportlevel',['set']);
  return $self;
 }
 

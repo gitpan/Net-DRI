@@ -22,7 +22,7 @@ use strict;
 use Time::HiRes ();
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.16 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.17 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -80,8 +80,7 @@ sub all_valid
 
 sub hash_merge
 {
- my ($rmaster,$rtoadd,$ver)=@_;
- $ver||=0;
+ my ($rmaster,$rtoadd)=@_;
  while(my ($k,$v)=each(%$rtoadd))
  {
   $rmaster->{$k}={} unless exists($rmaster->{$k});
@@ -89,7 +88,7 @@ sub hash_merge
   {
    $rmaster->{$k}->{$kk}=[] unless exists($rmaster->{$k}->{$kk});
    my @t=@$vv;
-   push @{$rmaster->{$k}->{$kk}},$ver? @t : \@t;
+   push @{$rmaster->{$k}->{$kk}},\@t;
   }
  }
 }
@@ -384,6 +383,15 @@ sub xml_parse_boolean
 {
  my $in=shift;
  return {'true'=>1,1=>1,0=>0,'false'=>0}->{$in};
+}
+
+sub xml_escape
+{
+ my ($in)=@_;
+ $in=~s/&/&amp;/g;
+ $in=~s/</&lt;/g;
+ $in=~s/>/&gt;/g;
+ return $in;
 }
 
 sub remcam

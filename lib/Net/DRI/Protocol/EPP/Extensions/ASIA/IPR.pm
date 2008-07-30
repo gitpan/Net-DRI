@@ -21,7 +21,7 @@ use strict;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -63,7 +63,6 @@ the Free Software Foundation; either version 2 of the License, or
 See the LICENSE file that comes with this distribution for more details.
 
 =cut
-
 
 ####################################################################################################
 
@@ -113,7 +112,7 @@ sub create
   push(@iprdata, ['ipr:preVerified', $rd->{ipr}->{preVerified}])
 	if (exists($rd->{ipr}->{preVerified}));
 
-  my $eid=$mes->command_extension_register('ipr:create','xmlns:ipr="urn:afilias:params:xml:ns:ipr-1.0" xsi:schemaLocation="urn:afilias:params:xml:ns:ipr-1.0 ipr-1.0.xsd"');
+  my $eid=$mes->command_extension_register('ipr:create',sprintf('xmlns:ipr="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('ipr')));
   $mes->command_extension($eid,[@iprdata]);
  }
 }
@@ -121,14 +120,13 @@ sub create
 sub create_parse
 {
  my ($po, $otype, $oaction, $oname, $rinfo) = @_;
- my $NS = 'urn:afilias:params:xml:ns:asia-1.0';
  my $mes = $po->message();
- my $infdata = $mes->get_content('creData', $NS, 1);
+ my $infdata = $mes->get_extension('asia','creData');
  my $c;
 
  return unless ($infdata);
 
- $c = $infdata->getElementsByTagNameNS($NS, 'domainRoid');
+ $c = $infdata->getElementsByTagNameNS($mes->ns('asia'), 'domainRoid');
  $rinfo->{$otype}->{$oname}->{roid} = $c->shift()->getFirstChild()->getData()
 	if ($c);
 }
@@ -137,32 +135,32 @@ sub parse
 {
  my ($po,$otype,$oaction,$oname,$rinfo)=@_;
  my $mes=$po->message();
- my $infdata=$mes->get_content('infData', 'urn:afilias:params:xml:ns:ipr-1.0', 1);
+ my $infdata=$mes->get_extension('ipr','infData');
  my $ipr = {};
  my $c;
 
  return unless ($infdata);
  my $pd=DateTime::Format::ISO8601->new();
-
- $c = $infdata->getElementsByTagNameNS('urn:afilias:params:xml:ns:ipr-1.0', 'name');
+ my $ns=$mes->ns('ipr');
+ $c = $infdata->getElementsByTagNameNS($ns, 'name');
  $ipr->{name} = $c->shift()->getFirstChild()->getData() if ($c);
- $c = $infdata->getElementsByTagNameNS('urn:afilias:params:xml:ns:ipr-1.0', 'ccLocality');
+ $c = $infdata->getElementsByTagNameNS($ns, 'ccLocality');
  $ipr->{cc} = $c->shift()->getFirstChild()->getData() if ($c);
- $c = $infdata->getElementsByTagNameNS('urn:afilias:params:xml:ns:ipr-1.0', 'number');
+ $c = $infdata->getElementsByTagNameNS($ns, 'number');
  $ipr->{number} = $c->shift()->getFirstChild()->getData() if ($c);
- $c = $infdata->getElementsByTagNameNS('urn:afilias:params:xml:ns:ipr-1.0', 'appDate');
+ $c = $infdata->getElementsByTagNameNS($ns, 'appDate');
  $ipr->{appDate} =$pd->parse_datetime ($c->shift()->getFirstChild()->getData()) if ($c);
- $c = $infdata->getElementsByTagNameNS('urn:afilias:params:xml:ns:ipr-1.0', 'regDate');
+ $c = $infdata->getElementsByTagNameNS($ns, 'regDate');
  $ipr->{regDate} = $pd->parse_datetime($c->shift()->getFirstChild()->getData()) if ($c);
- $c = $infdata->getElementsByTagNameNS('urn:afilias:params:xml:ns:ipr-1.0', 'class');
+ $c = $infdata->getElementsByTagNameNS($ns, 'class');
  $ipr->{class} = $c->shift()->getFirstChild()->getData() if ($c);
- $c = $infdata->getElementsByTagNameNS('urn:afilias:params:xml:ns:ipr-1.0', 'entitlement');
+ $c = $infdata->getElementsByTagNameNS($ns, 'entitlement');
  $ipr->{entitlement} = $c->shift()->getFirstChild()->getData() if ($c);
- $c = $infdata->getElementsByTagNameNS('urn:afilias:params:xml:ns:ipr-1.0', 'form');
+ $c = $infdata->getElementsByTagNameNS($ns, 'form');
  $ipr->{form} = $c->shift()->getFirstChild()->getData() if ($c);
- $c = $infdata->getElementsByTagNameNS('urn:afilias:params:xml:ns:ipr-1.0', 'preVerified');
+ $c = $infdata->getElementsByTagNameNS($ns, 'preVerified');
  $ipr->{preVerified} = $c->shift()->getFirstChild()->getData() if ($c);
- $c = $infdata->getElementsByTagNameNS('urn:afilias:params:xml:ns:ipr-1.0', 'type');
+ $c = $infdata->getElementsByTagNameNS($ns, 'type');
  $ipr->{type} = $c->shift()->getFirstChild()->getData() if ($c);
  $rinfo->{$otype}->{$oname}->{ipr} = $ipr;
 }

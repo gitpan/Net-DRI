@@ -22,7 +22,7 @@ package Net::DRI::Protocol::EPP::Extensions::NO::Host;
 use strict;
 use Net::DRI::Util;
 
-our $VERSION = do { my @r = ( q$Revision: 1.1 $ =~ /\d+/gmx ); sprintf( "%d" . ".%02d" x $#r, @r ); };
+our $VERSION = do { my @r = ( q$Revision: 1.2 $ =~ /\d+/gmx ); sprintf( "%d" . ".%02d" x $#r, @r ); };
 
 =pod
 
@@ -80,19 +80,14 @@ sub register_commands {
 
 ####################################################################################################
 
-sub capabilities_add {
-    return { 'host_update' => { 'contact' => ['set'] } };
-}
-
 sub parse_info {
     my ( $po, $otype, $oaction, $oname, $rinfo ) = @_;
     my $mes = $po->message();
     return unless $mes->is_success();
 
-    my @ns = @{ $mes->ns->{no_host} };
-    my $NS = $ns[0];
+    my $NS = $mes->ns('no_host');
 
-    my $condata = $mes->get_content( 'infData', $NS, 1 );
+    my $condata = $mes->get_extension('no_host','infData');
     return unless $condata;
 
     my @e = $condata->getElementsByTagNameNS( $NS, 'contact' );
@@ -109,12 +104,10 @@ sub parse_info {
 sub build_command_extension {
     my ( $mes, $epp, $tag ) = @_;
 
-    my @ns = @{ $mes->ns->{no_host} };
     return $mes->command_extension_register(
         $tag,
         sprintf(
-            'xmlns:no-ext-host="%s" xsi:schemaLocation="%s %s"',
-            $ns[0], $ns[0], $ns[1]
+            'xmlns:no-ext-host="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('no_host')
         )
     );
 }

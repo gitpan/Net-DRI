@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Handling of statuses list (order is irrelevant) (base class)
 ##
-## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -13,7 +13,7 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::Data::StatusList;
 
@@ -21,7 +21,7 @@ use strict;
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -37,31 +37,31 @@ with a message for each and a language tag, and any other stuff, depending on re
 
 =head1 METHODS
 
-=head2 is_active() 
+=head2 is_active()
 
 returns 1 if these statuses enable an object to be active
 
-=head2 is_published() 
+=head2 is_published()
 
 returns 1 if these statuses enable the object to be published on registry DNS servers
 
-=head2 is_pending() 
+=head2 is_pending()
 
 returns 1 if these statuses are for an object that is pending some action at registry
 
-=head2 is_linked() 
+=head2 is_linked()
 
 returns 1 if these statuses are for an object that is linked to another one at registry
 
-=head2 can_update() 
+=head2 can_update()
 
 returns 1 if these statuses allow to update the object at registry
 
-=head2 can_transfer() 
+=head2 can_transfer()
 
 returns 1 if these statuses allow to transfer the object at registry
 
-=head2 can_delete() 
+=head2 can_delete()
 
 returns 1 if these statuses allow to delete the object at registry
 
@@ -69,7 +69,7 @@ returns 1 if these statuses allow to delete the object at registry
 
 returns 1 if these statuses allow to renew the object at registry
 
-=head2 possible_no() 
+=head2 possible_no()
 
 returns an array with the list of available status to use in the no() call
 
@@ -83,19 +83,19 @@ can be used to build a status, which will be added to the list. Must be given th
 You may also use the following methods, but they should be less useful as
 the purpose of the module is to give an abstract view of the underlying statuses.
 
-=head2 list_status() 
+=head2 list_status()
 
-to get only the statuses' names, as an array
+to get only the statuses' names, as an array of sorted names
 
-=head2 status_details() 
+=head2 status_details()
 
 to get an hash ref with all status information
 
-=head2 has_any() 
+=head2 has_any()
 
 returns 1 if the object has any of the statuses given as arguments
 
-=head2 has_not() 
+=head2 has_not()
 
 returns 1 if the object has none of the statuses given as arguments
 
@@ -117,7 +117,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -129,12 +129,11 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
-################################################################################################################
+####################################################################################################
+
 sub new
 {
- my $proto=shift;
- my $class=ref($proto) || $proto;
-
+ my $class=shift;
  my $pname=shift || '?';
  my $pversion=shift || '?';
 
@@ -172,6 +171,14 @@ sub add
    $rs->{$el}={};
   }
  }
+ return $self;
+}
+
+sub rem
+{
+ my ($self,$status)=@_;
+ my $rs=$self->{sl};
+ delete($rs->{$status}) if exists($rs->{$status});
  return $self;
 }
 

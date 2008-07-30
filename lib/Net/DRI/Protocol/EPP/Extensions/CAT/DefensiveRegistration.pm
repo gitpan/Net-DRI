@@ -24,7 +24,7 @@ use Net::DRI::Exception;
 use Net::DRI::Protocol::EPP::Core::Domain;
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -82,11 +82,6 @@ sub register_commands
  $tmp1{check_multi}=$tmp1{check};
  
  return { 'defreg' => \%tmp1 };
-}
-
-sub capabilities_add
-{
- return { 'defreg_update' => { 'status' => ['add','del'], 'contact' => ['add','del'], 'registrant' => ['set'], 'auth' => ['set'], 'maintainer' => ['set'], 'trademark' => ['set'] } };
 }
 
 sub ns
@@ -214,10 +209,10 @@ sub check_parse
  return unless $mes->is_success();
 
  my $ns=ns($mes);
- my $chkdata=$mes->get_content('chkData',$ns);
+ my $chkdata=$mes->get_response($ns,'chkData');
  return unless $chkdata;
 
- foreach my $cd ($chkdata->getElementsByTagNameNS($ns,'cd'))
+ foreach my $cd ($chkdata->getChildrenByTagNameNS($ns,'cd'))
  {
   my $c=$cd->getFirstChild();
   my $id;
@@ -255,7 +250,7 @@ sub info_parse
  return unless $mes->is_success();
 
  my $ns=ns($mes);
- my $infdata=$mes->get_content('infData',$ns);
+ my $infdata=$mes->get_response($ns,'infData');
  return unless $infdata;
 
  my (@s,%t);
@@ -296,7 +291,7 @@ sub info_parse
    $rinfo->{defreg}->{$oname}->{$1}=$pd->parse_datetime($c->getFirstChild()->getData());
   } elsif ($name eq 'authInfo')
   {
-   $rinfo->{defreg}->{$oname}->{auth}={pw=>($c->getElementsByTagNameNS($ns,'pw'))[0]->getFirstChild()->getData()};
+   $rinfo->{defreg}->{$oname}->{auth}={pw=>($c->getChildrenByTagNameNS($ns,'pw'))[0]->getFirstChild()->getData()};
   } elsif ($name eq 'maintainer')
   {
    $rinfo->{defreg}->{$oname}->{maintainer}=$c->getFirstChild()->getData();

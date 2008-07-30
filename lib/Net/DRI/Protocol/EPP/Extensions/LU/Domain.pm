@@ -24,7 +24,7 @@ use Net::DRI::Util;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -96,9 +96,7 @@ sub register_commands
 sub build_command_extension
 {
  my ($mes,$epp,$tag)=@_;
-
- my @ns=@{$mes->ns->{dnslu}};
- return $mes->command_extension_register($tag,sprintf('xmlns:dnslu="%s" xsi:schemaLocation="%s %s"',$ns[0],$ns[0],$ns[1]));
+ return $mes->command_extension_register($tag,sprintf('xmlns:dnslu="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('dnslu')));
 }
 
 ####################################################################################################
@@ -109,14 +107,18 @@ sub info_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $infdata=$mes->get_content('infData',$mes->ns('dnslu'),1);
+ my $infdata=$mes->get_extension('dnslu','ext');
  return unless $infdata;
-
- my @c=$infdata->getElementsByTagNameNS($mes->ns('dnslu'),'domain');
- return unless @c;
+ my $ns=$mes->ns('dnslu');
+ $infdata=$infdata->getChildrenByTagNameNS($ns,'resData');
+ return unless $infdata->size();
+ $infdata=$infdata->shift()->getChildrenByTagNameNS($ns,'infData');
+ return unless $infdata->size();
+ $infdata=$infdata->shift()->getChildrenByTagNameNS($ns,'domain');
+ return unless $infdata->size();
 
  my $pd=DateTime::Format::ISO8601->new();
- my $c=$c[0]->getFirstChild();
+ my $c=$infdata->shift()->getFirstChild();
  while($c)
  {
   next unless ($c->nodeType() == 1); ## only for element nodes
@@ -270,14 +272,18 @@ sub parse_transfer_trade_restore
  my ($po,$otype,$oaction,$oname,$rinfo,$s)=@_;
  my $mes=$po->message();
 
- my $infdata=$mes->get_content($s,$mes->ns('dnslu'),1);
+ my $infdata=$mes->get_extension('dnslu','ext');
  return unless $infdata;
-
- my @c=$infdata->getElementsByTagNameNS($mes->ns('dnslu'),'domain');
- return unless @c;
+ my $ns=$mes->ns('dnslu');
+ $infdata=$infdata->getChildrenByTagNameNS($ns,'resData');
+ return unless $infdata->size();
+ $infdata=$infdata->shift()->getChildrenByTagNameNS($ns,$s);
+ return unless $infdata->size();
+ $infdata=$infdata->shift()->getChildrenByTagNameNS($ns,'domain');
+ return unless $infdata->size();
 
  my $pd=DateTime::Format::ISO8601->new();
- my $c=$c[0]->getFirstChild();
+ my $c=$infdata->shift->getFirstChild();
  while($c)
  {
   next unless ($c->nodeType() == 1); ## only for element nodes

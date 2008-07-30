@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Whois Info (EPP-Whois-Info-Ext.pdf)
 ##
-## Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -22,7 +22,7 @@ use strict;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -52,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -110,7 +110,7 @@ sub info_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $infdata=$mes->get_content('whoisInfData','http://www.verisign.com/epp/whoisInf-1.0',1);
+ my $infdata=$mes->get_extension('http://www.verisign.com/epp/whoisInf-1.0','whoisInfData');
  return unless $infdata;
 
  my %w;

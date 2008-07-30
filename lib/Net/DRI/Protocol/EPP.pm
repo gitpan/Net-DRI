@@ -27,7 +27,7 @@ use Net::DRI::Protocol::EPP::Message;
 use Net::DRI::Protocol::EPP::Core::Status;
 use Net::DRI::Data::Contact;
 
-our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -76,33 +76,31 @@ sub new
  my $c=shift;
  my ($drd,$version,$extrah,$coremods)=@_;
 
- my $self=$c->SUPER::new(); ## we are now officially a Net::DRI::Protocol object
+ my $self=$c->SUPER::new();
  $self->name('EPP');
  $version=Net::DRI::Util::check_equal($version,['1.0'],'1.0');
  $self->version($version);
 
- $self->capabilities({ 'host_update'   => { 'ip' => ['add','del'], 'status' => ['add','del'], 'name' => ['set'] },
-                       'contact_update'=> { 'status' => ['add','del'], 'info' => ['set'] },
-                       'domain_update' => { 'ns' => ['add','del'], 'status' => ['add','del'], 'contact' => ['add','del'], 'registrant' => ['set'], 'auth' => ['set'] },
-                     });
+ foreach my $o (qw/ip status/) { $self->capabilities('host_update',$o,['add','del']); }
+ $self->capabilities('host_update','name',['set']);
+ $self->capabilities('contact_update','status',['add','del']);
+ $self->capabilities('contact_update','info',['set']);
+ foreach my $o (qw/ns status contact/) { $self->capabilities('domain_update',$o,['add','del']); }
+ foreach my $o (qw/registrant auth/)   { $self->capabilities('domain_update',$o,['set']); }
 
  $self->{hostasattr}=$drd->info('host_as_attr') || 0;
  $self->{contacti18n}=$drd->info('contact_i18n') || 7; ## bitwise OR with 1=LOC only, 2=INT only, 4=LOC+INT only
  $self->{defaulti18ntype}=undef; ## only needed for registries not following truely EPP standard, like .CZ
  $self->{usenullauth}=$drd->info('use_null_auth') || 0; ## See RFC4931 §3.2.5
- $self->{ns}={ _main   => ['urn:ietf:params:xml:ns:epp-1.0','epp-1.0.xsd'],
-               domain  => ['urn:ietf:params:xml:ns:domain-1.0','domain-1.0.xsd'],
-               host    => ['urn:ietf:params:xml:ns:host-1.0','host-1.0.xsd'],
-               contact => ['urn:ietf:params:xml:ns:contact-1.0','contact-1.0.xsd'],
-             };
+ $self->ns({ _main   => ['urn:ietf:params:xml:ns:epp-1.0','epp-1.0.xsd'],
+             domain  => ['urn:ietf:params:xml:ns:domain-1.0','domain-1.0.xsd'],
+             host    => ['urn:ietf:params:xml:ns:host-1.0','host-1.0.xsd'],
+             contact => ['urn:ietf:params:xml:ns:contact-1.0','contact-1.0.xsd'],
+           });
 
- $self->factories({ 
-                   message => sub { my $m=Net::DRI::Protocol::EPP::Message->new(@_); $m->ns($self->{ns}); $m->version($version); return $m; },
-                   status  => sub { return Net::DRI::Protocol::EPP::Core::Status->new(); },
-                   contact => sub { return Net::DRI::Data::Contact->new(); },
-                  });
-
- bless($self,$c); ## rebless
+ $self->factories('message',sub { my $m=Net::DRI::Protocol::EPP::Message->new(@_); $m->ns($self->ns()); $m->version($version); return $m; });
+ $self->factories('status',sub { return Net::DRI::Protocol::EPP::Core::Status->new(); });
+ $self->factories('contact',sub { return Net::DRI::Data::Contact->new(); });
 
  $self->_load($extrah,$coremods);
  return $self;
@@ -143,6 +141,13 @@ sub parse_status
 }
 
 sub core_contact_types { return ('admin','tech','billing'); }
+
+sub ns
+{
+ my ($self,$add)=@_;
+ $self->{ns}={ ref($self->{ns})? %{$self->{ns}} : (), %$add } if (defined($add) && ref($add) eq 'HASH');
+ return $self->{ns};
+}
 
 ####################################################################################################
 1;

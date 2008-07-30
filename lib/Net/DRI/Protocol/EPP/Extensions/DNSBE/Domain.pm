@@ -14,7 +14,7 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::Protocol::EPP::Extensions::DNSBE::Domain;
 
@@ -25,9 +25,7 @@ use Net::DRI::Exception;
 use Net::DRI::Protocol::EPP::Core::Domain;
 use Net::DRI::Data::Hosts;
 
-use Carp;
-
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -89,19 +87,12 @@ sub register_commands
  return { 'domain' => \%tmp };
 }
 
-sub capabilities_add
-{
- return { 'domain_update' => { 'nsgroup' => [ 'add','del']} };
-}
-
 ####################################################################################################
 
 sub build_command_extension
 {
  my ($mes,$epp,$tag)=@_;
- 
- my @ns=@{$mes->ns->{dnsbe}};
- return $mes->command_extension_register($tag,sprintf('xmlns:dnsbe="%s" xsi:schemaLocation="%s %s"',$ns[0],$ns[0],$ns[1]));
+ return $mes->command_extension_register($tag,sprintf('xmlns:dnsbe="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('dnsbe')));
 }
 
 sub create
@@ -149,11 +140,11 @@ sub info_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $infdata=$mes->get_content('infData',$mes->ns('dnsbe'),1);
+ my $infdata=$mes->get_extension('dnsbe','infData');
  return unless $infdata;
 
  my @c;
- foreach my $el ($infdata->getElementsByTagNameNS($mes->ns('dnsbe'),'nsgroup'))
+ foreach my $el ($infdata->getChildrenByTagNameNS($mes->ns('dnsbe'),'nsgroup'))
  {
   push @c,Net::DRI::Data::Hosts->new()->name($el->getFirstChild()->getData());
  }
@@ -215,8 +206,8 @@ sub add_transfer
  if (Net::DRI::Util::has_ns($rd))
  {
   my $n=Net::DRI::Protocol::EPP::Core::Domain::build_ns($epp,$rd->{ns},$domain,'dnsbe');
-  my @ns=@{$mes->ns->{domain}};
-  push @$n,{'xmlns:domain'=>$ns[0],'xsi:schemaLocation'=>sprintf('%s %s',@ns)};
+  my @ns=$mes->nsattrs('domain');
+  push @$n,{'xmlns:domain'=>shift(@ns),'xsi:schemaLocation'=>sprintf('%s %s',@ns)};
   push @n,$n;
  }
 

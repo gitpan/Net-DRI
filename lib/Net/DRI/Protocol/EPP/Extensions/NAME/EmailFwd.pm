@@ -26,7 +26,7 @@ use Net::DRI::Data::Contact;
 use Net::DRI::Data::ContactSet;
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -87,15 +87,11 @@ sub register_commands
  return { 'emailfwd' => \%tmp1 };
 }
 
-sub capabilities_add
-{
- return { 'emailfwd_update' => { 'info' => ['set'] } };
-}
-
 sub ns
 {
  my ($mes)=@_;
- return (exists($mes->ns->{emailFwd}))? $mes->ns->{emailFwd}->[0] : 'http://www.nic.name/epp/emailFwd-1.0';
+ my $ns=$mes->ns('emailFwd');
+ return defined($ns)? $ns : 'http://www.nic.name/epp/emailFwd-1.0';
 }
 
 sub build_command
@@ -111,8 +107,9 @@ sub build_command
 
  Net::DRI::Exception->die(1,'protocol/EPP',2,'emailFwd name needed') unless (defined($info->{name}));
 
- my @ns=exists($msg->ns->{emailFwd})? @{$msg->ns->{emailFwd}} : ('http://www.nic.name/epp/emailFwd-1.0','emailFwd-1.0.xsd');
- $msg->command([$command,'emailFwd:'.$command,sprintf('xmlns:emailFwd="%s" xsi:schemaLocation="%s %s"',$ns[0],$ns[0],$ns[1])]);
+ my @ns=$msg->nsattrs('emailFwd');
+ @ns=qw(http://www.nic.name/epp/emailFwd-1.0 http://www.nic.name/epp/emailFwd-1.0 emailFwd-1.0.xsd) unless @ns;
+ $msg->command([$command,'emailFwd:'.$command,sprintf('xmlns:emailFwd="%s" xsi:schemaLocation="%s %s"',@ns)]);
 
  # @ret = map { ['emailFwd:' . $_, $info->{$_}] } keys(%{$info});
  push(@ret, ['emailFwd:name', $info->{name}]) if (defined($info->{name}));
@@ -154,10 +151,10 @@ sub check_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $ns=$mes->ns('emailFwd');
- my $chkdata=$mes->get_content('chkData',$ns);
+ my $ns=ns('emailFwd');
+ my $chkdata=$mes->get_response($ns,'chkData');
  return unless $chkdata;
- foreach my $cd ($chkdata->getElementsByTagNameNS($mes->ns('emailFwd'),'cd'))
+ foreach my $cd ($chkdata->getElementsByTagNameNS($ns,'cd'))
  {
   my $c = $cd->getFirstChild();
   my $fwd;
@@ -191,7 +188,7 @@ sub info_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $infdata=$mes->get_content('infData',ns($mes));
+ my $infdata=$mes->get_response(ns($mes),'infData');
  return unless $infdata;
 
  my $nm;

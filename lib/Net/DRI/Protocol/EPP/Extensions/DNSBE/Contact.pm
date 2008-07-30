@@ -1,7 +1,7 @@
 ## Domain Registry Interface, DNSBE Contact EPP extension commands
 ## (based on Registration_guidelines_v4_7_2-Part_4-epp.pdf)
 ##
-## Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -14,13 +14,13 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::Protocol::EPP::Extensions::DNSBE::Contact;
 
 use strict;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -81,9 +81,7 @@ sub register_commands
 sub build_command_extension
 {
  my ($mes,$epp,$tag)=@_;
-
- my @ns=@{$mes->ns->{dnsbe}};
- return $mes->command_extension_register($tag,sprintf('xmlns:dnsbe="%s" xsi:schemaLocation="%s %s"',$ns[0],$ns[0],$ns[1]));
+ return $mes->command_extension_register($tag,sprintf('xmlns:dnsbe="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('dnsbe')));
 }
 
 sub create
@@ -123,16 +121,16 @@ sub info_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $infdata=$mes->get_content('infData',$mes->ns('dnsbe'),1);
+ my $infdata=$mes->get_extension('dnsbe','infData');
  return unless $infdata;
 
  my $s=$rinfo->{contact}->{$oname}->{self};
 
- my $el=$infdata->getElementsByTagNameNS($mes->ns('dnsbe'),'type');
+ my $el=$infdata->getChildrenByTagNameNS($mes->ns('dnsbe'),'type');
  $s->type($el->get_node(1)->getFirstChild()->getData());
- $el=$infdata->getElementsByTagNameNS($mes->ns('dnsbe'),'vat');
+ $el=$infdata->getChildrenByTagNameNS($mes->ns('dnsbe'),'vat');
  $s->vat($el->get_node(1)->getFirstChild()->getData()) if defined($el->get_node(1));
- $el=$infdata->getElementsByTagNameNS($mes->ns('dnsbe'),'lang');
+ $el=$infdata->getChildrenByTagNameNS($mes->ns('dnsbe'),'lang');
  $s->lang($el->get_node(1)->getFirstChild()->getData());
 }
 

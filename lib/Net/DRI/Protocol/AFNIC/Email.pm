@@ -1,6 +1,6 @@
 ## Domain Registry Interface, AFNIC Email Protocol
 ##
-## Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -13,7 +13,7 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::Protocol::AFNIC::Email;
 
@@ -27,7 +27,7 @@ use Net::DRI::Exception;
 use Net::DRI::Protocol::AFNIC::Email::Message;
 use Net::DRI::Data::Contact::AFNIC;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -57,7 +57,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -69,32 +69,25 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
-###################################################################################################
+####################################################################################################
 
 sub new
 {
- my $h=shift;
- my $c=ref($h) || $h;
-
- my ($drd,$clientid,$clientpw,$emailfrom)=@_;
+ my ($c,$drd,$clientid,$clientpw,$emailfrom)=@_;
 
  Net::DRI::Exception::usererr_insufficient_parameters('client id must be defined') unless $clientid;
  Net::DRI::Exception::usererr_insufficient_parameters('client password must be defined') unless $clientpw;
  Net::DRI::Exception::usererr_insufficient_parameters('from email must be defined') unless $emailfrom;
  Net::DRI::Exception::usererr_invalid_parameters($emailfrom.' is not a valid email address') unless Email::Valid->rfc822($emailfrom);
 
- my $self=$c->SUPER::new(); ## we are now officially a Net::DRI::Protocol object
+ my $self=$c->SUPER::new();
  $self->name('afnic_email');
  $self->version($VERSION);
 
- $self->capabilities({ domain_update => { ns => ['set'], contact => ['set'] } }); ## no registrant, as there is a separate trade() call
-
- $self->factories({ message => sub { my $m=Net::DRI::Protocol::AFNIC::Email::Message->new(@_); $m->client_auth({id => $clientid, pw => $clientpw}); $m->email_from($emailfrom); return $m; },
-                    contact => sub { return Net::DRI::Data::Contact::AFNIC->new(); },
-                  });
-
- bless($self,$c); ## rebless
-
+ foreach my $o (qw/ns contact/) { $self->capabilities('domain_update',$o,['set']); } ## no registrant, as there is a separate trade() call
+ 
+ $self->factories('message',sub { my $m=Net::DRI::Protocol::AFNIC::Email::Message->new(@_); $m->client_auth({id => $clientid, pw => $clientpw}); $m->email_from($emailfrom); return $m; });
+ $self->factories('contact',sub { return Net::DRI::Data::Contact::AFNIC->new(); });
  $self->_load();
  return $self;
 }
@@ -108,6 +101,5 @@ sub _load
  $self->SUPER::_load(@class);
 }
 
-
-##########################################################################################################
+####################################################################################################
 1;

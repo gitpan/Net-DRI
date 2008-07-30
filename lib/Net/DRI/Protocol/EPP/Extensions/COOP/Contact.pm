@@ -23,9 +23,7 @@ use strict;
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
-
-our $NS='http://www.nic.coop/contactCoopExt-1.0';
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -90,7 +88,7 @@ sub register_commands
 sub build_command_extension
 {
  my ($mes,$epp,$tag)=@_;
- return $mes->command_extension_register($tag,sprintf('xmlns:coop="%s"',$NS));
+ return $mes->command_extension_register($tag,sprintf('xmlns:coop="%s"',$mes->nsattrs('coop')));
 }
 
 sub build_sponsors
@@ -146,20 +144,21 @@ sub info_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $infdata=$mes->get_content('infData',$NS,1);
+ my $infdata=$mes->get_extension('coop','infData');
  return unless $infdata;
 
  my $s=$rinfo->{contact}->{$oname}->{self};
 
- my $el=$infdata->getElementsByTagNameNS($NS,'state');
+ my $ns=$mes->ns('coop');
+ my $el=$infdata->getChildrenByTagNameNS($ns,'state');
  $s->state($el->get_node(1)->getAttribute('code')) if defined($el->get_node(1));
 
- my @s=map { $_->getFirstChild()->getData() } $infdata->getElementsByTagNameNS($NS,'sponsor');
+ my @s=map { $_->getFirstChild()->getData() } $infdata->getChildrenByTagNameNS($ns,'sponsor');
  $s->sponsors(\@s) if @s;
 
- $el=$infdata->getElementsByTagNameNS($NS,'langPref');
+ $el=$infdata->getChildrenByTagNameNS($ns,'langPref');
  $s->lang($el->get_node(1)->getFirstChild()->getData()) if defined($el->get_node(1));
- $el=$infdata->getElementsByTagNameNS($NS,'mailingListPref');
+ $el=$infdata->getChildrenByTagNameNS($ns,'mailingListPref');
  $s->mailing_list($el->get_node(1)->getFirstChild()->getData()) if defined($el->get_node(1));
 }
 
@@ -179,11 +178,11 @@ sub domain_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $data=$mes->get_content('stateChange',$NS,1);
+ my $data=$mes->get_extension('coop','stateChange');
  return unless $data;
 
- my $id=$data->getElementsByTagNameNS($NS,'id')->get_node(1)->getFirstChild()->getData();
- $rinfo->{contact}->{$id}->{state}=$data->getElementsByTagNameNS($NS,'state')->get_node(1)->getAttribute('code');
+ my $id=$data->getChildrenByTagNameNS($mes->ns('coop'),'id')->get_node(1)->getFirstChild()->getData();
+ $rinfo->{contact}->{$id}->{state}=$data->getChildrenByTagNameNS($mes->ns('coop'),'state')->get_node(1)->getAttribute('code');
  $rinfo->{contact}->{$id}->{action}='verification_review';
 
  if (defined($otype) && ($otype eq 'domain') && defined($oaction) && ($oaction eq 'create' || $oaction eq 'update'))

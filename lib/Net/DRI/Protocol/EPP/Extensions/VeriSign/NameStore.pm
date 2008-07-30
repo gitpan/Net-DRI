@@ -22,7 +22,7 @@ use strict;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 our $NS='http://www.verisign-grs.com/epp/namestoreExt-1.1';
 
 =pod
@@ -95,9 +95,21 @@ sub register_commands
            delete       => [ \&add_namestore_ext, \&parse_error ],
            update       => [ \&add_namestore_ext, \&parse_error ],
          );
+
+ # contact functions
+ my %tmpContact = (
+           create       => [ \&add_namestore_ext, \&parse_error ],
+           check        => [ \&add_namestore_ext, \&parse ],
+           check_multi  => [ \&add_namestore_ext, \&parse ],
+           info         => [ \&add_namestore_ext, \&parse_error ],
+           delete       => [ \&add_namestore_ext, \&parse_error ],
+           update       => [ \&add_namestore_ext, \&parse_error ],
+         );
+
  
  return { 'domain' => \%tmpDomain,
           'host'   => \%tmpHost,
+          'contact'=> \%tmpContact,
         };
 }
 
@@ -146,9 +158,9 @@ sub parse
  parse_error($po,$otype,$oaction,$oname,$rinfo);
  return unless $mes->is_success();
 
- my $infdata=$mes->get_content('namestoreExt',$NS,1);
+ my $infdata=$mes->get_extension($NS,'namestoreExt');
  return unless $infdata;
- my $c=$infdata->getElementsByTagNameNS($NS,'subProduct');
+ my $c=$infdata->getChildrenByTagNameNS($NS,'subProduct');
  return unless $c;
 
  $rinfo->{$otype}->{$oname}->{subproductid}=$c->shift()->getFirstChild()->getData();
@@ -162,11 +174,9 @@ sub parse_error
  ## Parse namestoreExt in case of errors
  return unless $mes->result_code() == 2306;
 
- my $ext=$mes->node_extension();
- return unless $ext;
- my $data=$ext->getElementsByTagNameNS($NS,'nsExtErrData');
+ my $data=$mes->get_extension($NS,'nsExtErrData');
  return unless $data;
- $data=$data->shift()->getElementsByTagNameNS($NS,'msg');
+ $data=$data->shift()->getChildrenByTagNameNS($NS,'msg');
  return unless $data;
  $data=$data->shift();
 

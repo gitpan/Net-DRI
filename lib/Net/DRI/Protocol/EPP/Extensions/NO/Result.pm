@@ -21,7 +21,7 @@ package Net::DRI::Protocol::EPP::Extensions::NO::Result;
 
 use strict;
 
-our $VERSION = do { my @r = ( q$Revision: 1.1 $ =~ /\d+/gxm ); sprintf( "%d" . ".%02d" x $#r, @r ); };
+our $VERSION = do { my @r = ( q$Revision: 1.2 $ =~ /\d+/gxm ); sprintf( "%d" . ".%02d" x $#r, @r ); };
 
 =pod
 
@@ -98,16 +98,20 @@ sub condition_parse {
     my ( $po, $otype, $oaction, $oname, $rinfo ) = @_;
     my $mes = $po->message();
 
-    my @ns = @{ $mes->ns->{no_result} };
-    my $NS = $ns[0];
-
-    my $condata = $mes->get_content( 'conditions', $NS, 1 );
-
+    my $condata = $mes->get_extension('no_result','conditions');
     return unless $condata;
 
+    parse($mes,$otype,$oname,$rinfo,$condata);
+}
+
+
+sub parse
+{
+    my ($mes,$otype,$oname,$rinfo,$node)=@_;
+    my $NS = $mes->ns('no_result');
     my @conditions;
 
-    foreach my $el ( $condata->getElementsByTagNameNS( $NS, 'condition' ) ) {
+    foreach my $el ( $node->getElementsByTagNameNS( $NS, 'condition' ) ) {
         my %con;
         my $c = $el->getFirstChild();
 

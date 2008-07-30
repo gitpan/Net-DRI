@@ -23,7 +23,7 @@ use strict;
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -69,9 +69,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $proto=shift;
- my $class=ref($proto) || $proto;
-
+ my $class=shift;
  my $self=$class->SUPER::new(shift);
  bless($self,$class);
 

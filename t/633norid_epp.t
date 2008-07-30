@@ -4,7 +4,7 @@ use DateTime::Duration;
 use Net::DRI;
 use Net::DRI::Data::Raw;
 
-use Test::More tests => 250;
+use Test::More tests => 253;
 
 our $E1='<?xml version="1.0" encoding="UTF-8" standalone="no"?><epp xmlns="urn:ietf:params:xml:ns:epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="urn:ietf:params:xml:ns:epp-1.0 epp-1.0.xsd">';
 our $E2='</epp>';
@@ -24,7 +24,7 @@ sub myrecv
  return Net::DRI::Data::Raw->new_from_string($R2? $R2 : $E1.'<response>'.r().$TRID.'</response>'.$E2);
 }
 
-my $dri=Net::DRI->new(10);
+my $dri=Net::DRI::TrapExceptions->new(10);
 $dri->{trid_factory}=sub { return 'ABC-12345'; };
 $dri->add_registry('NO');
 $dri->target('NO')->new_current_profile('p1','Net::DRI::Transport::Dummy',[{f_send=>\&mysend,f_recv=>\&myrecv}],'Net::DRI::Protocol::EPP::Extensions::NO',[]);
@@ -609,6 +609,15 @@ is($dri->get_info('last_id'), 375424692, 'message get_info last_id 1');
 is($dri->get_info('object_type', 'message', 375424692), 'domain','message get_info object_type');
 is($dri->get_info('object_id', 'message', 375424692), 'weingeist.no','message get_info object_id');
 is($dri->get_info('action', 'message', 375424692), 'domain-info-lock-customer','message get_info action');
+
+
+$R2=$E1.'<response><result code="1301"><msg>Command completed successfully; ack to dequeue</msg></result><msgQ count="1" id="134443"><qDate>2008-07-03T10:00:07.00Z</qDate><msg>EPP response to command with clTRID [NORID-3748-1215079064192782] and svTRID [200807031157442264480D-reg9091-NORID]</msg></msgQ><resData><message type="epp-late-response" xmlns="http://www.norid.no/xsd/no-ext-result-1.0" xsi:schemaLocation="http://www.norid.no/xsd/no-ext-result-1.0 no-ext-result-1.0.xsd"><desc>EPP response to command with clTRID [NORID-3748-1215079064192782] and svTRID [200807031157442264480D-reg9091-NORID]</desc><data><epp xmlns="urn:ietf:params:xml:ns:epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="urn:ietf:params:xml:ns:epp-1.0 epp-1.0.xsd"><response><result code="1000"><msg>Command completed successfully</msg></result><msgQ count="1" id="132939"/><resData><domain:trnData xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>trond-transfer.no</domain:name><domain:trStatus>pending</domain:trStatus><domain:reID>reg9091</domain:reID><domain:reDate>2008-07-03T09:57:48.00Z</domain:reDate><domain:acID>reg9091</domain:acID><domain:acDate>2008-08-02T09:57:48.00Z</domain:acDate></domain:trnData></resData><trID><clTRID>NORID-3748-1215079064192782</clTRID><svTRID>200807031157442264480D-reg9091-NORID</svTRID></trID></response></epp></data></message></resData><trID><clTRID>NORID-6828-1215085198022632</clTRID><svTRID>2008070313395805604613-reg9091-NORID</svTRID></trID></response>'.$E2;
+$rc=$dri->message_retrieve();
+my @t=$rc->trid();
+is($t[0],'NORID-6828-1215085198022632','Correct parse of outer trID/clTRID block');
+is($t[1],'2008070313395805604613-reg9091-NORID','Correct parse of outer trID/svTRID block');
+$rc=$rc->next();
+is($rc,undef,'Correct parse of trID, without touching any trID node inside response');
 
 exit 0;
 

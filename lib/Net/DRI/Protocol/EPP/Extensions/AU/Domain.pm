@@ -21,7 +21,7 @@ use strict;
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -76,19 +76,12 @@ sub register_commands
  return { 'domain' => \%tmp };
 }
 
-sub capabilities_add
-{
- return { 'domain_update' => { 'maintainer_url' => [ 'set' ]} };
-}
-
 ####################################################################################################
 
 sub build_command_extension
 {
  my ($mes,$epp,$tag)=@_;
- 
- my @ns=@{$mes->ns()->{'auext'}};
- return $mes->command_extension_register($tag,sprintf('xmlns:auext="%s" xsi:schemaLocation="%s %s"',$ns[0],$ns[0],$ns[1]));
+ return $mes->command_extension_register($tag,sprintf('xmlns:auext="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('auext')));
 }
 
 sub create
@@ -135,8 +128,7 @@ sub info_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- # my $infdata=$mes->get_content('extensionAU',$mes->ns('auext'),1);
- my $infdata=$mes->get_content('infData',$mes->ns('auextnew'),1);
+ my $infdata=$mes->get_extension('auextnew','infData');
  return unless $infdata;
 
  my %ens;

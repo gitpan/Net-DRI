@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .CAT Contact EPP extension commands
 ##
-## Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -19,7 +19,7 @@ package Net::DRI::Protocol::EPP::Extensions::CAT::Contact;
 
 use strict;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -49,7 +49,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -80,9 +80,7 @@ sub register_commands
 sub build_command_extension
 {
  my ($mes,$epp,$tag)=@_;
-
- my @ns=@{$mes->ns()->{'puntcat_contact'}};
- return $mes->command_extension_register($tag,sprintf('xmlns:cx="%s" xsi:schemaLocation="%s %s"',$ns[0],$ns[0],$ns[1]));
+ return $mes->command_extension_register($tag,sprintf('xmlns:cx="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('puntcat_contact')));
 }
 
 sub add_puntcat_extension
@@ -131,16 +129,16 @@ sub info_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $infdata=$mes->get_content('infData',$mes->ns('puntcat_contact'),1);
+ my $infdata=$mes->get_extension('puntcat_contact','infData');
  return unless $infdata;
 
  my $s=$rinfo->{contact}->{$oname}->{self};
 
- my $el=$infdata->getElementsByTagNameNS($mes->ns('puntcat_contact'),'language');
+ my $el=$infdata->getChildrenByTagNameNS($mes->ns('puntcat_contact'),'language');
  $s->lang($el->get_node(1)->getFirstChild()->getData()) if $el;
- $el=$infdata->getElementsByTagNameNS($mes->ns('puntcat_contact'),'maintainer');
+ $el=$infdata->getChildrenByTagNameNS($mes->ns('puntcat_contact'),'maintainer');
  $s->maintainer($el->get_node(1)->getFirstChild()->getData()) if $el;
- $el=$infdata->getElementsByTagNameNS($mes->ns('puntcat_contact'),'sponsorEmail');
+ $el=$infdata->getChildrenByTagNameNS($mes->ns('puntcat_contact'),'sponsorEmail');
  $s->email_sponsor($el->get_node(1)->getFirstChild()->getData()) if $el;
 }
 

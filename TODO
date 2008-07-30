@@ -10,7 +10,6 @@ All
 Net::DRI
 	* IDN support (in a cross registry fashion) with Net-IDN-Tools (1)
 		see also http://www.bsdprojects.net/cgi-bin/archzoom.cgi/tonnerre@bsdprojects.net--2006/Net-DRI--tonnerre--0.81.1--patch-12?log
-	* way to use it without exceptions (wrap in eval + carp ?)
 	* let the user choose a trid factory (ex: UUID/GUID)
 
 Net::DRI::DRD
@@ -22,8 +21,11 @@ Net::DRI::DRD
           - verify not same info in add & del
           - verify final change is not empty ?
 
+Net::DRI::Protocol::ResultStatus + Net::DRI::Registry
+	* implement the results_* methods added in EPP/Message. Or change API based on wantarray
+
 Net::DRI::DRD::AFNIC
-	* implement all(?) webservices
+	* implement all(?) webservices (probably not needed since EPP is coming)
 
 Net::DRI::DRD::LU
 	* implement startTLS extension ?
@@ -33,7 +35,7 @@ Net::DRI::DRD::Nominet
 
 Net::DRI::Transport::HTTP::*
 	* implement default logging: output data at wire level (SOAP envelope) or higher ?
-	* unify all three modules into one, taking into account all possible cases
+	* unify all three modules into one (Net::DRI::Transport::WS ?), taking into account all possible cases
 	* retrofit Transport/SOAP into Transport/HTTP/SOAPLite (1), depending also on previous point
 
 

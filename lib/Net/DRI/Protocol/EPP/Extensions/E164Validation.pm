@@ -22,7 +22,7 @@ use strict;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 our $NS='urn:ietf:params:xml:ns:e164val-1.0';
 our @VALIDATION_MODULES=qw/RFC5076/; ## modules to handle validation information, override this variable to use other validation modules
 
@@ -84,10 +84,7 @@ sub register_commands
  return { 'domain' => \%tmp };
 }
 
-sub capabilities_add
-{
- return { 'domain_update' => { 'e164_validation_information' => [ 'add','del','set'] }};
-}
+sub capabilities_add { return ('domain_update','e164_validation_information',['add','del','set']); }
 
 our %VAL;
 sub load_validation_modules ## §4.4 §4.5
@@ -147,14 +144,14 @@ sub info_parse ## §5.1.2
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $infdata=$mes->get_content('infData',$NS,1);
+ my $infdata=$mes->get_extension($NS,'infData');
  return unless $infdata;
 
  my @val;
- foreach my $el ($infdata->getElementsByTagNameNS($NS,'inf'))
+ foreach my $el ($infdata->getChildrenByTagNameNS($NS,'inf'))
  {
   my $id=$el->getAttribute('id');
-  my $r=($el->getElementsByTagNameNS($NS,'validationInfo'))[0];
+  my $r=($el->getChildrenByTagNameNS($NS,'validationInfo'))[0];
   $r=$r->getFirstChild();
   while( $r->nodeType()!=1) { $r=$r->getNextSibling(); }
   my $uri=$r->namespaceURI();

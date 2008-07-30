@@ -34,7 +34,7 @@ sub r
  return '<result code="'.($c || 1000).'"><msg>'.($m || 'Command completed successfully').'</msg></result>';
 }
 
-my $dri=Net::DRI->new(10);
+my $dri=Net::DRI::TrapExceptions->new(10);
 $dri->{trid_factory}=sub { return 'TRID-0001'; };
 $dri->add_registry('EURid');
 $dri->target('EURid')->new_current_profile('p1','Net::DRI::Transport::Dummy',[{f_send=>\&mysend,f_recv=>\&myrecv}],'Net::DRI::Protocol::EPP::Extensions::EURid',[]);

@@ -29,7 +29,7 @@ use Net::DRI::Exception;
 use Net::DRI::Util;
 use Net::DRI::Data::Raw;
 
-our $VERSION=do { my @r=(q$Revision: 1.26 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.27 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -46,7 +46,7 @@ This module implements a socket (tcp or tls) for establishing connections in Net
 At creation (see Net::DRI C<new_profile>) you pass a reference to an hash, with the following available keys:
 
 =head2 defer
- 
+
 do we open the connection right now (0) or later (1)
 
 =head2 timeout
@@ -96,11 +96,11 @@ number of protocol commands to send to server (we will automatically close and r
 either a reference to something that have a print() method or a filehandle (ex: \*STDERR or an anonymous filehandle) on something already opened for write ;
 if defined, all exchanges (messages sent to server, messages received from server) will be printed to this filehandle
 
-=head2 local_host 
+=head2 local_host
 
 (optional) the local address (hostname or IP) you want to use to connect
 
-=head2 trid 
+=head2 trid
 
 (optional) code reference of a subroutine generating transaction id ; if not defined, Net::DRI::Util::create_trid_1 is used
 
@@ -170,8 +170,8 @@ sub new
  $t{protocol_data}=$opts{protocol_data} if (exists($opts{protocol_data}) && $opts{protocol_data});
 
  $t{pc}->require or Net::DRI::Exception::err_failed_load_module('transport/socket',$t{pc},$@);
- my @need=qw/get_data/;
- Net::DRI::Exception::usererr_invalid_parameters('protocol_connection class must have: '.join(' ',@need)) if (grep { ! $t{pc}->can($_) } @need);
+ my @need=qw/read_data write_message/;
+ Net::DRI::Exception::usererr_invalid_parameters('protocol_connection class ('.$t{pc}.') must have: '.join(' ',@need)) if (grep { ! $t{pc}->can($_) } @need);
 
  Net::DRI::Exception::usererr_invalid_parameters('close_after must be an integer') if ($opts{close_after} && !Net::DRI::Util::isint($opts{close_after}));
  $t{close_after}=$opts{close_after} || 0;
@@ -200,7 +200,7 @@ sub new
 
  $self->{transport}=\%t;
  bless($self,$class); ## rebless in my class
- 
+
  if ($self->defer()) ## we will open, but later
  {
   $self->current_state(0);
@@ -213,15 +213,15 @@ sub new
  return $self;
 }
 
-sub sock { my ($self,$v)=@_; $self->{transport}->{sock}=$v if defined($v); return $self->{transport}->{sock}; }
+sub sock { my ($self,$v)=@_; $self->transport_data()->{sock}=$v if defined($v); return $self->transport_data()->{sock}; }
 
 sub open_socket
 {
  my $self=shift;
- my $t=$self->{transport};
+ my $t=$self->transport_data();
  my $type=$t->{socktype};
  my $sock;
- 
+
  my %n=( PeerAddr   => $t->{remote_host},
          PeerPort   => $t->{remote_port},
          Proto      => 'tcp',
@@ -249,7 +249,7 @@ sub open_socket
 sub send_login
 {
  my $self=shift;
- my $t=$self->{transport};
+ my $t=$self->transport_data();
  my $sock=$self->sock();
  my $pc=$t->{pc};
 
@@ -265,18 +265,18 @@ sub send_login
 
  if ($pc->can('parse_greeting'))
  {
-  $dr=$pc->get_data($self,$sock);
+  $dr=$pc->read_data($self,$sock);
   $self->logging($cltrid,1,1,1,$dr);
   my $rc1=$pc->parse_greeting($dr); ## gives back a Net::DRI::Protocol::ResultStatus
   die($rc1) unless $rc1->is_success();
  }
 
- my $login=$pc->login($t->{message_factory},$t->{client_login},$t->{client_password},$cltrid,$dr,$t->{client_newpassword},$t->{protocol_data});
+ my $login=$pc->login($self,$t->{message_factory},$t->{client_login},$t->{client_password},$cltrid,$dr,$t->{client_newpassword},$t->{protocol_data});
  $self->logging($cltrid,1,0,1,$login);
  Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send login message') unless ($sock->print($login));
 
  ## Verify login successful
- $dr=$pc->get_data($self,$sock);
+ $dr=$pc->read_data($self,$sock);
  $self->logging($cltrid,1,1,1,$dr);
  my $rc2=$pc->parse_login($dr); ## gives back a Net::DRI::Protocol::ResultStatus
  die($rc2) unless $rc2->is_success();
@@ -285,17 +285,17 @@ sub send_login
 sub send_logout
 {
  my $self=shift;
- my $t=$self->{transport};
+ my $t=$self->transport_data();
  my $sock=$self->sock();
  my $pc=$t->{pc};
 
  return unless ($pc->can('logout') && $pc->can('parse_logout'));
 
  my $cltrid=$t->{trid_factory}->($self->name());
- my $logout=$pc->logout($t->{message_factory},$cltrid);
+ my $logout=$pc->logout($self,$t->{message_factory},$cltrid);
  $self->logging($cltrid,3,0,1,$logout);
  Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send logout message') unless ($sock->print($logout));
- my $dr=$pc->get_data($self,$sock); ## We expect this to throw an exception, since the server will probably cut the connection
+ my $dr=$pc->read_data($self,$sock); ## We expect this to throw an exception, since the server will probably cut the connection
  $self->logging($cltrid,3,1,1,$dr);
  my $rc1=$pc->parse_logout($dr);
  die($rc1) unless $rc1->is_success();
@@ -309,14 +309,14 @@ sub open_connection
  $self->current_state(1);
  $self->time_open(time());
  $self->time_used(time());
- $self->{transport}->{exchanges_done}=0;
+ $self->transport_data()->{exchanges_done}=0;
 }
 
 sub ping
 {
  my ($self,$autorecon)=@_;
  $autorecon||=0;
- my $t=$self->{transport};
+ my $t=$self->transport_data();
  my $sock=$self->sock();
  my $pc=$t->{pc};
  Net::DRI::Exception::err_method_not_implemented() unless ($pc->can('keepalive') && $pc->can('parse_keepalive'));
@@ -326,12 +326,12 @@ sub ping
  {
   local $SIG{ALRM}=sub { die 'timeout' };
   alarm(10);
-  my $noop=$pc->keepalive($t->{message_factory},$cltrid);
+  my $noop=$pc->keepalive($self,$t->{message_factory},$cltrid);
   $self->logging($cltrid,2,0,1,$noop);
   Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send ping message') unless ($sock->print($noop));
   $self->time_used(time());
   $t->{exchanges_done}++;
-  my $dr=$pc->get_data($self,$sock);
+  my $dr=$pc->read_data($self,$sock);
   $self->logging($cltrid,2,1,1,$dr);
   my $rc=$pc->parse_keepalive($dr);
   die($rc) unless $rc->is_success();
@@ -386,9 +386,11 @@ sub send
 sub _print ## here we are sure open_connection() was called before
 {
  my ($self,$count,$tosend)=@_;
+ my $t=$self->transport_data();
+ my $pc=$t->{pc};
  my $sock=$self->sock();
 
- Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send message') unless ($sock->print($tosend->as_string('tcp')));
+ Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send message') unless ($sock->print($pc->write_message($self,$tosend)));
  return 1; ## very important
 }
 
@@ -402,12 +404,12 @@ sub receive
 sub _get
 {
  my ($self,$count)=@_;
- my $t=$self->{transport};
+ my $t=$self->transport_data();
  my $sock=$self->sock();
  my $pc=$t->{pc};
 
  ## Answer
- my $dr=$pc->get_data($self,$sock);
+ my $dr=$pc->read_data($self,$sock);
 
  ## Do we allow other messages ?
  $t->{exchanges_done}++;

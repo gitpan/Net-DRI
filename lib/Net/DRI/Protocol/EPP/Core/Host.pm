@@ -26,7 +26,7 @@ use Net::DRI::Protocol::EPP;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -97,8 +97,7 @@ sub build_command
   Net::DRI::Exception->die(1,'protocol/EPP',10,'Invalid host name: '.$n) unless Net::DRI::Util::is_hostname($n);
  }
 
- my @ns=@{$msg->ns->{host}};
- $msg->command([$command,'host:'.$command,sprintf('xmlns:host="%s" xsi:schemaLocation="%s %s"',$ns[0],$ns[0],$ns[1])]);
+ $msg->command([$command,'host:'.$command,sprintf('xmlns:host="%s" xsi:schemaLocation="%s %s"',$msg->nsattrs('host'))]);
 
  my @d=map { ['host:name',$_] } @n;
  return @d;
@@ -122,9 +121,9 @@ sub check_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $chkdata=$mes->get_content('chkData',$mes->ns('host'));
+ my $chkdata=$mes->get_response('host','chkData');
  return unless $chkdata;
- foreach my $cd ($chkdata->getElementsByTagNameNS($mes->ns('host'),'cd'))
+ foreach my $cd ($chkdata->getChildrenByTagNameNS($mes->ns('host'),'cd'))
  {
   my $c=$cd->getFirstChild();
   my $host;
@@ -160,7 +159,7 @@ sub info_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $infdata=$mes->get_content('infData',$mes->ns('host'));
+ my $infdata=$mes->get_response('host','infData');
  return unless $infdata;
 
  my (@s,@ip4,@ip6);
@@ -220,7 +219,7 @@ sub create_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $infdata=$mes->get_content('creData',$mes->ns('host'));
+ my $infdata=$mes->get_response('host','creData');
  return unless $infdata;
 
  my $c=$infdata->getFirstChild();
@@ -313,7 +312,7 @@ sub pandata_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $pandata=$mes->get_content('panData',$mes->ns('host'));
+ my $pandata=$mes->get_response('host','panData');
  return unless $pandata;
 
  my $c=$pandata->firstChild();
@@ -326,14 +325,14 @@ sub pandata_parse
   if ($name eq 'name')
   {
    $oname=lc($c->getFirstChild()->getData());
-   $rinfo->{host}->{$oname}->{action}='create_review';
+   $rinfo->{host}->{$oname}->{action}='review';
    $rinfo->{host}->{$oname}->{result}=Net::DRI::Util::xml_parse_boolean($c->getAttribute('paResult'));
    $rinfo->{host}->{$oname}->{exist}=$rinfo->{host}->{$oname}->{result};
   } elsif ($name eq 'paTRID')
   {
-   my @tmp=$c->getElementsByTagNameNS($mes->ns('_main'),'clTRID');
+   my @tmp=$c->getChildrenByTagNameNS($mes->ns('_main'),'clTRID');
    $rinfo->{host}->{$oname}->{trid}=$tmp[0]->getFirstChild()->getData() if (@tmp && $tmp[0]);
-   $rinfo->{host}->{$oname}->{svtrid}=($c->getElementsByTagNameNS($mes->ns('_main'),'svTRID'))[0]->getFirstChild()->getData();
+   $rinfo->{host}->{$oname}->{svtrid}=($c->getChildrenByTagNameNS($mes->ns('_main'),'svTRID'))[0]->getFirstChild()->getData();
   } elsif ($name eq 'paDate')
   {
    $rinfo->{host}->{$oname}->{date}=DateTime::Format::ISO8601->new()->parse_datetime($c->firstChild->getData());

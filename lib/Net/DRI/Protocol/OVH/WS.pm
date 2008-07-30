@@ -14,7 +14,7 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::Protocol::OVH::WS;
 
@@ -23,7 +23,7 @@ use strict;
 use base qw(Net::DRI::Protocol);
 use Net::DRI::Protocol::OVH::WS::Message;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -69,20 +69,11 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $c=shift;
- my ($drd,$version,$extrah)=@_;
-
- my $self=$c->SUPER::new(); ## we are now officially a Net::DRI::Protocol object
+ my ($c,$drd,$version,$extrah)=@_;
+ my $self=$c->SUPER::new();
  $self->name('ovh_ws');
  $self->version($VERSION);
-
- $self->capabilities({});
-
- $self->factories({ message => sub { my $m=Net::DRI::Protocol::OVH::WS::Message->new(); $m->version($VERSION); return $m; },
-                  });
-
- bless($self,$c); ## rebless
-
+ $self->factories('message',sub { my $m=Net::DRI::Protocol::OVH::WS::Message->new(); $m->version($VERSION); return $m; });
  $self->_load($extrah);
  return $self;
 }
@@ -93,7 +84,6 @@ sub _load
  my @class=map { 'Net::DRI::Protocol::OVH::WS::'.$_ } (qw/Account Domain/);
  $self->SUPER::_load(@class);
 }
-
 
 ####################################################################################################
 1;

@@ -19,13 +19,12 @@ package Net::DRI::Protocol::BookMyName::WS::Message;
 
 use strict;
 
-use Carp;
 use Net::DRI::Protocol::ResultStatus;
 
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version method params operation result retcode retval));
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 

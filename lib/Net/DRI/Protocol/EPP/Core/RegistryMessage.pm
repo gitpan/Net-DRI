@@ -13,7 +13,7 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::Protocol::EPP::Core::RegistryMessage;
 
@@ -22,7 +22,7 @@ use strict;
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -135,18 +135,18 @@ sub parse_poll
  Net::DRI::Exception::err_assert('EPP::parse_poll was not able to parse anything, please report !') unless $toname;
 
  ## Copy local %info into $rd (which is in fact global info as set above) someway (we're working with references)
+ ## Here, $rd=$rinfo->{message}->{$msgid}
  $rd->{object_type}=$totype;
  $rd->{object_id}=$toname; ## this has to be taken broadly, it is in fact a name for domains and hosts
  while(my ($k,$v)=each(%{$info{$totype}->{$toname}}))
  {
   $rd->{$k}=$v;
  }
-
- ## TODO : optionnally, offer to merge this new information with already existing cache information
- ## in order to be able to do:
- ## $dri->get_info('clID')
- ## instead of currently:
- ## $dri->get_info('clID','message',$id)
+ ## Also update data about the queried object, for easier access
+ while(my ($k,$v)=each(%$rd))
+ {
+  $rinfo->{$totype}->{$toname}->{$k}=$v;
+ }
 }
 
 ####################################################################################################

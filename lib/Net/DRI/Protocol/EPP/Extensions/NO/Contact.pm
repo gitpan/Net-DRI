@@ -23,7 +23,7 @@ use strict;
 use Net::DRI::Util;
 use Net::DRI::Protocol::EPP::Core::Contact;
 
-our $VERSION = do { my @r = ( q$Revision: 1.1 $ =~ /\d+/gmx ); sprintf( "%d" . ".%02d" x $#r, @r ); };
+our $VERSION = do { my @r = ( q$Revision: 1.2 $ =~ /\d+/gmx ); sprintf( "%d" . ".%02d" x $#r, @r ); };
 
 =pod
 
@@ -107,8 +107,7 @@ sub parse_info {
     my $mes = $po->message();
     return unless $mes->is_success();
 
-    my @ns = @{ $mes->ns->{no_contact} };
-    my $NS = $ns[0];
+    my $NS = $mes->ns('no_contact');
 
     my $c = $rinfo->{contact}->{$oname}->{self};
 
@@ -119,7 +118,7 @@ sub parse_info {
         && $oaction    eq 'info'
         && $c->email() eq 'n/a' );
 
-    my $condata = $mes->get_content( 'infData', $NS, 1 );
+    my $condata = $mes->get_extension('no_contact','infData');
     return unless $condata;
 
     # type
@@ -204,13 +203,10 @@ sub parse_info {
 sub build_command_extension {
     my ( $mes, $epp, $tag ) = @_;
 
-    my @ns = @{ $mes->ns->{no_contact} };
-
     return $mes->command_extension_register(
         $tag,
         sprintf(
-            'xmlns:no-ext-contact="%s" xsi:schemaLocation="%s %s"',
-            $ns[0], $ns[0], $ns[1]
+            'xmlns:no-ext-contact="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('no_contact')
         )
     );
 }

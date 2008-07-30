@@ -1,6 +1,6 @@
 ## Domain Registry Interface, nic.at domain transactions extension
 ## Contributed by Michael Braunoeder from NIC.AT <mib@nic.at>
-## Extended by Tonnerre Lombard 
+## Extended by Tonnerre Lombard
 ##
 ## Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
@@ -23,7 +23,7 @@ use strict;
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 our $NS='http://www.nic.at/xsd/at-ext-message-1.0';
 
@@ -111,7 +111,7 @@ sub parse_poll
  my $msgid=$mes->msg_id();
  $rinfo->{message}->{session}->{last_id}=$msgid;
 
- my $mesdata=$mes->get_content('message',$NS,0);
+ my $mesdata=$mes->get_response($NS,'message');
  $rinfo->{$otype}->{$oname}->{message}=$mesdata;
  return unless $mesdata;
 
@@ -163,41 +163,49 @@ sub parse_poll
  return unless (@tags);
  $ext = $tags[0];
 
- @tags = $ext->getElementsByTagNameNS($resNS, 'conditions');
- return unless (@tags);
- $ctag = $tags[0];
-
- @tags = $ctag->getElementsByTagNameNS($resNS, 'condition');
-
- foreach my $cond (@tags)
+ foreach my $node ($ext->childNodes())
  {
-  my %con;
-  my $c = $cond->getFirstChild();
-
-  $con{code} = $cond->getAttribute('code') if ($cond->getAttribute('code'));
-  $con{severity} = $cond->getAttribute('severity') if ($cond->getAttribute('severity'));
-
-  while ($c)
+  my $name = $node->localName() || $node->nodeName();
+   
+  if ($name eq 'conditions')
   {
-   next unless ($c->nodeType() == 1); ## only for element nodes
-   my $name = $c->localname() || $c->nodeName();
-   next unless $name;
+   @tags = $node->getElementsByTagNameNS($resNS, 'condition');
 
-   if ($name =~ m/^(msg|details)$/)
+   foreach my $cond (@tags)
    {
-    $con{$1} = $c->getFirstChild()->getData();
-   }
-   elsif ($name eq 'attributes')
-   {
-    foreach my $attr ($c->getChildrenByTagNameNS($NS,'attr'))
+    my %con;
+    my $c = $cond->getFirstChild();
+
+    $con{code} = $cond->getAttribute('code') if ($cond->getAttribute('code'));
+    $con{severity} = $cond->getAttribute('severity') if ($cond->getAttribute('severity'));
+
+    while ($c)
     {
-     my $attrname = $attr->getAttribute('name');
-     $con{'attr ' . $attrname} = $attr->getFirstChild()->getData();
-    }
-   }
-  } continue { $c = $c->getNextSibling(); }
+     next unless ($c->nodeType() == 1); ## only for element nodes
+     my $cname = $c->localname() || $c->nodeName();
+     next unless $cname;
+  
+     if ($cname =~ m/^(msg|details)$/)
+     {
+      $con{$1} = $c->getFirstChild()->getData();
+     }
+     elsif ($cname eq 'attributes')
+     {
+      foreach my $attr ($c->getChildrenByTagNameNS($NS,'attr'))
+      {
+       my $attrname = $attr->getAttribute('name');
+       $con{'attr ' . $attrname} = $attr->getFirstChild()->getData();
+      }
+     }
+    } continue { $c = $c->getNextSibling(); }
 
-  push(@conds, \%con);
+    push(@conds, \%con);
+   }
+  }
+  elsif ($name eq 'keydate')
+  {
+   $rinfo->{message}->{$msgid}->{keydate} = $node->getFirstChild()->getData();
+  }
  }
 
  $rinfo->{message}->{$msgid}->{conditions} = \@conds;

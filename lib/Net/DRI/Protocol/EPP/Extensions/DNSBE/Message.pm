@@ -13,7 +13,7 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::Protocol::EPP::Extensions::DNSBE::Message;
 
@@ -21,7 +21,7 @@ use strict;
 
 use base qw/Net::DRI::Protocol::EPP::Message/;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -71,12 +71,12 @@ sub parse
  $self->SUPER::parse(@_);
 
  ## Parse dnsbe:ext
- my $result=$self->get_content('result',$self->ns('dnsbe'),1);
+ my $result=$self->get_extension('dnsbe','result');
  return unless $result;
 
  ## We add it to the latest status extra_info seen.
  my $ra=$self->{results}->[-1]->{extra_info};
- foreach my $el ($result->getElementsByTagNameNS($self->ns('dnsbe'),'msg'))
+ foreach my $el ($result->getChildrenByTagNameNS($self->ns('dnsbe'),'msg'))
  {
   push @{$ra},$el->getFirstChild()->getData();
  }

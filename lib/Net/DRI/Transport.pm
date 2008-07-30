@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Superclass of all Transport/* modules (hence virtual class, never used directly)
 ##
-## Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -25,13 +25,13 @@ __PACKAGE__->mk_accessors(qw/name version retry pause trace timeout defer curren
 use Net::DRI::Exception;
 use Time::HiRes;
 
-our $VERSION=do { my @r=(q$Revision: 1.15 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.16 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Transport - Superclass of all Net::DRI Transports
+Net::DRI::Transport - Superclass of all transport modules in Net::DRI
 
 =head1 DESCRIPTION
 
@@ -55,7 +55,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -70,8 +70,7 @@ See the LICENSE file that comes with this distribution for more details.
 ####################################################################################################
 sub new
 {
- my $proto=shift;
- my $class=ref($proto) || $proto;
+ my $class=shift;
 
  my %opts=(@_==1 && ref($_[0]))? %{$_[0]} : @_;
  my $self={
@@ -96,6 +95,8 @@ sub new
  bless($self,$class);
  return $self;
 }
+
+sub transport_data { return shift->{transport}; }
 
 sub send
 {
@@ -137,7 +138,7 @@ sub send
 
  ## Get inner error message ?
  Net::DRI::Exception->die(0,'transport',4,'Unable to send message to registry') unless $ok;
- 
+
  alarm($prevalarm) if $prevalarm; ## re-enable previous alarm (warning, time is off !!)
 }
 
@@ -210,7 +211,7 @@ sub xmldump_to_filehandle ## NOT a class method
 
 sub logging
 {
- ## $self,(cl)TRID,Step (1=Init,2=Live,3=Closing),Direction(0=outgoing,1=incoming),Type of data given(1=Net::DRI::Data::Raw),Data to log
+ ## $self,(cl)TRID,Step (1=Init,2=Live,3=Closing),Direction(0=outgoing,1=incoming),Type of data given(1=Net::DRI::Data::Raw or something with as_string() method,2=string),Data to log
  my ($self,$trid,$step,$dir,$type,$data)=@_;
  my $tname=$self->name();
  my $tversion=$self->version();
@@ -221,7 +222,6 @@ sub logging
   my ($fn,$p)=@$l;
   return unless (ref($fn) eq 'CODE');
   $fn->($p,$tname,$tversion,$trid,$step,$dir,$type,$data);
-  return;
  } elsif (UNIVERSAL::can($l,'logging'))
  {
   $l->logging($tname,$tversion,$trid,$step,$dir,$type,$data);

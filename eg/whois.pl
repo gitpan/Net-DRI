@@ -84,6 +84,12 @@ $rc=$dri->target('TRAVEL')->new_current_profile('profile1','whois');
 die($rc) unless $rc->is_success();
 display('paris.travel',$dri);
 
+$dri->add_registry('US',{});
+$rc=$dri->target('US')->new_current_profile('profile1','whois');
+die($rc) unless $rc->is_success();
+display('disney.us',$dri);
+
+
 $dri->end();
 };
 

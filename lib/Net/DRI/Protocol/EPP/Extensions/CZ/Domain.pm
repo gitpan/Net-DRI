@@ -27,7 +27,7 @@ use Net::DRI::Data::Hosts;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION = do { my @r = ( q$Revision: 1.1 $ =~ /\d+/g ); sprintf( "%d" . ".%02d" x $#r, @r ); };
+our $VERSION = do { my @r = ( q$Revision: 1.2 $ =~ /\d+/g ); sprintf( "%d" . ".%02d" x $#r, @r ); };
 
 =pod
 
@@ -102,11 +102,8 @@ sub build_command
 	}
 
 	my $tcommand = (ref($command)) ? $command->[0] : $command;
-	my @ns = @{$msg->ns->{domain}};
 	$msg->command([$command, 'domain:' . $tcommand,
-		sprintf('xmlns:domain="%s" xsi:schemaLocation="%s %s"',
-			$ns[0], $ns[0], $ns[1])]);
-
+		sprintf('xmlns:domain="%s" xsi:schemaLocation="%s %s"',$msg->nsattrs('domain'))]);
 	my @d = map { ['domain:name', $_, $domainattr] } @dom;
 	return @d;
 }
@@ -144,9 +141,7 @@ sub build_period
 }
 
 
-##################################################################################################
-
-
+####################################################################################################
 ########### Query commands
 
 sub info
@@ -163,7 +158,7 @@ sub info_parse
 	my ($po, $otype, $oaction, $oname, $rinfo) = @_;
 	my $mes = $po->message();
 	return unless $mes->is_success();
-	my $infdata = $mes->get_content('infData', $mes->ns('domain'));
+	my $infdata = $mes->get_response('domain','infData');
 	return unless $infdata;
 	my (@s, @host, $ns);
 	my $cs = Net::DRI::Data::ContactSet->new();

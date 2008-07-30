@@ -13,7 +13,7 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::Protocol::EPP::Extensions::EURid::Message;
 
@@ -21,7 +21,7 @@ use strict;
 
 use base qw/Net::DRI::Protocol::EPP::Message/;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -71,12 +71,16 @@ sub parse
  $self->SUPER::parse(@_);
 
  ## Parse eurid:ext
- my $result=$self->get_content('result',$self->ns('eurid'),1);
+ my $result=$self->get_extension('eurid','ext');
  return unless $result;
+ my $ns=$self->ns('eurid');
+ $result=$result->getChildrenByTagNameNS($ns,'result');
+ return unless $result->size();
+ $result=$result->shift();
 
  ## We add it to the latest status extra_info seen.
  my $ra=$self->{results}->[-1]->{extra_info};
- foreach my $el ($result->getElementsByTagNameNS($self->ns('eurid'),'msg'))
+ foreach my $el ($result->getChildrenByTagNameNS($ns,'msg'))
  {
   push @{$ra},$el->getFirstChild()->getData();
  }

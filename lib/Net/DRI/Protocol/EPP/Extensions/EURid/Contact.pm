@@ -14,13 +14,13 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::Protocol::EPP::Extensions::EURid::Contact;
 
 use strict;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -81,9 +81,7 @@ sub register_commands
 sub build_command_extension
 {
  my ($mes,$epp,$tag)=@_;
-
- my @ns=@{$mes->ns->{eurid}};
- return $mes->command_extension_register($tag,sprintf('xmlns:eurid="%s" xsi:schemaLocation="%s %s"',$ns[0],$ns[0],$ns[1]));
+ return $mes->command_extension_register($tag,sprintf('xmlns:eurid="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('eurid')));
 }
 
 
@@ -132,20 +130,26 @@ sub info_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $infdata=$mes->get_content('infData',$mes->ns('eurid'),1);
+ my $infdata=$mes->get_extension('eurid','ext');
  return unless $infdata;
+ my $ns=$mes->ns('eurid');
+ $infdata=$infdata->getChildrenByTagNameNS($ns,'infData');
+ return unless $infdata->size();
+ $infdata=$infdata->shift();
+ $infdata=$infdata->getChildrenByTagNameNS($ns,'contact');
+ return unless $infdata->size();
+ $infdata=$infdata->shift();
 
  my $s=$rinfo->{contact}->{$oname}->{self};
-
- my $el=$infdata->getElementsByTagNameNS($mes->ns('eurid'),'type');
+ my $el=$infdata->getChildrenByTagNameNS($ns,'type');
  $s->type($el->get_node(1)->getFirstChild()->getData());
- $el=$infdata->getElementsByTagNameNS($mes->ns('eurid'),'vat');
+ $el=$infdata->getChildrenByTagNameNS($ns,'vat');
  $s->vat($el->get_node(1)->getFirstChild()->getData()) if defined($el->get_node(1));
- $el=$infdata->getElementsByTagNameNS($mes->ns('eurid'),'lang');
+ $el=$infdata->getChildrenByTagNameNS($ns,'lang');
  $s->lang($el->get_node(1)->getFirstChild()->getData());
- $el=$infdata->getElementsByTagNameNS($mes->ns('eurid'),'onhold');
+ $el=$infdata->getChildrenByTagNameNS($ns,'onhold');
  $s->onhold($el->get_node(1)->getFirstChild()->getData()) if defined($el->get_node(1));
- $el=$infdata->getElementsByTagNameNS($mes->ns('eurid'),'monitoringStatus');
+ $el=$infdata->getChildrenByTagNameNS($ns,'monitoringStatus');
  $s->monitoring_status($el->get_node(1)->getFirstChild()->getData()) if defined($el->get_node(1));
 }
 

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .AERO Domain EPP extension commands
 ##
-## Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -21,7 +21,7 @@ use strict;
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -51,7 +51,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -81,9 +81,7 @@ sub register_commands
 sub build_command_extension
 {
  my ($mes,$epp,$tag)=@_;
- 
- my @ns=@{$mes->ns()->{'aero'}};
- return $mes->command_extension_register($tag,sprintf('xmlns:aero="%s" xsi:schemaLocation="%s %s"',$ns[0],$ns[0],$ns[1]));
+ return $mes->command_extension_register($tag,sprintf('xmlns:aero="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('aero')));
 }
 
 sub create
@@ -108,7 +106,7 @@ sub info_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $infdata=$mes->get_content('infData',$mes->ns('aero'),1);
+ my $infdata=$mes->get_extension('aero','infData');
  return unless $infdata;
 
  my %ens;

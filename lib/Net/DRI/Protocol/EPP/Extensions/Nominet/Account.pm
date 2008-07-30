@@ -27,7 +27,7 @@ use Net::DRI::Exception;;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -103,8 +103,7 @@ sub build_command
  Net::DRI::Exception->die(1,'protocol/EPP',2,'Contact id needed') unless (defined($id) && $id && !ref($id));
  Net::DRI::Exception->die(1,'protocol/EPP',10,'Invalid contact id: '.$id) unless Net::DRI::Util::xml_is_token($id,3,16); ## inherited from Core EPP
  my $tcommand=(ref($command))? $command->[0] : $command;
- my @ns=@{$msg->ns()->{account}};
- my $ns=($command eq 'update')? sprintf('xmlns:account="%s" xmlns:contact="%s" xsi:schemaLocation="%s %s"',$ns[0],$msg->ns()->{contact}->[0],$ns[0],$ns[1]) : sprintf('xmlns:account="%s" xsi:schemaLocation="%s %s"',$ns[0],$ns[0],$ns[1]);
+ my $ns=($command eq 'update')? sprintf('xmlns:contact="%s" xmlns:account="%s" xsi:schemaLocation="%s %s"',$msg->ns('contact'),$msg->nsattrs('account')) : sprintf('xmlns:account="%s" xsi:schemaLocation="%s %s"',$msg->nsattrs('account'));
  $msg->command([$command,'account:'.$tcommand,$ns]);
  return (['account:roid',$id]);
 }
@@ -127,7 +126,7 @@ sub info_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $infdata=$mes->get_content('infData',$mes->ns('account'));
+ my $infdata=$mes->get_response('account','infData');
  return unless $infdata;
 
  parse_infdata($po,$mes,$infdata,$oname,$rinfo);
@@ -179,7 +178,7 @@ sub parse_infdata
    my $type=$c->getAttribute('type'); ## admin or billing
    my $order=$c->getAttribute('order'); ## 1 or 2 or 3
    my $co=$cf->();
-   Net::DRI::Protocol::EPP::Extensions::Nominet::Contact::parse_infdata($c->getElementsByTagNameNS($mes->ns('contact'),'infData')->shift(),$co,undef,$rinfo);
+   Net::DRI::Protocol::EPP::Extensions::Nominet::Contact::parse_infdata($c->getChildrenByTagNameNS($mes->ns('contact'),'infData')->shift(),$co,undef,$rinfo);
    $c{$type}->{$order}=$co;
   } elsif ($name=~m/^(clID|crID|upID)$/)
   {

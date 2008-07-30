@@ -14,7 +14,7 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::Protocol::EPP::Extensions::SE::Extensions;
 
@@ -23,7 +23,7 @@ use strict;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 our $NS='http://www.nic.se/xml/epp/ext-1.0';
 
 =pod
@@ -126,7 +126,7 @@ sub domain_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $result=$mes->get_content('result',$NS,1);
+ my $result=$mes->get_extension($NS,'result');
  return unless $result;
 
  my @ds;
@@ -144,7 +144,7 @@ sub contact_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $result=$mes->get_content('infData',$NS,1);
+ my $result=$mes->get_extension($NS,'infData');
  return unless $result;
 
  foreach my $el ($result->getElementsByTagNameNS($NS,'orgno')) {

@@ -23,7 +23,7 @@ use strict;
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -101,10 +101,8 @@ sub build_command
 	}
 
 	my $tcommand = (ref($command)) ? $command->[0] : $command;
-	my @ns = @{$msg->ns->{contact}};
 	$msg->command([$command, 'contact:' . $tcommand,
-		sprintf('xmlns:contact="%s" xsi:schemaLocation="%s %s"',
-		$ns[0], $ns[0], $ns[1])]);
+		sprintf('xmlns:contact="%s" xsi:schemaLocation="%s %s"',$msg->nsattrs('contact'))]);
 
 	my @d = map { ['contact:id', $_] } @c;
 	if (($tcommand =~ m/^(?:info|transfer)$/) && ref($contact[0]) &&
@@ -129,7 +127,7 @@ sub info_parse
 
 	return unless $mes->is_success();
 
-	my $infdata = $mes->get_content('infData', $mes->ns('contact'), 0);
+	my $infdata = $mes->get_response('contact','infData');
 	return unless $infdata;
 
 	my $s = $rinfo->{contact}->{$oname}->{self};

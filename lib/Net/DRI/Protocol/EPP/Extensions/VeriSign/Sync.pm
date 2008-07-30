@@ -23,7 +23,7 @@ use Net::DRI::Util;
 use Net::DRI::Exception;
 use Net::DRI::Protocol::EPP::Core::Domain;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -77,10 +77,7 @@ sub register_commands
  return { 'domain' => \%tmp };
 }
 
-sub capabilities_add
-{
- return { 'domain_update' => { 'sync' => ['set'] }};
-}
+sub capabilities_add { return ('domain_update','sync',['set']); }
 
 ####################################################################################################
 

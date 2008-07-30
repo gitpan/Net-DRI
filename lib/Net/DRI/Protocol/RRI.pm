@@ -1,6 +1,6 @@
 ## Domain Registry Interface, RRI Protocol (DENIC-11)
 ##
-## Copyright (c) 2007 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
+## Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -26,7 +26,7 @@ use Net::DRI::Protocol::RRI::Message;
 use Net::DRI::Data::StatusList;
 use Net::DRI::Data::Contact::DENIC;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -56,7 +56,7 @@ Tonnerre Lombard, E<lt>tonnerre.lombard@sygroup.chE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -74,15 +74,16 @@ sub new
 {
  my ($c,$drd,$version,$extrah)=@_;
 
- my $self=$c->SUPER::new(); ## we are now officially a Net::DRI::Protocol object
+ my $self=$c->SUPER::new();
  $self->name('RRI');
  $version=Net::DRI::Util::check_equal($version,['2.0'],'2.0');
  $self->version($version);
 
- $self->capabilities({ 'host_update'   => { 'ip' => ['add','del'], 'status' => ['add','del'], 'name' => ['set'] },
-                       'contact_update'=> { 'info' => ['set'] },
-                       'domain_update' => { 'ns' => ['add','del'], 'status' => ['add','del'], 'contact' => ['add','del'], 'registrant' => ['set'], 'auth' => ['set'] },
-                     });
+ foreach my $o (qw/ip status/) { $self->capabilities('host_update',$o,['set']); }
+ $self->capabilities('host_update','name',['set']);
+ $self->capabilities('contact_update','info',['set']);
+ foreach my $o (qw/ns status contact/) { $self->capabilities('domain_update',$o,['add','del']); }
+ foreach my $o (qw/registrant auth/)   { $self->capabilities('domain_update',$o,['set']); }
 
  $self->{ns}={ _main	=> ['http://registry.denic.de/global/1.0'],
 		tr	=> ['http://registry.denic.de/transaction/1.0'],
@@ -91,16 +92,11 @@ sub new
 		dnsentry=> ['http://registry.denic.de/dnsentry/1.0'],
                 msg	=> ['http://registry.denic.de/msg/1.0'],
 		xsi	=> ['http://www.w3.org/2001/XMLSchema-instance'],
- };
+             };
 
- $self->factories({ 
-                   message => sub { my $m=Net::DRI::Protocol::RRI::Message->new(@_); $m->ns($self->{ns}); $m->version($version); return $m; },
-                   status  => sub { return Net::DRI::Data::StatusList->new(); },
-                   contact => sub { return Net::DRI::Data::Contact::DENIC->new(); },
-                  });
-
- bless($self,$c); ## rebless
-
+ $self->factories('message',sub { my $m=Net::DRI::Protocol::RRI::Message->new(@_); $m->ns($self->{ns}); $m->version($version); return $m; });
+ $self->factories('status',sub { return Net::DRI::Data::StatusList->new(); });
+ $self->factories('contact',sub { return Net::DRI::Data::Contact::DENIC->new(); });
  $self->_load($extrah);
  return $self;
 }

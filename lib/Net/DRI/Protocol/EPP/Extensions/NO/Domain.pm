@@ -15,7 +15,7 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::Protocol::EPP::Extensions::NO::Domain;
 
@@ -26,7 +26,7 @@ use Net::DRI::Protocol::EPP::Core::Contact;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION = do { my @r = ( q$Revision: 1.1 $ =~ /\d+/gmx ); sprintf( "%d" . ".%02d" x $#r, @r ); };
+our $VERSION = do { my @r = ( q$Revision: 1.2 $ =~ /\d+/gmx ); sprintf( "%d" . ".%02d" x $#r, @r ); };
 
 =pod
 
@@ -90,12 +90,10 @@ sub register_commands {
 sub build_command_extension {
     my ( $mes, $epp, $tag ) = @_;
 
-    my @ns = @{ $mes->ns->{no_domain} };
     return $mes->command_extension_register(
         $tag,
         sprintf(
-            'xmlns:no-ext-domain="%s" xsi:schemaLocation="%s %s"',
-            $ns[0], $ns[0], $ns[1]
+            'xmlns:no-ext-domain="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('no_domain')
         )
     );
 }
@@ -156,14 +154,8 @@ sub withdraw {
         'Witdraw command requires a domain name')
         unless ( defined($domain) && $domain );
 
-    my @ns  = @{ $mes->ns->{no_domain} };
-    my $NS  = $ns[0];
-    my $NSX = $ns[1];
-
-    my @ens    = @{ $mes->ns->{no_epp} };
-    my $ExtNS  = $ens[0];
-    my $ExtNSX = $ens[1];
-
+    my (undef,$NS,$NSX)=$mes->nsattrs('no_domain');
+    my (undef,$ExtNS,$ExtNSX)=$mes->nsattrs('no_epp');
     my $eid = $mes->command_extension_register( 'command',
               'xmlns="' 
             . $ExtNS
@@ -199,13 +191,8 @@ sub transfer_execute {
 
     return unless ( $transaction && $transaction eq 'transfer_execute' );
 
-    my @ns  = @{ $mes->ns->{no_domain} };
-    my $NS  = $ns[0];
-    my $NSX = $ns[1];
-
-    my @ens    = @{ $mes->ns->{no_epp} };
-    my $ExtNS  = $ens[0];
-    my $ExtNSX = $ens[1];
+    my (undef,$NS,$NSX)=$mes->nsattrs('no_domain');
+    my (undef,$ExtNS,$ExtNSX)=$mes->nsattrs('no_epp');
 
     my ( $auth, $du, $token );
     $auth  = $rd->{auth}     if $rd->{auth};

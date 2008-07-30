@@ -21,7 +21,7 @@ use strict;
 
 use base qw/Net::DRI::Protocol::EPP/;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -68,8 +68,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $c=shift;
- my ($drd,$version,$extrah,$defproduct)=@_;
+ my ($c,$drd,$version,$extrah,$defproduct)=@_;
  my %e=map { $_ => 1 } (defined($extrah)? (ref($extrah)? @$extrah : ($extrah)) : ());
 
  ## We do no load automatically IDNLanguage as we do not know if it is
@@ -82,9 +81,7 @@ sub new
   $e{'Net::DRI::Protocol::EPP::Extensions::GracePeriod'}=1;
  }
 
- my $self=$c->SUPER::new($drd,$version,[keys(%e)]); ## we are now officially a Net::DRI::Protocol::EPP object
-
- bless($self,$c); ## rebless
+ my $self=$c->SUPER::new($drd,$version,[keys(%e)]);
  return $self;
 }
 

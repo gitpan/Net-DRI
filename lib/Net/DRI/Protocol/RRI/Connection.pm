@@ -1,6 +1,6 @@
 ## Domain Registry Interface, RRI Connection handling
 ##
-## Copyright (c) 2007 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
+## Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -13,15 +13,18 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::Protocol::RRI::Connection;
 
 use strict;
+
+use Encode ();
+
 use Net::DRI::Data::Raw;
 use Net::DRI::Protocol::ResultStatus;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -51,7 +54,7 @@ Tonnerre Lombard, E<lt>tonnerre.lombard@sygroup.chE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -67,8 +70,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub login
 {
- shift if ($_[0] eq __PACKAGE__);
- my ($cm, $id, $pass, $cltrid, $dr, $newpass, $pdata) = @_;
+ my ($class, $to, $cm, $id, $pass, $cltrid, $dr, $newpass, $pdata) = @_;
 
  my $mes=$cm->();
  $mes->command(['login']);
@@ -76,40 +78,37 @@ sub login
  push @d,['user',$id];
  push @d,['password',$pass];
  $mes->command_body(\@d);
- return $mes->as_string('tcp');
+ return $class->write_message($to,$mes);
 }
 
 sub logout
 {
- shift if ($_[0] eq __PACKAGE__);
- my ($cm,$cltrid)=@_;
+ my ($class,$to,$cm,$cltrid)=@_;
  my $mes=$cm->();
  $mes->command(['logout']);
  $mes->cltrid($cltrid) if $cltrid;
- return $mes->as_string('tcp');
+ return $class->write_message($to,$mes);
 }
 
 sub keepalive
 {
- shift if ($_[0] eq __PACKAGE__);
- my ($cm,$cltrid)=@_;
+ my ($class,$to,$cm,$cltrid)=@_;
  my $mes=$cm->();
  $mes->command(['hello']);
- return $mes->as_string('tcp');
+ return $class->write_message($to,$mes);
 }
 
 ####################################################################################################
 
-sub get_data
+sub read_data
 {
- shift if ($_[0] eq __PACKAGE__);
- my ($to,$sock)=@_;
+ my ($class,$to,$sock)=@_;
 
  my $version = $to->{transport}->{protocol_version};
  my $m;
  my $c;
  $sock->read($c, 4); ## first 4 bytes are the packed length
- die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_SYNTAX_ERROR',
+ die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED',
 	'Unable to read RRI 4 bytes length (connection closed by registry ?)',
 	'en')) unless $c;
  my $length = unpack('N', $c);
@@ -127,10 +126,18 @@ sub get_data
  return Net::DRI::Data::Raw->new_from_string($m);
 }
 
+sub write_message
+{
+ my ($self,$to,$msg)=@_;
+
+ my $m=Encode::encode('utf8',$msg->as_string());
+ my $l = pack('N', length($m)); ## DENIC-11
+ return $l.$m;
+}
+
 sub parse_login
 {
- shift if ($_[0] eq __PACKAGE__);
- my $dc=shift;
+ my ($class,$dc)=@_;
  my ($result,$code,$msg)=find_result($dc);
  unless (defined($result) && ($result eq 'success'))
  {
@@ -145,8 +152,7 @@ sub parse_login
 
 sub parse_logout
 {
- shift if ($_[0] eq __PACKAGE__);
- my $dc=shift;
+ my ($class,$dc)=@_;
  my ($result,$code,$msg)=find_result($dc);
  unless (defined($result) && ($result eq 'success'))
  {

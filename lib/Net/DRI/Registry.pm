@@ -33,7 +33,7 @@ use Net::DRI::Data::Hosts;
 
 our $AUTOLOAD;
 
-our $VERSION=do { my @r=(q$Revision: 1.26 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.27 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -107,7 +107,7 @@ sub new
 sub available_profiles
 {
  my $self=shift;
- return keys(%{$self->{profiles}});
+ return sort(keys(%{$self->{profiles}}));
 }
 
 sub exist_profile
@@ -165,7 +165,7 @@ sub _result
  err_no_current_profile() unless (defined($p));
  Net::DRI::Exception->die(0,'DRI',6,'No last status code available for current registry and profile') unless (exists($self->{profiles}->{$p}->{status}));
  my $rc=$self->{profiles}->{$p}->{status}; ## a Net::DRI::Protocol::ResultStatus object !
- Net::DRI::Exception->die(1,'DRI',5,'Status key if not a Net::DRI::Protocol::ResultStatus object') unless UNIVERSAL::isa($rc,'Net::DRI::Protocol::ResultStatus');
+ Net::DRI::Exception->die(1,'DRI',5,'Status key is not a Net::DRI::Protocol::ResultStatus object') unless UNIVERSAL::isa($rc,'Net::DRI::Protocol::ResultStatus');
  return $rc if ($f eq 'self');
  Net::DRI::Exception->die(1,'DRI',5,'Method '.$f.' not implemented in Net::DRI::Protocol::ResultStatus') unless ($f && $rc->can($f));
  return $rc->$f();
@@ -177,7 +177,8 @@ sub result_code        { return shift->_result('code');        }
 sub result_native_code { return shift->_result('native_code'); }
 sub result_message     { return shift->_result('message');     }
 sub result_lang        { return shift->_result('lang');        }
-sub result_status { return shift->_result('self'); }
+sub result_status      { return shift->_result('self');        }
+sub result_extra_info  { return shift->_result('info');        }
 
 sub cache_expire { return shift->{cache}->delete_expired(); }
 sub cache_clear  { return shift->{cache}->delete(); }
@@ -458,11 +459,8 @@ sub process_back
 
  eval
  {
-  ## transport parameters ?
   my $res=$to->receive($trid); ## a Net::DRI::Data::Raw or die inside
-  ###  return $self->protocol()->new_from_reply($tosend,$gotback);
-  ###  ## $tosend needed to propagate EPP version, for example
-  ($rc,$ri)=$po->reaction($otype,$oaction,$res,$self->{ops}->{$trid}->[1],$oname);
+  ($rc,$ri)=$po->reaction($otype,$oaction,$res,$self->{ops}->{$trid}->[1],$oname); ## $tosend needed to propagate EPP version, for example
   $rc->_set_trid([ $trid ]) unless $rc->trid(); ## if not done inside Protocol::*::Message::result_status, make sure we save at least our transaction id
  };
 

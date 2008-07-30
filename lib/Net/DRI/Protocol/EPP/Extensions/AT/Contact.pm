@@ -20,7 +20,7 @@ package Net::DRI::Protocol::EPP::Extensions::AT::Contact;
 
 use strict;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 our $NS='http://www.nic.at/xsd/at-ext-contact-1.0';
 
@@ -88,7 +88,7 @@ sub parse_info
  my $c=$rinfo->{contact}->{$oname}->{self};
  $c->email(undef) if ($c->email() eq 'n/a');
 
- my $condata=$mes->get_content('infData',$NS,1);
+ my $condata=$mes->get_extension($NS,'infData');
  return unless $condata;
 
  my @options;

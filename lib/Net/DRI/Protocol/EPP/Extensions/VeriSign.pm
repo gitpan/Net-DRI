@@ -1,6 +1,6 @@
 ## Domain Registry Interface, VeriSign EPP extensions
 ##
-## Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -20,8 +20,9 @@ package Net::DRI::Protocol::EPP::Extensions::VeriSign;
 use strict;
 
 use base qw/Net::DRI::Protocol::EPP/;
+use Net::DRI::Data::Contact::JOBS;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -51,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -66,10 +67,7 @@ See the LICENSE file that comes with this distribution for more details.
 ####################################################################################################
 sub new
 {
- my $h=shift;
- my $c=ref($h) || $h;
-
- my ($drd,$version,$extrah,$defproduct)=@_;
+ my ($c,$drd,$version,$extrah,$defproduct)=@_;
  my %e=map { $_ => 1 } (defined($extrah)? (ref($extrah)? @$extrah : ($extrah)) : ());
 
  $e{'Net::DRI::Protocol::EPP::Extensions::VeriSign::NameStore'}=1;
@@ -81,17 +79,17 @@ sub new
  if (exists($e{':full'})) ## useful shortcut, modeled after Perl itself
  {
   delete($e{':full'});
+  $e{'Net::DRI::Protocol::EPP::Extensions::VeriSign::JobsContact'}=1 if (defined($defproduct) && $defproduct eq 'dotJOBS');
   $e{'Net::DRI::Protocol::EPP::Extensions::VeriSign::IDNLanguage'}=1;
   $e{'Net::DRI::Protocol::EPP::Extensions::VeriSign::WhoisInfo'}=1;
   $e{'Net::DRI::Protocol::EPP::Extensions::GracePeriod'}=1;
  }
 
- my $self=$c->SUPER::new($drd,$version,[keys(%e)]); ## we are now officially a Net::DRI::Protocol::EPP object
+ my $self=$c->SUPER::new($drd,$version,[keys(%e)]);
  $self->default_parameters()->{subproductid}=$defproduct || '_auto_';
  $self->default_parameters()->{whois_info}=0;
  $self->default_parameters()->{breaks_rfc3915}=1;
-
- bless($self,$c); ## rebless
+ $self->factories('contact',sub { return Net::DRI::Data::Contact::JOBS->new(@_); }) if (grep { $_ =~ /JobsContact$/ } keys(%e));
  return $self;
 }
 

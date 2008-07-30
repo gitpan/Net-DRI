@@ -13,7 +13,7 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::DRD::PL;
 
@@ -23,7 +23,7 @@ use base qw/Net::DRI::DRD/;
 use Net::DRI::Exception;
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -65,7 +65,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
-#####################################################################################
+####################################################################################################
 
 sub new
 {
@@ -74,14 +74,16 @@ sub new
 
  my $self=$class->SUPER::new(@_);
  $self->{info}->{host_as_attr}=0;
+ $self->{info}->{contact_i18n}=1;	## LOC only
 
  bless($self,$class);
  return $self;
 }
 
-sub periods  { return map { DateTime::Duration->new(years => $_) } (1); }
+sub periods  { return map { DateTime::Duration->new(years => $_) } (1..10); }
 sub name     { return 'NASK'; }
-sub tlds     { return ('pl'); }
+## See http://www.dns.pl/english/dns-funk.html
+sub tlds     { return ('pl',map { $_.'.pl'} qw/aid agro atm auto biz com edu gmina gsm info mail miasta media mil net nieruchomosci nom org pc powiat priv realestate rel sex shop sklep sos szkola targi tm tourism travel turystyka/ ); }
 sub object_types { return ('domain','contact','ns'); }
 
 sub transport_protocol_compatible
@@ -90,7 +92,7 @@ sub transport_protocol_compatible
  my $pn=$po->name();
  my $tn=$to->name();
 
- return 1 if (($pn eq 'EPP') && ($tn eq 'socket_inet'));
+ return 1 if (($pn eq 'EPP') && ($tn eq 'http'));
  return;
 }
 
@@ -98,17 +100,23 @@ sub transport_protocol_default
 {
  my ($drd,$ndr,$type,$ta,$pa)=@_;
  $type='epp' if (!defined($type) || ref($type));
- return Net::DRI::DRD::_transport_protocol_default_epp('Net::DRI::Protocol::EPP::Extensions::PL',$ta,$pa) if ($type eq 'epp');
+ if ($type eq 'epp') ## EPP is over HTTPS
+ {
+  my @a=Net::DRI::DRD::_transport_protocol_default_epp('Net::DRI::Protocol::EPP::Extensions::PL',$ta,$pa);
+  $a[0]='Net::DRI::Transport::HTTP';
+  $a[1]->[0]->{protocol_connection}='Net::DRI::Protocol::EPP::Extensions::PL::Connection';
+  return @a;
+ }
 }
 
-######################################################################################
+####################################################################################################
 
 sub verify_name_domain
 {
  my ($self,$ndr,$domain)=@_;
  $domain=$ndr unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
 
- my $r=$self->SUPER::check_name($domain,1);
+ my $r=$self->SUPER::check_name($domain,[1,2]);
  return $r if ($r);
  return 10 unless $self->is_my_tld($domain);
 
@@ -136,6 +144,13 @@ sub domain_operation_needs_is_mine
  return;
 }
 
+sub message_retrieve
+{
+ my ($self,$ndr,$id)=@_;
+ my $rc=$ndr->process('message','plretrieve',[$id]);
+ return $rc;
+}
+
 ## Only transfer requests are possible
 sub domain_transfer_stop    { Net::DRI::Exception->die(0,'DRD',4,'No domain transfer cancel available in .PL'); }
 sub domain_transfer_query   { Net::DRI::Exception->die(0,'DRD',4,'No domain transfer query available in .PL'); }
@@ -146,5 +161,5 @@ sub contact_transfer_query  { Net::DRI::Exception->die(0,'DRD',4,'No contact tra
 sub contact_transfer_accept { Net::DRI::Exception->die(0,'DRD',4,'No contact transfer approve available in .PL'); }
 sub contact_transfer_refuse { Net::DRI::Exception->die(0,'DRD',4,'No contact transfer reject in .PL'); }
 
-#################################################################################################################
+####################################################################################################
 1;

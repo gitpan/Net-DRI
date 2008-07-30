@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .MOBI Domain EPP extension commands
 ##
-## Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -21,7 +21,7 @@ use strict;
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -51,7 +51,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -77,19 +77,12 @@ sub register_commands
  return { 'domain' => \%tmp };
 }
 
-sub capabilities_add
-{
- return { 'domain_update' => { 'maintainer_url' => [ 'set' ]} };
-}
-
 ####################################################################################################
 
 sub add_maintainer_url
 {
  my ($mes,$tag,$url)=@_;
-
- my @ns=@{$mes->ns()->{'mobi'}};
- my $eid=$mes->command_extension_register($tag,sprintf('xmlns:mobi="%s" xsi:schemaLocation="%s %s"',$ns[0],$ns[0],$ns[1]));
+ my $eid=$mes->command_extension_register($tag,sprintf('xmlns:mobi="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('mobi')));
  $mes->command_extension($eid,['mobi:maintainerUrl',$url]);
 }
 
@@ -122,10 +115,10 @@ sub info_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $infdata=$mes->get_content('infData',$mes->ns('mobi'),1);
+ my $infdata=$mes->get_extension('mobi','infData');
  return unless $infdata;
 
- my $c=$infdata->getElementsByTagNameNS($mes->ns('mobi'),'maintainerUrl');
+ my $c=$infdata->getChildrenByTagNameNS($mes->ns('mobi'),'maintainerUrl');
  return unless ($c && $c->size()==1);
 
  $rinfo->{domain}->{$oname}->{maintainer_url}=$c->shift()->getFirstChild()->getData();

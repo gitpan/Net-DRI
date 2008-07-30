@@ -20,7 +20,7 @@ package Net::DRI::Protocol::Gandi::WS::Connection;
 use strict;
 use XMLRPC::Lite; ## needed to have XMLRPC::Data
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -61,7 +61,6 @@ the Free Software Foundation; either version 2 of the License, or
 See the LICENSE file that comes with this distribution for more details.
 
 =cut
-
 
 ####################################################################################################
 

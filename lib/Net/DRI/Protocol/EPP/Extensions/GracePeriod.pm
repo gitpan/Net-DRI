@@ -13,7 +13,7 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::Protocol::EPP::Extensions::GracePeriod;
 
@@ -22,7 +22,7 @@ use strict;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 our $NS='urn:ietf:params:xml:ns:rgp-1.0';
 
 =pod
@@ -65,8 +65,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
-
-##########################################################
+####################################################################################################
 
 sub register_commands
 {
@@ -79,13 +78,9 @@ sub register_commands
  return { 'domain' => \%tmp };
 }
 
-sub capabilities_add
-{
- return { 'domain_update' => { 'rgp' => ['set'] }};
-}
+sub capabilities_add { return ('domain_update','rgp',['set']); }
 
-##################################################################################################
-
+####################################################################################################
 ########### Query commands
 
 sub info_parse
@@ -94,12 +89,12 @@ sub info_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $infdata=$mes->get_content('infData',$NS,1);
+ my $infdata=$mes->get_extension($NS,'infData');
  return unless $infdata;
 
  my $cs=$rinfo->{domain}->{$oname}->{status}; ## a Net::DRI::Protocol::EPP::Core::Status object
 
- foreach my $el ($infdata->getElementsByTagNameNS($NS,'rgpStatus'))
+ foreach my $el ($infdata->getChildrenByTagNameNS($NS,'rgpStatus'))
  {
   $cs->add($el->getAttribute('s'));
  }
@@ -163,12 +158,12 @@ sub update_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $updata=$mes->get_content('upData',$NS,1);
+ my $updata=$mes->get_extension($NS,'upData');
  return unless $updata;
 
  ## We do nothing, since the rgpStatus alone is useless
  ## (we do not have the other status)
 }
 
-#########################################################################################################
+####################################################################################################
 1;

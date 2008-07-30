@@ -4,7 +4,7 @@
 # needed for some registries in Net::DRI but not all of them,
 # and we warn the user if they are not present
 
-use Test::More tests => 6;
+use Test::More tests => 11;
 
 SKIP: {
 	eval { require Net::SMTP; };
@@ -14,8 +14,9 @@ SKIP: {
 
 SKIP: {
 	eval { require MIME::Entity; };
-	skip 'Module MIME::Entity is not installed, you need it if you want to use Net::DRI for: AFNIC (emails)',1 if $@;
+	skip 'Module MIME::Entity is not installed, you need it if you want to use Net::DRI for: AFNIC (emails)',2 if $@;
 	require_ok('Net::DRI::Protocol::AFNIC::Email::Message');
+	require_ok('Net::DRI::Protocol::AFNIC::Email'); ## depends on Message
 }
 
 SKIP: {
@@ -35,6 +36,25 @@ SKIP: {
 	eval { require SOAP::WSDL; }; ## also needs SOAP::Lite
 	skip('Module SOAP::WSDL is not installed, you need it if you want to use Net::DRI for: OVH (WebServices)',1) if $@;
 	require_ok('Net::DRI::Transport::HTTP::SOAPWSDL');
+}
+
+SKIP: {
+	eval { require LWP::UserAgent; };
+	skip('Module LWP::UserAgent is not installed, you need it if you want to use Net::DRI for: OpenSRS (XCP), .PL (EPP over HTTPS)',1) if $@;
+	require_ok('Net::DRI::Transport::HTTP');
+}
+
+SKIP: {
+	eval { require HTTP::Request; };
+	skip('Module HTTP::Request is not installed, you need it if you want to use Net::DRI for: OpenSRS (XCP), .PL (EPP over HTTPS)',2) if $@;
+	require_ok('Net::DRI::Protocol::OpenSRS::XCP::Connection');
+	require_ok('Net::DRI::Protocol::EPP::Extensions::PL::Connection');
+}
+
+SKIP: {
+	eval { require Digest::MD5; };
+	skip('Module Digest::MD5 is not installed, you need it if you want to use Net::DRI for: OpenSRS (XCP)',1) if $@;
+	require_ok('Net::DRI::Protocol::OpenSRS::XCP::Connection');
 }
 
 exit 0;

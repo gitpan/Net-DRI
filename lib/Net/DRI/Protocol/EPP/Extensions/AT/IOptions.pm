@@ -1,7 +1,7 @@
 ## Domain Registry Interface, ENUM.AT Options extension
 ## Contributed by Michael Braunoeder from ENUM.AT <michael.braunoeder@enum.at>
 ##
-## Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -23,7 +23,7 @@ use strict;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 our $NS='http://www.enum.at/rxsd/ienum43-options-1.0';
 
 =pod
@@ -54,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -80,17 +80,14 @@ sub register_commands
  return { 'domain' => \%tmp };
 }
 
-sub capabilities_add
-{
- return { 'domain_update' => { 'options' => [ 'set'] }};
-}
+sub capabilities_add { return ('domain_update','options',['set']); }
 
 sub parse_options
 {
  my ($po,$otype,$oaction,$oname,$rinfo)=@_;
  my $mes=$po->message();
 
- my $condata=$mes->get_content('options',$NS,1);
+ my $condata=$mes->get_extension($NS,'options');
  return unless $condata;
 
  my @options;

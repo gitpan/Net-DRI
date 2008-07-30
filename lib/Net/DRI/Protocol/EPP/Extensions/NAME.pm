@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .NAME EPP extensions
 ##
-## Copyright (c) 2007 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
+## Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -13,7 +13,7 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::Protocol::EPP::Extensions::NAME;
 
@@ -23,7 +23,7 @@ use base qw/Net::DRI::Protocol::EPP/;
 
 use Net::DRI::Protocol::EPP::Extensions::NAME::EmailFwd;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -54,7 +54,7 @@ Tonnerre Lombard, E<lt>tonnerre.lombard@sygroup.chE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -70,20 +70,13 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $c=shift;
- my ($drd,$version,$extrah)=@_;
+ my ($c,$drd,$version,$extrah)=@_;
  my %e=map { $_ => 1 } (defined($extrah)? (ref($extrah)? @$extrah : ($extrah)) : ());
 
  $e{'Net::DRI::Protocol::EPP::Extensions::NAME::EmailFwd'}=1;
-
- my $self=$c->SUPER::new($drd,$version,[keys(%e)]); ## we are now officially a Net::DRI::Protocol::EPP object
-
- foreach my $w ('emailFwd')
- {
-  $self->{ns}->{$w}=['http://www.nic.name/epp/'.$w.'-1.0',$w.'-1.0.xsd'];
- }
-
- bless($self,$c); ## rebless
+ my $self=$c->SUPER::new($drd,$version,[keys(%e)]);
+ $self->ns({ emailFwd => ['http://www.nic.name/epp/emailFwd-1.0','emailFwd-1.0.xsd'] });
+ $self->capabilities('emailfwd_update','info',['set']);
  return $self;
 }
 

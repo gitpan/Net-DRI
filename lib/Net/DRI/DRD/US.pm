@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .US policies
 ##
-## Copyright (c) 2007 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>,
+## Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>,
 ##                    All rights reserved.
 ##
 ## This file is part of Net::DRI
@@ -24,7 +24,7 @@ use base qw/Net::DRI::DRD/;
 use Net::DRI::DRD::ICANN;
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -54,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007 Tonnerre Lombard E<lt>tonnerre.lombard@sygroup.chE<gt>,
+Copyright (c) 2007,2008 Tonnerre Lombard E<lt>tonnerre.lombard@sygroup.chE<gt>,
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -100,6 +100,7 @@ sub transport_protocol_default
  my ($drd,$ndr,$type,$ta,$pa)=@_;
  $type='epp' if (!defined($type) || ref($type));
  return Net::DRI::DRD::_transport_protocol_default_epp('Net::DRI::Protocol::EPP::Extensions::US',$ta,$pa) if ($type eq 'epp');
+ return ('Net::DRI::Transport::Socket',[{%Net::DRI::DRD::PROTOCOL_DEFAULT_WHOIS,remote_host=>'whois.nic.us'}],'Net::DRI::Protocol::Whois',[]) if (lc($type) eq 'whois');
 }
 
 ####################################################################################################

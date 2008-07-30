@@ -21,7 +21,6 @@ use strict;
 
 use DateTime::Format::ISO8601 ();
 use XML::LibXML ();
-use Encode ();
 
 use Net::DRI::Protocol::ResultStatus;
 use Net::DRI::Exception;
@@ -30,7 +29,7 @@ use Net::DRI::Util;
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version command command_body cltrid svtrid msg_id node_resdata node_extension node_msg result_greeting));
 
-our $VERSION=do { my @r=(q$Revision: 1.20 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.21 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -80,7 +79,7 @@ sub new
  my $class=ref($proto) || $proto;
  my $trid=shift;
 
- my $self={ results => [] };
+ my $self={ results => [], ns => {} };
  bless($self,$class);
 
  $self->cltrid($trid) if (defined($trid) && $trid);
@@ -96,22 +95,18 @@ sub _get_result
  return $rh->{$what};
 }
 
-sub results { return @{shift->{results}}; }
-sub results_code { return map { $_->{code} } shift->results(); }
-sub results_message { return map { $_->{message} } shift->results(); }
-sub results_lang { return map { $_->{lang} } shift->results(); }
+## TODO : these are not very useful here, they should be done in ResultStatus
+## (they are only used from t/241epp_message.t)
+sub results            { return @{shift->{results}}; }
+sub results_code       { return map { $_->{code} } shift->results(); }
+sub results_message    { return map { $_->{message} } shift->results(); }
+sub results_lang       { return map { $_->{lang} } shift->results(); }
 sub results_extra_info { return map { $_->{extra_info} } shift->results(); }
 
-sub result_code { return shift->_get_result('code',@_); }
-sub result_message { return shift->_get_result('message',@_); }
-sub result_lang  { return shift->_get_result('lang',@_); }
+sub result_code       { return shift->_get_result('code',@_); }
+sub result_message    { return shift->_get_result('message',@_); }
+sub result_lang       { return shift->_get_result('lang',@_); }
 sub result_extra_info { return shift->_get_result('extra_info',@_); }
-
-## old names and old API, we were storing results each on on top of the previous one, hence the net result was the latest seen
-## except for result_extra_info that is now giving back, by default, the *first* result seen, not the last
-sub errcode { return shift->result_code(-1); }
-sub errlang { return shift->result_lang(-1); }
-sub errmsg  { return shift->result_message(-1); }
 
 sub ns
 {
@@ -125,6 +120,14 @@ sub ns
  }
  return unless exists($self->{ns}->{$what});
  return $self->{ns}->{$what}->[0];
+}
+
+sub nsattrs
+{
+ my ($self,$what)=@_;
+ return unless (defined($what) && exists($self->{ns}->{$what}));
+ my @n=@{$self->{ns}->{$what}};
+ return ($n[0],$n[0],$n[1]);
 }
 
 sub is_success { return _is_success(shift->result_code()); }
@@ -171,9 +174,7 @@ sub command_extension
 sub as_string
 {
  my ($self,$to)=@_;
- my $rns=$self->ns();
- my $topns=$rns->{_main};
- my $ens=sprintf('xmlns="%s" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="%s %s"',$topns->[0],$topns->[0],$topns->[1]);
+ my $ens=sprintf('xmlns="%s" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="%s %s"',$self->nsattrs('_main'));
  my @d;
  push @d,'<?xml version="1.0" encoding="UTF-8" standalone="no"?>';
  push @d,'<epp '.$ens.'>';
@@ -220,11 +221,11 @@ sub as_string
    if ($ecmd && $ens)
    {
     push @d,'<'.$ecmd.' '.$ens.'>';
-    push @d,ref($rdata)? _toxml($rdata) : xml_escape($rdata);
+    push @d,ref($rdata)? _toxml($rdata) : Net::DRI::Util::xml_escape($rdata);
     push @d,'</'.$ecmd.'>';
    } else
    {
-    push @d,xml_escape(@$rdata);
+    push @d,Net::DRI::Util::xml_escape(@$rdata);
    }
   }
   push @d,'</extension>';
@@ -239,9 +240,7 @@ sub as_string
  }
  push @d,'</epp>';
 
- my $m=Encode::encode('utf8',join('',@d));
- my $l=pack('N',4+length($m)); ## RFC 4934 §4
- return (defined($to) && ($to eq 'tcp') && ($self->version() > 0.4))? $l.$m : $m;
+ return join('',@d);
 }
 
 sub _toxml
@@ -270,84 +269,65 @@ sub _toxml
   } else
   {
    push @t,'<'.$tag.$attr.'>';
-   push @t,(@c==1 && !ref($c[0]))? xml_escape($c[0]) : _toxml(\@c);
+   push @t,(@c==1 && !ref($c[0]))? Net::DRI::Util::xml_escape($c[0]) : _toxml(\@c);
    push @t,'</'.$tag.'>';
   }
  }
  return @t;
 }
 
-sub xml_escape
+sub get_response  { my $self=shift; return $self->_get_content($self->node_resdata(),@_); }
+sub get_extension { my $self=shift; return $self->_get_content($self->node_extension(),@_); }
+
+sub _get_content
 {
- my $in=shift;
- $in=~s/&/&amp;/g;
- $in=~s/</&lt;/g;
- $in=~s/>/&gt;/g;
- return $in;
-}
-
-sub topns { return shift->ns->{_main}->[0]; }
-
-sub get_content
-{
- my ($self,$nodename,$ns,$ext)=@_;
- return unless (defined($nodename) && $nodename);
-
- my @tmp;
- my $n1=$self->node_resdata();
- my $n2=$self->node_extension();
-
- $ns||=$self->topns();
-
- if ($ext)
- {
-  @tmp=$n2->getElementsByTagNameNS($ns,$nodename) if (defined($n2));
- } else
- {
-  @tmp=$n1->getElementsByTagNameNS($ns,$nodename) if (defined($n1));
- }
-
+ my ($self,$node,$nstag,$nodename)=@_;
+ return unless (defined($node) && defined($nstag) && $nstag && defined($nodename) && $nodename);
+ my $ns=$self->ns($nstag);
+ $ns=$nstag unless defined($ns) && $ns;
+ my @tmp=$node->getChildrenByTagNameNS($ns,$nodename);
  return unless @tmp;
- return wantarray()? @tmp : $tmp[0];
+ return $tmp[0];
 }
 
 sub parse
 {
  my ($self,$dc,$rinfo)=@_;
 
- my $NS=$self->topns();
+ my $NS=$self->ns('_main');
  my $parser=XML::LibXML->new();
  my $doc=$parser->parse_string($dc->as_string());
  my $root=$doc->getDocumentElement();
  Net::DRI::Exception->die(0,'protocol/EPP',1,'Unsuccessfull parse, root element is not epp') unless ($root->getName() eq 'epp');
 
- if ($root->getElementsByTagNameNS($NS,'greeting'))
+ if (my $g=$root->getChildrenByTagNameNS($NS,'greeting'))
  {
   push @{$self->{results}},{ code => 1000, message => undef, lang => undef, extra_info => []}; ## fake an OK
-  my $r=$self->parse_greeting(($root->getElementsByTagNameNS($NS,'greeting'))[0]);
-  $self->result_greeting($r);
+  $self->result_greeting($self->parse_greeting($g->shift()));
   return;
  }
- Net::DRI::Exception->die(0,'protocol/EPP',1,'Unsuccessfull parse, no response block') unless $root->getElementsByTagNameNS($NS,'response');
- my $res=($root->getElementsByTagNameNS($NS,'response'))[0];
+ my $c=$root->getChildrenByTagNameNS($NS,'response');
+ Net::DRI::Exception->die(0,'protocol/EPP',1,'Unsuccessfull parse, no response block') unless ($c->size()==1);
+ my $res=$c->shift();
 
  ## result block(s)
- foreach my $result ($res->getElementsByTagNameNS($NS,'result')) ## one element if success, multiple elements if failure RFC4930 §2.6
+ foreach my $result ($res->getChildrenByTagNameNS($NS,'result')) ## one element if success, multiple elements if failure RFC4930 §2.6
  {
   $self->parse_result($result);
  }
 
- if ($res->getElementsByTagNameNS($NS,'msgQ')) ## OPTIONAL
+ $c=$res->getChildrenByTagNameNS($NS,'msgQ');
+ if ($c->size()) ## OPTIONAL
  {
-  my $msgq=($res->getElementsByTagNameNS($NS,'msgQ'))[0];
+  my $msgq=$c->shift();
   my $id=$msgq->getAttribute('id'); ## id of the message that has just been retrieved and dequeued (RFC4930) OR id of *next* available message (RFC3730)
   $rinfo->{message}->{info}={ count => $msgq->getAttribute('count'), id => $id };
   if ($msgq->hasChildNodes()) ## We will have childs only as a result of a poll request
   {
    my %d=( id => $id );
    $self->msg_id($id);
-   $d{qdate}=DateTime::Format::ISO8601->new()->parse_datetime(($msgq->getElementsByTagNameNS($NS,'qDate'))[0]->firstChild()->getData());
-   my $msgc=($msgq->getElementsByTagNameNS($NS,'msg'))[0];
+   $d{qdate}=DateTime::Format::ISO8601->new()->parse_datetime(($msgq->getChildrenByTagNameNS($NS,'qDate'))[0]->firstChild()->getData());
+   my $msgc=($msgq->getChildrenByTagNameNS($NS,'msg'))[0];
    $d{lang}=$msgc->getAttribute('lang') || 'en';
 
    if (grep { $_->nodeType() == 1 } $msgc->childNodes())
@@ -361,18 +341,13 @@ sub parse
   }
  }
 
- if ($res->getElementsByTagNameNS($NS,'resData')) ## OPTIONAL
- {
-  $self->node_resdata(($res->getElementsByTagNameNS($NS,'resData'))[0]);
- }
-
- if ($res->getElementsByTagNameNS($NS,'extension')) ## OPTIONAL
- {
-  $self->node_extension(($res->getElementsByTagNameNS($NS,'extension'))[0]);
- }
+ $c=$res->getChildrenByTagNameNS($NS,'resData');
+ $self->node_resdata($c->shift()) if ($c->size()); ## OPTIONAL
+ $c=$res->getChildrenByTagNameNS($NS,'extension');
+ $self->node_extension($c->shift()) if ($c->size()); ## OPTIONAL
 
  ## trID
- my $trid=($res->getElementsByTagNameNS($NS,'trID'))[0];
+ my $trid=($res->getChildrenByTagNameNS($NS,'trID'))[0]; ## we search only for <trID> as direct child of <response>, hence getChildren and not getElements !
  my $tmp=extract_trids($trid,$NS,'clTRID');
  $self->cltrid($tmp) if defined($tmp);
  $tmp=extract_trids($trid,$NS,'svTRID');
@@ -382,7 +357,7 @@ sub parse
 sub extract_trids
 {
  my ($trid,$NS,$what)=@_;
- my @tmp=$trid->getElementsByTagNameNS($NS,$what);
+ my @tmp=$trid->getChildrenByTagNameNS($NS,$what);
  return unless @tmp && defined($tmp[0]) && defined($tmp[0]->firstChild());
  return $tmp[0]->firstChild()->getData();
 }
@@ -390,9 +365,8 @@ sub extract_trids
 sub parse_result
 {
  my ($self,$node)=@_;
- my $NS=$self->topns();
  my $code=$node->getAttribute('code');
- my $msg=($node->getElementsByTagNameNS($NS,'msg'))[0];
+ my $msg=($node->getChildrenByTagNameNS($self->ns('_main'),'msg'))[0];
  my $lang=$msg->getAttribute('lang') || 'en';
  $msg=$msg->firstChild()->getData();
  my @i;

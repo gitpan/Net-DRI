@@ -1,7 +1,7 @@
 ## Domain Registry Interface, CentralNic Web Forwarding EPP extension
 ## (http://labs.centralnic.com/epp/ext/wf.php)
 ##
-## Copyright (c) 2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -20,7 +20,7 @@ package Net::DRI::Protocol::EPP::Extensions::CentralNic::WebForwarding;
 
 use strict;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -50,7 +50,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -74,13 +74,6 @@ sub register_commands
  return { 'domain' => \%tmp };
 }
 
-sub capabilities_add
-{
- return { 'domain_update' => { 'web_forwarding' => ['set'] } };
-}
-
-our @NS=qw/urn:centralnic:params:xml:ns:wf-1.0 wf-1.0.xsd/;
-
 ####################################################################################################
 ########### Query commands
 
@@ -90,10 +83,10 @@ sub info_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $infdata=$mes->get_content('infData',$NS[0],1);
+ my $infdata=$mes->get_extension('wf','infData');
  return unless $infdata;
 
- my @c=$infdata->getElementsByTagNameNS($NS[0],'url');
+ my @c=$infdata->getChildrenByTagNameNS($mes->ns('wf'),'url');
  return unless @c;
 
  $rinfo->{domain}->{$oname}->{web_forwarding}=$c[0]->getFirstChild()->getData();
@@ -108,7 +101,7 @@ sub create
 
  return unless (exists($rd->{web_forwarding}) && defined($rd->{web_forwarding}));
 
- my $eid=$mes->command_extension_register('wf:create',sprintf('xmlns:wf="%s" xsi:schemaLocation="%s %s"',$NS[0],@NS));
+ my $eid=$mes->command_extension_register('wf:create',sprintf('xmlns:wf="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('wf')));
  my @n=(['wf:url',$rd->{web_forwarding}]);
  $mes->command_extension($eid,\@n);
 }
@@ -121,7 +114,7 @@ sub update
  my $toset=$todo->set('web_forwarding');
  return unless defined($toset);
 
- my $eid=$mes->command_extension_register('wf:update',sprintf('xmlns:wf="%s" xsi:schemaLocation="%s %s"',$NS[0],@NS));
+ my $eid=$mes->command_extension_register('wf:update',sprintf('xmlns:wf="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('wf')));
  my @n=(['wf:url',$toset]);
  $mes->command_extension($eid,\@n);
 }

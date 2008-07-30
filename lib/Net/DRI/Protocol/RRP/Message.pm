@@ -13,13 +13,11 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::Protocol::RRP::Message;
 
 use strict;
-
-use Encode ();
 
 use Net::DRI::Exception;
 use Net::DRI::Protocol::ResultStatus;
@@ -27,7 +25,7 @@ use Net::DRI::Protocol::ResultStatus;
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version errcode errmsg command));
 
-our $VERSION=do { my @r=(q$Revision: 1.15 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.16 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -129,32 +127,32 @@ sub as_string
  my $ent=$self->entities('EntityName');
  my $allopt=$self->options();
  my $order=lc($cmd);
- $order.="_".lc($ent) if ($ent);
+ $order.='_'.lc($ent) if ($ent);
 
- Net::DRI::Exception->die(1,'protocol/RRP',5,'Unknown command $cmd, no order found') unless (exists($ORDER{$order}));
+ Net::DRI::Exception->die(1,'protocol/RRP',5,'Unknown command '.$cmd.', no order found') unless (exists($ORDER{$order}));
 
  my @r=($cmd);
  foreach my $o (@{$ORDER{$order}})
  {
   if ($o=~m/^-(.+)$/) ## Option
   {
-   push @r,"${o}:".$allopt->{$1} if exists($allopt->{$1});
+   push @r,$o.':'.$allopt->{$1} if exists($allopt->{$1});
   } else ## Entity
   {
    my @e=$self->entities($o);
-   push @r,map { "${o}:${_}" } @e if @e;
+   push @r,map { $o.':'.$_ } @e if @e;
   }
  }
- 
- push @r,".${EOL}"; ## end
- return Encode::encode('ascii',join($EOL,@r));
+
+ push @r,'.'.$EOL; ## end
+ return join($EOL,@r);
 }
 
 sub parse
 {
  my ($self,$dc)=@_; ## DataRaw
  my @todo=map { my $s=$_; $s=~s/\r*\n*\r*$//; $s; } grep { defined() && ! /^\s+$/ } $dc->as_array();
- Net::DRI::Exception->die(0,'protocol/RRP',1,"Unsuccessfull parse (last line not '.')") unless (pop(@todo) eq '.');
+ Net::DRI::Exception->die(0,'protocol/RRP',1,'Unsuccessfull parse (last line not a lonely dot ') unless (pop(@todo) eq '.');
 
  my $t=shift(@todo);
  $t=~m/^(\d+)\s+(\S.*\S)\s*$/;

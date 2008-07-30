@@ -24,7 +24,7 @@ use base qw/Net::DRI::Protocol::EPP/;
 
 use Net::DRI::Data::Contact::SWITCH;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -71,20 +71,13 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $c=shift;
- my ($drd,$version,$extrah)=@_;
+ my ($c,$drd,$version,$extrah)=@_;
  my %e=map { $_ => 1 } (defined($extrah)? (ref($extrah)? @$extrah : ($extrah)) : ());
 
- my $self=$c->SUPER::new($drd,$version,[keys(%e)]); ## we are now officially a Net::DRI::Protocol::EPP object
-
- my $rcapa=$self->capabilities();
- delete($rcapa->{domain_update}->{status});
- delete($rcapa->{contact_update}->{status}); 
-
- my $rfact=$self->factories();
- $rfact->{contact}=sub { return Net::DRI::Data::Contact::SWITCH->new(); };
-
- bless($self,$c); ## rebless
+ my $self=$c->SUPER::new($drd,$version,[keys(%e)]);
+ $self->capabilities('domain_update','status',undef);
+ $self->capabilities('contact_update','status',undef);
+ $self->factories('contact',sub { return Net::DRI::Data::Contact::SWITCH->new(); });
  return $self;
 }
 

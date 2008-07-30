@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .LU Contact EPP extension commands
 ##
-## Copyright (c) 2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -21,7 +21,7 @@ use strict;
 
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -51,7 +51,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -80,9 +80,7 @@ sub register_commands
 sub build_command_extension
 {
  my ($mes,$epp,$tag)=@_;
-
- my @ns=@{$mes->ns->{dnslu}};
- return $mes->command_extension_register($tag,sprintf('xmlns:dnslu="%s" xsi:schemaLocation="%s %s"',$ns[0],$ns[0],$ns[1]));
+ return $mes->command_extension_register($tag,sprintf('xmlns:dnslu="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('dnslu')));
 }
 
 ####################################################################################################
@@ -93,21 +91,26 @@ sub info_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $infdata=$mes->get_content('infData',$mes->ns('dnslu'),1);
+ my $infdata=$mes->get_extension('dnslu','ext');
  return unless $infdata;
-
- my @c=$infdata->getElementsByTagNameNS($mes->ns('dnslu'),'contact');
- return unless @c;
+ my $ns=$mes->ns('dnslu');
+ $infdata=$infdata->getChildrenByTagNameNS($ns,'resData');
+ return unless $infdata->size();
+ $infdata=$infdata->shift()->getChildrenByTagNameNS($ns,'infData');
+ return unless $infdata->size();
+ $infdata=$infdata->shift()->getChildrenByTagNameNS($ns,'contact');
+ return unless $infdata->size();
+ $infdata=$infdata->shift();
  
  my $co=$rinfo->{contact}->{$oname}->{self};
 
- my $t=($c[0]->getElementsByTagNameNS($mes->ns('dnslu'),'type'))[0];
- $co->type($t->getFirstChild()->getData()) if $t;
+ my $t=$infdata->getChildrenByTagNameNS($ns,'type');
+ $co->type($t->shift->getFirstChild()->getData()) if $t->size();
 
- my $c=($infdata->getElementsByTagNameNS($mes->ns('dnslu'),'disclose'))[0];
- if ($c)
+ my $c=$infdata->getChildrenByTagNameNS($ns,'disclose');
+ if ($c->size())
  {
-  $c=$c->getFirstChild();
+  $c=$c->shift()->getFirstChild();
   $co->disclose({}) unless defined($co->disclose()); 
   while($c)
   {

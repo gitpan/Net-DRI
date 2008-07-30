@@ -20,12 +20,12 @@ package Net::DRI::Protocol;
 use strict;
 
 use base qw(Class::Accessor::Chained::Fast);
-__PACKAGE__->mk_accessors(qw(name version factories commands message capabilities default_parameters));
+__PACKAGE__->mk_accessors(qw(name version commands message default_parameters));
 
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.18 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.19 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -72,11 +72,10 @@ See the LICENSE file that comes with this distribution for more details.
 sub new
 {
  my $c=shift;
- my $self={}; ## more to do ?
+ my $self={ factories => {}, capabilities => {} };
  bless($self,$c);
 
  $self->message(undef);
- $self->capabilities({});
  $self->default_parameters({});
  return $self;
 }
@@ -95,7 +94,6 @@ sub _load
  my $self=shift;
  my $etype='protocol/'.$self->name();
  my $version=$self->version();
- my $rcapa=$self->capabilities();
 
  my %c;
  my %done;
@@ -108,8 +106,14 @@ sub _load
   Net::DRI::Util::hash_merge(\%c,$rh); ## { object type => { action type => [ build action, parse action ]+ } }
   if ($class->can('capabilities_add'))
   {
-   my $rca=$class->capabilities_add();
-   Net::DRI::Util::hash_merge($rcapa,$rca,1);
+   my @a=$class->capabilities_add();
+   if (ref($a[0]))
+   {
+    foreach my $a (@a) { $self->capabilities(@$a); }
+   } else
+   {
+    $self->capabilities(@a);
+   }
   }
   $done{$class}=1;
  }
@@ -199,13 +203,37 @@ sub reaction
  }
  $self->message(undef); ## needed ? useful ?
 
- return ($rc,\%info,$oname);
+ return ($rc,\%info);
 }
 
 sub nameversion
 {
  my $self=shift;
  return $self->name().'/'.$self->version();
+}
+
+sub factories
+{
+ my ($self,$object,$code)=@_;
+ $self->{factories}->{$object}=$code if defined($code);
+ return $self->{factories};
+}
+
+sub capabilities
+{
+ my ($self,$action,$object,$cap)=@_;
+ if (defined($action) && defined($object))
+ {
+  $self->{capabilities}->{$action}={} unless exists($self->{capabilities}->{$action});
+  if (defined($cap))
+  {
+   $self->{capabilities}->{$action}->{$object}=$cap;
+  } else
+  {
+   delete($self->{capabilities}->{$action}->{$object});
+  }
+ }
+ return $self->{capabilities};
 }
 
 ####################################################################################################

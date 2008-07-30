@@ -1,7 +1,7 @@
 ## Domain Registry Interface, CentralNic DNS TTL EPP extension
 ## (http://labs.centralnic.com/epp/ext/ttl.php)
 ##
-## Copyright (c) 2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -22,7 +22,7 @@ use strict;
 
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -52,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -76,13 +76,6 @@ sub register_commands
  return { 'domain' => \%tmp };
 }
 
-sub capabilities_add
-{
- return { 'domain_update' => { 'ttl' => ['set'] } };
-}
-
-our @NS=qw/urn:centralnic:params:xml:ns:ttl-1.0 ttl-1.0.xsd/;
-
 ####################################################################################################
 ########### Query commands
 
@@ -92,10 +85,10 @@ sub info_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $infdata=$mes->get_content('infData',$NS[0],1);
+ my $infdata=$mes->get_extension('ttl','infData');
  return unless $infdata;
 
- my @secs=$infdata->getElementsByTagNameNS($NS[0],'secs');
+ my @secs=$infdata->getChildrenByTagNameNS($mes->ns('ttl'),'secs');
  return unless @secs;
 
  $rinfo->{domain}->{$oname}->{ttl}=DateTime::Duration->new(seconds => $secs[0]->getFirstChild()->getData());
@@ -110,7 +103,7 @@ sub create
 
  return unless (exists($rd->{ttl}) && ((ref($rd->{ttl}) && UNIVERSAL::isa($rd->{ttl},'DateTime::Duration')) || $rd->{ttl}=~m/^\d+$/));
 
- my $eid=$mes->command_extension_register('ttl:create',sprintf('xmlns:ttl="%s" xsi:schemaLocation="%s %s"',$NS[0],@NS));
+ my $eid=$mes->command_extension_register('ttl:create',sprintf('xmlns:ttl="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('ttl')));
  my @n=(['ttl:secs',ref($rd->{ttl})? $rd->{ttl}->in_units('seconds') : $rd->{ttl}]);
  $mes->command_extension($eid,\@n);
 }
@@ -123,7 +116,7 @@ sub update
  my $toset=$todo->set('ttl');
  return unless (defined($toset) && ((ref($toset) && UNIVERSAL::isa($toset,'DateTime::Duration')) || $toset=~m/^\d+$/));
 
- my $eid=$mes->command_extension_register('ttl:update',sprintf('xmlns:ttl="%s" xsi:schemaLocation="%s %s"',$NS[0],@NS));
+ my $eid=$mes->command_extension_register('ttl:update',sprintf('xmlns:ttl="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('ttl')));
  my @n=(['ttl:secs',ref($toset)? $toset->in_units('seconds') : $toset]);
  $mes->command_extension($eid,\@n);
 }
