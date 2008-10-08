@@ -7,8 +7,8 @@ use Data::Dumper;
 
 use Test::More tests => 59;
 
-eval { use Test::LongString max => 100; $Test::LongString::Context = 50; };
-*{'main::is_string'} = \&main::is if $@;
+eval { no warnings; require Test::LongString; Test::LongString->import(max => 100); $Test::LongString::Context=50; };
+*{'main::is_string'}=\&main::is if $@;
 
 our $E1='<?xml version="1.0" encoding="UTF-8" standalone="no"?><epp xmlns="urn:ietf:params:xml:ns:epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="urn:ietf:params:xml:ns:epp-1.0 epp-1.0.xsd">';
 our $E2='</epp>';
@@ -64,7 +64,8 @@ $cs->add($dri->local_object('contact')->srid('testcontact2'), 'admin');
 $cs->add($dri->local_object('contact')->srid('testcontact3'), 'registrant');
 
 eval {
-	$rc = $dri->domain_create_only('wirzenius.law.pro', {
+	$rc = $dri->domain_create('wirzenius.law.pro', {
+                pure_create => 1,
 		ns => $dri->local_object('hosts')->add('ns1.test.pro')->
 			add('ns2.test.pro'),
 		duration =>	new DateTime::Duration(years => 4),
@@ -85,7 +86,8 @@ is($rc->is_success(), 1, 'domain create');
 is($R1, '<?xml version="1.0" encoding="UTF-8" standalone="no"?><epp xmlns="urn:ietf:params:xml:ns:epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="urn:ietf:params:xml:ns:epp-1.0 epp-1.0.xsd"><command><create><domain:create xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>wirzenius.law.pro</domain:name><domain:period unit="y">4</domain:period><domain:ns><domain:hostObj>ns1.test.pro</domain:hostObj><domain:hostObj>ns2.test.pro</domain:hostObj></domain:ns><domain:registrant>testcontact3</domain:registrant><domain:contact type="admin">testcontact2</domain:contact><domain:contact type="tech">testcontact1</domain:contact><domain:authInfo><domain:pw>testTest</domain:pw></domain:authInfo></domain:create></create><extension><rpro:proDomain xmlns:rpro="http://registrypro.pro/2003/epp/1/rpro-epp-2.0" xsi:schemaLocation="http://registrypro.pro/2003/epp/1/rpro-epp-2.0 rpro-epp-2.0.xsd"><rpro:registrationType>Resolving</rpro:registrationType><rpro:authorization roid="RPRODEF-SAMPLE-1">FAKETEXT</rpro:authorization></rpro:proDomain></extension><clTRID>ABC-12345</clTRID></command></epp>', 'domain create xml');
 
 eval {
-	$rc = $dri->domain_create_only('bucerius.law.pro', {
+	$rc = $dri->domain_create('bucerius.law.pro', {
+                pure_create => 1,
 		ns => $dri->local_object('hosts')->add('ns1.test.pro')->
 			add('ns2.test.pro'),
 		duration =>	new DateTime::Duration(years => 4),

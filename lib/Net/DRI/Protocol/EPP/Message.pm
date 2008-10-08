@@ -29,7 +29,7 @@ use Net::DRI::Util;
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version command command_body cltrid svtrid msg_id node_resdata node_extension node_msg result_greeting));
 
-our $VERSION=do { my @r=(q$Revision: 1.21 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.22 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -193,7 +193,7 @@ sub as_string
   {
    push @d,'<'.$cmd.$attr.'>';
    push @d,'<'.$ocmd.' '.$ons.'>';
-   push @d,_toxml($body);
+   push @d,Net::DRI::Util::xml_write($body);
    push @d,'</'.$ocmd.'>';
    push @d,'</'.$cmd.'>';
   } else
@@ -201,7 +201,7 @@ sub as_string
    if (defined($body) && $body)
    {
     push @d,'<'.$cmd.$attr.'>';
-    push @d,_toxml($body);
+    push @d,Net::DRI::Util::xml_write($body);
     push @d,'</'.$cmd.'>';
    } else
    {
@@ -221,7 +221,7 @@ sub as_string
    if ($ecmd && $ens)
    {
     push @d,'<'.$ecmd.' '.$ens.'>';
-    push @d,ref($rdata)? _toxml($rdata) : Net::DRI::Util::xml_escape($rdata);
+    push @d,ref($rdata)? Net::DRI::Util::xml_write($rdata) : Net::DRI::Util::xml_escape($rdata);
     push @d,'</'.$ecmd.'>';
    } else
    {
@@ -241,39 +241,6 @@ sub as_string
  push @d,'</epp>';
 
  return join('',@d);
-}
-
-sub _toxml
-{
- my $rd=shift;
- my @t;
- foreach my $d ((ref($rd->[0]))? @$rd : ($rd)) ## $d is a node=ref array
- {
-  my @c; ## list of children nodes
-  my %attr;
-  foreach my $e (grep { defined } @$d)
-  {
-   if (ref($e) eq 'HASH')
-   {
-    while(my ($k,$v)=each(%$e)) { $attr{$k}=$v; }
-   } else
-   {
-    push @c,$e;
-   }
-  }
-  my $tag=shift(@c);
-  my $attr=keys(%attr)? ' '.join(' ',map { $_.'="'.$attr{$_}.'"' } sort(keys(%attr))) : '';
-  if (!@c || (@c==1 && !ref($c[0]) && ($c[0] eq '')))
-  {
-   push @t,'<'.$tag.$attr.'/>';
-  } else
-  {
-   push @t,'<'.$tag.$attr.'>';
-   push @t,(@c==1 && !ref($c[0]))? Net::DRI::Util::xml_escape($c[0]) : _toxml(\@c);
-   push @t,'</'.$tag.'>';
-  }
- }
- return @t;
 }
 
 sub get_response  { my $self=shift; return $self->_get_content($self->node_resdata(),@_); }
@@ -332,6 +299,7 @@ sub parse
 
    if (grep { $_->nodeType() == 1 } $msgc->childNodes())
    {
+    $d{content}=$msgc->toString();
     $self->node_msg($msgc);
    } else
    {

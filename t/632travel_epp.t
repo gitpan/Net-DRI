@@ -62,7 +62,8 @@ my $cs = $dri->local_object('contactset');
 $cs->add($dri->local_object('contact')->srid('TL1-TRAVEL'), 'tech');
 $cs->add($dri->local_object('contact')->srid('SK1-TRAVEL'), 'admin');
 eval {
-	$rc = $dri->domain_create_only('jerusalem.travel', {
+	$rc = $dri->domain_create('jerusalem.travel', {
+                pure_create => 1,
 		ns => $dri->local_object('hosts')->add('dns1.syhosting.ch'),
 		contact => $cs,
 		duration => new DateTime::Duration(years => 2),

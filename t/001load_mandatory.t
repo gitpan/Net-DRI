@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-use Test::More tests => 246;
+use Test::More tests => 260;
 
 BEGIN { 
 use_ok('Net::DRI');
@@ -55,6 +55,9 @@ use_ok('Net::DRI::DRD::NO');
 use_ok('Net::DRI::DRD::BR');
 use_ok('Net::DRI::DRD::PRO');
 use_ok('Net::DRI::DRD::OpenSRS');
+use_ok('Net::DRI::DRD::PT');
+use_ok('Net::DRI::DRD::CentralNic');
+use_ok('Net::DRI::DRD::CoCCA');
 use_ok('Net::DRI::Data::Raw');
 use_ok('Net::DRI::Data::Hosts');
 use_ok('Net::DRI::Data::Changes');
@@ -80,8 +83,10 @@ use_ok('Net::DRI::Data::Contact::SWITCH');
 use_ok('Net::DRI::Data::Contact::NO');
 use_ok('Net::DRI::Data::Contact::BR');
 use_ok('Net::DRI::Data::Contact::JOBS');
+use_ok('Net::DRI::Data::Contact::FCCN');
 use_ok('Net::DRI::Transport::Socket');
 use_ok('Net::DRI::Transport::Dummy');
+use_ok('Net::DRI::Transport::Defer');
 use_ok('Net::DRI::Protocol::ResultStatus');
 use_ok('Net::DRI::Protocol::Message');
 use_ok('Net::DRI::Protocol::RRP::Message');
@@ -178,6 +183,7 @@ use_ok('Net::DRI::Protocol::EPP::Extensions::Nominet::Domain');
 use_ok('Net::DRI::Protocol::EPP::Extensions::Nominet::Contact');
 use_ok('Net::DRI::Protocol::EPP::Extensions::Nominet::Host');
 use_ok('Net::DRI::Protocol::EPP::Extensions::Nominet::Account');
+use_ok('Net::DRI::Protocol::EPP::Extensions::Nominet::Notifications');
 use_ok('Net::DRI::Protocol::EPP::Extensions::SWITCH');
 use_ok('Net::DRI::Protocol::EPP::Extensions::CZ');
 use_ok('Net::DRI::Protocol::EPP::Extensions::CZ::Contact');
@@ -201,6 +207,9 @@ use_ok('Net::DRI::Protocol::EPP::Extensions::BR::Domain');
 use_ok('Net::DRI::Protocol::EPP::Extensions::PRO');
 use_ok('Net::DRI::Protocol::EPP::Extensions::PRO::AV');
 use_ok('Net::DRI::Protocol::EPP::Extensions::PRO::Domain');
+use_ok('Net::DRI::Protocol::EPP::Extensions::FCCN');
+use_ok('Net::DRI::Protocol::EPP::Extensions::FCCN::Domain');
+use_ok('Net::DRI::Protocol::EPP::Extensions::FCCN::Contact');
 use_ok('Net::DRI::Protocol::DAS');
 use_ok('Net::DRI::Protocol::DAS::Message');
 use_ok('Net::DRI::Protocol::DAS::Connection');
@@ -249,6 +258,11 @@ use_ok('Net::DRI::Protocol::OpenSRS::XCP::Account');
 use_ok('Net::DRI::Protocol::OpenSRS::XCP::Domain');
 use_ok('Net::DRI::Protocol::OpenSRS::XCP::Session');
 use_ok('Net::DRI::Protocol::OpenSRS::XCP::Message');
+use_ok('Net::DRI::Protocol::IRIS');
+use_ok('Net::DRI::Protocol::IRIS::Message');
+use_ok('Net::DRI::Protocol::IRIS::Core');
+use_ok('Net::DRI::Protocol::IRIS::DCHK::Domain');
+use_ok('Net::DRI::Protocol::IRIS::DCHK::Status');
 }
 
 exit 0;

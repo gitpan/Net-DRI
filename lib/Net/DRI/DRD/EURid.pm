@@ -24,7 +24,7 @@ use Net::DRI::Util;
 use Net::DRI::Exception;
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -84,7 +84,7 @@ sub new
 sub periods  { return map { DateTime::Duration->new(years => $_) } (1); }
 sub name     { return 'EURid'; }
 sub tlds     { return ('eu'); }
-sub object_types { return ('domain','contact','ns','nsgroup'); }
+sub object_types { return ('domain','contact','nsgroup'); }
 
 sub transport_protocol_compatible
 {

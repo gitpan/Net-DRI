@@ -20,11 +20,11 @@ package Net::DRI::Data::Contact::AFNIC;
 use strict;
 use encoding 'iso-8859-15';
 use base qw/Net::DRI::Data::Contact/;
-__PACKAGE__->mk_accessors(qw(legal_form legal_form_other legal_id jo trademark key birth));
+__PACKAGE__->mk_accessors(qw(firstname legal_form legal_form_other legal_id jo trademark key birth));
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -41,10 +41,9 @@ AFNIC specific data.
 
 The following accessors/mutators can be called in chain, as they all return the object itself.
 
-=head2 name()
+=head2 firstname()
 
-Please note that for AFNIC data, the name() must be of the following form: Firstname, Lastname
-(the comma is mandatory)
+Please note that for AFNIC data, the name() must be only the lastname, hence this extra firstname() method
 
 =head2 roid()
 
@@ -132,7 +131,8 @@ sub validate
 ## NIC handle
  push @errs,'roid' if ($self->roid() && $self->roid()!~m/^[A-Z]+(?:[1-9][0-9]*)?-FRNIC$/i);
 
- ##push @errs,'name' if ($self->name() && $self->name()!~m/^${NOM_PROPRE} *, *${NOM_PROPRE}$/); TODO
+ push @errs,'name' if ($self->name() && $self->name()!~m/^${NOM_PROPRE}$/);
+ push @errs,'firstname' if ($self->firstname() && $self->firstname()!~m/^${NOM_PROPRE}$/);
  push @errs,'org'  if ($self->org()  && ! is_nom_libre($self->org()));
 
  my $rs=$self->street();

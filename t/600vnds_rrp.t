@@ -26,23 +26,23 @@ $dri->add_registry('VNDS',{tz=>'America/New_York'});
 $dri->target('VNDS')->new_current_profile('p1','Net::DRI::Transport::Dummy',[{f_send=>\&mysend,f_recv=>\&myrecv}],'Net::DRI::Protocol::RRP',[]);
 
 $R2="200 Command completed successfully\r\nregistration expiration date:2009-09-22 10:27:00.0\r\nstatus:ACTIVE\r\n.\r\n";
-my $rc=$dri->domain_create_only('example2.com',{duration => DateTime::Duration->new(years => 10)});
-is($R1,"add\r\nEntityName:Domain\r\nDomainName:EXAMPLE2.COM\r\n-Period:10\r\n.\r\n",'domain_create_only send');
-is($rc->is_success(),1,'domain_create_only rc is_success');
-is($dri->get_info('action'),'create','domain_create_only get_info(action)');
-is($dri->get_info('exist'),1,'domain_create_only get_info(exist)');
-is($rc->code(),1000,'domain_create_only rc code');
-is($rc->native_code(),200,'domain_create_only rc native_code');
-is($rc->message(),'Command completed successfully','domain_create_only rc message');
+my $rc=$dri->domain_create('example2.com',{pure_create=>1,duration => DateTime::Duration->new(years => 10)});
+is($R1,"add\r\nEntityName:Domain\r\nDomainName:EXAMPLE2.COM\r\n-Period:10\r\n.\r\n",'domain_create build');
+is($rc->is_success(),1,'domain_create rc is_success');
+is($dri->get_info('action'),'create','domain_create get_info(action)');
+is($dri->get_info('exist'),1,'domain_create get_info(exist)');
+is($rc->code(),1000,'domain_create rc code');
+is($rc->native_code(),200,'domain_create rc native_code');
+is($rc->message(),'Command completed successfully','domain_create rc message');
 my $d=$dri->get_info('exDate');
-isa_ok($d,'DateTime','domain_create_only get_info(exDate)');
-is($d.'','2009-09-22T10:27:00','domain_create_only get_info(exDate) value');
+isa_ok($d,'DateTime','domain_create get_info(exDate)');
+is($d.'','2009-09-22T10:27:00','domain_create get_info(exDate) value');
 
 my $s=$dri->get_info('status');
 
-is($s->is_active(),1,'domain_create_only get_info(status) is_active');
-is($s->is_published(),1,'domain_create_only get_info(status) is_published');
-is($s->can_update(),1,'domain_create_only get_info(status) can_update');
+is($s->is_active(),1,'domain_create get_info(status) is_active');
+is($s->is_published(),1,'domain_create get_info(status) is_published');
+is($s->can_update(),1,'domain_create get_info(status) can_update');
 
 $R2="211 Domain name not available\r\n.\r\n";
 $rc=$dri->domain_check('example2.com');

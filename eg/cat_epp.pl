@@ -70,7 +70,7 @@ $cs->set($c2,'billing');
 $cs->set($c3,'tech');
 $cs->set($c4,'admin');
 print "Attempting to create domain $dom\n";
-$rc=$dri->domain_create_only($dom,{duration=>DateTime::Duration->new(years =>1),ns=>$nso,contact=>$cs,lang=>'ca',ens=>{auth=>{id=>'FASE3-100000',key=>'0000'},intended_use=>'To test Net::DRI'},auth=>{pw=>'XYZE'}});
+$rc=$dri->domain_create($dom,{pure_create=>1,duration=>DateTime::Duration->new(years =>1),ns=>$nso,contact=>$cs,lang=>'ca',ens=>{auth=>{id=>'FASE3-100000',key=>'0000'},intended_use=>'To test Net::DRI'},auth=>{pw=>'XYZE'}});
 print "Created $dom is_success=".$rc->is_success()."\n";
 
 
@@ -109,7 +109,7 @@ $rc=$dri->domain_update_status_del($dom,$s);
 print "status_del OK=".$rc->is_success()."\n";
 $rc=$dri->domain_info($dom);
 
-$rc=$dri->domain_delete_only($dom);
+$rc=$dri->domain_delete($dom,{pure_delete => 1});
 print "domain_delete OK=".$rc->is_success()."\n";
 
 $rc=$dri->contact_delete($c1);

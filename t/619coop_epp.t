@@ -43,18 +43,18 @@ my $c2=$dri->local_object('contact')->srid('sh8013');
 $cs->set($c1,'registrant');
 $cs->set($c2,'admin');
 $cs->set($c2,'tech');
-$rc=$dri->domain_create_only('th1domain1test.coop',{duration=>DateTime::Duration->new(years=>2),ns=>$dri->local_object('hosts')->set(['ns1.example.com'],['ns1.example.net']),contact=>$cs,auth=>{pw=>'2fooBAR'}});
-is($dri->get_info('action'),'create','domain_create_only get_info(action)');
-is($dri->get_info('exist'),1,'domain_create_only get_info(exist)');
+$rc=$dri->domain_create('th1domain1test.coop',{pure_create=>1,duration=>DateTime::Duration->new(years=>2),ns=>$dri->local_object('hosts')->set(['ns1.example.com'],['ns1.example.net']),contact=>$cs,auth=>{pw=>'2fooBAR'}});
+is($dri->get_info('action'),'create','domain_create get_info(action)');
+is($dri->get_info('exist'),1,'domain_create get_info(exist)');
 $d=$dri->get_info('crDate');
-isa_ok($d,'DateTime','domain_create_only get_info(crDate)');
-is(''.$d,'2004-12-06T11:32:39','domain_create_only get_info(crDate) value');
+isa_ok($d,'DateTime','domain_create get_info(crDate)');
+is(''.$d,'2004-12-06T11:32:39','domain_create get_info(crDate) value');
 $d=$dri->get_info('exDate');
-isa_ok($d,'DateTime','domain_create_only get_info(exDate)');
-is(''.$d,'2006-12-06T11:32:39','domain_create_only get_info(exDate) value');
-is($dri->get_info('registrant_id'),'th1contact1Test','domain_create_only get_info(registrant_id) value');
-is($dri->get_info('registrant_state'),'verified','domain_create_only get_info(registrant_state) value');
-is($dri->get_info('state','contact','th1contact1Test'),'verified','domain_create_only get_info(state,contact,X) value');
+isa_ok($d,'DateTime','domain_create get_info(exDate)');
+is(''.$d,'2006-12-06T11:32:39','domain_create get_info(exDate) value');
+is($dri->get_info('registrant_id'),'th1contact1Test','domain_create get_info(registrant_id) value');
+is($dri->get_info('registrant_state'),'verified','domain_create get_info(registrant_state) value');
+is($dri->get_info('state','contact','th1contact1Test'),'verified','domain_create get_info(state,contact,X) value');
 
 ## Contact commands
 $R2=$E1.'<response>'.r().'<resData><contact:infData xmlns:contact="urn:ietf:params:xml:ns:contact-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:contact-1.0 contact-1.0.xsd"><contact:id>th1domainTest</contact:id><contact:roid>62273C-COOP</contact:roid><contact:status s="ok">ok</contact:status><contact:postalInfo type="loc"><contact:name>Kermit The Frog</contact:name><contact:org>The Muppet Show</contact:org><contact:addr><contact:city>Chicago</contact:city><contact:cc>US</contact:cc></contact:addr></contact:postalInfo><contact:email>k.frog@example.tld</contact:email><contact:clID>TestHarness1</contact:clID><contact:crID>TestHarness1</contact:crID><contact:crDate>2004-10-29T12:29:02.6Z</contact:crDate><contact:authInfo><contact:pw>Match Sticks</contact:pw></contact:authInfo></contact:infData></resData><extension><coop:infData xmlns:coop="http://www.nic.coop/contactCoopExt-1.0"><coop:state code="verified">Verified</coop:state><coop:sponsor>th1Sponsor1</coop:sponsor><coop:sponsor>th1Sponsor2</coop:sponsor></coop:infData></extension>'.$TRID.'</response>'.$E2;

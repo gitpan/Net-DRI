@@ -24,7 +24,7 @@ use Net::DRI::DRD::ICANN;
 use DateTime::Duration;
 use DateTime;
 
-our $VERSION=do { my @r=(q$Revision: 1.16 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.17 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -81,7 +81,6 @@ sub transport_protocol_compatible
  my $pv=$po->version();
  my $tn=$to->name();
 
- return 1 if (($pn eq 'RRP') && ($tn eq 'socket_inet'));
  return 1 if (($pn eq 'EPP') && ($tn eq 'socket_inet'));
  return 1 if (($pn eq 'Whois') && ($tn eq 'socket_inet'));
  return;

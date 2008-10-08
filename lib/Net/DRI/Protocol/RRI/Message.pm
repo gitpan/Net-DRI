@@ -29,7 +29,7 @@ use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version command command_body cltrid svtrid result
 	errcode errmsg node_resdata result_extra_info));
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -157,7 +157,7 @@ sub as_string
  if (defined($body) && $body)
  {
   push @d,'<'.$cmd.$attr.'>';
-  push @d,_toxml($body);
+  push @d,Net::DRI::Util::xml_write($body);
   push @d,'</'.$cmd.'>';
  } else
  {
@@ -172,39 +172,6 @@ sub as_string
  push @d,'</registry-request>';
 
  return join('',@d);
-}
-
-sub _toxml
-{
- my $rd=shift;
- my @t;
- foreach my $d ((ref($rd->[0]))? @$rd : ($rd)) ## $d is a node=ref array
- {
-  my @c; ## list of children nodes
-  my %attr;
-  foreach my $e (grep { defined } @$d)
-  {
-   if (ref($e) eq 'HASH')
-   {
-    while(my ($k,$v)=each(%$e)) { $attr{$k}=$v; }
-   } else
-   {
-    push @c,$e;
-   }
-  }
-  my $tag=shift(@c);
-  my $attr=keys(%attr)? ' '.join(' ',map { $_.'="'.$attr{$_}.'"' } sort(keys(%attr))) : '';
-  if (!@c || (@c==1 && !ref($c[0]) && ($c[0] eq '')))
-  {
-   push @t,'<'.$tag.$attr.'/>';
-  } else
-  {
-   push @t,'<'.$tag.$attr.'>';
-   push @t,(@c==1 && !ref($c[0]))? Net::DRI::Util::xml_escape($c[0]) : _toxml(\@c);
-   push @t,'</'.$tag.'>';
-  }
- }
- return @t;
 }
 
 sub topns { return shift->ns->{_main}->[0]; }

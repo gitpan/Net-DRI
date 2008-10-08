@@ -23,7 +23,7 @@ use Net::DRI::Util;
 use Net::DRI::Exception;
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -225,7 +225,7 @@ sub trade_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- parse_trade_recover($po,$otype,'trade',$oname,$rinfo,'trdData');
+ parse_trade_recover($po,$otype,'trade',$oname,$rinfo,'traData');
 }
 
 sub recover_request
@@ -279,7 +279,8 @@ sub check_parse
    {
     $domain=lc($c->getFirstChild()->getData());
     $rinfo->{domain}->{$domain}->{action}='check';
-    ## attributes reserved/forbidden are not used since they just tell if rsvReason/fbdReason are there
+    $rinfo->{domain}->{$domain}->{reserved}=Net::DRI::Util::xml_parse_boolean($c->getAttribute('reserved'));
+    $rinfo->{domain}->{$domain}->{forbidden}=Net::DRI::Util::xml_parse_boolean($c->getAttribute('forbidden'));
    } elsif ($n eq 'rsvReason')
    {
     push @r,$c->getFirstChild()->getData();

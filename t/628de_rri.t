@@ -190,7 +190,8 @@ $cs->add($dri->local_object('contact')->srid('DENIC-99990-10240-BSP1'), 'admin')
 $cs->add($dri->local_object('contact')->srid('DENIC-99990-10240-BSP2'), 'tech');
 
 eval {
-	$rc = $dri->domain_create_only('rritestdomain.de', {
+	$rc = $dri->domain_create('rritestdomain.de', {
+                pure_create =>  1,
 		contact =>	$cs,
 		ns =>		$dri->local_object('hosts')->
 			add('dns1.syhosting.ch',['193.219.115.46'])

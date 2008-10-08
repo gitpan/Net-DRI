@@ -30,7 +30,7 @@ use Net::DRI::Protocol::EPP::Extensions::Nominet::Host;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -113,6 +113,7 @@ sub info_parse
 
  my $pd=DateTime::Format::ISO8601->new();
  my $ns=Net::DRI::Data::Hosts->new();
+ my @n;
  my $c=$infdata->getFirstChild();
  while ($c)
  {
@@ -124,10 +125,13 @@ sub info_parse
    $oname=lc($c->getFirstChild()->getData());
    $rinfo->{domain}->{$oname}->{action}='info';
    $rinfo->{domain}->{$oname}->{exist}=1;
-  } elsif ($name=~m/^(reg-status|first-bill|recur-bill|auto-bill|next-bill|notes)$/)
+  } elsif ($name=~m/^(reg-status|first-bill|recur-bill|auto-bill|next-bill)$/)
   {
    ## See http://www.nominet.org.uk/registrars/systems/data/fields/
    $rinfo->{domain}->{$oname}->{$1}=$c->getFirstChild()->getData();
+  } elsif ($name eq 'notes') ## There may be more than one instance of this element. (http://www.nominet.org.uk/registrars/systems/epp/domainnamelistelements/)
+  {
+   push @n,$c->getFirstChild()->getData();
   } elsif ($name eq 'account')
   {
    my $cs=Net::DRI::Protocol::EPP::Extensions::Nominet::Account::parse_infdata($po,$mes,$c->getChildrenByTagNameNS($mes->ns('account'),'infData')->shift(),undef,$rinfo);
@@ -153,6 +157,7 @@ sub info_parse
  } continue { $c=$c->getNextSibling(); }
 
  $rinfo->{domain}->{$oname}->{ns}=$ns;
+ $rinfo->{domain}->{$oname}->{notes}=\@n;
 }
 
 ############ Transform commands ####################################################################
@@ -268,7 +273,6 @@ sub create_parse
  my $pd=DateTime::Format::ISO8601->new();
  my $cs=Net::DRI::Data::ContactSet->new();
  my $cf=$po->factories()->{contact};
- my %c;
  my $c=$credata->getFirstChild();
  while ($c)
  {
@@ -283,31 +287,9 @@ sub create_parse
    $rinfo->{domain}->{$oname}->{exist}=1;
   } elsif ($name eq 'account')
   {
-   my $nsa=$mes->ns('account');
-   my $node=$c->getChildrenByTagNameNS($nsa,'creData')->shift();
-   my $roid=$node->getChildrenByTagNameNS($nsa,'roid')->shift()->getFirstChild()->getData();
-   my $name=$node->getChildrenByTagNameNS($nsa,'name')->shift()->getFirstChild()->getData();
-   my $co=$cf->()->srid($roid)->name($name);
-   $cs->set($co,'registrant');
-   $rinfo->{contact}->{$roid}->{exist}=1;
-   $rinfo->{contact}->{$roid}->{roid}=$roid;
-   $rinfo->{contact}->{$roid}->{self}=$co;
-   my $nsc=$mes->ns('contact');
-   foreach my $ac ($node->getChildrenByTagNameNS($nsa,'contact'))
-   {
-    my $type=$ac->getAttribute('type');
-    my $order=$ac->getAttribute('order');
-    my $credata=$ac->getChildrenByTagNameNS($nsc,'creData')->shift();
-    $roid=$credata->getChildrenByTagNameNS($nsc,'roid')->shift()->getFirstChild()->getData();
-    $name=$credata->getChildrenByTagNameNS($nsc,'name')->shift()->getFirstChild()->getData();
-    $co=$cf->()->srid($roid)->name($name);
-    $c{$type}->{$order}=$co;
-    $rinfo->{contact}->{$roid}->{exist}=1;
-    $rinfo->{contact}->{$roid}->{roid}=$roid;
-    $rinfo->{contact}->{$roid}->{self}=$co;
-   }
-   $cs->set([ map { $c{'admin'}->{$_} } sort { $a <=> $b } keys(%{$c{'admin'}}) ],'admin') if (exists($c{'admin'}));
-   $cs->set([ map { $c{'billing'}->{$_} } sort { $a <=> $b } keys(%{$c{'billing'}}) ],'billing') if (exists($c{'billing'}));
+   my $node=$c->getChildrenByTagNameNS($mes->ns('account'),'creData')->shift();
+   my $roid=Net::DRI::Protocol::EPP::Extensions::Nominet::Account::parse_credata($mes,$node,$cf,$cs,$rinfo);
+   $rinfo->{account}->{$roid}->{action}='create';
    $rinfo->{domain}->{$oname}->{contact}=$cs;
   } elsif ($name eq 'ns')
   {
@@ -317,11 +299,14 @@ sub create_parse
     {
      my $roid=$node->getChildrenByTagNameNS($nsns,'roid')->shift()->getFirstChild()->getData();
      my $name=$node->getChildrenByTagNameNS($nsns,'name')->shift()->getFirstChild()->getData();
+     my $date=$pd->parse_datetime($node->getChildrenByTagNameNS($nsns,'crDate')->shift()->getFirstChild()->getData());
      $ns->add($name,[],[],undef,{roid => $roid});
      ## See Host::parse_infdata
      $rinfo->{host}->{$name}->{exist}=$rinfo->{host}->{$roid}->{exist}=1;
      $rinfo->{host}->{$name}->{roid}=$roid;
+     $rinfo->{host}->{$name}->{crDate}=$date;
      $rinfo->{host}->{$roid}->{name}=$name;
+     $rinfo->{host}->{$roid}->{crDate}=$date;
     }
    $rinfo->{domain}->{$oname}->{ns}=$ns
   } elsif ($name=~m/^(crDate|exDate)$/)
@@ -347,8 +332,9 @@ sub update
  {
   push @d,['domain:account',['account:update',{'xmlns:account'=>$mes->ns('account'),'xmlns:contact'=>$mes->ns('contact')},Net::DRI::Protocol::EPP::Extensions::Nominet::Account::add_account_data($mes,$co,1)]];
  }
+
  ## NS
- if (Net::DRI::Util::isa_hosts($ns))
+ if (Net::DRI::Util::isa_hosts($ns,1))
  {
   if ($ns->is_empty())
   {

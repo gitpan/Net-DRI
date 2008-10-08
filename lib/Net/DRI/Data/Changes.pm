@@ -19,7 +19,7 @@ package Net::DRI::Data::Changes;
 
 use strict;
 
-our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -109,6 +109,8 @@ sub _el
  }
  $self->{$type}=[] unless (exists($self->{$type}));
  $self->{$type}->[$pos]=$new;
+
+ return $self;
 }
 
 sub add { return shift->_el(0,shift,shift); }

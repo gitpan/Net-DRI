@@ -24,9 +24,10 @@ $e=f1('A','B');
 $err=$e->as_string();
 
 like($err,qr/test message f3:A_B/,'backtrace of nested calls (final message)');
-like($err,qr/main::f1\('A', 'B'\) called at ${fn}/,'                          (first level)');
-like($err,qr/main::f2\('A', 'B'\) called at ${fn}/,'                          (second level)');
-like($err,qr/main::f3\('A', 'B'\) called at ${fn}/,'                          (third level)');
+## \s* added because of perl 5.8.2 on netbsd : http://www.nntp.perl.org/group/perl.cpan.testers/2008/08/msg1973281.html
+like($err,qr/main::f1\('A',\s*'B'\) called at ${fn}/,'                          (first level)');
+like($err,qr/main::f2\('A',\s*'B'\) called at ${fn}/,'                          (second level)');
+like($err,qr/main::f3\('A',\s*'B'\) called at ${fn}/,'                          (third level)');
 
 eval { Net::DRI::Exception->die(1,'test area die',788,'test message die'); };
 isa_ok($@,'Net::DRI::Exception','Exception->die() results');

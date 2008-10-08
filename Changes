@@ -1,3 +1,41 @@
+0.92 2008-10-08
+
++ IRIS support (RFC3981) with LWZ transport (RFC4993) for DCHK (RFC5144): currently only DENIC registry (.DE) provide this service, 
+  but this new set of protocols have been created to replace the current sad state of whois (a change that will probably take years)
+  See eg/iris_dchk.pl
++ Net::DRI::Shell : a new version of the earlier prototype, now revamped, extended, documented, with support for all Net::DRI operations, and batch feature for domain name operations with logging and time statistics. See its documentation for all details ; it can very easily be used to leverage all power of Net::DRI without writing any line of code!
++ .UK EPP support : added new registry operations (account fork and merge, registry notifications), upgraded to version 1.1 of their local schema and correctly handle login
++ .PT EPP support, with domain and contact extensions (see t/640pt_epp.t)
++ Preliminary CoCCA support (.CX .GS .TL .KI .MS .MU .NF .HT) : interoperability tested with registry ; in the future the general CoCCA DRD should be replaced by multiple DRDs, one for each TLD, implementing each the specific country policy on its ccTLD
++ Full CentralNic EPP support, interoperability tested with registry (see t/621centralnic_epp.t)
++ .BR various updates and interoperability tested with registry
++ .NO various updates: improved contact validation and more refined service message parse for delayed domain transfer responses (submitted by Trond Haugen)
++ Transport/Defer : preliminary prototype for debugging ; can also be used in production to simulate operations without sending anything to the registries
+= DRD::domain_create_only() is now deprecated (and will be removed in later versions), you should use domain_create with a pure_create key and value of 1 ; examples and tests have been updated
+= DRD::domain_delete_only() is now deprecated (and will be removed in later versions), you should use domain_delete with a pure_delete key and value of 1 ; examples and tests have been updated
+= DRD/ME : 1 year registrations allowed since October 1st
+= Transport/Socket : UDP support (for LWZ needed by IRIS.DCHK)
+= Transport/Socket : dynamic remote_host/remote_port possible (needed for IRIS.DCHK)
+= Data/Changes : add() del() set() returns the object itself now
+= Protocol/EPP/Core/RegistryMessage : handle notifications completely and only inside the <msg> node ; add error message if no ID given for message to delete
+= Protocol/ResultStatus : changed as_string() output format and better handling of no message case
+= EPP/Core/Message & RRI/Core/Message : factorization of _toxml and transplantation into Net::DRI::Util
+= Protocol : do no set result_status if already set inside parse functions (like in IRIS DCHK)
+= Registry : allow to use local_object() for a DateTime or DateTime::Duration instance/has_object
+= Data/Contact : little change in as_string() format output
+= DRD : domain_create() will create contacts if needed, passed and not pure_create
+= DRD/US : contact internationalized data, either INT+LOC or INT only
+= DRD/VNDS : do not use RRP any more
+= DRD/COOP : use ICANN policies for reserved names, and allow 2 characters domain names
+= Data/Contact/AFNIC : new firstname method, the name() method should store only the lastname (this impacts both email and EPP operations)
+= EPP/Extensions/AFNIC : various updates for next iteration of .FR EPP beta server
+- DRD/*::object_types various fixes (removal of 'ns' when hosts are only attributes at registry)
+- Transport : bugfix for encoding during logging (submitted by Trond Haugen) ; should probably be only temporary before a better logging system
+- DRD : bugfix for host_update_name_set and has_object
+- DRD/US : correct contact I18N (bugfix by Marc Winoto)
+- EPP/Connection : handle newlines before closing node (bugfix by Marc Winoto)
+- EPP/Connection : handle empty line(s) at end of message
+
 0.91 2008-07-30
 
 + .BR EPP support, with Domain and Organization extensions (see t/635br_epp.t)
@@ -24,7 +62,7 @@
                 all EPP modules were modified to fit this new API ; extensions developers should sync their work and always use current EPP/Core/* modules as guidelines
 = EPP/Core/Domain : no need to provide IPs of nameservers during update in the rem section
 = EPP/Connection : fix message retrieval for broken registries that send carriage returns (contributed by Tonnerre Lombard)
-= Contact/FR : take into account various ways to have a date (needed for new EPP extensions)
+= Contact/AFNIC : take into account various ways to have a date (needed for new EPP extensions)
 = Data/StatusList : new rem() method to remove a status from the list when really needed
 - EPP/Message : correct parse of trID blocks in case of multiple occurences (from original bug report by Trond Haugen) ;
                 this prompted a review of various EPP XML parse methods (Core and Extensions), where getElementsByTagNameNS have been changed to getChildrenByTagNameNS,

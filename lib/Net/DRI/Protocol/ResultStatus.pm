@@ -22,7 +22,7 @@ use strict;
 use base qw(Class::Accessor::Chained::Fast);
 __PACKAGE__->mk_ro_accessors(qw(is_success native_code code message lang next));
 
-our $VERSION=do { my @r=(q$Revision: 1.19 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.20 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -44,7 +44,7 @@ returns 1 if the operation was a success
 =head2 code()
 
 returns the EPP code corresponding to the native code (registry dependent)
-for this operation (see RFC for full list or source of this file)
+for this operation (see RFC for full list and source of this file for local extensions)
 
 =head2 native_code()
 
@@ -77,7 +77,7 @@ same as CORE::print($rs->as_string(1))
 =head2 trid()
 
 in scalar context, gives the transaction id (our transaction id, that is the client part in EPP) which has generated this result,
-in array context, gives the transaction id followed by other ids given by registry (example in EPP : server transaction id)
+in array context, gives the transaction id followed by other ids given by registry (example in EPP: server transaction id)
 
 =head1 SUPPORT
 
@@ -180,7 +180,7 @@ sub info
 sub as_string
 {
  my ($self,$withinfo)=@_;
- my $b=sprintf('%s (%s/%s) %s',$self->message(),$self->code(),$self->native_code(),$self->is_success()? 'SUCCESS' : 'ERROR' );
+ my $b=sprintf('%s: %s (%s/%s)',$self->is_success()? 'SUCCESS' : 'ERROR',$self->message() || '(No message given)',$self->code(),$self->native_code());
  if (defined($withinfo) && $withinfo)
  {
   my @i=$self->info();

@@ -21,7 +21,7 @@ use strict;
 use base qw/Net::DRI::DRD/;
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -70,7 +70,7 @@ sub new
  my $class=shift;
  my $self=$class->SUPER::new(@_);
  $self->{info}->{host_as_attr}=1;
- $self->{info}->{contact_i18n}=2; ## INT only ?
+ $self->{info}->{contact_i18n}=1; ## LOC only
 
  bless($self,$class);
  return $self;

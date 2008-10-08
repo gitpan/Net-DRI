@@ -31,7 +31,7 @@ $dri->target('VNDS')->new_current_profile('p1','Net::DRI::Transport::Dummy',[{f_
 #########################################################################################################
 ## Example taken from EPP-IDN-Lang-Mapping.pdf
 
-my $rc=$dri->domain_create_only('xn--example2.com',{auth => { pw => '2fooBAR' }, language => 'en'});
+my $rc=$dri->domain_create('xn--example2.com',{pure_create => 1, auth => { pw => '2fooBAR' }, language => 'en'});
 is($R1,$E1.'<command><create><domain:create xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>xn--example2.com</domain:name><domain:authInfo><domain:pw>2fooBAR</domain:pw></domain:authInfo></domain:create></create><extension><idnLang:tag xmlns:idnLang="http://www.verisign.com/epp/idnLang-1.0" xsi:schemaLocation="http://www.verisign.com/epp/idnLang-1.0 idnLang-1.0.xsd">en</idnLang:tag></extension><clTRID>ABC-12345</clTRID></command>'.$E2,'domain_create build');
 
 exit 0;

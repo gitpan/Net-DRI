@@ -85,7 +85,7 @@ $cs->set($c4,'billing');
 $cs->set($c4,'tech');
 $cs->set($c4,'admin');
 print "Attempting to create domain $dom\n";
-$rc=$dri->domain_create_only($dom,{duration=>DateTime::Duration->new(years =>2),ns=>$nso,contact=>$cs,auth=>{pw=>'whatever'}});
+$rc=$dri->domain_create($dom,{pure_create=>1,duration=>DateTime::Duration->new(years =>2),ns=>$nso,contact=>$cs,auth=>{pw=>'whatever'}});
 print "$dom created successfully:".($rc->is_success()? 'YES' : 'NO')."\n";
 
 $rc=$dri->domain_check($dom);
@@ -93,7 +93,7 @@ print "$dom does exists now: ".($dri->get_info('exist')? 'YES' : 'NO')."\n";
 $rc=$dri->domain_info($dom);
 print "$dom domain_info: ".($rc->is_success()? 'YES' : 'NO')."\n";
 
-$rc=$dri->domain_delete_only($dom);
+$rc=$dri->domain_delete($dom,{pure_delete => 1});
 print "$dom domain_delete: ".($rc->is_success()? 'YES' : 'NO')."\n";
 
 $rc=$dri->contact_delete($c3);

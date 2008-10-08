@@ -24,7 +24,7 @@ use base qw/Net::DRI::Protocol::EPP/;
 
 use Net::DRI::Data::Contact::Nominet;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -73,12 +73,13 @@ sub new
  my ($c,$drd,$version,$extrah)=@_;
  my %e=map { $_ => 1 } (defined($extrah)? (ref($extrah)? @$extrah : ($extrah)) : ());
 
- my @c=map { 'Net::DRI::Protocol::EPP::Extensions::Nominet::'.$_ } qw/Domain Contact Host Account/;
+ my @c=map { 'Net::DRI::Protocol::EPP::Extensions::Nominet::'.$_ } qw/Domain Contact Host Account Notifications/;
  push @c,'Session';
+ push @c,'RegistryMessage';
  my $self=$c->SUPER::new($drd,$version,[keys(%e)],\@c);
  foreach my $w (qw/domain contact ns account notifications/)
  {
-  $self->ns({$w => ['http://www.nominet.org.uk/epp/xml/nom-'.$w.'-1.0','nom-'.$w.'-1.0.xsd'] });
+  $self->ns({$w => ['http://www.nominet.org.uk/epp/xml/nom-'.$w.'-1.1','nom-'.$w.'-1.1.xsd'] });
  }
 
  foreach my $o (qw/ns contact first-bill recur-bill auto-bill next-bill notes/) { $self->capabilities('domain_update',$o,['set']); }

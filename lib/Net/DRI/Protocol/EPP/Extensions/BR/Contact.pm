@@ -25,7 +25,7 @@ use Net::DRI::Util;
 use Net::DRI::Data::ContactSet;
 use Net::DRI::Data::Contact::BR;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -103,8 +103,14 @@ sub check
  {
   Net::DRI::Exception::usererr_invalid_parameters('contact must be Net::DRI::Data::Contact::BR object') unless Net::DRI::Util::isa_contact($c,'Net::DRI::Data::Contact::BR');
   my $orgid=$c->orgid();
-  Net::DRI::Exception::usererr_invalid_parameters('orgid must be an xml token string with 1 to 30 characters') unless Net::DRI::Util::xml_is_token($orgid,1,30);
-  push @n,['brorg:cd',['brorg:id',$c->srid()],['brorg:organization',$orgid]];
+  if (defined($orgid))
+  {
+   Net::DRI::Exception::usererr_invalid_parameters('orgid must be an xml token string with 1 to 30 characters') unless Net::DRI::Util::xml_is_token($orgid,1,30);
+   push @n,['brorg:cd',['brorg:id',$c->srid()],['brorg:organization',$orgid]];
+  } else
+  {
+   push @n,['brorg:cd',['brorg:id',$c->srid()]];
+  }
  }
  $mes->command_extension($eid,\@n);
 }
@@ -152,6 +158,7 @@ sub info
 
  Net::DRI::Exception::usererr_invalid_parameters('contact must be Net::DRI::Data::Contact::BR object') unless Net::DRI::Util::isa_contact($contact,'Net::DRI::Data::Contact::BR');
  my $orgid=$contact->orgid();
+ return unless defined($orgid); ## to be able to create pure contacts
  Net::DRI::Exception::usererr_invalid_parameters('orgid must be an xml token string with 1 to 30 characters') unless Net::DRI::Util::xml_is_token($orgid,1,30);
 
  my $eid=build_command_extension($mes,$epp,'brorg:info');
@@ -223,6 +230,7 @@ sub create
 
  Net::DRI::Exception::usererr_invalid_parameters('contact must be Net::DRI::Data::Contact::BR object') unless Net::DRI::Util::isa_contact($contact,'Net::DRI::Data::Contact::BR');
  my $orgid=$contact->orgid();
+ return unless defined($orgid); ## to be able to create pure contacts
  Net::DRI::Exception::usererr_invalid_parameters('orgid must be an xml token string with 1 to 30 characters') unless Net::DRI::Util::xml_is_token($orgid,1,30);
  my $cs=$contact->associated_contacts();
  Net::DRI::Exception::usererr_invalid_parameters('associated_contacts must be a ContactSet object') unless Net::DRI::Util::isa_contactset($cs);
@@ -281,7 +289,7 @@ sub pandata_parse
    $rinfo->{$otype}->{$oname}->{orgid}=$c->getFirstChild()->getData();
   } elsif ($n eq 'reason')
   {
-   $rinfo->{$otype}->{$oname}->{reason}=$c->getFirstChild()->getData();
+   $rinfo->{$otype}->{$oname}->{reason}=$c->textContent(); ## this may be empty
    $rinfo->{$otype}->{$oname}->{reason_lang}=$c->getAttribute('lang') || 'en';
   }
  } continue { $c=$c->getNextSibling(); }

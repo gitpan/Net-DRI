@@ -28,7 +28,7 @@ use Net::DRI::Util;
 use Email::Valid;
 use Encode ();
 
-our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -272,7 +272,7 @@ sub as_string
  my ($self,$sep)=@_;
  $sep='|' unless (defined($sep) && $sep);
  my $st=$self->street();
- my @v=grep { defined } ($self->srid(),$self->name(),$self->org(),defined($st)? join('',@$st) : undef,$self->city(),$self->sp(),$self->pc(),$self->cc(),$self->voice(),$self->fax(),$self->email());
+ my @v=grep { defined } ($self->srid(),$self->name(),$self->org(),defined($st)? join(' // ',@$st) : undef,$self->city(),$self->sp(),$self->pc(),$self->cc(),$self->voice(),$self->fax(),$self->email());
  return join($sep,@v);
 }
 

@@ -23,7 +23,7 @@ use base qw/Net::DRI::DRD/;
 use Net::DRI::Exception;
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -80,7 +80,7 @@ sub new
 sub periods  { return map { DateTime::Duration->new(years => $_) } (1); }
 sub name     { return 'DNSBE'; }
 sub tlds     { return ('be'); }
-sub object_types { return ('domain','contact','ns','nsgroup'); }
+sub object_types { return ('domain','contact','nsgroup'); }
 
 sub transport_protocol_compatible
 {

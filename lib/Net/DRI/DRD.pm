@@ -23,7 +23,9 @@ use DateTime;
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.29 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+use Carp;
+
+our $VERSION=do { my @r=(q$Revision: 1.30 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 ## Nice shortcuts used in various DRDs even if it should be in Protocol/* somewhere, from RFCs & IANA assignation
 our %PROTOCOL_DEFAULT_EPP=(defer => 0, socktype => 'ssl', ssl_cipher_list => 'TLSv1', remote_port => 700, protocol_connection => 'Net::DRI::Protocol::EPP::Connection', protocol_version => 1);
@@ -35,7 +37,7 @@ our %PROTOCOL_DEFAULT_WHOIS=(defer => 1, close_after => 1, socktype => 'tcp', re
 
 =head1 NAME
 
-Net::DRI::DRD - Superclass of all Net::DRI Domain Registry Drivers
+Net::DRI::DRD - Superclass of all Net::DRI Registry Drivers
 
 =head1 DESCRIPTION
 
@@ -127,7 +129,8 @@ sub domain_operation_needs_is_mine { Net::DRI::Exception::err_method_not_impleme
 
 sub has_object
 {
- my ($self,$type)=@_;
+ my ($self,$ndr,$type)=@_;
+ $type=$ndr unless (defined($type) && ref($ndr));
  return 0 unless (defined($type) && $type);
  $type=lc($type);
  return (grep { lc($_) eq $type } ($self->object_types()))? 1 : 0;
@@ -241,10 +244,10 @@ sub err_invalid_contact
 sub domain_create_only
 {
  my ($self,$ndr,$domain,$rd)=@_;
-
+ Carp::carp('domain_create_only() is deprecated and will be removed, please use domain_create() with a ref hash key of pure_create and value of 1');
  $self->err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'create');
  my %rd=(defined($rd) && (ref($rd) eq 'HASH'))? %$rd : ();
- 
+
  if (defined($rd{duration}))
  {
   Net::DRI::Exception->die(0,'DRD',3,'Invalid duration') if ((ref($rd{duration}) ne 'DateTime::Duration') || $self->verify_duration_create($rd{duration},$domain));
@@ -258,16 +261,19 @@ sub domain_create_only
 sub domain_create
 {
  my ($self,$ndr,$domain,$rd)=@_;
-
  $self->err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'create');
  my %rd=(defined($rd) && (ref($rd) eq 'HASH'))? %$rd : ();
-
+ my $pure=(exists($rd{pure_create}) && $rd{pure_create})? 1 : 0;
+ delete($rd{pure_create});
  my @rc;
  my $nsin=$ndr->local_object('hosts');
  my $nsout=$ndr->local_object('hosts');
- if (exists($rd{ns}) && $self->has_object('ns')) ## Separate nameserver (inside & outside of domain) + Create outside nameservers if needed
+
+ Net::DRI::Util::check_isa($rd{ns},'Net::DRI::Data::Hosts') if (exists($rd{ns})); ## test needed in both cases
+
+ ## If not pure domain creation, separate nameservers (inside & outside of domain) and then create outside nameservers if needed
+ if (!$pure && exists($rd{ns}) && $self->has_object('ns'))
  {
-  Net::DRI::Util::check_isa($rd{ns},'Net::DRI::Data::Hosts');
   $rc[0]=[];
   foreach (1..$rd{ns}->count())
   {
@@ -291,13 +297,35 @@ sub domain_create
   $rd{ns}=$nsout;
  }
 
- ## TODO ($rc1) : if contacts  && has_object('contact'), make sure they exist, or create them
+ ## If not pure domain creation, and if contacts are used make sure they exist as objects in the registry if needed
+ if (!$pure && exists($rd{contact}) && Net::DRI::Util::isa_contactset($rd{contact}) && $self->has_object('contact'))
+ {
+  my %cd;
+  $rc[1]=[];
+  foreach my $t ($rd{contact}->types())
+  {
+   foreach my $co ($rd{contact}->get($t))
+   {
+    next if exists($cd{$co->srid()});
+    unless ($self->contact_exist($ndr,$co))
+    {
+     my $rc1=$self->contact_create($ndr,$co);
+     push @{$rc[1]},$rc1;
+     return wantarray? @rc : $rc1 unless $rc1->is_success();
+    }
+    $cd{$co->srid()}=1;
+   }
+  }
+ }
 
- my $rc2=$self->domain_create_only($ndr,$domain,\%rd);
+ Net::DRI::Exception->die(0,'DRD',3,'Invalid duration') if (exists($rd{duration}) && defined($rd{duration}) && ((ref($rd{duration}) ne 'DateTime::Duration') || $self->verify_duration_create($rd{duration},$domain)));
+ my $rc2=$ndr->process('domain','create',[$domain,\%rd]);
+ return $rc2 if $pure; ## pure domain creation we do not bother with other stuff and we stop here
  $rc[2]=$rc2;
  return wantarray? @rc : $rc2 unless $rc2->is_success();
 
- unless ($nsin->is_empty()) ## Create inside nameservers & add them
+ ## Create inside nameservers and add them to the domain
+ unless ($nsin->is_empty())
  { 
   $rc[3]=[];
   foreach (1..$nsin->count())
@@ -313,13 +341,15 @@ sub domain_create
   return wantarray? @rc : $rc4 unless $rc4->is_success();
  }
 
- if (exists($rd{status})) ## if provided, add status to domain
+ ## Add status to domain, if provided
+ if (exists($rd{status}))
  {
   my $rc5=$self->domain_update_status_add($ndr,$domain,$rd{status});
   $rc[5]=$rc5;
   return wantarray? @rc : $rc5 unless $rc5->is_success();
  }
 
+ ## Do a final info to populate the local cache
  if ($ndr->protocol()->has_action('domain','info'))
  {
   my $rc6=$self->domain_info($ndr,$domain);
@@ -327,12 +357,13 @@ sub domain_create
   return wantarray? @rc : $rc6;
  }
 
- return wantarray? @rc : $rc2; ## result code of domain_create_only
+ return wantarray? @rc : $rc2; ## result code of pure domain creation in scalar context
 }
 
 sub domain_delete_only
 {
  my ($self,$ndr,$domain,$rd)=@_;
+ Carp::carp('domain_delete_only is deprecated and will be removed, please use domain_delete() with a ref hash key of pure_delete and value of 1');
  $self->err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'delete');
 
  my $rc=$ndr->process('domain','delete',[$domain,$rd]);
@@ -343,21 +374,27 @@ sub domain_delete
 {
  my ($self,$ndr,$domain,$rd)=@_;
  $self->err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'delete');
-
+ my %rd=(defined($rd) && (ref($rd) eq 'HASH'))? %$rd : ();
  my @r;
- my $rc1=$self->domain_info($ndr,$domain);
- push @r,$rc1;
- return wantarray()? @r : $rc1 unless $rc1->is_success();
 
- my $ns=$ndr->get_info('ns');
- if (defined($ns) && !$ns->is_empty())
+ if ((! exists($rd{pure_delete})) || $rd{pure_delete}==0)
  {
-  my $rc2=$self->domain_update_ns_del($ndr,$domain,$ns);
-  push @r,$rc2;
-  return wantarray()? @r : $rc2 unless $rc2->is_success();
- }
+  my $rc1=$self->domain_info($ndr,$domain);
+  push @r,$rc1;
+  return wantarray()? @r : $rc1 unless $rc1->is_success();
 
- my $rc=$ndr->process('domain','delete',[$domain,$rd]);
+  ## This will make sure we remove in-bailiwick nameservers, otherwise the final delete would fail
+  my $ns=$ndr->get_info('ns');
+  if (defined($ns) && !$ns->is_empty())
+  {
+   my $rc2=$self->domain_update_ns_del($ndr,$domain,$ns);
+   push @r,$rc2;
+   return wantarray()? @r : $rc2 unless $rc2->is_success();
+  }
+ }
+ delete($rd{pure_delete});
+
+ my $rc=$ndr->process('domain','delete',[$domain,\%rd]);
  push @r,$rc;
  return wantarray()? @r : $rc;
 }
@@ -822,10 +859,10 @@ sub host_update_status
 
 sub host_update_name_set
 {
- my ($self,$ndr,$newname,$rh)=@_;
+ my ($self,$ndr,$dh,$newname,$rh)=@_;
  $newname=$newname->get_names(1) if ($newname && UNIVERSAL::isa($newname,'Net::DRI::Data::Hosts'));
  $self->err_invalid_host_name($newname) if $self->verify_name_host($newname);
- return $self->host_update($ndr,$ndr->local_object('changes')->set('name',$newname),$rh);
+ return $self->host_update($ndr,$dh,$ndr->local_object('changes')->set('name',$newname),$rh);
 }
 
 sub host_current_status

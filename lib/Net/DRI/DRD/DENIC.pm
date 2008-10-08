@@ -1,6 +1,6 @@
 ## Domain Registry Interface, DENIC policies
 ##
-## Copyright (c) 2007 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
+## Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -23,7 +23,7 @@ use base qw/Net::DRI::DRD/;
 use Net::DRI::DRD::ICANN;
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -53,7 +53,7 @@ Tonnerre Lombard, E<lt>tonnerre.lombard@sygroup.chE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -80,7 +80,7 @@ sub new
 sub periods  { return map { DateTime::Duration->new(years => $_) } (1..10); }
 sub name     { return 'DENIC'; }
 sub tlds     { return ('de'); }
-sub object_types { return ('domain','contact','ns'); }
+sub object_types { return ('domain','contact'); }
 
 sub transport_protocol_compatible
 {
@@ -90,6 +90,7 @@ sub transport_protocol_compatible
  my $tn=$to->name();
 
  return 1 if (($pn eq 'RRI') && ($tn eq 'socket_inet'));
+ return 1 if (($pn eq 'IRIS') && ($tn eq 'socket_inet'));
  return;
 }
 
@@ -111,6 +112,19 @@ sub transport_protocol_default
          );
   my @pa=(ref($pa) eq 'ARRAY' && @$pa)? @$pa : ('2.0');
   return ('Net::DRI::Transport::Socket',[\%ta],'Net::DRI::Protocol::RRI',\@pa);
+ }
+ if ($type eq 'dchk')
+ {
+  my %ta=( defer=>1,
+           socktype=>'udp',
+           find_remote_server => ['de','DCHK1:iris.lwz'], ## authority / service
+           protocol_connection=>'Net::DRI::Protocol::IRIS::LWZ',
+           protocol_version=>'1.0',
+           (ref($ta) eq 'ARRAY')? %{$ta->[0]} : %$ta,
+         );
+  my @pa=(ref($pa) eq 'ARRAY' && @$pa)? @$pa : ('1.0','de'); ## (version,authority)
+  return ('Net::DRI::Transport::Socket',[\%ta],'Net::DRI::Protocol::IRIS',\@pa);
+  #return ('Net::DRI::Transport::Defer',[\%ta],'Net::DRI::Protocol::IRIS',\@pa);
  }
 }
 

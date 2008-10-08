@@ -25,7 +25,7 @@ use DateTime::Duration;
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -107,15 +107,16 @@ sub transport_protocol_compatible
 sub transport_protocol_default
 {
  my ($drd,$ndr,$type,$ta,$pa)=@_;
+ my %ta=(ref($ta) eq 'ARRAY')? %{$ta->[0]} : %$ta;
+ my @pa=(ref($pa) eq 'ARRAY' && @$pa)? @$pa : ();
  if ($type eq 'email')
  {
-  my %ta=(ref($ta) eq 'ARRAY')? %{$ta->[0]} : %$ta;
-  my @pa=(ref($pa) eq 'ARRAY' && @$pa)? @$pa : ();
   return ('Net::DRI::Transport::SMTP',[\%ta],'Net::DRI::Protocol::AFNIC::Email',\@pa);
  } elsif ($type eq 'epp')
  {
   carp('AFNIC EPP support is currently being developed, use it only for tests');
-  return Net::DRI::DRD::_transport_protocol_default_epp('Net::DRI::Protocol::EPP::Extensions::AFNIC',$ta,$pa);
+  $ta{remote_host}='epp.preprod.nic.fr';
+  return Net::DRI::DRD::_transport_protocol_default_epp('Net::DRI::Protocol::EPP::Extensions::AFNIC',[\%ta],\@pa);
  }
 }
 
@@ -150,17 +151,18 @@ sub host_create { Net::DRI::Exception->die(0,'DRD',4,'No host creation possible 
 sub host_info { Net::DRI::Exception->die(0,'DRD',4,'No host info possible for AFNIC'); }
 sub contact_delete { Net::DRI::Exception->die(0,'DRD',4,'No contact delete possible for AFNIC'); }
 
-sub domain_create_only
+sub domain_create
 {
  my ($self,$ndr,$domain,$rd)=@_;
- return $self->SUPER::domain_create_only($ndr,$domain,$rd) unless $ndr->protocol()->name() eq 'EPP';
+ return $self->SUPER::domain_create($ndr,$domain,$rd) unless $ndr->protocol()->name() eq 'EPP';
+ return $self->SUPER::domain_create($ndr,$domain,$rd) unless (Net::DRI::Util::has_key($rd,'pure_create') && $rd->{pure_create}==1);
  my $ns;
  if (defined($rd) && (ref($rd) eq 'HASH'))
  {
   $ns=$rd->{ns};
   delete($rd->{ns});
  }
- my $rc=$self->SUPER::domain_create_only($ndr,$domain,$rd); ## create the domain without any nameserver
+ my $rc=$self->SUPER::domain_create($ndr,$domain,$rd); ## create the domain without any nameserver
  return $rc unless $rc->is_success();
  return $rc unless (defined($ns) && Net::DRI::Util::isa_hosts($ns));
  return $self->domain_update_ns_set($ndr,$domain,$ns); ## Finally update domain to add nameservers

@@ -46,22 +46,27 @@ Currently Net::DRI ships with:
   * CentralNic extensions: Release, TTL, WebForwarding
   * Domain/Contact/Host and other extensions needed for extra services in various TLD:
     .EU .COM .NET .MOBI .AERO .CAT .US .PL .SE .BE .AT .COOP .LU .ASIA .AU .NAME .ORG .UK
-    .DE .CH .LI .HN .SC .VC .AG .BZ .LC .MN .ME .CZ .TRAVEL .NO .BR .JOBS .PRO .FR
+    .DE .CH .LI .HN .SC .VC .AG .BZ .LC .MN .ME .CZ .TRAVEL .NO .BR .JOBS .PRO .FR .PT
+    .CX .GS .TL .KI .MS .MU .NF .HT
 - a full DAS (Domain Availability Service) implementation for .BE & .EU
 - a full Whois implementation (RFC 3912) for thin and thick registries :
      support included for domain names in .COM .NET .ORG .BIZ .INFO .AERO
      .EU .MOBI .NAME .LU .WS .SE .CAT .AT .TRAVEL .US
-- a TCP/TLS socket transport
+- an IRIS (RFC3981) implementation with LWZ transport (RFC4993) for DCHK (5144):
+  currently only DENIC registry (.DE) provide this service
+- an UDP/TCP/TLS socket transport
 - an HTTP/HTTPS transport
 - various SOAP transports over HTTP/HTTPS
 - an SMTP transport
-- Net::DRI::DRD::* modules for : .EU .COM .NET .TV .CC .WS .SE .PL .US .CAT
+- Net::DRI::DRD::* modules for : .EU .COM .NET .TV .CC .WS .SE .PL .US .CAT .FR
 		.BE .MOBI .INFO .ORG .AT .LU .BIZ .NAME .NU .UK .AU .AERO .ASIA .COOP
-		IENUMAT .DE .CH .LI .HN .SC .VC .AG .BZ .LC .MN .ME .CZ .TRAVEL
+		IENUMAT .DE .CH .LI .HN .SC .VC .AG .BZ .LC .MN .ME .CZ .TRAVEL .PT
+                .NO .BR .PRO CoCCA CentralNic
 - a Net::DRI::DRD::AFNIC covering AFNIC registry for .FR
      (only domain_check through web services and all operations by email)
 - Net::DRI::DRD::* modules to use registrars API for Gandi, OVH, BookMyName, OpenSRS
-
+- a shell (Net::DRI::Shell) providing logging and batch operations to be able
+  to leverage all Net::DRI power without writing any line of code
 
 If you are a registry/registrar/reseller, we would welcome
 the opportunity to be able to test Net::DRI against your system. Please
@@ -100,10 +105,11 @@ MIME::Entity (needed only for AFNIC emails)
 Net::SMTP (needed only for AFNIC emails)
 LWP::UserAgent (needed only for OpenSRS, and .PL)
 Digest::MD5 (needed only for OpenSRS)
+Net::DNS (needed only for .DE IRIS DCHK queries)
 
 
 (*) all dates and durations exchanged with Net::DRI should be
-DateTime or DateTime::Duration objects
+DateTime and DateTime::Duration objects
 
 Install
 -------
@@ -128,9 +134,9 @@ eurid_epp.pl : as registrar, connect to EURid test systems
 cat_epp.pl   : as registrar, connect to .CAT test systems
 coop_epp.pl  : as registrar, connect to .COOP test systems
 epp_client_no.pl (+ xmlfilter.pl) : as registrar, do operations with the .NO registry
-
 eurid_das.pl : for anyone, to check domain availability in .EU
 whois.pl     : for anyone, to do whois queries for some TLDs.
+iris_dchk.pl : for anyoen, to do IRIS DCHK queries for some .DE domain names
 
 In the t subdirectory, the test files can also be studied for insight
 of all the API available.
@@ -232,6 +238,9 @@ If you pass a true value to ping(), it will automatically reconnect if the conne
 Available API
 -------------
 
+Please see the included tests (directory t/) and examples (directory eg/) for many
+examples of use and full API coverage.
+
 * has_object($type)
 
  gives 1 if the registry manages objects of type $type (domain, ns, contact, etc...)
@@ -260,41 +269,38 @@ Available API
  called internally at various stages in Net::DRI to verify that we can add/renew/transfer
  a domain name
 
-* domain_create_only()
+* domain_create()
 
- Create a domain at the current registry and current profile.
- A domain name and an hash ref should be provided.
+ Create a domain name and associated operations (except if pure creation is asked)
+ at the current registry and current profile. A domain name and an hash ref should be provided.
  The hash ref can have a "duration" key with its value being a DateTime::Duration object,
  and a "ns" key with its value being a Net::DRI::Data::Hosts object.
- If nameservers are given, they must already exist at registry.
+
+ The following operations are done (if pure creation is asked, only step 4 is done):
+
+ 1) we separate nameservers : those being inside domain name being created, those being outside
+ 2) we test outside nameservers for existence at registry, and if it fails, we try to create them
+ 3) we create all needed contacts, for thick registries
+ 4) we create domain
+ 5) we create nameservers that are inside domain (in-bailiwick nameservers)
+ 6) we update domain to add nameservers created at step 5.
+ 7) if a status key exists in hash ref given, we try to change status of newly created domain name
+
+ In scalar context we get back the last status (which can be the one at any step, if it does not succeed)
+ of the list of all status for each step in array context.
 
  You may use get_info with the following keys to get more information:
  - exDate : for the current expiration date (a DateTime object)
  - status : for the current status of domain name
 
-* domain_create()
-
- Same thing as before but
- 1) we separate nameservers : those being inside domain name being created, those being outside
- 2) we test outside nameservers for existence at registry, and if it fails, we try to create them
- 3) we create domain
- 4) we create nameservers that are inside domain
- 5) we update domain to add nameservers created at step 4.
- 6) if a status key exists in hash ref given, we try to change status of newly created domain name
-
- (For thick registries, we would also test contacts, and add them if necessary)
-
- In scalar context we get back the last status (which can be the one at any step, if it does not succeed)
- of the list of all status for each step in array context.
-
-* domain_delete_only()
-
- Delete a domain at the current registry and current profile.
- A domain name should be provided.
-
 * domain_delete()
 
- Same as previous method except:
+ Delete a domain and associated opeations (except if a pure deletion is askedt)
+ at the current registry and current profile.
+ A domain name should be provided.
+
+ The following operations are done (if pure delete is asked, only step 3 is done):
+
  1) we find the current list of nameservers for this domain
  2) we remove all nameservers from this domain
  3) we delete the domain name
@@ -406,7 +412,7 @@ Available API
  Renew the domain name provided as first argument,
  with optionnally a ref hash, with keys duration and current_expiration.
 
- You may use get_info() to retrieve the same information as after domain_create_only()
+ You may use get_info() to retrieve the same information as after domain_create()
 
 * domain_transfer()
 

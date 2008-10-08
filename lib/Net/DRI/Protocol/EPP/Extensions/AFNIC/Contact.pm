@@ -21,7 +21,7 @@ use strict;
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -97,7 +97,7 @@ sub create
   my @d;
   Net::DRI::Exception::usererr_insufficient_parameters('legal_form data mandatory') unless ($contact->legal_form());
   Net::DRI::Exception::usererr_invalid_parameters('legal_form_other data mandatory if legal_form=other') if (($contact->legal_form() eq 'other') && !$contact->legal_form_other());
-  push @d,['frnic:status',{type => $contact->legal_form()},$contact->legal_form() eq 'other'? $contact->legal_form_other() : ''];
+  push @d,['frnic:legalStatus',{type => $contact->legal_form()},$contact->legal_form() eq 'other'? $contact->legal_form_other() : ''];
   push @d,['frnic:siren',$contact->legal_id()] if $contact->legal_id();
   push @d,['frnic:trademark',$contact->trademark()] if $contact->trademark();
   my $jo=$contact->jo();
@@ -111,23 +111,19 @@ sub create
   push @n,['frnic:legalEntityInfos',@d];
  } else # PP
  {
-  ## This is a big kludge ! TODO ->name()=prenom\s*,\*nom but we will have to change Core contact:name !
-  my $body=$mes->command_body();
-  my (@name)=($body->[1]->[1]->[1]=~m/^\s*(\S.*\S)\s*,\s*(\S.*\S)\s*$/); ## contact:id then contact:postalInfo and inside contact:name
-  $body->[1]->[1]->[1]=$name[1];
-  push @n,['frnic:surname',$name[0]];
+  push @n,['frnic:firstName',$contact->firstname()];
   push @n,['frnic:list','restrictedPublication'] if ($contact->disclose() eq 'N');
   my @d;
   my $b=$contact->birth();
   Net::DRI::Exception::usererr_insufficient_parameters('birth data mandatory') unless ($b && (ref($b) eq 'HASH') && exists($b->{date}) && exists($b->{place}));
-  push @d,['frnic:birthdate',(ref($b->{date}))? $b->{date}->strftime('%Y-%m-%d') : $b->{date}];
+  push @d,['frnic:birthDate',(ref($b->{date}))? $b->{date}->strftime('%Y-%m-%d') : $b->{date}];
   if ($b->{place}=~m/^[A-Z]{2}$/i) ## country not France
   {
    push @d,['frnic:cc',$b->{place}];
   } else
   {
    my @p=($b->{place}=~m/^\s*(\S.*\S)\s*,\s*(\S.+\S)\s*$/);
-   push @d,['frnic:birthcity',$p[1]];
+   push @d,['frnic:birthCity',$p[1]];
    push @d,['frnic:pc',$p[0]];
    push @d,['frnic:cc','FR'];
   }
@@ -210,9 +206,9 @@ sub info_parse
   my $name=$c->localname() || $c->nodeName();
   next unless $name;
 
-  if ($name eq 'surname')
+  if ($name eq 'firstName')
   {
-   $co->name(sprintf('%s, %s',$c->getFirstChild()->getData(),$co->name()));
+   $co->firstname($c->textContent());
   } elsif ($name eq 'list')
   {
    my $v=$c->getFirstChild()->getData();
@@ -230,10 +226,10 @@ sub info_parse
       if ($nn eq 'idStatus')
       {
         $rinfo->{contact}->{$oname}->{identification}=$cc->getFirstChild()->getData();
-      } elsif ($nn eq 'birthdate')
+      } elsif ($nn eq 'birthDate')
       {
         $b{date}=$cc->getFirstChild()->getData();
-      } elsif ($nn eq 'birthcity')
+      } elsif ($nn eq 'birthCity')
       {
         $b{place}=$cc->getFirstChild()->getData();
       } elsif ($nn eq 'pc')
@@ -255,7 +251,7 @@ sub info_parse
       my $nn=$cc->localname() || $c->nodeName();
       next unless $nn;
 
-      if ($nn eq 'status')
+      if ($nn eq 'legalStatus')
       {
        $co->legal_form($cc->getAttribute('type'));
        my $v=$cc->getFirstChild()->getData();

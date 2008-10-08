@@ -41,7 +41,7 @@ my $ns=$dri->local_object('hosts');
 $ns->add('ns.toto.fr',['123.45.67.89']);
 $ns->add('ns.toto.com');
 
-my $rc=$dri->domain_create_only('toto1.fr',{contact => $cs, maintainer => 'ABCD', ns => $ns});
+my $rc=$dri->domain_create('toto1.fr',{pure_create => 1, contact => $cs, maintainer => 'ABCD', ns => $ns});
 print "Mail successfully sent.\n" if $rc->is_success() && $rc->is_pending();
 
 $co=$dri->local_object('contact');
@@ -57,7 +57,7 @@ $co->disclose('N');
 $co->key('ABCDEFGH-100');
 $cs->set($co,'registrant');
 
-$rc=$dri->domain_create_only('toto2.fr',{contact => $cs, maintainer => 'ABCD', ns => $ns});
+$rc=$dri->domain_create('toto2.fr',{pure_create => 1, contact => $cs, maintainer => 'ABCD', ns => $ns});
 print "Mail successfully sent.\n" if $rc->is_success() && $rc->is_pending();
 
 ############################################################################################################

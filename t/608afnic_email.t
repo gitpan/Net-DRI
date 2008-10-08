@@ -67,18 +67,18 @@ $cs->set($co,'tech');
 $ns->add('ns.toto.fr',['123.45.67.89']);
 $ns->add('ns.toto.com');
 
-$rc=$dri->domain_create_only('toto.fr',{contact => $cs, maintainer => 'ABCD', ns => $ns});
+$rc=$dri->domain_create('toto.fr',{pure_create=>1, contact => $cs, maintainer => 'ABCD', ns => $ns});
 
-is($rc->code(),1001,'domain_create_only PM code');
-is($rc->is_success(),1,'domain_create_only PM is_success');
-is($rc->is_pending(),1,'domain_create_only PM is_pending');
+is($rc->code(),1001,'domain_create PM code');
+is($rc->is_success(),1,'domain_create PM is_success');
+is($rc->is_pending(),1,'domain_create PM is_pending');
 
 my $E1=<<'EOF';
 Content-Type: text/plain; charset="iso-8859-15"
 Content-Disposition: inline
 Content-Transfer-Encoding: 8bit
 MIME-Version: 1.0
-X-Mailer: Net::DRI 0.91/1.01 via MIME-tools 5.417 (Entity 5.417)
+X-Mailer: Net::DRI 0.92/1.01 via MIME-tools 5.417 (Entity 5.417)
 From: test@localhost
 To: domain@nic.fr
 Subject: CLIENTID domain_create [TRID-12345]
@@ -110,7 +110,7 @@ Subject: CLIENTID domain_create [TRID-12345]
 9a..: E
 EOF
 
-is_string(munge_xmailer($R1),munge_xmailer($E1),'domain_create_only build');
+is_string(munge_xmailer($R1),munge_xmailer($E1),'domain_create build');
 
 ## REDUCED PP
 $co=$dri->local_object('contact');
@@ -119,17 +119,17 @@ $co->disclose('N');
 $co->key('ABCDEFGH-100');
 $cs->set($co,'registrant');
 
-$rc=$dri->domain_create_only('toto.fr',{contact => $cs, maintainer => 'ABCD', ns => $ns});
-is($rc->code(),1001,'domain_create_only PPreduced code');
-is($rc->is_success(),1,'domain_create_only PPreduced is_success');
-is($rc->is_pending(),1,'domain_create_only PPreduced is_pending');
+$rc=$dri->domain_create('toto.fr',{pure_create=>1, contact => $cs, maintainer => 'ABCD', ns => $ns});
+is($rc->code(),1001,'domain_create PPreduced code');
+is($rc->is_success(),1,'domain_create PPreduced is_success');
+is($rc->is_pending(),1,'domain_create PPreduced is_pending');
 
 my $E2=<<'EOF';
 Content-Type: text/plain; charset="iso-8859-15"
 Content-Disposition: inline
 Content-Transfer-Encoding: 8bit
 MIME-Version: 1.0
-X-Mailer: Net::DRI 0.91/1.01 via MIME-tools 5.417 (Entity 5.417)
+X-Mailer: Net::DRI 0.92/1.01 via MIME-tools 5.417 (Entity 5.417)
 From: test@localhost
 To: domain@nic.fr
 Subject: CLIENTID domain_create [TRID-12345]
@@ -151,6 +151,6 @@ Subject: CLIENTID domain_create [TRID-12345]
 9a..: E
 EOF
 
-is_string(munge_xmailer($R1),munge_xmailer($E2),'domain_create_only PPreduced build');
+is_string(munge_xmailer($R1),munge_xmailer($E2),'domain_create PPreduced build');
 
 exit 0;

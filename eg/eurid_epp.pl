@@ -57,7 +57,7 @@ $cs->set($c1,'registrant');
 $cs->set($c2,'billing');
 $cs->set($c3,'tech');
 print "Attempting to create domain $dom\n";
-$rc=$dri->domain_create_only($dom,{duration=>DateTime::Duration->new(years =>1),ns=>$dri->local_object('hosts')->set('ns.example.com'),contact=>$cs});
+$rc=$dri->domain_create($dom,{pure_create=>1,duration=>DateTime::Duration->new(years =>1),ns=>$dri->local_object('hosts')->set('ns.example.com'),contact=>$cs});
 print "$dom created\n" if $rc->is_success();
 
 ## After the domain:create, the connection is dropped by the server
@@ -72,7 +72,7 @@ my $ns='ns.titi-'.time().'.fr';
 my $nso=$dri->local_object('hosts')->set($ns);
 print "NS=$ns\n";
 
-if ($dri->has_object('host')) ## Should be false for EURid
+if ($dri->has_object('ns')) ## Should be false for EURid
 {
  my $e=$dri->host_exist($ns);
  print "Host exist\n" if ($e==1);
@@ -100,7 +100,7 @@ $rc=$dri->domain_info($dom);
 #print "status_del OK\n" if $rc->is_success();
 #$rc=$dri->domain_info($dom);
 
-$rc=$dri->domain_delete_only($dom);
+$rc=$dri->domain_delete($dom,{pure_delete => 1});
 print "domain_delete OK\n" if $rc->is_success();
 
 $rc=$dri->contact_delete($c1);

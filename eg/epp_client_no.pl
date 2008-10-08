@@ -45,7 +45,7 @@ use encoding "utf-8";    # assume utf-8 encoded argument input
 
 our $VERSION     = '0.85.no';
 our $SVN_VERSION = do {
-    my @r = ( q$Revision: 1.1 $ =~ /\d+/gxm );
+    my @r = ( q$Revision: 1.2 $ =~ /\d+/gxm );
     sprintf( "%d" . ".%02d" x $#r, @r );
 };
 
@@ -912,9 +912,10 @@ sub do_command {
                     }
                 }
             }
-            $rc = $dri->domain_create_only(
+            $rc = $dri->domain_create(
                 $ace,
-                {   auth     => { pw => $p{pw} },
+                {   pure_create => 1, ## this was previously achieved by using domain_create_only that is now deprecated
+                    auth     => { pw => $p{pw} },
                     duration => $du,
                     contact  => $cs,
                     ns       => $nso
@@ -1033,12 +1034,12 @@ sub do_command {
                 "Cannot delete domain, rejected by DRI:domain_status_allows_delete()"
                 unless ( $dri->domain_status_allows_delete($ace) );
 
-            my %a;
+            my %a=(pure_delete => 1);
             $a{deletefromdns} = $p{deletefromdns} if $p{deletefromdns};
             $a{deletefromregistry} = $p{deletefromregistry}
                 if $p{deletefromregistry};
 
-            $rc = $dri->domain_delete_only( $ace, \%a );
+            $rc = $dri->domain_delete( $ace, \%a );
 
             print_result($dri);
             die($rc) unless $rc->is_success();

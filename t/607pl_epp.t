@@ -59,7 +59,7 @@ $dh=$dri->local_object('hosts');
 $dh->add('ns.przyklad2.pl');
 $dh->add('ns5.przyklad.pl');
 eval {
-	$rc=$dri->domain_create_only('przyklad44.pl',{ns=>$dh,auth=>{pw=>'authinfo_of_d97'},book=>1,reason=>'nice name'});
+	$rc=$dri->domain_create('przyklad44.pl',{pure_create=>1,ns=>$dh,auth=>{pw=>'authinfo_of_d97'},book=>1,reason=>'nice name'});
 };
 if ($@)
 {

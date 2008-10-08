@@ -26,8 +26,8 @@ use Net::DRI::Registry;
 use Net::DRI::Util;
 
 our $AUTOLOAD;
-our $VERSION='0.91';
-our $CVS_REVISION=do { my @r=(q$Revision: 1.31 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION='0.92';
+our $CVS_REVISION=do { my @r=(q$Revision: 1.33 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -49,9 +49,10 @@ EPP (core EPP in RFC 4930/4931/4932/4933/4934, extensions in
 RFC 3915/4114/4310/5076 and various extensions of ccTLDs/gTLDs
 - currently more than 30 TLDs are directly supported with extensions),
 RRI (.DE registration protocol), Whois, DAS (Domain Availability Service used by .BE, .EU),
+IRIS (RFC3981) DCHK (RFC5144) over LWZ (RFC4993) for .DE currently,
 .FR/.RE email and webservices interface, and resellers interface of some registrars
 (Gandi, OpenSRS, etc.).
-It has transports for connecting with TCP/TLS, HTTP/HTTPS, 
+It has transports for connecting with UDP/TCP/TLS, HTTP/HTTPS, 
 Web Services (XML-RPC and SOAP with/without WSDL),
 or SMTP-based registries/registrars.
 

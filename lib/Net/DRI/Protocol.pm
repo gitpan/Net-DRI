@@ -25,7 +25,7 @@ __PACKAGE__->mk_accessors(qw(name version commands message default_parameters));
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.19 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.20 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -197,6 +197,7 @@ sub reaction
    foreach my $v2 (values(%{$v1}))
    {
     next unless (ref($v2) eq 'HASH' && keys(%$v2)); ## yes, this can happen, with must_reconnect for example
+    next if exists($v2->{result_status});
     $v2->{result_status}=$rc;
    }
   }

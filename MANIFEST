@@ -7,6 +7,7 @@ eg/epp_client_no.pl
 eg/epp_server.pl
 eg/eurid_das.pl
 eg/eurid_epp.pl
+eg/iris_dchk.pl
 eg/vnds_rrp.pl
 eg/whois.pl
 eg/ws_rrp.pl
@@ -26,6 +27,7 @@ lib/Net/DRI/Data/Contact/CAT.pm
 lib/Net/DRI/Data/Contact/COOP.pm
 lib/Net/DRI/Data/Contact/DENIC.pm
 lib/Net/DRI/Data/Contact/EURid.pm
+lib/Net/DRI/Data/Contact/FCCN.pm
 lib/Net/DRI/Data/Contact/JOBS.pm
 lib/Net/DRI/Data/Contact/LU.pm
 lib/Net/DRI/Data/Contact/NO.pm
@@ -52,6 +54,8 @@ lib/Net/DRI/DRD/BookMyName.pm
 lib/Net/DRI/DRD/BR.pm
 lib/Net/DRI/DRD/BZ.pm
 lib/Net/DRI/DRD/CAT.pm
+lib/Net/DRI/DRD/CentralNic.pm
+lib/Net/DRI/DRD/CoCCA.pm
 lib/Net/DRI/DRD/COOP.pm
 lib/Net/DRI/DRD/CZ.pm
 lib/Net/DRI/DRD/DENIC.pm
@@ -75,6 +79,7 @@ lib/Net/DRI/DRD/ORG.pm
 lib/Net/DRI/DRD/OVH.pm
 lib/Net/DRI/DRD/PL.pm
 lib/Net/DRI/DRD/PRO.pm
+lib/Net/DRI/DRD/PT.pm
 lib/Net/DRI/DRD/SC.pm
 lib/Net/DRI/DRD/SE.pm
 lib/Net/DRI/DRD/SWITCH.pm
@@ -159,6 +164,9 @@ lib/Net/DRI/Protocol/EPP/Extensions/EURid/Contact.pm
 lib/Net/DRI/Protocol/EPP/Extensions/EURid/Domain.pm
 lib/Net/DRI/Protocol/EPP/Extensions/EURid/Message.pm
 lib/Net/DRI/Protocol/EPP/Extensions/EURid/Sunrise.pm
+lib/Net/DRI/Protocol/EPP/Extensions/FCCN.pm
+lib/Net/DRI/Protocol/EPP/Extensions/FCCN/Contact.pm
+lib/Net/DRI/Protocol/EPP/Extensions/FCCN/Domain.pm
 lib/Net/DRI/Protocol/EPP/Extensions/GracePeriod.pm
 lib/Net/DRI/Protocol/EPP/Extensions/IENUMAT.pm
 lib/Net/DRI/Protocol/EPP/Extensions/LU.pm
@@ -182,6 +190,7 @@ lib/Net/DRI/Protocol/EPP/Extensions/Nominet/Account.pm
 lib/Net/DRI/Protocol/EPP/Extensions/Nominet/Contact.pm
 lib/Net/DRI/Protocol/EPP/Extensions/Nominet/Domain.pm
 lib/Net/DRI/Protocol/EPP/Extensions/Nominet/Host.pm
+lib/Net/DRI/Protocol/EPP/Extensions/Nominet/Notifications.pm
 lib/Net/DRI/Protocol/EPP/Extensions/NSgroup.pm
 lib/Net/DRI/Protocol/EPP/Extensions/PL.pm
 lib/Net/DRI/Protocol/EPP/Extensions/PL/Connection.pm
@@ -211,6 +220,12 @@ lib/Net/DRI/Protocol/Gandi/WS/Account.pm
 lib/Net/DRI/Protocol/Gandi/WS/Connection.pm
 lib/Net/DRI/Protocol/Gandi/WS/Domain.pm
 lib/Net/DRI/Protocol/Gandi/WS/Message.pm
+lib/Net/DRI/Protocol/IRIS.pm
+lib/Net/DRI/Protocol/IRIS/Core.pm
+lib/Net/DRI/Protocol/IRIS/DCHK/Domain.pm
+lib/Net/DRI/Protocol/IRIS/DCHK/Status.pm
+lib/Net/DRI/Protocol/IRIS/LWZ.pm
+lib/Net/DRI/Protocol/IRIS/Message.pm
 lib/Net/DRI/Protocol/Message.pm
 lib/Net/DRI/Protocol/OpenSRS/XCP.pm
 lib/Net/DRI/Protocol/OpenSRS/XCP/Account.pm
@@ -261,6 +276,7 @@ lib/Net/DRI/Protocol/Whois/Message.pm
 lib/Net/DRI/Registry.pm
 lib/Net/DRI/Shell.pm
 lib/Net/DRI/Transport.pm
+lib/Net/DRI/Transport/Defer.pm
 lib/Net/DRI/Transport/Dummy.pm
 lib/Net/DRI/Transport/HTTP.pm
 lib/Net/DRI/Transport/HTTP/SOAPLite.pm
@@ -335,6 +351,7 @@ t/636vnds_epp_jobs.t
 t/637pro_epp.t
 t/638switch_epp.t
 t/639opensrs_xcp.t
+t/640pt_epp.t
 t/701ovh_ws_live.t
 t/702bookmyname_ws_live.t
 t/703gandi_ws_live.t

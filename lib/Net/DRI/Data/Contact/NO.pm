@@ -29,7 +29,7 @@ use base qw/Net::DRI::Data::Contact/;
 __PACKAGE__->mk_accessors(
     qw(type identity mobilephone organization rolecontact xemail xdisclose));
 
-our $VERSION = do { my @r = ( q$Revision: 1.1 $ =~ /\d+/gmx ); sprintf( "%d" . ".%02d" x $#r, @r ); };
+our $VERSION = do { my @r = ( q$Revision: 1.2 $ =~ /\d+/gmx ); sprintf( "%d" . ".%02d" x $#r, @r ); };
 
 =pod
 
@@ -246,7 +246,8 @@ sub validate {
             !~ m/^(?:organizationNumber|localIdentity|nationalIdentityNumber)$/mx
             );
 
-# let the server handle validation of what identity syntax and values are legal
+        # let the server handle further validation of what identity syntax
+        # and values are legal
     }
     $t = $self->mobilephone();
     push @errs, 'mobilephone'
@@ -254,51 +255,50 @@ sub validate {
         && !Net::DRI::Util::xml_is_token( $t, undef, 17 )
         && $t !~ m/^\+[0-9]{1,3}\.[0-9]{1,14}(?:x\d+)?$/mx );
 
-    $t = $self->organization();
-    push @errs, 'organization'
-        if ( $t && !Net::DRI::Util::xml_is_token( $t, 3, 16 ) );
+    #
+    foreach my $el ( 'organization', 'rolecontact', 'xemail' ) {
+        if ( $t = $self->$el() ) {    # option, as scalar or array
+            my @em;
+            my $er;
 
-    $t = $self->rolecontact();
-    push @errs, 'roleContact'
-        if ( $t && !Net::DRI::Util::xml_is_token( $t, 3, 16 ) );
-
-    if ( $t = $self->xemail() )
-    {    # option, multiple emails, as scalar or array
-        my @em;
-        my $er;
-
-        # validate all xemail addresses
-        if ($change) {
-            if ( ref($t) eq 'HASH' ) {
-                foreach my $s ( 'add', 'del' ) {
-                    my $e = $t->{$s};
-                    if ( ref($e) eq 'ARRAY' ) {
-                        push @em, @$e if (@$e);
-                    } else {
-                        push @em, $e if ($e);
+            if ($change) {
+                if ( ref($t) eq 'HASH' ) {
+                    foreach my $s ( 'add', 'del' ) {
+                        my $e = $t->{$s};
+                        if ( ref($e) eq 'ARRAY' ) {
+                            push @em, @$e if (@$e);
+                        } else {
+                            push @em, $e if ($e);
+                        }
                     }
+                } else {
+                    $er .= ":update needs an add/del hash:";
                 }
             } else {
-                $er .= ":update needs an add/rem hash:";
+                if ( ref($t) eq 'ARRAY' ) {
+                    push @em, @$t if (@$t);
+                } else {
+                    push @em, $t if ($t);
+                }
             }
-        } else {
-            if ( ref($t) eq 'ARRAY' ) {
-                push @em, @$t if (@$t);
-            } else {
-                push @em, $t if ($t);
+            foreach my $e (@em) {
+                if ( $el eq 'xemail' ) {
+                    $er .= " $e "
+                        if (
+                        $e
+                        && !(
+                            Net::DRI::Util::xml_is_token( $e, 1, undef )
+                            && Email::Valid->rfc822($e)
+                        )
+                        );
+                } else {
+                    $er .= " $e "
+                        if ( $e
+                        && !Net::DRI::Util::xml_is_token( $e, 3, 16 ) );
+                }
+                push @errs, "xemail:$er" if ($er);
             }
         }
-        foreach my $e (@em) {
-            $er .= " $e "
-                if (
-                $e
-                && !(
-                    Net::DRI::Util::xml_is_token( $e, 1, undef )
-                    && Email::Valid->rfc822($e)
-                )
-                );
-        }
-        push @errs, "xemail:$er" if ($er);
     }
 
     ## Check that xdisclose only contains mobilePhone

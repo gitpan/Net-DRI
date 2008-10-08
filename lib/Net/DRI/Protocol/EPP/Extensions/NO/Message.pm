@@ -27,7 +27,7 @@ use Net::DRI::Protocol::EPP::Extensions::NO::Contact;
 use Net::DRI::Protocol::EPP::Extensions::NO::Host;
 use Net::DRI::Protocol::EPP::Extensions::NO::Result;
 
-our $VERSION = do { my @r = ( q$Revision: 1.2 $ =~ /\d+/gmx ); sprintf( "%d" . ".%02d" x $#r, @r ); };
+our $VERSION = do { my @r = ( q$Revision: 1.3 $ =~ /\d+/gmx ); sprintf( "%d" . ".%02d" x $#r, @r ); };
 
 =pod
 
@@ -101,6 +101,65 @@ sub pollreq {
     return ( $mes->command( [ [ 'poll', { op => 'req' } ] ] ) );
 }
 
+sub parse_resp_result
+{
+ my ($node, $NS, $rinfo, $msgid)=@_;
+
+ my $code=$node->getAttribute('code');
+ my $msg=($node->getChildrenByTagNameNS($NS,'msg'))[0];
+ my $lang=$msg->getAttribute('lang') || 'en';
+ $msg=$msg->firstChild()->getData();
+ my @i;
+
+ my $c=$node->getFirstChild();
+ while ($c)
+ {
+  next unless ($c->nodeType() == 1); ## only for element nodes
+  my $name=$c->nodeName();
+  next unless $name;
+
+  if ($name eq 'extValue') ## OPTIONAL
+  {
+   push @i,substr(substr($c->toString(),10),0,-11); ## grab everything as a string, without <extValue> and </extValue>
+  } elsif ($name eq 'value') ## OPTIONAL
+  {
+   push @i,$c->toString();
+  }
+ } continue { $c=$c->getNextSibling(); }
+
+ push @{$rinfo->{message}->{$msgid}->{results}}, { code => $code, message => $msg, lang => $lang, extra_info => \@i};
+ return;
+}
+
+sub transfer_resp_parse {
+ my ($trndata, $oname, $rinfo, $msgid)=@_;
+
+ return unless $trndata;
+
+ my $pd=DateTime::Format::ISO8601->new();
+ my $c=$trndata->getFirstChild();
+
+ while ($c) {
+
+  next unless ($c->nodeType() == 1); ## only for element nodes
+  my $name=$c->localname() || $c->nodeName();
+  next unless $name;
+
+  if ($name eq 'name') {
+   $oname=lc($c->getFirstChild()->getData());
+   $rinfo->{message}->{$msgid}->{domain}->{$oname}->{action}='transfer';
+
+   $rinfo->{message}->{$msgid}->{domain}->{$oname}->{exist}=1;
+  } elsif ($name=~m/^(trStatus|reID|acID)$/mx) {
+   $rinfo->{message}->{$msgid}->{domain}->{$oname}->{$1}=$c->getFirstChild()->getData();
+  } elsif ($name=~m/^(reDate|acDate|exDate)$/mx) {
+   $rinfo->{message}->{$msgid}->{domain}->{$oname}->{$1}=$pd->parse_datetime($c->getFirstChild()->getData());
+  }
+ } continue { $c=$c->getNextSibling(); }
+ return;
+}
+
+
 ## We take into account all parse functions, to be able to parse any result
 sub parse_poll {
     my ( $po, $otype, $oaction, $oname, $rinfo ) = @_;
@@ -141,12 +200,20 @@ sub parse_poll {
     my $data = $tags[0];
 
     ##
-    # Inside a data we can have variants, one is the <entry ..>
+    # Inside a data we can have variants, 
+    # a normal result block in the start, then an <entry ..>
     # which is a sequence, the other is a late response which will contain
     # a complete and ordinary EPP response, only delayed.
 
+    #
+    # Parse any ordinary result block(s)
+    # 
+    foreach my $result ($data->getElementsByTagNameNS($eppNS,'result')) {
+	parse_resp_result($result, $eppNS, $rinfo, $msgid);
+    }
+
     ###
-    # the entry, if any
+    # Parse entry
     #
     @tags = $data->getElementsByTagNameNS( $NS, 'entry' );
 
@@ -204,13 +271,8 @@ sub parse_poll {
     }
 
     # Parse any domain transfer late response data
-    if (my $trndata=$mes->get_response('domain','trnData')) {
-       Net::DRI::Protocol::EPP::Core::Domain::transfer_parse($po,'domain','transfer', $oname,$rinfo);
-
-       if (defined($rinfo->{domain}) && $rinfo->{domain}) {
-           $rinfo->{message}->{$msgid}->{domain} = $rinfo->{domain};
-           delete($rinfo->{domain});
-       }
+    if (my $trndata = (($data->getElementsByTagNameNS($mes->ns('domain'), 'trnData'))[0])) {
+	transfer_resp_parse($trndata, $oname, $rinfo, $msgid);
     }
 
     # Parse any any contact info late response data

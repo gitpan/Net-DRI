@@ -11,8 +11,8 @@ is($n->is_success(),1,'epp is_success');
 is($n->native_code(),1000,'epp native_code');
 is($n->code(),1000,'epp code');
 is($n->message(),'Command completed successfully','epp message');
-is($n->as_string(0),'Command completed successfully (1000/1000) SUCCESS','epp as_string(0)');
-is($n->as_string(1),'Command completed successfully (1000/1000) SUCCESS','epp as_string(1)');
+is($n->as_string(0),'SUCCESS: Command completed successfully (1000/1000)','epp as_string(0)');
+is($n->as_string(1),'SUCCESS: Command completed successfully (1000/1000)','epp as_string(1)');
 
 $n=Net::DRI::Protocol::ResultStatus->new('rrp',200,1000,1,'Command completed successfully');
 isa_ok($n,'Net::DRI::Protocol::ResultStatus');

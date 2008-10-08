@@ -29,7 +29,7 @@ use Net::DRI::Exception;
 use Net::DRI::Util;
 use Net::DRI::Data::Raw;
 
-our $VERSION=do { my @r=(q$Revision: 1.27 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.28 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -55,7 +55,7 @@ time to wait (in seconds) for server reply
 
 =head2 socktype
 
-ssl or tcp
+ssl, tcp or udp
 
 =head2 ssl_key_file ssl_cert_file ssl_ca_file ssl_ca_path ssl_cipher_list ssl_version
 
@@ -138,9 +138,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $proto=shift;
- my $class=ref($proto) || $proto;
-
+ my $class=shift;
  my $drd=shift;
  my $po=shift;
 
@@ -149,22 +147,18 @@ sub new
  $self->has_state(1);
  $self->is_sync(1);
  $self->name('socket_inet');
- $self->version('0.1');
+ $self->version('0.2');
 
  my %t=(message_factory => $po->factories()->{message});
  $t{trid_factory}=(exists($opts{trid}) && (ref($opts{trid}) eq 'CODE'))? $opts{trid} : \&Net::DRI::Util::create_trid_1;
 
  Net::DRI::Exception::usererr_insufficient_parameters('socktype must be defined') unless (exists($opts{socktype}));
- Net::DRI::Exception::usererr_invalid_parameters('socktype must be ssl or tcp') unless ($opts{socktype}=~m/^(ssl|tcp)$/);
+ Net::DRI::Exception::usererr_invalid_parameters('socktype must be ssl, tcp or udp') unless ($opts{socktype}=~m/^(ssl|tcp|udp)$/);
  $t{socktype}=$opts{socktype};
  $t{client_login}=$opts{client_login};
  $t{client_password}=$opts{client_password};
  $t{client_newpassword}=$opts{client_newpassword} if (exists($opts{client_newpassword}) && $opts{client_newpassword});
- foreach my $p ('remote_host','remote_port','protocol_version')
- {
-  Net::DRI::Exception::usererr_insufficient_parameters($p.' must be defined') unless (exists($opts{$p}) && $opts{$p});
-  $t{$p}=$opts{$p};
- }
+
  Net::DRI::Exception::usererr_insufficient_parameters('protocol_connection') unless (exists($opts{protocol_connection}) && $opts{protocol_connection});
  $t{pc}=$opts{protocol_connection};
  $t{protocol_data}=$opts{protocol_data} if (exists($opts{protocol_data}) && $opts{protocol_data});
@@ -172,6 +166,16 @@ sub new
  $t{pc}->require or Net::DRI::Exception::err_failed_load_module('transport/socket',$t{pc},$@);
  my @need=qw/read_data write_message/;
  Net::DRI::Exception::usererr_invalid_parameters('protocol_connection class ('.$t{pc}.') must have: '.join(' ',@need)) if (grep { ! $t{pc}->can($_) } @need);
+
+ if (exists($opts{find_remote_server}) && defined($opts{find_remote_server}) && $t{pc}->can('find_remote_server'))
+ {
+  ($opts{remote_host},$opts{remote_port})=$t{pc}->find_remote_server($self,$opts{find_remote_server});
+ }
+ foreach my $p ('remote_host','remote_port','protocol_version')
+ {
+  Net::DRI::Exception::usererr_insufficient_parameters($p.' must be defined') unless (exists($opts{$p}) && $opts{$p});
+  $t{$p}=$opts{$p};
+ }
 
  Net::DRI::Exception::usererr_invalid_parameters('close_after must be an integer') if ($opts{close_after} && !Net::DRI::Util::isint($opts{close_after}));
  $t{close_after}=$opts{close_after} || 0;
@@ -204,7 +208,7 @@ sub new
  if ($self->defer()) ## we will open, but later
  {
   $self->current_state(0);
- } else ## we will open NOW 
+ } else ## we will open NOW
  {
   $self->open_connection();
   $self->current_state(1);
@@ -215,6 +219,10 @@ sub new
 
 sub sock { my ($self,$v)=@_; $self->transport_data()->{sock}=$v if defined($v); return $self->transport_data()->{sock}; }
 
+## TODO (for IRIS DCHK1 + NAPTR/SRV)
+## Wrap in an eval to handle timeout (see if outer eval already for that ?)
+## Handle remote_host/port being ref array of ordered strings to try (in which case defer should be 0 probably as the list of things to try have been determined now, not later)
+## Or specify a callback to call when doing socket open to find the correct host+ports to use at that time
 sub open_socket
 {
  my $self=shift;
@@ -224,7 +232,7 @@ sub open_socket
 
  my %n=( PeerAddr   => $t->{remote_host},
          PeerPort   => $t->{remote_port},
-         Proto      => 'tcp',
+         Proto      => $t->{socktype} eq 'udp'? 'udp' : 'tcp',
          Blocking   => 1,
 	 MultiHomed => 1,
        );
@@ -236,7 +244,7 @@ sub open_socket
                              %n,
                             );
  }
- if ($type eq 'tcp')
+ if ($type eq 'tcp' || $type eq 'udp')
  {
   $sock=IO::Socket::INET->new(%n);
  }
@@ -390,7 +398,8 @@ sub _print ## here we are sure open_connection() was called before
  my $pc=$t->{pc};
  my $sock=$self->sock();
 
- Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send message') unless ($sock->print($pc->write_message($self,$tosend)));
+ my $m=($t->{socktype} eq 'udp')? 'send' : 'print';
+ Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send message: '.$!) unless ($sock->$m($pc->write_message($self,$tosend)));
  return 1; ## very important
 }
 

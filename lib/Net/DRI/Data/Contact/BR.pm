@@ -23,7 +23,7 @@ __PACKAGE__->mk_accessors(qw(orgid type associated_contacts associated_domains r
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -90,7 +90,7 @@ sub validate
 
  if (!$change)
  {
-  Net::DRI::Exception::usererr_insufficient_parameters('orgid is mandatory') unless $self->orgid();
+##  Net::DRI::Exception::usererr_insufficient_parameters('orgid is mandatory') unless $self->orgid();
  }
 
  push @errs,'orgid' if ($self->orgid() && !Net::DRI::Util::xml_is_token($self->orgid(),1,30));
@@ -98,6 +98,16 @@ sub validate
  Net::DRI::Exception::usererr_invalid_parameters('Invalid contact information: '.join('/',@errs)) if @errs;
 
  return 1; ## everything ok.
+}
+
+sub init
+{
+ my ($self,$what)=@_;
+
+ if ($what eq 'create')
+ {
+  $self->srid('auto') unless defined($self->srid()); ## we can not choose the ID
+ }
 }
 
 ####################################################################################################

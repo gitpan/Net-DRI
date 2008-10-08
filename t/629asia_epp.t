@@ -151,7 +151,8 @@ my $ns = $dri->local_object('hosts');
 $ns->add('ns1.eppvalid.asia');
 $ns->add('ns2.eppvalid.asia');
 eval {
-	$rc = $dri->domain_create_only('epptest.asia', {
+	$rc = $dri->domain_create('epptest.asia', {
+                pure_create =>  1,
 		contact =>	$cs,
 		ns =>		$ns,
 		url =>		'http://www.justgoogleit.com/',

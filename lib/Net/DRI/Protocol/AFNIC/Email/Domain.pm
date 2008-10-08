@@ -13,14 +13,14 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::Protocol::AFNIC::Email::Domain;
 
 use strict;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -119,7 +119,7 @@ sub create
 
  $mes->line('3w',$co->org()? 'PM' : 'PP');
 
- if ($co->org()) ## PM
+ if ($co->org() && $co->legal_form()) ## PM
  {
   add_company_info($mes,$co);
  } else ## PP
@@ -130,9 +130,9 @@ sub create
    $mes->line('3q',$co->key());
   } else
   {
-   $mes->line('3a',$co->name());
+   $mes->line('3a',sprintf('%s, %s',$co->firstname(),$co->name()));
    my $b=$co->birth();
-   Net::DRI::Exception::usererr_insufficient_parameters('birth data mandatory, if no registrant key provided') unless ($b && (ref($b) eq 'HASH') && exists($b->{date}) && exists($b->{place}));
+   Net::DRI::Exception::usererr_insufficient_parameters('birth data (date+city) mandatory, if no registrant key provided') unless ($b && (ref($b) eq 'HASH') && exists($b->{date}) && exists($b->{place}));
    $mes->line('3r',(ref($b->{date}))? $b->{date}->strftime('%d/%m/%Y') : $b->{date});
    $mes->line('3s',$b->{place});
   }

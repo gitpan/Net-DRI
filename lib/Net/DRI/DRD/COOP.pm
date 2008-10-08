@@ -20,10 +20,11 @@ package Net::DRI::DRD::COOP;
 use strict;
 use base qw/Net::DRI::DRD/;
 
+use Net::DRI::DRD::ICANN;
 use Net::DRI::Exception;
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -116,12 +117,13 @@ sub transport_protocol_default
 
 sub verify_name_domain
 {
- my ($self,$ndr,$domain)=@_;
- $domain=$ndr unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
+ my ($self,$ndr,$domain,$op)=@_;
+ ($domain,$op)=($ndr,$domain) unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
 
  my $r=$self->SUPER::check_name($domain,1);
  return $r if ($r);
  return 10 unless $self->is_my_tld($domain);
+ return 11 if Net::DRI::DRD::ICANN::is_reserved_name($domain,$op);
 
  return 0;
 }

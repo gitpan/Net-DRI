@@ -134,23 +134,23 @@ $cs->set($c1,'registrant');
 $cs->set($c2,'admin');
 $cs->set($c2,'tech');
 
-$rc=$dri->domain_create_only('example202.no',{duration=>DateTime::Duration->new(months=>12),ns=>$dri->local_object('hosts')->set(['ns1.example.no'],['ns2.example.no']),contact=>$cs,auth=>{pw=>'2fooBAR'}});
+$rc=$dri->domain_create('example202.no',{pure_create=>1,duration=>DateTime::Duration->new(months=>12),ns=>$dri->local_object('hosts')->set(['ns1.example.no'],['ns2.example.no']),contact=>$cs,auth=>{pw=>'2fooBAR'}});
 
-is($R1,$E1.'<command><create><domain:create xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example202.no</domain:name><domain:period unit="y">1</domain:period><domain:ns><domain:hostObj>ns1.example.no</domain:hostObj><domain:hostObj>ns2.example.no</domain:hostObj></domain:ns><domain:registrant>jd1234</domain:registrant><domain:contact type="admin">sh8013</domain:contact><domain:contact type="tech">sh8013</domain:contact><domain:authInfo><domain:pw>2fooBAR</domain:pw></domain:authInfo></domain:create></create><clTRID>ABC-12345</clTRID></command>'.$E2,'domain_create_only build');
-is($dri->get_info('action'),'create','domain_create_only get_info(action)');
-is($dri->get_info('exist'),1,'domain_create_only get_info(exist)');
+is($R1,$E1.'<command><create><domain:create xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example202.no</domain:name><domain:period unit="y">1</domain:period><domain:ns><domain:hostObj>ns1.example.no</domain:hostObj><domain:hostObj>ns2.example.no</domain:hostObj></domain:ns><domain:registrant>jd1234</domain:registrant><domain:contact type="admin">sh8013</domain:contact><domain:contact type="tech">sh8013</domain:contact><domain:authInfo><domain:pw>2fooBAR</domain:pw></domain:authInfo></domain:create></create><clTRID>ABC-12345</clTRID></command>'.$E2,'domain_create build');
+is($dri->get_info('action'),'create','domain_create get_info(action)');
+is($dri->get_info('exist'),1,'domain_create get_info(exist)');
 $d=$dri->get_info('crDate');
-isa_ok($d,'DateTime','domain_create_only get_info(crDate)');
-is("".$d,'1999-04-03T22:00:00','domain_create_only get_info(crDate) value');
+isa_ok($d,'DateTime','domain_create get_info(crDate)');
+is("".$d,'1999-04-03T22:00:00','domain_create get_info(crDate) value');
 $d=$dri->get_info('exDate');
-isa_ok($d,'DateTime','domain_create_only get_info(exDate)');
-is("".$d,'2001-04-03T22:00:00','domain_create_only get_info(exDate) value');
+isa_ok($d,'DateTime','domain_create get_info(exDate)');
+is("".$d,'2001-04-03T22:00:00','domain_create get_info(exDate) value');
 
 
 $R2='';
-$rc=$dri->domain_delete_only('example203.no');
-is($R1,$E1.'<command><delete><domain:delete xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example203.no</domain:name></domain:delete></delete><clTRID>ABC-12345</clTRID></command>'.$E2,'domain_delete_only build');
-is($rc->is_success(),1,'domain_delete_only is_success');
+$rc=$dri->domain_delete('example203.no',{pure_delete=>1});
+is($R1,$E1.'<command><delete><domain:delete xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example203.no</domain:name></domain:delete></delete><clTRID>ABC-12345</clTRID></command>'.$E2,'domain_delete build');
+is($rc->is_success(),1,'domain_delete is_success');
 
 
 $R2=$E1.'<response>'.r().'<resData><domain:renData xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example204.no</domain:name><domain:exDate>2008-02-22T22:00:00.0Z</domain:exDate></domain:renData></resData>'.$TRID.'</response>'.$E2;

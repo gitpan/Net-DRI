@@ -27,7 +27,7 @@ use Net::DRI::Exception;;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -77,6 +77,8 @@ sub register_commands
  my %tmp=( 
 	 	info   => [ \&info, \&info_parse ],
 		update => [ \&update ],
+                fork   => [ \&fork, \&fork_parse ],
+		merge  => [ \&merge ],
 	);
 
  return { 'account' => \%tmp };
@@ -87,6 +89,18 @@ sub build_command
  my ($msg,$command,$contact)=@_;
  Net::DRI::Exception->die(1,'protocol/EPP',2,'Contact id needed') unless (defined($contact));
 
+ my $id=extract_contact_id($contact);
+ Net::DRI::Exception->die(1,'protocol/EPP',2,'Contact id needed') unless (defined($id) && $id && !ref($id));
+ Net::DRI::Exception->die(1,'protocol/EPP',10,'Invalid contact id: '.$id) unless Net::DRI::Util::xml_is_token($id,3,16); ## inherited from Core EPP
+ my $tcommand=(ref($command))? $command->[0] : $command;
+ my $ns=($command eq 'update')? sprintf('xmlns:contact="%s" xmlns:account="%s" xsi:schemaLocation="%s %s"',$msg->ns('contact'),$msg->nsattrs('account')) : sprintf('xmlns:account="%s" xsi:schemaLocation="%s %s"',$msg->nsattrs('account'));
+ $msg->command([$command,'account:'.$tcommand,$ns]);
+ return (['account:roid',$id]);
+}
+
+sub extract_contact_id
+{
+ my $contact=shift;
  my $id;
  if (Net::DRI::Util::isa_contactset($contact))
  {
@@ -100,12 +114,7 @@ sub build_command
  {
   $id=$contact;
  }
- Net::DRI::Exception->die(1,'protocol/EPP',2,'Contact id needed') unless (defined($id) && $id && !ref($id));
- Net::DRI::Exception->die(1,'protocol/EPP',10,'Invalid contact id: '.$id) unless Net::DRI::Util::xml_is_token($id,3,16); ## inherited from Core EPP
- my $tcommand=(ref($command))? $command->[0] : $command;
- my $ns=($command eq 'update')? sprintf('xmlns:contact="%s" xmlns:account="%s" xsi:schemaLocation="%s %s"',$msg->ns('contact'),$msg->nsattrs('account')) : sprintf('xmlns:account="%s" xsi:schemaLocation="%s %s"',$msg->nsattrs('account'));
- $msg->command([$command,'account:'.$tcommand,$ns]);
- return (['account:roid',$id]);
+ return $id;
 }
 
 
@@ -310,6 +319,103 @@ sub update
  Net::DRI::Exception::usererr_invalid_parameters($cs.' must be a Net::DRI::Data::ContactSet object') unless Net::DRI::Util::isa_contactset($cs);
  my @d=build_command($mes,'update',$c);
  push @d,add_account_data($mes,$cs,1);
+ $mes->command_body(\@d);
+}
+
+sub fork
+{
+ my ($epp,$c,$rh)=@_;
+ Net::DRI::Exception::usererr_invalid_parameters('For account fork, a domains key must be there with a ref array of domain names to fork') unless (Net::DRI::Util::has_key($rh,'domains') && (ref($rh->{domains}) eq 'ARRAY'));
+
+ my $mes=$epp->message();
+ $mes->command(['update','account:fork',sprintf('xmlns:account="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('account'))]);
+ my @d;
+ my $id=extract_contact_id($c);
+ push @d,['account:roid',$id] if (defined($id) && $id);
+ foreach my $d (@{$rh->{domains}})
+ {
+  next unless (defined($d) && $d && Net::DRI::Util::is_hostname($d));
+  push @d,['account:domain-name',$d];
+ }
+ $mes->command_body(\@d);
+}
+
+sub parse_credata
+{
+ my ($mes,$node,$cf,$cs,$rinfo)=@_;
+ my %c;
+ my $nsa=$mes->ns('account');
+ my $roid=$node->getChildrenByTagNameNS($nsa,'roid')->shift()->getFirstChild()->getData();
+ my $name=$node->getChildrenByTagNameNS($nsa,'name')->shift()->getFirstChild()->getData();
+ my $co=$cf->()->srid($roid)->name($name);
+ $cs->set($co,'registrant');
+ $rinfo->{contact}->{$roid}->{exist}=1;
+ $rinfo->{contact}->{$roid}->{roid}=$roid;
+ $rinfo->{contact}->{$roid}->{self}=$co;
+ my $nsc=$mes->ns('contact');
+ foreach my $ac ($node->getChildrenByTagNameNS($nsa,'contact'))
+ {
+  my $type=$ac->getAttribute('type');
+  my $order=$ac->getAttribute('order');
+  my $credata=$ac->getChildrenByTagNameNS($nsc,'creData')->shift();
+  my $roid2=$credata->getChildrenByTagNameNS($nsc,'roid')->shift()->getFirstChild()->getData();
+  my $name2=$credata->getChildrenByTagNameNS($nsc,'name')->shift()->getFirstChild()->getData();
+  $co=$cf->()->srid($roid2)->name($name2);
+  $c{$type}->{$order}=$co;
+  $rinfo->{contact}->{$roid2}->{exist}=1;
+  $rinfo->{contact}->{$roid2}->{roid}=$roid2;
+  $rinfo->{contact}->{$roid2}->{self}=$co;
+ }
+ $cs->set([ map { $c{'admin'}->{$_} } sort { $a <=> $b } keys(%{$c{'admin'}}) ],'admin') if (exists($c{'admin'}));
+ $cs->set([ map { $c{'billing'}->{$_} } sort { $a <=> $b } keys(%{$c{'billing'}}) ],'billing') if (exists($c{'billing'}));
+ $rinfo->{account}->{$roid}->{self}=$cs;
+ $rinfo->{account}->{$roid}->{exist}=1;
+ return $roid;
+}
+
+sub fork_parse
+{
+ my ($po,$otype,$oaction,$oname,$rinfo)=@_;
+ my $mes=$po->message();
+ return unless $mes->is_success();
+
+ my $credata=$mes->get_response('account','creData');
+ return unless $credata;
+
+ my $cs=Net::DRI::Data::ContactSet->new();
+ my $cf=$po->factories()->{contact};
+ my $roid=parse_credata($mes,$credata,$cf,$cs,$rinfo);
+ $rinfo->{account}->{$roid}->{action}='fork';
+ $rinfo->{account}->{$oname}->{fork_to}=$roid if defined($oname); ## roid not mandatory during fork call
+}
+
+sub merge
+{
+ my ($epp,$c,$rh)=@_;
+ my $mes=$epp->message();
+ my @d=build_command($mes,'merge',$c);
+ my $cmd=$mes->command();
+ shift(@$cmd);
+ $mes->command(['update',@$cmd]);
+ $mes->command_body(\@d);
+
+ if (Net::DRI::Util::has_key($rh,'roid_source') && (ref($rh->{roid_source}) eq 'ARRAY'))
+ {
+  push @d,map { ['account:roid',{source=>'y'},$_] } @{$rh->{roid_source}};
+ }
+
+ if (Net::DRI::Util::has_key($rh,'names') && (ref($rh->{names}) eq 'ARRAY'))
+ {
+  push @d,map { ['account:name',$_] } @{$rh->{names}};
+ }
+
+ Net::DRI::Exception::usererr_invalid_parameters('For account merge, a domains key must be there with a ref array of domain names to fork') unless (Net::DRI::Util::has_key($rh,'domains') && (ref($rh->{domains}) eq 'ARRAY'));
+ foreach my $d (@{$rh->{domains}})
+ {
+  next unless (defined($d) && $d && Net::DRI::Util::is_hostname($d));
+  push @d,['account:domain-name',$d];
+ }
+
  $mes->command_body(\@d);
 }
 

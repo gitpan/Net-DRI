@@ -22,10 +22,12 @@ use strict;
 use base qw(Class::Accessor::Chained::Fast);
 __PACKAGE__->mk_accessors(qw/name version retry pause trace timeout defer current_state has_state is_sync time_creation time_open time_used/);
 
-use Net::DRI::Exception;
+use Encode ();
 use Time::HiRes;
 
-our $VERSION=do { my @r=(q$Revision: 1.16 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+use Net::DRI::Exception;
+
+our $VERSION=do { my @r=(q$Revision: 1.17 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -185,6 +187,7 @@ sub dump_to_filehandle ## NOT a class method
 {
  my ($fh,$tname,$tversion,$trid,$step,$dir,$type,$data)=@_; ## $tname,$tversion,$step not used here
  my $c=(ref($data) && UNIVERSAL::can($data,'as_string'))? $data->as_string() : $data;
+ $c=Encode::encode('UTF-8', $c) if (Encode::is_utf8($c)); ## Should be only a temporary fix
  my ($t,$v)=Time::HiRes::gettimeofday();
  my @t=localtime($t);
  my $tp=sprintf('%d-%02d-%02d %02d:%02d:%02d.%06d C%sS [%s] ',1900+$t[5],1+$t[4],$t[3],$t[2],$t[1],$t[0],$v,($dir==0)? '=>' : '<=',$trid || '').$c."\n";

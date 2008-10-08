@@ -28,8 +28,8 @@ sub myrecv
 
 my $dri=Net::DRI->new(10);
 $dri->{trid_factory}=sub { return 'ABC-12345'; };
-$dri->add_registry('VNDS');
-$dri->target('VNDS')->new_current_profile('p1','Net::DRI::Transport::Dummy',[{f_send=>\&mysend,f_recv=>\&myrecv}],'Net::DRI::Protocol::EPP::Extensions::CentralNic',[]);
+$dri->add_registry('CentralNic');
+$dri->target('CentralNic')->new_current_profile('p1','Net::DRI::Transport::Dummy',[{f_send=>\&mysend,f_recv=>\&myrecv}],'Net::DRI::Protocol::EPP::Extensions::CentralNic',[]);
 
 my $rc;
 my $s;
@@ -39,8 +39,8 @@ my ($dh,@c);
 ####################################################################################################
 ## DNS TTL extension
 
-$R2=$E1.'<response>'.r().'<resData><domain:infData xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example2.com</domain:name><domain:roid>CNIC-DO302520</domain:roid><domain:status s="ok"/><domain:registrant>C11480</domain:registrant><domain:contact type="tech">C11480</domain:contact><domain:clID>C11480</domain:clID><domain:ns><domain:hostObj>ns0.example.com</domain:hostObj><domain:hostObj>ns1.example.com</domain:hostObj></domain:ns><domain:crDate>1995-01-01T00:00:00.0Z</domain:crDate><domain:exDate>2020-01-01T23:59:59.0Z</domain:exDate><domain:upDate>2005-05-14T11:15:19.0Z</domain:upDate></domain:infData></resData><extension><ttl:infData xmlns:ttl="urn:centralnic:params:xml:ns:ttl-1.0" xsi:schemaLocation="urn:centralnic:params:xml:ns:ttl-1.0 ttl-1.0.xsd"><ttl:secs>3600</ttl:secs></ttl:infData></extension>'.$TRID.'</response>'.$E2;
-$rc=$dri->domain_info('example2.com');
+$R2=$E1.'<response>'.r().'<resData><domain:infData xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example2.eu.com</domain:name><domain:roid>CNIC-DO302520</domain:roid><domain:status s="ok"/><domain:registrant>C11480</domain:registrant><domain:contact type="tech">C11480</domain:contact><domain:clID>C11480</domain:clID><domain:ns><domain:hostObj>ns0.example.com</domain:hostObj><domain:hostObj>ns1.example.com</domain:hostObj></domain:ns><domain:crDate>1995-01-01T00:00:00.0Z</domain:crDate><domain:exDate>2020-01-01T23:59:59.0Z</domain:exDate><domain:upDate>2005-05-14T11:15:19.0Z</domain:upDate></domain:infData></resData><extension><ttl:infData xmlns:ttl="urn:centralnic:params:xml:ns:ttl-1.0" xsi:schemaLocation="urn:centralnic:params:xml:ns:ttl-1.0 ttl-1.0.xsd"><ttl:secs>3600</ttl:secs></ttl:infData></extension>'.$TRID.'</response>'.$E2;
+$rc=$dri->domain_info('example2.eu.com');
 $s=$dri->get_info('ttl');
 isa_ok($s,'DateTime::Duration','TTL extension : ttl key');
 is($s->in_units('seconds'),3600,'TTL extension : value');
@@ -49,25 +49,25 @@ $R2='';
 my $cs=$dri->local_object('contactset');
 $cs->set($dri->local_object('contact')->srid('C11480'),'registrant');
 $cs->set($dri->local_object('contact')->srid('C11480'),'tech');
-$rc=$dri->domain_create_only('example2.com',{contact=>$cs,auth=>{pw=>'2fooBAR'},ttl=>DateTime::Duration->new(seconds => 300)});
-is_string($R1,$E1.'<command><create><domain:create xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example2.com</domain:name><domain:registrant>C11480</domain:registrant><domain:contact type="tech">C11480</domain:contact><domain:authInfo><domain:pw>2fooBAR</domain:pw></domain:authInfo></domain:create></create><extension><ttl:create xmlns:ttl="urn:centralnic:params:xml:ns:ttl-1.0" xsi:schemaLocation="urn:centralnic:params:xml:ns:ttl-1.0 ttl-1.0.xsd"><ttl:secs>300</ttl:secs></ttl:create></extension><clTRID>ABC-12345</clTRID></command>'.$E2,'TTL extension : domain_create_only build with DateTime::Duration');
+$rc=$dri->domain_create('example2.eu.com',{pure_create=>1,contact=>$cs,auth=>{pw=>'2fooBAR'},ttl=>DateTime::Duration->new(seconds => 300)});
+is_string($R1,$E1.'<command><create><domain:create xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example2.eu.com</domain:name><domain:registrant>C11480</domain:registrant><domain:contact type="tech">C11480</domain:contact><domain:authInfo><domain:pw>2fooBAR</domain:pw></domain:authInfo></domain:create></create><extension><ttl:create xmlns:ttl="urn:centralnic:params:xml:ns:ttl-1.0" xsi:schemaLocation="urn:centralnic:params:xml:ns:ttl-1.0 ttl-1.0.xsd"><ttl:secs>300</ttl:secs></ttl:create></extension><clTRID>ABC-12345</clTRID></command>'.$E2,'TTL extension : domain_create build with DateTime::Duration');
 
 
 $R2='';
-$rc=$dri->domain_create_only('example3.com',{contact=>$cs,auth=>{pw=>'2fooBAR'},ttl=>600});
-is_string($R1,$E1.'<command><create><domain:create xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example3.com</domain:name><domain:registrant>C11480</domain:registrant><domain:contact type="tech">C11480</domain:contact><domain:authInfo><domain:pw>2fooBAR</domain:pw></domain:authInfo></domain:create></create><extension><ttl:create xmlns:ttl="urn:centralnic:params:xml:ns:ttl-1.0" xsi:schemaLocation="urn:centralnic:params:xml:ns:ttl-1.0 ttl-1.0.xsd"><ttl:secs>600</ttl:secs></ttl:create></extension><clTRID>ABC-12345</clTRID></command>'.$E2,'TTL extension : domain_create_only build with integer');
+$rc=$dri->domain_create('example3.eu.com',{pure_create=>1,contact=>$cs,auth=>{pw=>'2fooBAR'},ttl=>600});
+is_string($R1,$E1.'<command><create><domain:create xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example3.eu.com</domain:name><domain:registrant>C11480</domain:registrant><domain:contact type="tech">C11480</domain:contact><domain:authInfo><domain:pw>2fooBAR</domain:pw></domain:authInfo></domain:create></create><extension><ttl:create xmlns:ttl="urn:centralnic:params:xml:ns:ttl-1.0" xsi:schemaLocation="urn:centralnic:params:xml:ns:ttl-1.0 ttl-1.0.xsd"><ttl:secs>600</ttl:secs></ttl:create></extension><clTRID>ABC-12345</clTRID></command>'.$E2,'TTL extension : domain_create build with integer');
 
 $R2='';
 my $toc=$dri->local_object('changes');
 $toc->set('ttl',300);
-$rc=$dri->domain_update('example4.com',$toc);
-is_string($R1,$E1.'<command><update><domain:update xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example4.com</domain:name></domain:update></update><extension><ttl:update xmlns:ttl="urn:centralnic:params:xml:ns:ttl-1.0" xsi:schemaLocation="urn:centralnic:params:xml:ns:ttl-1.0 ttl-1.0.xsd"><ttl:secs>300</ttl:secs></ttl:update></extension><clTRID>ABC-12345</clTRID></command>'.$E2,'TTL extension : domain_update build');
+$rc=$dri->domain_update('example4.eu.com',$toc);
+is_string($R1,$E1.'<command><update><domain:update xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example4.eu.com</domain:name></domain:update></update><extension><ttl:update xmlns:ttl="urn:centralnic:params:xml:ns:ttl-1.0" xsi:schemaLocation="urn:centralnic:params:xml:ns:ttl-1.0 ttl-1.0.xsd"><ttl:secs>300</ttl:secs></ttl:update></extension><clTRID>ABC-12345</clTRID></command>'.$E2,'TTL extension : domain_update build');
 
 ####################################################################################################
 ## Web Forwarding extension
 
-$R2=$E1.'<response>'.r().'<resData><domain:infData xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example5.com</domain:name><domain:roid>CNIC-DO302520</domain:roid><domain:status s="ok"/><domain:registrant>C11480</domain:registrant><domain:contact type="tech">C11480</domain:contact><domain:clID>C11480</domain:clID><domain:crDate>1995-01-01T00:00:00.0Z</domain:crDate><domain:exDate>2020-01-01T23:59:59.0Z</domain:exDate><domain:upDate>2005-05-14T11:15:19.0Z</domain:upDate></domain:infData></resData><extension><wf:infData xmlns:wf="urn:centralnic:params:xml:ns:wf-1.0" xsi:schemaLocation="urn:centralnic:params:xml:ns:wf-1.0 wf-1.0.xsd"><wf:url>http://www.example.com/</wf:url></wf:infData></extension>'.$TRID.'</response>'.$E2;
-$rc=$dri->domain_info('example5.com');
+$R2=$E1.'<response>'.r().'<resData><domain:infData xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example5.eu.com</domain:name><domain:roid>CNIC-DO302520</domain:roid><domain:status s="ok"/><domain:registrant>C11480</domain:registrant><domain:contact type="tech">C11480</domain:contact><domain:clID>C11480</domain:clID><domain:crDate>1995-01-01T00:00:00.0Z</domain:crDate><domain:exDate>2020-01-01T23:59:59.0Z</domain:exDate><domain:upDate>2005-05-14T11:15:19.0Z</domain:upDate></domain:infData></resData><extension><wf:infData xmlns:wf="urn:centralnic:params:xml:ns:wf-1.0" xsi:schemaLocation="urn:centralnic:params:xml:ns:wf-1.0 wf-1.0.xsd"><wf:url>http://www.example.com/</wf:url></wf:infData></extension>'.$TRID.'</response>'.$E2;
+$rc=$dri->domain_info('example5.eu.com');
 $s=$dri->get_info('web_forwarding');
 is($s,'http://www.example.com/','WebForwarding extension : value');
 
@@ -75,29 +75,28 @@ $R2='';
 $cs=$dri->local_object('contactset');
 $cs->set($dri->local_object('contact')->srid('C11480'),'registrant');
 $cs->set($dri->local_object('contact')->srid('C11480'),'tech');
-$rc=$dri->domain_create_only('example6.com',{contact=>$cs,auth=>{pw=>'2fooBAR'},web_forwarding=>'http://www.example.com/'});
-is_string($R1,$E1.'<command><create><domain:create xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example6.com</domain:name><domain:registrant>C11480</domain:registrant><domain:contact type="tech">C11480</domain:contact><domain:authInfo><domain:pw>2fooBAR</domain:pw></domain:authInfo></domain:create></create><extension><wf:create xmlns:wf="urn:centralnic:params:xml:ns:wf-1.0" xsi:schemaLocation="urn:centralnic:params:xml:ns:wf-1.0 wf-1.0.xsd"><wf:url>http://www.example.com/</wf:url></wf:create></extension><clTRID>ABC-12345</clTRID></command>'.$E2,'WebForwarding extension : domain_create_only build');
+$rc=$dri->domain_create('example6.eu.com',{pure_create=>1,contact=>$cs,auth=>{pw=>'2fooBAR'},web_forwarding=>'http://www.example.com/'});
+is_string($R1,$E1.'<command><create><domain:create xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example6.eu.com</domain:name><domain:registrant>C11480</domain:registrant><domain:contact type="tech">C11480</domain:contact><domain:authInfo><domain:pw>2fooBAR</domain:pw></domain:authInfo></domain:create></create><extension><wf:create xmlns:wf="urn:centralnic:params:xml:ns:wf-1.0" xsi:schemaLocation="urn:centralnic:params:xml:ns:wf-1.0 wf-1.0.xsd"><wf:url>http://www.example.com/</wf:url></wf:create></extension><clTRID>ABC-12345</clTRID></command>'.$E2,'WebForwarding extension : domain_create build');
 
 $R2='';
 $toc=$dri->local_object('changes');
 $toc->set('web_forwarding','http://www.example.com/');
-$rc=$dri->domain_update('example7.com',$toc);
-is_string($R1,$E1.'<command><update><domain:update xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example7.com</domain:name></domain:update></update><extension><wf:update xmlns:wf="urn:centralnic:params:xml:ns:wf-1.0" xsi:schemaLocation="urn:centralnic:params:xml:ns:wf-1.0 wf-1.0.xsd"><wf:url>http://www.example.com/</wf:url></wf:update></extension><clTRID>ABC-12345</clTRID></command>'.$E2,'WebForwarding extension: domain_update build');
+$rc=$dri->domain_update('example7.eu.com',$toc);
+is_string($R1,$E1.'<command><update><domain:update xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example7.eu.com</domain:name></domain:update></update><extension><wf:update xmlns:wf="urn:centralnic:params:xml:ns:wf-1.0" xsi:schemaLocation="urn:centralnic:params:xml:ns:wf-1.0 wf-1.0.xsd"><wf:url>http://www.example.com/</wf:url></wf:update></extension><clTRID>ABC-12345</clTRID></command>'.$E2,'WebForwarding extension: domain_update build');
 
 $R2='';
 $toc=$dri->local_object('changes');
 $toc->set('web_forwarding','');
-$rc=$dri->domain_update('example8.com',$toc);
-is_string($R1,$E1.'<command><update><domain:update xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example8.com</domain:name></domain:update></update><extension><wf:update xmlns:wf="urn:centralnic:params:xml:ns:wf-1.0" xsi:schemaLocation="urn:centralnic:params:xml:ns:wf-1.0 wf-1.0.xsd"><wf:url/></wf:update></extension><clTRID>ABC-12345</clTRID></command>'.$E2,'WebForwarding extension: domain_update build with empty url');
+$rc=$dri->domain_update('example8.eu.com',$toc);
+is_string($R1,$E1.'<command><update><domain:update xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example8.eu.com</domain:name></domain:update></update><extension><wf:update xmlns:wf="urn:centralnic:params:xml:ns:wf-1.0" xsi:schemaLocation="urn:centralnic:params:xml:ns:wf-1.0 wf-1.0.xsd"><wf:url/></wf:update></extension><clTRID>ABC-12345</clTRID></command>'.$E2,'WebForwarding extension: domain_update build with empty url');
 
 ####################################################################################################
 ## Release extension
 
 
-$R2=$E1.'<response>'.r(1001,'Command completed successfully.').'<resData><domain:trnData xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example9.com</domain:name><domain:trStatus>approved</domain:trStatus></domain:trnData></resData>'.$TRID.'</response>'.$E2;
-my $ro=$dri->remote_object('domain');
-$rc=$ro->release('example9.com',{clID=>H12345}); ## should be properly handled in a DRD module
-is_string($R1,$E1.'<command><transfer op="release"><domain:transfer xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example9.com</domain:name><domain:clID>H12345</domain:clID></domain:transfer></transfer><clTRID>ABC-12345</clTRID></command>'.$E2,'Release extension: domain_release build');
+$R2=$E1.'<response>'.r(1001,'Command completed successfully.').'<resData><domain:trnData xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example9.eu.com</domain:name><domain:trStatus>approved</domain:trStatus></domain:trnData></resData>'.$TRID.'</response>'.$E2;
+$rc=$dri->domain_release('example9.eu.com',{clID=>'H12345'});
+is_string($R1,$E1.'<command><transfer op="release"><domain:transfer xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example9.eu.com</domain:name><domain:clID>H12345</domain:clID></domain:transfer></transfer><clTRID>ABC-12345</clTRID></command>'.$E2,'Release extension: domain_release build');
 is($rc->is_success(),1,'Release extension: domain_release is_success');
 is($rc->is_pending(),1,'Release extension: domain_release is_pending');
 is($dri->get_info('trStatus'),'approved','Release extension: domain_release get_info(trStatus)');

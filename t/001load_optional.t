@@ -4,7 +4,7 @@
 # needed for some registries in Net::DRI but not all of them,
 # and we warn the user if they are not present
 
-use Test::More tests => 11;
+use Test::More tests => 12;
 
 SKIP: {
 	eval { require Net::SMTP; };
@@ -55,6 +55,14 @@ SKIP: {
 	eval { require Digest::MD5; };
 	skip('Module Digest::MD5 is not installed, you need it if you want to use Net::DRI for: OpenSRS (XCP)',1) if $@;
 	require_ok('Net::DRI::Protocol::OpenSRS::XCP::Connection');
+}
+
+SKIP: {
+#	eval { require IO::Uncompress::RawInflate; };
+#	skip('Module IO::Uncompress::RawInflate is not installed, you need it if you want to use Net::DRI for: .DE (IRIS DCHK over LWZ)',1) if $@;
+	eval { require Net::DNS; };
+	skip('Module Net::DNS is not installed, you need it if you want to use Net::DRI for: .DE (IRIS DCHK over LWZ)',1) if $@;
+	require_ok('Net::DRI::Protocol::IRIS::LWZ');
 }
 
 exit 0;

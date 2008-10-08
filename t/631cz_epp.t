@@ -166,7 +166,8 @@ my $cs = $dri->local_object('contactset');
 $cs->add($dri->local_object('contact')->srid('SG1-CZ'), 'registrant');
 $cs->add($dri->local_object('contact')->srid('SK1-CZ'), 'admin');
 eval {
-	$rc = $dri->domain_create_only('sygroup.cz', {
+	$rc = $dri->domain_create('sygroup.cz', {
+                pure_create =>  1,
 		contact =>	$cs,
 		nsset =>	'nameservers',
 		duration =>	DateTime::Duration->new(years => 2),

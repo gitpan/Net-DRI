@@ -25,7 +25,7 @@ use Net::DRI::Exception;
 
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -104,6 +104,7 @@ sub transport_protocol_default
   return ('Net::DRI::Transport::Socket','Net::DRI::Protocol::EPP::Extensions::Nominet') unless (defined($ta) && defined($pa));
   my %ta=(	%Net::DRI::DRD::PROTOCOL_DEFAULT_EPP,
 		remote_host => 'epp.nominet.org.uk',
+                protocol_data => { login_service_filter => \&_filter_objuri },
 		(ref($ta) eq 'ARRAY')? %{$ta->[0]} : %$ta,
 	);
   my @pa=(ref($pa) eq 'ARRAY' && @$pa)? @$pa : ('1.0');
@@ -111,6 +112,20 @@ sub transport_protocol_default
   return ('Net::DRI::Transport::Socket',[\%ta],'Net::DRI::Protocol::EPP::Extensions::Nominet',\@pa);
  }
 ## return ('Net::DRI::Transport::Socket',[{%Net::DRI::DRD::PROTOCOL_DEFAULT_DAS,remote_host=>'dac.nic.uk',remote_port=>2043,close_after=>0}],'Net::DRI::Protocol::DAS::Nominet',[]) if (lc($type) eq 'das');
+}
+
+## The registry gives back both -1.0 and -1.1 version of its namespaces, we keep only the latest
+## See http://www.nominet.org.uk/registrars/systems/epp/Namespace+URIs/
+sub _filter_objuri
+{
+ my @a;
+ foreach my $a (@_)
+ {
+  my ($t,$v)=@$a;
+  next if ($t eq 'objURI' && $v=~m/nom-\S+-1\.0$/);
+  push @a,$a;
+ }
+ return @a;
 }
 
 ####################################################################################################
@@ -217,6 +232,18 @@ sub account_update
 {
  my ($self,$ndr,$c,$cs)=@_;
  return $ndr->process('account','update',[$c,$cs]);
+}
+
+sub account_fork
+{
+ my ($self,$ndr,$c,$cs)=@_;
+ return $ndr->process('account','fork',[$c,$cs]);
+}
+
+sub account_merge
+{
+ my ($self,$ndr,$c,$cs)=@_;
+ return $ndr->process('account','merge',[$c,$cs]);
 }
 
 ####################################################################################################

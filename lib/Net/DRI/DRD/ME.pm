@@ -24,7 +24,7 @@ use base qw/Net::DRI::DRD/;
 ##use Net::DRI::DRD::ICANN;
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -78,7 +78,7 @@ sub new
  return $self;
 }
 
-sub periods  { return map { DateTime::Duration->new(years => $_) } (2..10); }
+sub periods  { return map { DateTime::Duration->new(years => $_) } (1..10); }
 sub name     { return 'ME'; }
 sub tlds     { return ('me'); }
 sub object_types { return ('domain','contact','ns'); }

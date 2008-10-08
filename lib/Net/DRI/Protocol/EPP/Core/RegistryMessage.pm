@@ -22,7 +22,7 @@ use strict;
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -82,6 +82,7 @@ sub pollack
 {
  my ($epp,$msgid)=@_;
  my $mes=$epp->message();
+ Net::DRI::Exception::usererr_invalid_parameters('In EPP, you must specify the message id you want to delete') unless (defined($msgid) && $msgid=~m/^\d+$/);
  $mes->command([['poll',{op=>'ack',msgID=>$msgid}]]);
 }
 
@@ -132,7 +133,7 @@ sub parse_poll
    }
   }
  }
- Net::DRI::Exception::err_assert('EPP::parse_poll was not able to parse anything, please report !') unless $toname;
+ return unless $toname; ## this may happen, for messages completely in the <msg> head node
 
  ## Copy local %info into $rd (which is in fact global info as set above) someway (we're working with references)
  ## Here, $rd=$rinfo->{message}->{$msgid}

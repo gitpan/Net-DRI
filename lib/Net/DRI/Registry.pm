@@ -22,6 +22,9 @@ use strict;
 use base qw(Class::Accessor::Chained::Fast);
 __PACKAGE__->mk_ro_accessors(qw(name driver profile trid)); ## READ-ONLY !!
 
+use DateTime;
+use DateTime::Duration;
+
 use Net::DRI::Exception;
 use Net::DRI::Util;
 use Net::DRI::Protocol::ResultStatus;
@@ -33,7 +36,7 @@ use Net::DRI::Data::Hosts;
 
 our $AUTOLOAD;
 
-our $VERSION=do { my @r=(q$Revision: 1.27 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.28 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -152,6 +155,8 @@ sub local_object
  my $self=shift;
  my $f=shift;
  return unless $self && $f;
+ return DateTime->new(@_)                   if $f eq 'datetime';
+ return DateTime::Duration->new(@_)         if $f eq 'duration';
  return Net::DRI::Data::Changes->new(@_)    if $f eq 'changes';
  return Net::DRI::Data::ContactSet->new(@_) if $f eq 'contactset';
  return Net::DRI::Data::Hosts->new(@_)      if $f eq 'hosts';

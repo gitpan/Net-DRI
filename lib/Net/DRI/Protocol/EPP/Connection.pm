@@ -24,7 +24,7 @@ use Net::DRI::Protocol::ResultStatus;
 
 use Encode ();
 
-our $VERSION=do { my @r=(q$Revision: 1.14 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.15 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -129,7 +129,7 @@ sub read_data
   $length-=$sock->read($new,$length);
   $m.=$new;
  }
- die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_SYNTAX_ERROR',$m? $m : '<empty message from server>','en')) unless ($m=~m!</epp>\r?$!);
+ die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_SYNTAX_ERROR',$m? 'Got unexpected EPP message: '.$m : '<empty message from server>','en')) unless ($m=~m!</epp>\s*$!s);
 
  return Net::DRI::Data::Raw->new_from_string($m);
 }
@@ -195,8 +195,9 @@ sub find_code
  my $dc=shift;
  my $a=$dc->as_string();
  return () unless ($a=~m!</epp>!);
- return (1000,'Greeting OK')  if ($a=~m!<greeting>!);
+ return (1000,'Greeting OK','en')  if ($a=~m!<greeting>!);
  $a=~s/>[\n\s\t]+/>/g;
+ $a=~s/[\n\s\t]+</</g;
  my ($code,$msg,$lang);
  return () unless (($code)=($a=~m!<response><result code=["'](\d+)["']>!));
  return () unless (($lang,$msg)=($a=~m!<msg(?: lang=["'](\S+)["'])?>(.+)</msg>!));

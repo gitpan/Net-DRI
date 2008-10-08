@@ -25,7 +25,7 @@ use Net::DRI::Exception;;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -74,7 +74,6 @@ sub register_commands
  my ($class,$version)=@_;
  my %tmp=( 
 		info   => [ \&info, \&info_parse ],
-		create => [ \&create, \&create_parse ],
 		update => [ \&update ],
 	);
 

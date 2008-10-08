@@ -22,7 +22,7 @@ use strict;
 use Time::HiRes ();
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.17 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.18 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -135,8 +135,9 @@ sub isa_contact
 
 sub isa_hosts
 {
- my $h=shift;
- return (defined($h) && UNIVERSAL::isa($h, 'Net::DRI::Data::Hosts') && !$h->is_empty())? 1 : 0;
+ my ($h,$emptyok)=@_;
+ $emptyok||=0;
+ return (defined($h) && UNIVERSAL::isa($h, 'Net::DRI::Data::Hosts') && ($emptyok || !$h->is_empty()) )? 1 : 0;
 }
 
 sub isa_nsgroup
@@ -394,6 +395,41 @@ sub xml_escape
  return $in;
 }
 
+sub xml_write
+{
+ my $rd=shift;
+ my @t;
+ foreach my $d ((ref($rd->[0]))? @$rd : ($rd)) ## $d is a node=ref array
+ {
+  my @c; ## list of children nodes
+  my %attr;
+  foreach my $e (grep { defined } @$d)
+  {
+   if (ref($e) eq 'HASH')
+   {
+    while(my ($k,$v)=each(%$e)) { $attr{$k}=$v; }
+   } else
+   {
+    push @c,$e;
+   }
+  }
+  my $tag=shift(@c);
+  my $attr=keys(%attr)? ' '.join(' ',map { $_.'="'.$attr{$_}.'"' } sort(keys(%attr))) : '';
+  if (!@c || (@c==1 && !ref($c[0]) && ($c[0] eq '')))
+  {
+   push @t,'<'.$tag.$attr.'/>';
+  } else
+  {
+   push @t,'<'.$tag.$attr.'>';
+   push @t,(@c==1 && !ref($c[0]))? xml_escape($c[0]) : xml_write(\@c);
+   push @t,'</'.$tag.'>';
+  }
+ }
+ return @t;
+}
+
+####################################################################################################
+
 sub remcam
 {
  my $in=shift;
@@ -401,6 +437,46 @@ sub remcam
  $in=~s/([A-Z])/_$1/g;
  return lc($in);
 }
+
+####################################################################################################
+
+## RFC2782
+sub dns_srv_order
+{
+ my (@r,%r);
+ foreach my $ans (@_)
+ {
+  push @{$r{$ans->priority()}},$ans;
+ }
+ foreach my $pri (sort { $a <=> $b } keys(%r))
+ {
+  my @o=@{$r{$pri}};
+  if (@o > 1)
+  {
+   my $ts=0;
+   foreach (@o) { $ts+=$_->weight(); }
+   my $s=0;
+   @o=map { $s+=$_->weight(); [ $s, $_ ] } (grep { $_->weight() == 0 } @o, grep { $_->weight() > 0 } @o);
+   my $cs=0;
+   while(@o > 1)
+   {
+    my $r=int(rand($ts-$cs+1));
+    foreach my $i (0..$#o)
+    {
+     next unless $o[$i]->[0] >= $r;
+     $cs+=$o[$i]->[0];
+     foreach my $j (($i+1)..$#o) { $o[$j]->[0]-=$o[$i]->[0]; }
+     push @r,$o[$i]->[1];
+     splice(@o,$i,1);
+     last;
+    }
+   }
+  }
+  push @r,$o[0]->[1];
+ }
+ return map { [$_->target(),$_->port()] } @r;
+}
+
 
 ####################################################################################################
 1;

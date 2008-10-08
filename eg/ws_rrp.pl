@@ -19,7 +19,7 @@ my $rc=$dri->target('WS')->new_current_profile('profile1','Net::DRI::Transport::
 my $dom='toto-'.time().'.ws';
 $rc=$dri->domain_check($dom);
 print "$dom does not exist\n" unless $dri->get_info('exist');
-$rc=$dri->domain_create_only($dom,{duration=>DateTime::Duration->new(years =>5)});
+$rc=$dri->domain_create($dom,{pure_create=>1,duration=>DateTime::Duration->new(years =>5)});
 print "$dom created\n" if $rc->is_success();
 $rc=$dri->domain_check($dom);
 print "$dom does exist now\n" if $dri->get_info('exist');
@@ -58,7 +58,7 @@ print "status_del OK\n" if $rc->is_success();
 $rc=$dri->domain_info($dom);
 
 
-$rc=$dri->domain_delete_only($dom);
+$rc=$dri->domain_delete($dom,{pure_delete => 1});
 print "domain_delete OK\n" if $rc->is_success();
 };
 
