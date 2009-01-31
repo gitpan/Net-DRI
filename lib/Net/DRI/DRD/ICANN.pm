@@ -19,7 +19,7 @@ package Net::DRI::DRD::ICANN;
 
 use strict;
 
-our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -62,8 +62,8 @@ See the LICENSE file that comes with this distribution for more details.
 =cut
 
 ## See http://www.icann.org/registries/rsep/submitted_app.html for changes
-our %ALLOW1=(); ## Pending ICANN Approval: .MOBI .COOP
-our %ALLOW2=(name => 1, jobs => 1, coop => 1);
+our %ALLOW1=(mobi => 1, coop => 1); ## Pending ICANN review: biz
+our %ALLOW2=(mobi => 1, coop => 1, name => 1, jobs => 1); ## Pending ICANN review: biz
 
 ## See http://www.icann.org/tlds/agreements/verisign/registry-agmt-appk-net-org-16apr01.htm & same
 ## Updated to http://www.icann.org/tlds/agreements/tel/appendix-6-07apr06.htm

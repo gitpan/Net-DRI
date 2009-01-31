@@ -14,18 +14,14 @@ my $PASS='';
 my $CID_PREFIX=''; ## The registry mandates all contacts ID to start with a specific prefix, tied to your account
 
 
-my $dri=Net::DRI->new(10);
+my $dri=Net::DRI->new({cache_ttl=>10,logging=>'files'});
 
 eval {
 ############################################################################################################
 $dri->add_registry('COOP',{clid=>$CLID});
 
-my $file='results-'.time().'.log';
-open(my $fh,'>>',$file) || die $!;
-print "Dumping XML exchange to $file\n";
-
 ## This connects to .COOP server for tests : make sure you have local files key.pem and cert.pem
-my $rc=$dri->target('COOP')->new_current_profile('profile1','epp',[{log_fh=>$fh,ssl_key_file=>'./key.pem',ssl_cert_file=>'./cert.pem',ssl_ca_file=>'./cert.pem',client_login=>$CLID,client_password=>$PASS}],[]);
+my $rc=$dri->target('COOP')->add_current_profile('profile1','epp',{ssl_key_file=>'./key.pem',ssl_cert_file=>'./cert.pem',ssl_ca_file=>'./cert.pem',client_login=>$CLID,client_password=>$PASS});
 
 die($rc) unless $rc->is_success(); ## Here we catch all errors during setup of transport, such as authentication errors
 
@@ -107,7 +103,6 @@ print 'Contact4 deleted successfully: '.($rc->is_success()? 'YES' : 'NO')."\n";
 
 
 $dri->end();
-close($fh);
 };
 
 if ($@)

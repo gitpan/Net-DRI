@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EURid (.EU) policy on reserved names
 ##
-## Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -24,7 +24,9 @@ use Net::DRI::Util;
 use Net::DRI::Exception;
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+
+__PACKAGE__->make_exception_for_unavailable_operations(qw/domain_transfer_query domain_transfer_accept domain_transfer_refuse domain_renew contact_check contact_check_multi contact_transfer contact_transfer_start contact_transfer_stop contact_transfer_query contact_transfer_accept contact_transfer_refuse message_retrieve message_delete message_waiting message_count/);
 
 =pod
 
@@ -54,7 +56,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -115,6 +117,8 @@ sub transport_protocol_default
  }
  return ('Net::DRI::Transport::Socket',[{%Net::DRI::DRD::PROTOCOL_DEFAULT_DAS,remote_host=>'das.eu'}],'Net::DRI::Protocol::DAS',[]) if (lc($type) eq 'das');
  return ('Net::DRI::Transport::Socket',[{%Net::DRI::DRD::PROTOCOL_DEFAULT_WHOIS,remote_host=>'whois.eu'}],'Net::DRI::Protocol::Whois',[]) if (lc($type) eq 'whois');
+ return ('Net::DRI::Transport::Socket',[{%Net::DRI::DRD::PROTOCOL_DEFAULT_DAS,remote_host=>'das.registry.eu'}],'Net::DRI::Protocol::DAS',[]) if (lc($type) eq 'das-registrar');
+ return ('Net::DRI::Transport::Socket',[{%Net::DRI::DRD::PROTOCOL_DEFAULT_WHOIS,remote_host=>'whois.registry.eu'}],'Net::DRI::Protocol::Whois',[]) if (lc($type) eq 'whois-registrar');
 }
 
 ######################################################################################
@@ -122,59 +126,19 @@ sub transport_protocol_default
 ## See terms_and_conditions_v1_0_.pdf, Section 2.2.ii
 sub verify_name_domain
 {
- my ($self,$ndr,$domain)=@_;
- $domain=$ndr unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
-
- my $r=$self->SUPER::check_name($domain,1);
- return $r if ($r);
- return 10 unless $self->is_my_tld($domain);
-
- my @d=split(/\./,$domain);
- return 12 if length($d[0]) < 2;
- return 13 if substr($d[0],2,2) eq '--';
- return 14 if exists($Net::DRI::Util::CCA2{uc($d[0])});
-
- return 0;
-}
-
-sub verify_duration_transfer
-{
- my ($self,$ndr,$duration,$domain,$op)=@_;
- ($duration,$domain,$op)=($ndr,$duration,$domain) unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
-
- return 0 unless ($op eq 'start'); ## we are not interested by other cases, they are always OK
- return 0; ## Always OK to start a transfer, since the new expiration is one year away from the transfer date
-}
-
-sub domain_operation_needs_is_mine
-{
  my ($self,$ndr,$domain,$op)=@_;
- ($domain,$op)=($ndr,$domain) unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
-
- return unless defined($op);
-
- return 1 if ($op=~m/^(?:renew|update|delete)$/);
- return 0 if ($op eq 'transfer');
- return;
+ return $self->_verify_name_rules($domain,$op,{check_name => 1,
+                                               my_tld => 1,
+                                               min_length => 2,
+                                               no_double_hyphen => 1,
+                                               no_country_code => 1,
+                                              });
 }
-
-sub domain_transfer_query   { Net::DRI::Exception->die(0,'DRD',4,'No domain transfer query available in .EU'); }
-sub domain_transfer_accept  { Net::DRI::Exception->die(0,'DRD',4,'No domain transfer approve available in .EU'); }
-sub domain_transfer_refuse  { Net::DRI::Exception->die(0,'DRD',4,'No domain transfer reject in .EU'); }
-sub domain_renew        { Net::DRI::Exception->die(0,'DRD',4,'No domain renew available in .EU'); }
-sub contact_check       { Net::DRI::Exception->die(0,'DRD',4,'No contact check available in .EU'); }
-sub contact_check_multi { Net::DRI::Exception->die(0,'DRD',4,'No contact check available in .EU'); }
-sub contact_transfer    { Net::DRI::Exception->die(0,'DRD',4,'No contact transfer available in .EU'); }
-sub message_retrieve    { Net::DRI::Exception->die(0,'DRD',4,'No poll features available in .EU'); }
-sub message_delete      { Net::DRI::Exception->die(0,'DRD',4,'No poll features available in .EU'); }
-sub message_waiting     { Net::DRI::Exception->die(0,'DRD',4,'No poll features available in .EU'); }
-sub message_count       { Net::DRI::Exception->die(0,'DRD',4,'No poll features available in .EU'); }
-
 
 sub domain_undelete
 {
  my ($self,$ndr,$domain,$rd)=@_;
- $self->err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'undelete');
+ $self->err_invalid_domain_name($domain) if $self->verify_name_domain($ndr,$domain,'undelete');
 
  my $rc=$ndr->process('domain','undelete',[$domain,$rd]);
  return $rc;
@@ -183,7 +147,7 @@ sub domain_undelete
 sub domain_transfer_quarantine
 {
  my ($self,$ndr,$domain,$op,$rd)=@_;
- $self->err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'transfer');
+ $self->err_invalid_domain_name($domain) if $self->verify_name_domain($ndr,$domain,'transfer_quarantine');
  Net::DRI::Exception::usererr_invalid_parameters('Transfer from quarantine operation must be start or stop') unless ($op=~m/^(?:start|stop)$/);
 
  my $rc;
@@ -204,7 +168,7 @@ sub domain_transfer_quarantine_stop  { my ($self,$ndr,$domain,$rd)=@_; return $s
 sub domain_trade_start
 {
  my ($self,$ndr,$domain,$rd)=@_;
- $self->err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'trade');
+ $self->err_invalid_domain_name($domain) if $self->verify_name_domain($ndr,$domain,'trade');
 
  my $rc=$ndr->process('domain','trade_request',[$domain,$rd]);
  return $rc;
@@ -213,7 +177,7 @@ sub domain_trade_start
 sub domain_trade_stop
 {
  my ($self,$ndr,$domain,$rd)=@_;
- $self->err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'trade');
+ $self->err_invalid_domain_name($domain) if $self->verify_name_domain($ndr,$domain,'trade');
 
  my $rc=$ndr->process('domain','trade_cancel',[$domain,$rd]);
  return $rc;
@@ -222,7 +186,7 @@ sub domain_trade_stop
 sub domain_reactivate
 {
  my ($self,$ndr,$domain,$rd)=@_;
- $self->err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'reactivate');
+ $self->err_invalid_domain_name($domain) if $self->verify_name_domain($ndr,$domain,'reactivate');
 
  my $rc=$ndr->process('domain','reactivate',[$domain,$rd]);
  return $rc;
@@ -231,7 +195,7 @@ sub domain_reactivate
 sub domain_check_contact_for_transfer
 {
  my ($self,$ndr,$domain,$rd)=@_;
- $self->err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'check_contact_for_transfer');
+ $self->err_invalid_domain_name($domain) if $self->verify_name_domain($ndr,$domain,'check_contact_for_transfer');
 
  my $rc=$ndr->process('domain','check_contact_for_transfer',[$domain,$rd]);
  return $rc;

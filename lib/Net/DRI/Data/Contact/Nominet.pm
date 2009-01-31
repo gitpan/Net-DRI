@@ -15,19 +15,17 @@
 #
 #########################################################################################
 
-
 package Net::DRI::Data::Contact::Nominet;
 
 use strict;
 use base qw(Net::DRI::Data::Contact);
-__PACKAGE__->mk_accessors(qw(type co_no opt_out mobile));
-
+use Email::Valid;
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-use Email::Valid;
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+__PACKAGE__->register_attributes(qw(type co_no opt_out mobile));
 
 =pod
 

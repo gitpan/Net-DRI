@@ -19,11 +19,11 @@ package Net::DRI::Data::Contact::BR;
 
 use strict;
 use base qw/Net::DRI::Data::Contact/;
-__PACKAGE__->mk_accessors(qw(orgid type associated_contacts associated_domains responsible proxy));
-
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+
+__PACKAGE__->register_attributes(qw(orgid type associated_contacts associated_domains responsible proxy));
 
 =pod
 
@@ -106,7 +106,7 @@ sub init
 
  if ($what eq 'create')
  {
-  $self->srid('auto') unless defined($self->srid()); ## we can not choose the ID
+  $self->srid('auto') unless defined($self->srid()); ## we can not choose the ID for pure contacts (but we can for brorg creations it seems)
  }
 }
 

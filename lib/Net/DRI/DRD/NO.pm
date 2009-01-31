@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .NO policies for Net::DRI
 ##
-## Copyright (c) 2008 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
+## Copyright (c) 2008,2009 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
 ##                    Trond Haugen E<lt>info@norid.noE<gt>
 ##                    All rights reserved.
 ##
@@ -26,7 +26,10 @@ use DateTime::Duration;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION = do { my @r = ( q$Revision: 1.2 $ =~ /\d+/gxm ); sprintf( "%d" . ".%02d" x $#r, @r ); };
+our $VERSION = do { my @r = ( q$Revision: 1.3 $ =~ /\d+/gxm ); sprintf( "%d" . ".%02d" x $#r, @r ); };
+
+# let contact check support be decided by the server policy
+__PACKAGE__->make_exception_for_unavailable_operations(qw/domain_transfer_accept domain_transfer_refuse contact_transfer_stop contact_transfer_query contact_transfer_accept contact_transfer_refuse/);
 
 =pod
 
@@ -56,7 +59,7 @@ Trond Haugen E<lt>info@norid.noE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
+Copyright (c) 2008,2009 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
 Trond Haugen E<lt>info@norid.noE<gt>
 All rights reserved.
 
@@ -72,9 +75,7 @@ See the LICENSE file that comes with this distribution for more details.
 ####################################################################################################
 
 sub new {
-    my $proto = shift;
-    my $class = ref($proto) || $proto;
-
+    my $class = shift;
     my $self = $class->SUPER::new(@_);
     $self->{info}->{host_as_attr} = 0;    # means make host objects
     $self->{info}->{use_null_auth}= 1;    # means using domain:null for empty authinfo password
@@ -130,22 +131,29 @@ sub verify_name_host {
     return 0;
 }
 
-sub verify_name_domain {
-    my ( $self, $ndr, $domain ) = @_;
-    $domain = $ndr
-        unless ( defined($ndr)
-        && $ndr
-        && ( ref($ndr) eq 'Net::DRI::Registry' ) );
+=head1 verify_name_domain
 
-    my $r = $self->SUPER::check_name($domain);
-    return $r if ($r);
-    return 10 unless $self->is_my_tld($domain);
+.NO allows country codes in labels on the left, so we need to subclass
+the verify_name_domain to avoid the CCA2 table check.
 
-    my @d = split( /\./mx, $domain );
-    return 12 if length( $d[0] ) < 2;
-    return 14 if exists($Net::DRI::Util::CCA2{uc($d[0])});
+We then clone the .AT code also here, but remove the dot-count and check
+in 'check_name'.
 
-    return 0;
+However, we do not subclass the 'is_my_tld' as .AT has done,
+but we then have to call it in a non-strict mode to allow for
+domain names with multiple lables.
+
+The combination should then allow multiple labels and also
+to use CC-codes in lables, like 'se.vgs.no'
+
+=cut
+
+sub verify_name_domain
+{
+ my ($self,$ndr,$domain,$op)=@_;
+ $self->_verify_name_rules($domain,$op,{check_name_no_dots => 1,
+                                        my_tld_not_strict => 0,
+                                       });
 }
 
 sub verify_duration_renew {
@@ -173,11 +181,6 @@ sub verify_duration_renew {
 
 sub domain_operation_needs_is_mine {
     my ( $self, $ndr, $domain, $op ) = @_;
-    ( $domain, $op ) = ( $ndr, $domain )
-        unless ( defined($ndr)
-        && $ndr
-        && ( ref($ndr) eq 'Net::DRI::Registry' ) );
-
     return unless defined($op);
 
     return 1 if ( $op =~ m/^(?:renew|update|delete|withdraw)$/mx );
@@ -187,7 +190,7 @@ sub domain_operation_needs_is_mine {
 
 sub domain_withdraw {
     my ( $self, $ndr, $domain, $rd ) = @_;
-    $self->err_invalid_domain_name($domain) if $self->verify_name_domain($domain);
+    $self->err_invalid_domain_name($domain) if $self->verify_name_domain($ndr,$domain,'withdraw');
 
     $rd = {} unless ( defined($rd) && ( ref($rd) eq 'HASH' ) );
     $rd->{transactionname} = 'withdraw';
@@ -199,7 +202,7 @@ sub domain_withdraw {
 sub domain_transfer_execute
 {
  my ($self,$ndr,$domain,$rd)=@_;
- $self->err_invalid_domain_name($domain) if $self->verify_name_domain($domain);
+ $self->err_invalid_domain_name($domain) if $self->verify_name_domain($ndr,$domain,'transfer_execute');
 
  $rd={} unless (defined($rd) && (ref($rd) eq 'HASH'));
  $rd->{transactionname} = 'transfer_execute';
@@ -302,48 +305,5 @@ sub message_count {
     return ( defined($count) && $count ) ? $count : 0;
 }
 
-##############################################################################
-# unsupported transactions
-#
-# enable DRI reject on unsupported DRI operations here.
-# If DRI handles them, just let the server reject them
-#
-sub domain_transfer_accept {
-    Net::DRI::Exception->die( 0, 'DRD', 4,
-        'No domain transfer approve available in .NO' );
-    return;
-}
-
-sub domain_transfer_refuse {
-    Net::DRI::Exception->die( 0, 'DRD', 4,
-        'No domain transfer reject in .NO' );
-    return;
-}
-
-sub contact_transfer_stop {
-    Net::DRI::Exception->die( 0, 'DRD', 4,
-        'No contact transfer cancel available in .NO' );
-    return;
-}
-
-sub contact_transfer_query {
-    Net::DRI::Exception->die( 0, 'DRD', 4,
-        'No contact transfer query available in .NO' );
-    return;
-}
-
-sub contact_transfer_accept {
-    Net::DRI::Exception->die( 0, 'DRD', 4,
-        'No contact transfer approve available in .NO' );
-    return;
-}
-
-sub contact_transfer_refuse {
-    Net::DRI::Exception->die( 0, 'DRD', 4,
-        'No contact transfer reject in .NO' );
-    return;
-}
-
-# let contact check support be decided by the server policy
-#sub contact_check { Net::DRI::Exception->die(0,'DRD',4,'No contact check in .NO'); }
+####################################################################################################
 1;

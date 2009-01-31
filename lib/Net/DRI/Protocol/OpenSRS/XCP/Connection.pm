@@ -1,6 +1,6 @@
 ## Domain Registry Interface, OpenSRS XCP Connection handling
 ##
-## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -20,14 +20,14 @@ package Net::DRI::Protocol::OpenSRS::XCP::Connection;
 use strict;
 
 use Digest::MD5 ();
-use Encode ();
 use HTTP::Request ();
 
+use Net::DRI::Util;
 use Net::DRI::Exception;
 use Net::DRI::Data::Raw;
 use Net::DRI::Protocol::ResultStatus;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -57,7 +57,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -90,8 +90,9 @@ sub write_message
  my $req=HTTP::Request->new('POST',$t->{remote_url});
  $req->header('Content-Type','text/xml');
  $req->header('X-Username',$t->{client_login});
- $req->header('X-Signature',Digest::MD5::md5_hex(Digest::MD5::md5_hex($msg->get_body(),$t->{client_password}),$t->{client_password})); ## client_password is in fact the reseller key
- $req->content(Encode::encode('utf8',$msg->get_body()));
+ my $body=$msg->get_body();
+ $req->header('X-Signature',Digest::MD5::md5_hex(Digest::MD5::md5_hex($body,$t->{client_password}),$t->{client_password})); ## client_password is in fact the reseller key
+ $req->content(Net::DRI::Util::encode_utf8($body));
  ## Content-Length will be automatically computed during Transport by LWP::UserAgent
  return $req;
 }
@@ -100,8 +101,8 @@ sub write_message
 sub read_data
 {
  my ($class,$to,$res)=@_;
- die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED',sprintf('Got unsuccessfull HTTP response: %d %s',$res->code(),$res->message()),'en')) unless $res->is_success();
- return Net::DRI::Data::Raw->new_from_string($res->content());
+ die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED_CLOSING',sprintf('Got unsuccessfull HTTP response: %d %s',$res->code(),$res->message()),'en')) unless $res->is_success();
+ return Net::DRI::Data::Raw->new_from_xmlstring($res->decoded_content());
 }
 
 ####################################################################################################

@@ -14,7 +14,7 @@ eval {
 $dri->add_registry('WS',{tz=>'America/Los_Angeles'});
 
 ## This connects to .WS OT&E server
-my $rc=$dri->target('WS')->new_current_profile('profile1','Net::DRI::Transport::Socket',[{defer=>0,socktype=>'ssl',remote_host=>'www.worldsite.ws',remote_port=>648,ssl_key_file=>'./privkey.pem',ssl_cert_file=>'./cacert.pem',ssl_ca_file=>'./cacert.pem',ssl_cipher_list=>'TLSv1',protocol_connection=>'Net::DRI::Protocol::RRP::Connection',protocol_version=>1,client_login=>'MyLOGIN',client_password=>'MyPASSWORD'}],'Net::DRI::Protocol::RRP',[]);
+my $rc=$dri->target('WS')->add_current_profile('profile1','rrp',{defer=>0,socktype=>'ssl',remote_host=>'www.worldsite.ws',remote_port=>648,ssl_key_file=>'./privkey.pem',ssl_cert_file=>'./cacert.pem',ssl_ca_file=>'./cacert.pem',ssl_cipher_list=>'TLSv1',protocol_connection=>'Net::DRI::Protocol::RRP::Connection',protocol_version=>1,client_login=>'MyLOGIN',client_password=>'MyPASSWORD'});
 
 my $dom='toto-'.time().'.ws';
 $rc=$dri->domain_check($dom);

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, SOAP Transport (HTTP/HTTPS)
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -24,7 +24,7 @@ use Net::DRI::Exception;
 
 use SOAP::Lite;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -69,7 +69,7 @@ C<ssl_ca_file> is a string giving the local path to the CA certificate file, if 
 =item * only for SOAP over HTTP/HTTPS
 
 =item * only one CA certificate can be used in each given instance of Net::DRI 
-(because is given through %ENV)
+(because it is given through %ENV)
 
 =back
 
@@ -91,7 +91,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -106,14 +106,11 @@ See the LICENSE file that comes with this distribution for more details.
 #######################################################################################
 sub new
 {
- my $proto=shift;
- my $class=ref($proto) || $proto;
-
- my $drd=shift;
- my $po=shift;
+ my $class=shift;
+ my $ctx=shift;
 
  my %opts=(@_==1 && ref($_[0]))? %{$_[0]} : @_;
- my $self=$class->SUPER::new(\%opts); ## We are now officially a Net::DRI::Transport instance
+ my $self=$class->SUPER::new($ctx,\%opts); ## We are now officially a Net::DRI::Transport instance
  $self->has_state(0);
  $self->is_sync(1);
  $self->name('soap');
@@ -170,8 +167,8 @@ sub soap_fault
 
 sub send
 {
- my ($self,$trid,$tosend)=@_;
- $self->SUPER::send($trid,$tosend,\&_soap_send,sub {});
+ my ($self,$ctx,$tosend)=@_;
+ $self->SUPER::send($ctx,$tosend,\&_soap_send,sub {});
 }
 
 sub _soap_send
@@ -192,8 +189,8 @@ sub _soap_send
 
 sub receive
 {
- my ($self,$trid)=@_;
- return $self->SUPER::receive($trid,\&_soap_receive);
+ my ($self,$ctx,$count)=@_;
+ return $self->SUPER::receive($ctx,\&_soap_receive);
 }
 
 sub _soap_receive

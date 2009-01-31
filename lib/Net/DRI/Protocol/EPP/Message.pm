@@ -20,6 +20,7 @@ package Net::DRI::Protocol::EPP::Message;
 use strict;
 
 use DateTime::Format::ISO8601 ();
+use DateTime ();
 use XML::LibXML ();
 
 use Net::DRI::Protocol::ResultStatus;
@@ -29,7 +30,7 @@ use Net::DRI::Util;
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version command command_body cltrid svtrid msg_id node_resdata node_extension node_msg result_greeting));
 
-our $VERSION=do { my @r=(q$Revision: 1.22 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.23 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -284,11 +285,13 @@ sub parse
  }
 
  $c=$res->getChildrenByTagNameNS($NS,'msgQ');
+ $rinfo->{message}->{info}={ count => 0, checked_on => DateTime->now() };
  if ($c->size()) ## OPTIONAL
  {
   my $msgq=$c->shift();
   my $id=$msgq->getAttribute('id'); ## id of the message that has just been retrieved and dequeued (RFC4930) OR id of *next* available message (RFC3730)
-  $rinfo->{message}->{info}={ count => $msgq->getAttribute('count'), id => $id };
+  $rinfo->{message}->{info}->{id}=$id;
+  $rinfo->{message}->{info}->{count}=$msgq->getAttribute('count');
   if ($msgq->hasChildNodes()) ## We will have childs only as a result of a poll request
   {
    my %d=( id => $id );

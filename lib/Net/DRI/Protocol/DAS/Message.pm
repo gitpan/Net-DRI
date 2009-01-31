@@ -1,6 +1,6 @@
 ## Domain Registry Interface, DAS Message
 ##
-## Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -19,16 +19,13 @@ package Net::DRI::Protocol::DAS::Message;
 
 use strict;
 
-use Encode ();
-
 use Net::DRI::Protocol::ResultStatus;
 use Net::DRI::Exception;
-use Net::DRI::Util;
 
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version errcode errmsg errlang command command_param command_tld cltrid response));
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -58,7 +55,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -111,7 +108,7 @@ sub as_string
 {
  my ($self,$to)=@_;
  my $s=sprintf("%s %s %s\x0d\x0a",$self->command(),$self->version(),$self->command_param());
- return Encode::encode('ascii',$s);
+ return $s;
 }
 
 sub parse

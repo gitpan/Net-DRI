@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Deferred Transport
 ##
-## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -23,7 +23,7 @@ use strict;
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -37,7 +37,7 @@ This module implements a deferred transport in Net::DRI. For now it just dumps a
 to a given filehandle, and reports back to Net::DRI that the message has been sent.
 
 This is useful for debugging, and also to validate all parameters of an operation without
-actually sending anything to the registry ; in such way, it is kind of a « simulate » operation
+actually sending anything to the registry ; in such way, it is kind of a "simulate" operation
 where everything is done (parameters validation, message building, etc...) without touching
 the registry.
 
@@ -72,7 +72,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -89,11 +89,10 @@ See the LICENSE file that comes with this distribution for more details.
 sub new
 {
  my $class=shift;
- my $drd=shift;
- my $po=shift;
+ my $ctx=shift;
 
  my %opts=(@_==1 && ref($_[0]))? %{$_[0]} : @_;
- my $self=$class->SUPER::new(\%opts);
+ my $self=$class->SUPER::new($ctx,\%opts);
  $self->name('defer');
  $self->version('0.1');
  $self->has_state(0);
@@ -121,7 +120,7 @@ sub ping {  return 1; }
 
 sub send
 {
- my ($self,$trid,$tosend)=@_;
+ my ($self,$ctx,$tosend)=@_;
  my $t=$self->transport_data();
  my $pc=$t->{pc};
 

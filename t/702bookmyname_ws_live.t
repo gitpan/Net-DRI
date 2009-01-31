@@ -13,7 +13,7 @@ unless ($ENV{TEST_BOOKMYNAME_WS_LIVE_CLIENTID} && $ENV{TEST_BOOKMYNAME_WS_LIVE_C
 
 my $dri=Net::DRI->new(10);
 $dri->add_registry('BookMyName');
-$dri->target('BookMyName')->new_current_profile('p1','ws',[{client_login=>$ENV{TEST_BOOKMYNAME_WS_LIVE_CLIENTID},client_password=>$ENV{TEST_BOOKMYNAME_WS_LIVE_CLIENTPASS}}],[]);
+$dri->target('BookMyName')->add_current_profile('p1','ws',{client_login=>$ENV{TEST_BOOKMYNAME_WS_LIVE_CLIENTID},client_password=>$ENV{TEST_BOOKMYNAME_WS_LIVE_CLIENTPASS}});
 
 eval {
  my $rc=$dri->account_list_domains();

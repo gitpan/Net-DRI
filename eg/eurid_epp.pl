@@ -13,19 +13,14 @@ use DateTime::Duration;
 my $CLID='YOUR TEST CLIENT ID'; ### Change this information
 my $PASS='YOUR PASSWORD'; ### Change this information
 
-my $dri=Net::DRI->new(10);
+my $dri=Net::DRI->new({cache_ttl=>10,logging=>'files'});
 
 eval {
 ############################################################################################################
 $dri->add_registry('EURid',{clid=>$CLID});
 
-my $file='results-'.time().'.log';
-open(my $fh,'>>',$file) || die $!;
-print "Dumping XML exchange to $file\n";
-my $oldfh=select($fh); $|++; select($oldfh);
-
 ## This connects to .EU server for tests
-my $rc=$dri->target('EURid')->new_current_profile('profile1','epp',[{log_fh=>$fh,client_login=>$CLID,client_password=>$PASS}],[]);
+my $rc=$dri->target('EURid')->add_current_profile('profile1','epp',{client_login=>$CLID,client_password=>$PASS});
 
 die($rc) unless $rc->is_success(); ## Here we catch all errors during setup of transport, such as authentication errors
 
@@ -112,7 +107,6 @@ print "Contact3 deleted successfully" if $rc->is_success();
 
 
 $dri->end();
-close($fh);
 };
 
 if ($@)

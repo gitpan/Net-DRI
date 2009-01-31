@@ -16,7 +16,7 @@ eval {
 ## 2) to replace USERNAME and PASSWORD with your credentials at AFNIC.
 
 $dri->add_registry('AFNIC', { clid => 'USERNAME' });
-$dri->target('AFNIC')->new_current_profile('profile1','Net::DRI::Transport::SOAP',[{proxy_url=>'https://soap-adh.nic.fr/',service_wsdl=>{Domain=>'file:./Domain-perl.wsdl'},ssl_ca_file=>'./afnic-ca.crt',credentials=>['soap-adh.nic.fr:443','Webservices Adherents AFNIC','USERNAME','PASSWORD']}],'Net::DRI::Protocol::AFNIC::WS',[]);
+$dri->target('AFNIC')->add_current_profile('profile1','ws',{proxy_url=>'https://soap-adh.nic.fr/',service_wsdl=>{Domain=>'file:./Domain-perl.wsdl'},ssl_ca_file=>'./afnic-ca.crt',credentials=>['soap-adh.nic.fr:443','Webservices Adherents AFNIC','USERNAME','PASSWORD']});
 
 my $rc=$dri->domain_check('toto.fr');
 print "Is success : ".$rc->is_success()."\n";

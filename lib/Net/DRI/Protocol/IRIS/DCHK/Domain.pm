@@ -27,13 +27,13 @@ use Net::DRI::Protocol::IRIS::Core;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Protocol::IRIS::DCHK - IRIS DCHK (RFC5144) Domain Commands for Net::DRI
+Net::DRI::Protocol::IRIS::DCHK::Domain - IRIS DCHK (RFC5144) Domain Commands for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -112,7 +112,9 @@ sub info_parse
  foreach my $cd ($mes->results()->get_nodelist())
  {
   carp('For domain '.$oname.' got a node <additional>, please report') if $cd->getChildrenByTagNameNS($mes->ns('iris1'),'additional')->size(); ## TODO
-  $rinfo->{domain}->{$oname}->{result_status}=Net::DRI::Protocol::IRIS::Core::parse_error($mes,$cd); ## a ResultStatus instance, either a generic success, or a specific error
+  $rinfo->{domain}->{$oname}->{result_status}=Net::DRI::Protocol::IRIS::Core::parse_error($cd); ## a ResultStatus instance, either a generic success, or a specific error
+  $rinfo->{domain}->{$oname}->{action}='info';
+  $rinfo->{domain}->{$oname}->{exist}=0;
 
   my $c=$cd->getChildrenByTagNameNS($mes->ns('iris1'),'answer');
   next unless $c->size();

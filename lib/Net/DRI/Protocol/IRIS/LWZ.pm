@@ -1,6 +1,6 @@
 ## Domain Registry Interface, IRIS LWZ Connection handling
 ##
-## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -25,10 +25,12 @@ use Net::DRI::Data::Raw;
 use Net::DRI::Protocol::ResultStatus;
 
 use Net::DNS ();
-##use IO::Uncompress::RawInflate (); ## TODO
-use Encode ();
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+## The LWZ RFC says DEFLATE=RFC1951 ; the DENIC IRIS DCHK server uses RFC1950 for now but is planning to fix that, so for now we try to handle both cases nicely
+use IO::Uncompress::Inflate (); ## RFC1950
+use IO::Uncompress::RawInflate (); ## RFC1951
+
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -58,7 +60,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -77,10 +79,10 @@ sub read_data # §3.1.2
  my ($class,$to,$sock)=@_;
 
  my $data;
- $sock->recv($data,4000) or die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED','Unable to read registry reply: '.$!,'en'));
+ $sock->recv($data,4000) or die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED_CLOSING','Unable to read registry reply: '.$!,'en'));
  my $hdr=substr($data,0,1);
 
- die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED','Unable to read 1 byte header','en')) unless $hdr;
+ die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED_CLOSING','Unable to read 1 byte header','en')) unless $hdr;
  # §3.1.3
  ##my @bits=split(//,unpack('B8',$hdr));
  $hdr=unpack('C',$hdr);
@@ -88,7 +90,7 @@ sub read_data # §3.1.2
  die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_SYNTAX_ERROR','Version unknown in header: '.$ver,'en')) unless $ver==0;
  my $rr=($hdr & 32) >> 5;
  die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_SYNTAX_ERROR','RR Flag is not response in header: '.$rr,'en')) unless $rr==1;
- my $deflate=($hdr & 16) >> 4; ## if 1, the payload is compressed with the deflate algorithm
+ my $deflate=($hdr & 16) >> 4; ## if 1, the payload is compressed with the deflate algorithm (RFC1951)
  my $type=($hdr & 3); ## §3.1.4
  die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_SYNTAX_ERROR','Unexpected response type in header: '.$type,'en')) unless $type==0; ## TODO : handle size info, version, etc.
 
@@ -98,38 +100,51 @@ sub read_data # §3.1.2
  my $load=substr($data,3);
  if ($deflate)
  {
-  die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_SYNTAX_ERROR','Unexpected deflated reply','en'));
-##  my $data2;
-##  IO::Uncompress::RawInflate::rawinflate(\$data,\$data2) or die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED','Unable to uncompress payload: '.$IO::Uncompress::RawInflate::RawInflateError,'en'));
-##  $data=$data2;
+  my $load2;
+  IO::Uncompress::RawInflate::rawinflate(\$load,\$load2) or die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED','Unable to uncompress payload: '.$IO::Uncompress::RawInflate::RawInflateError,'en'));
+  if ($load2!~/<response>/) ## Try temporarily fallback to RFC1950
+  {
+   $load2=undef;
+   IO::Uncompress::Inflate::inflate(\$load,\$load2) or die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED','Unable to uncompress payload: '.$IO::Uncompress::Inflate::InflateError,'en'));
+  }
+  $load=$load2;
  }
 
- my $m=Encode::decode('utf8',$load);
+ my $m=Net::DRI::Util::decode_utf8($load);
  die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_SYNTAX_ERROR',$m? 'Got unexpected reply message: '.$m : '<empty message from server>','en')) unless ($m=~m!</(?:\S+:)?response>\s*$!s); ## we do not handle other things than plain responses (see Message)
- return Net::DRI::Data::Raw->new_from_string($m);
+ return Net::DRI::Data::Raw->new_from_xmlstring($m);
 }
 
 sub write_message
 {
  my ($self,$to,$msg)=@_;
+ my $m=Net::DRI::Util::encode_utf8($msg);
+ my $hdr='00001000'; ## §3.1.3 : V=0 RR=Request PD=no DS=yes Reserved PT=xml
 
- # §3.1.1 + §3.1.3
- my $hdr='00001000'; ## V=0 RR=Request PD=no DS=yes Reserved PT=xml
- $hdr='00000000'; ## DS=no for now
- my $m=Encode::encode('utf8',$msg->as_string());
+ ## TODO : handle message payload deflation, as needed (the RFC says when over 1500 bytes
+ ## However, pay attention to the fact that some server do not accept such messages, see §3.1.7 "no-inflation-support-error", this is the case of DENIC server !
+ ## So either code that information per DRD, or try anyway & fallback based on reply (this will need multiple exchanges, so probably some changes in Net::DRI::Registry::process)
+
+# use IO::Compress::RawDeflate;
+# my $mm;
+# IO::Compress::RawDeflate::rawdeflate(\$m,\$mm);
+# $m=$mm;
+# $hdr='00011000';
+
  my ($tid)=($msg->tid()=~m/(\d{6})$/); ## 16 digits, we need to convert to a 16-bit value, we take the microsecond part modulo 65535 (since 0xFFFF is reserved)
  $tid%=65535;
  my $auth=$msg->authority();
- return pack('B8',$hdr).pack('n',$tid).pack('n',4000).pack('C',length($auth)).$auth.$m;
+ return pack('B8',$hdr).pack('n',$tid).pack('n',4000).pack('C',length($auth)).$auth.$m; ## §3.1.1
 }
 
+## TODO: move that someway into IRIS/Core probably (as needed for all transports)
 sub find_remote_server
 {
  my ($class,$to,$rd)=@_;
  my ($authority,$service)=@$rd;
 
- my $res=Net::DNS::Resolver->new();
- my $query=$res->query($authority,'NAPTR');
+ my $res=Net::DNS::Resolver->new(domain=>'', search=>''); ## make sure to start from clean state (otherwise we inherit the system defaults !)
+ my $query=$res->send($authority,'NAPTR');
  Net::DRI::Exception->die(1,'transport/socket',8,'No remote endpoint given, and unable to perform NAPTR DNS query for '.$authority.': '.$res->errorstring()) unless $query;
 
  my @r=sort { $a->order() <=> $b->order() || $a->preference() <=> $b->preference() } grep { $_->type() eq 'NAPTR' } $query->answer(); ## RFC3958 §2.2.1

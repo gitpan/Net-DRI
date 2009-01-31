@@ -13,7 +13,7 @@ unless ($ENV{TEST_OPENSRS_XCP_LIVE_CLIENTID} && $ENV{TEST_OPENSRS_XCP_LIVE_CLIEN
 
 my $dri=Net::DRI::TrapExceptions->new(10);
 $dri->add_registry('OpenSRS');
-$dri->target('OpenSRS')->new_current_profile('p1','xcp',[{client_login=>$ENV{TEST_OPENSRS_XCP_LIVE_CLIENTID},client_password=>$ENV{TEST_OPENSRS_XCP_LIVE_CLIENTPASS},remote_url=>'https://rr-n1-tor.opensrs.net:55443/resellers/',verify_response => \&verify_response}],[]);
+$dri->target('OpenSRS')->add_current_profile('p1','xcp',{client_login=>$ENV{TEST_OPENSRS_XCP_LIVE_CLIENTID},client_password=>$ENV{TEST_OPENSRS_XCP_LIVE_CLIENTPASS},remote_url=>'https://rr-n1-tor.opensrs.net:55443/resellers/',verify_response => \&verify_response});
 
 eval {
  my $rc=$dri->account_list_domains();
@@ -49,3 +49,4 @@ sub verify_response
  diag('Got SSL Cipher: '.$ans->header('Client-SSL-Cipher'));
  diag('Got SSL Warning: '.$ans->header('Client-SSL-Warning'));
 }
+

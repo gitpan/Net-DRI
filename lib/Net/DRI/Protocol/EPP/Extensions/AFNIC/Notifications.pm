@@ -1,6 +1,6 @@
 ## Domain Registry Interface, AFNIC EPP Notifications
 ##
-## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -19,7 +19,7 @@ package Net::DRI::Protocol::EPP::Extensions::AFNIC::Notifications;
 
 use strict;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -49,7 +49,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -82,13 +82,16 @@ sub parse_zonecheck
  return unless $mes->is_success();
  return unless $mes->node_msg(); ## this is the <msg> node in the EPP header
 
- my $zc=$mes->node_msg()->getChildrenByTagNameNS($mes->ns('frnic'),'resZC'); ## TODO : for now there is no namespace !!
+ ## For now there is no namespace
+ #my $zc=$mes->node_msg()->getChildrenByTagNameNS($mes->ns('frnic'),'resZC');
+ my $zc=$mes->node_msg()->getChildrenByTagName('resZC');
  return unless $zc->size();
  $zc=$zc->shift();
  return unless ($zc->getAttribute('type') eq 'plain-text'); ## we do not know what to do with other types
 
  $rinfo->{domain}->{$oname}->{review_zonecheck}=$zc->getFirstChild()->getData(); ## a blob for now
  $rinfo->{domain}->{$oname}->{action}='review_zonecheck';
+ $rinfo->{domain}->{$oname}->{exist}=1;
 }
 
 ####################################################################################################

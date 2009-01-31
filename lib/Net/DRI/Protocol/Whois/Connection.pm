@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Whois Connection handling
 ##
-## Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,10 +18,13 @@
 package Net::DRI::Protocol::Whois::Connection;
 
 use strict;
+use warnings;
+
+use Net::DRI::Util;
 use Net::DRI::Data::Raw;
 use Net::DRI::Protocol::ResultStatus;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -51,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -76,14 +79,15 @@ sub read_data
   push @a,$l if $l;
  }
 
- die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED','Unable to read answer (connection closed by registry ?)','en')) unless (@a > 5);
+ @a=map { Net::DRI::Util::decode_ascii($_); } @a;
+ die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED_CLOSING','Unable to read answer (connection closed by registry ?)','en')) unless (@a > 5);
  return Net::DRI::Data::Raw->new_from_array(\@a);
 }
 
 sub write_message
 {
  my ($class,$to,$msg)=@_;
- return $msg->as_string();
+ return Net::DRI::Util::encode_ascii($msg->as_string());
 }
 
 ####################################################################################################

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Registry Driver for .PT
 ##
-## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -22,10 +22,11 @@ use base qw/Net::DRI::DRD/;
 
 use DateTime::Duration;
 use DateTime;
-use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+
+__PACKAGE__->make_exception_for_unavailable_operations(qw/contact_check contact_delete contact_transfer contact_transfer_start contact_transfer_stop contact_transfer_query contact_transfer_accept contact_transfer_refuse message_retrieve message_delete message_waiting message_count/);
 
 =pod
 
@@ -55,7 +56,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -105,17 +106,6 @@ sub transport_protocol_default
 
 ####################################################################################################
 
-sub verify_name_domain
-{
- my ($self,$ndr,$domain,$op)=@_;
- ($domain,$op)=($ndr,$domain) unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
-
- my $r=$self->SUPER::check_name($domain,[1,2]);
- return $r if ($r);
- return 10 unless $self->is_my_tld($domain);
- return 0;
-}
-
 ## We can not start a transfer, if domain name has already been transfered less than 15 days ago.
 sub verify_duration_transfer
 {
@@ -134,46 +124,14 @@ sub verify_duration_transfer
  ## we return 0 if OK, anything else if not
 }
 
-
-sub domain_operation_needs_is_mine
-{
- my ($self,$ndr,$domain,$op)=@_;
- ($domain,$op)=($ndr,$domain) unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
-
- return unless defined($op);
-
- return 1 if ($op=~m/^(?:renew|update|delete)$/);
- return 0 if ($op eq 'transfer');
- return;
-}
-
 ####################################################################################################
 
 sub domain_renounce
 {
  my ($self,$ndr,$domain,$rd)=@_;
- $self->err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'renounce');
+ $self->err_invalid_domain_name($domain) if $self->verify_name_domain($ndr,$domain,'renounce');
  return $ndr->process('domain','renounce',[$domain,$rd]);
 }
-
-####################################################################################################
-
-sub contact_check  { Net::DRI::Exception->die(0,'DRD',4,'No contact check available in .PT'); }
-sub contact_delete { Net::DRI::Exception->die(0,'DRD',4,'No contact delete available in .PT'); }
-
-## Only domain transfer
-sub contact_transfer        { Net::DRI::Exception->die(0,'DRD',4,'No contact transfer available in .PT'); }
-sub contact_transfer_start  { Net::DRI::Exception->die(0,'DRD',4,'No contact transfer available in .PT'); }
-sub contact_transfer_stop   { Net::DRI::Exception->die(0,'DRD',4,'No contact transfer available in .PT'); }
-sub contact_transfer_query  { Net::DRI::Exception->die(0,'DRD',4,'No contact transfer available in .PT'); }
-sub contact_transfer_accept { Net::DRI::Exception->die(0,'DRD',4,'No contact transfer available in .PT'); }
-sub contact_transfer_refuse { Net::DRI::Exception->die(0,'DRD',4,'No contact transfer available in .PT'); }
-
-## No polling
-sub message_retrieve { Net::DRI::Exception->die(0,'DRD',4,'No message polling features available in .PT'); }
-sub message_delete   { Net::DRI::Exception->die(0,'DRD',4,'No message polling features available in .PT'); }
-sub message_waiting  { Net::DRI::Exception->die(0,'DRD',4,'No message polling features available in .PT'); }
-sub message_count    { Net::DRI::Exception->die(0,'DRD',4,'No message polling features available in .PT'); }
 
 ####################################################################################################
 1;

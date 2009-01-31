@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .ORG policies
 ##
-## Copyright (c) 2006,2007,2008 Rony Meyer <perl@spot-light.ch>. All rights reserved.
+## Copyright (c) 2006,2007,2008,2009 Rony Meyer <perl@spot-light.ch>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -23,7 +23,7 @@ use base qw/Net::DRI::DRD/;
 use Net::DRI::DRD::ICANN;
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -53,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2007,2008 Rony Meyer <perl@spot-light.ch>.
+Copyright (c) 2006,2007,2008,2009 Rony Meyer <perl@spot-light.ch>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -69,9 +69,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $proto=shift;
- my $class=ref($proto) || $proto;
-
+ my $class=shift;
  my $self=$class->SUPER::new(@_);
  $self->{info}->{host_as_attr}=0;
 
@@ -109,26 +107,10 @@ sub transport_protocol_default
 sub verify_name_domain
 {
  my ($self,$ndr,$domain,$op)=@_;
- ($domain,$op)=($ndr,$domain) unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
-
- my $r=$self->SUPER::check_name($domain,1);
- return $r if ($r);
- return 10 unless $self->is_my_tld($domain);
- return 11 if Net::DRI::DRD::ICANN::is_reserved_name($domain,$op);
-
- return 0;
-}
-
-sub domain_operation_needs_is_mine
-{
- my ($self,$ndr,$domain,$op)=@_;
- ($domain,$op)=($ndr,$domain) unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
-
- return unless defined($op);
-
- return 1 if ($op=~m/^(?:renew|update|delete)$/);
- return 0 if ($op eq 'transfer');
- return;
+ return $self->_verify_name_rules($domain,$op,{check_name => 1,
+                                               my_tld => 1,
+                                               icann_reserved => 1,
+                                              });
 }
 
 ####################################################################################################

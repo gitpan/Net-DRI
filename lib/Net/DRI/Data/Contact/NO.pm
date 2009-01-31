@@ -20,16 +20,14 @@
 package Net::DRI::Data::Contact::NO;
 
 use strict;
+use base qw/Net::DRI::Data::Contact/;
 use Email::Valid;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-use base qw/Net::DRI::Data::Contact/;
+our $VERSION = do { my @r = ( q$Revision: 1.3 $ =~ /\d+/gmx ); sprintf( "%d" . ".%02d" x $#r, @r ); };
 
-__PACKAGE__->mk_accessors(
-    qw(type identity mobilephone organization rolecontact xemail xdisclose));
-
-our $VERSION = do { my @r = ( q$Revision: 1.2 $ =~ /\d+/gmx ); sprintf( "%d" . ".%02d" x $#r, @r ); };
+__PACKAGE__->register_attributes(qw(type identity mobilephone organization rolecontact xemail xdisclose));
 
 =pod
 

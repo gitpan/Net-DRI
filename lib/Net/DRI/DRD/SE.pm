@@ -1,7 +1,7 @@
 ## Domain Registry Interface, .SE policy on reserved names
 ## Contributed by Elias Sidenbladh from NIC SE
 ##
-## Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -14,7 +14,7 @@
 #
 #  
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::DRD::SE;
 
@@ -22,11 +22,13 @@ use strict;
 use base qw/Net::DRI::DRD/;
 
 use Net::DRI::Util;
-use Net::DRI::Exception;
-use Net::DRI::Data::Contact::SE;
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+
+## The domain renew command are not implemented at the .se EPP server, domains are renewed automaticly when
+## they expires if not the "clientRenewProhibited" or "serverRenewProhibited" statuses are set.
+__PACKAGE__->make_exception_for_unavailable_operations(qw/domain_transfer_stop domain_transfer_accept domain_transfer_refuse domain_renew/);
 
 =pod
 
@@ -56,7 +58,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -68,13 +70,11 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
-#####################################################################################
+####################################################################################################
 
 sub new
 {
- my $proto=shift;
- my $class=ref($proto) || $proto;
-
+ my $class=shift;
  my $self=$class->SUPER::new(@_);
  $self->{info}->{host_as_attr}=0;
 
@@ -106,43 +106,17 @@ sub transport_protocol_default
  return ('Net::DRI::Transport::Socket',[{%Net::DRI::DRD::PROTOCOL_DEFAULT_WHOIS,remote_host=>'whois.nic-se.se'}],'Net::DRI::Protocol::Whois',[]) if (lc($type) eq 'whois');
 }
 
-######################################################################################
+####################################################################################################
 
 sub verify_name_domain
 {
- my ($self,$ndr,$domain)=@_;
- $domain=$ndr unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
-
- my $r=$self->SUPER::check_name($domain);
- return $r if ($r);
- return 10 unless $self->is_my_tld($domain);
-
- my @d=split(/\./,$domain);
- return 12 if length($d[0]) < 2;
- return 14 if exists($Net::DRI::Util::CCA2{uc($d[0])});
-
- return 0;
+ my ($self,$ndr,$domain,$op)=@_;
+ return $self->_verify_name_rules($domain,$op,{check_name => 1,
+                                               my_tld => 1,
+                                               min_length => 2,
+                                               no_country_code => 1,
+                                              });
 }
 
-sub domain_operation_needs_is_mine
-{
-    my ($self,$ndr,$domain,$op)=@_;
-    ($domain,$op)=($ndr,$domain) unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
-
-    return unless defined($op);
-
-    return 1 if ($op=~m/^(?:update|delete)$/);
-    return 0 if ($op eq 'transfer');
-    return; #renew not implemented
-}
-
-## Only transfer requests and queries are possible, the rest is handled "off line".
-sub domain_transfer_stop    { Net::DRI::Exception->die(0,'DRD',4,'No domain transfer cancel available in .SE'); }
-sub domain_transfer_accept  { Net::DRI::Exception->die(0,'DRD',4,'No domain transfer approve available in .SE'); }
-sub domain_transfer_refuse  { Net::DRI::Exception->die(0,'DRD',4,'No domain transfer reject in .SE'); }
-## The domain renew command are not implemented at the .se EPP server, domains are renewed automaticly when
-## they expires if not the "clientRenewProhibited" or "serverRenewProhibited" statuses are set.
-sub domain_renew        { Net::DRI::Exception->die(0,'DRD',4,'No domain renew available in .SE'); }
-
-#################################################################################################################
+####################################################################################################
 1;

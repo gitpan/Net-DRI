@@ -28,7 +28,7 @@ use Net::DRI::Util;
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version client_auth command command_attributes response_attributes response_code response_text response_is_success));
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -127,6 +127,7 @@ sub result_status
 }
 
 sub is_success { return shift->response_is_success(); }
+sub as_string  { return shift->get_body(); }
 
 sub get_body
 {

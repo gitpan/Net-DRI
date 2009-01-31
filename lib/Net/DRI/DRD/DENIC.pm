@@ -1,6 +1,6 @@
 ## Domain Registry Interface, DENIC policies
 ##
-## Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
+## Copyright (c) 2007,2008,2009 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -23,7 +23,7 @@ use base qw/Net::DRI::DRD/;
 use Net::DRI::DRD::ICANN;
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -53,7 +53,7 @@ Tonnerre Lombard, E<lt>tonnerre.lombard@sygroup.chE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+Copyright (c) 2007,2008,2009 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -79,7 +79,7 @@ sub new
 
 sub periods  { return map { DateTime::Duration->new(years => $_) } (1..10); }
 sub name     { return 'DENIC'; }
-sub tlds     { return ('de'); }
+sub tlds     { return ('de','9.4.e164.arpa'); } ## *.9.4.e164.arpa can be queried over IRIS DCHK, do not know about RRI support
 sub object_types { return ('domain','contact'); }
 
 sub transport_protocol_compatible
@@ -93,6 +93,9 @@ sub transport_protocol_compatible
  return 1 if (($pn eq 'IRIS') && ($tn eq 'socket_inet'));
  return;
 }
+
+## TODO: see if that could be useful (such as being used by Net::DRI::Shell) ; if so propagate to other DRD modules
+sub available_profile_types { return qw/rri dchk/; }
 
 sub transport_protocol_default
 {
@@ -117,14 +120,16 @@ sub transport_protocol_default
  {
   my %ta=( defer=>1,
            socktype=>'udp',
-           find_remote_server => ['de','DCHK1:iris.lwz'], ## authority / service
+           find_remote_server => ['de.','DCHK1:iris.lwz'], ## authority / service
            protocol_connection=>'Net::DRI::Protocol::IRIS::LWZ',
            protocol_version=>'1.0',
+           timeout => 1, ## RFC4993 Section 4 gives recommandation for timeouts and retry algorithm
+           pause => 2,
+           retry => 5, ## computed so that the whole sequence stops after 60 seconds: t,p+2t,3/2(p+2)-2+4t,3/2*3/2*(p+2)-2+8t,...
            (ref($ta) eq 'ARRAY')? %{$ta->[0]} : %$ta,
          );
   my @pa=(ref($pa) eq 'ARRAY' && @$pa)? @$pa : ('1.0','de'); ## (version,authority)
   return ('Net::DRI::Transport::Socket',[\%ta],'Net::DRI::Protocol::IRIS',\@pa);
-  #return ('Net::DRI::Transport::Defer',[\%ta],'Net::DRI::Protocol::IRIS',\@pa);
  }
 }
 
@@ -133,26 +138,10 @@ sub transport_protocol_default
 sub verify_name_domain
 {
  my ($self,$ndr,$domain,$op)=@_;
- ($domain,$op)=($ndr,$domain) unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
-
- my $r=$self->SUPER::check_name($domain,1);
- return $r if ($r);
- return 10 unless $self->is_my_tld($domain);
- return 11 if Net::DRI::DRD::ICANN::is_reserved_name($domain,$op);
-
- return 0;
-}
-
-sub domain_operation_needs_is_mine
-{
- my ($self,$ndr,$domain,$op)=@_;
- ($domain,$op)=($ndr,$domain) unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
-
- return unless defined($op);
-
- return 1 if ($op=~m/^(?:renew|update|delete)$/);
- return 0 if ($op eq 'transfer');
- return;
+ return $self->_verify_name_rules($domain,$op,{check_name => 1,
+                                               my_tld => 1,
+                                               icann_reserved => 1, ## is that right ??
+                                              });
 }
 
 sub contact_update

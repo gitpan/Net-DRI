@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Shell interface
 ##
-## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,12 +18,15 @@
 package Net::DRI::Shell;
 
 use strict;
+use warnings;
+
 use Net::DRI;
 use Net::DRI::Util;
 use Term::ReadLine; ## see also Term::Shell
 use Time::HiRes ();
+use IO::Handle ();
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 exit __PACKAGE__->run(@ARGV) if (!caller() || caller() eq 'PAR'); ## This is a modulino :-)
 
@@ -31,7 +34,7 @@ exit __PACKAGE__->run(@ARGV) if (!caller() || caller() eq 'PAR'); ## This is a m
 
 =head1 NAME
 
-Net::DRI::Shell - Command Line Shell for Net::DRI, with batch features
+Net::DRI::Shell - Command Line Shell for Net::DRI, with batch features and autocompletion support
 
 =head1 SYNOPSYS
 
@@ -39,11 +42,11 @@ Net::DRI::Shell - Command Line Shell for Net::DRI, with batch features
  or
  perl -MNet::DRI::Shell -e run
 
- Welcome to Net::DRI experimental shell, version 1.02
+ Welcome to Net::DRI shell, version 1.06
  Net::DRI object created with TTL=10s
 
  NetDRI> add_registry registry=EURid clID=YOURLOGIN
- NetDRI(EURid)> new_current_profile name=profile1 type=epp defer=0 client_login=YOURLOGIN client_password=YOURPASSWORD
+ NetDRI(EURid)> add_current_profile name=profile1 type=epp defer=0 client_login=YOURLOGIN client_password=YOURPASSWORD
  Profile profile1 added successfully (1000/COMMAND_SUCCESSFUL) SUCCESS
  NetDRI(EURid,profile1)> domain_info example.eu
  Command completed successfully (1000/1000) SUCCESS
@@ -78,17 +81,18 @@ After having started this shell, the available commands are the following.
 =head3 add_registry registry=REGISTRYNAME clID=YOURLOGIN
 
 Replace REGISTRYNAME with the Net::DRI::DRD module you want to use, and YOURLOGIN
-with your client login for this registry
+with your client login for this registry.
 
-=head3 new_current_profile name=profile1 type=epp defer=0 client_login=YOURLOGIN client_password=YOURPASSWORD [log_fh=FILENAME]
+=head3 add_current_profile name=profile1 type=epp defer=0 client_login=YOURLOGIN client_password=YOURPASSWORD
 
 This will really connect to the registry, replace YOURLOGIN by your client login at registry,
 and YOURPASSWORD by the associated password. You may have to add parameters remote_host= and remote_port=
 to connect to other endpoints than the hardcoded default which is most of the time the registry OT&E server,
 and not the production one !
 
-If you provide a FILENAME with the log_fh attribute, this file will be open for write append and
-the XML EPP exchanges with the registry will be dump in it.
+=head3 add registry=REGISTRYNAME clID=YOURLOGIN name=profile1 type=epp defer=0 client_login=YOURLOGIN client_password=YOURPASSWORD
+
+This is a shortcut, doing the equivalent of add_registry, and then add_current_profile.
 
 =head3 get_info_all
 
@@ -101,30 +105,45 @@ manually at any time.
 =head3 show profiles
 
 Show the list of registries and associated profiles currently in use (opened in this shell with
-add_registry + new_current_profile)
+add_registry + add_current_profile, or add).
 
 =head3 show tlds
 
-Show the list of TLDs handled by the currently selected registry
+Show the list of TLDs handled by the currently selected registry.
 
 =head3 show periods
 
-Show the list of allowed periods (domain name durations) for the currently selected registry
+Show the list of allowed periods (domain name durations) for the currently selected registry.
 
 =head3 show objects
 
-Show the list of managed objects types at the currently selected registry
+Show the list of managed objects types at the currently selected registry.
 
 =head3 show status
 
 Show the list of available status for the currently selected registry, to use
 as status name in some commands below (domain_update_status_* host_update_status_* 
-contact_update_status_*)
+contact_update_status_*).
 
-=head3 target X Y
+=head3 show config
 
-Switch to registry X (from currently available registries) and profile Y (from currently available
-profiles in registry X).
+This will show all current config options. See C<set> command below for the list of config options.
+
+=head3 set OPTION=VALUE
+
+The set command can be used to change some options inside the shell.
+
+The current list of available options is:
+
+=head4 verbose
+
+Set this option to 1 if you want a dump of all data retrieved from registry automatically after each operation, including failed ones, and including
+all displaying raw data exchanged with registry.
+
+=head3 target REGISTRYNAME PROFILENAME
+
+Switch to registry REGISTRYNAME (from currently available registries) and profile PROFILENAME (from currently available
+profiles in registry REGISTRYNAME).
 
 =head3 run FILENAME
 
@@ -132,6 +151,22 @@ Will open the local FILENAME and read in it commands and execute all of them ; y
 start your shell with a filename as argument and its commands will be run at beginning of
 session before giving the control back. They will be displayed (username and password will be
 masked) with their results.
+
+=head3 record FILENAME
+
+If called with a filename argument, all subsequent commands, and their results will be printed in the filename given.
+If called without argument, it stops a current recording session.
+
+=head3 !cmd
+
+All command line starting with a bang (!) will be treated as local commands to run through the local underlying OS shell.
+
+Example: !ls -l
+will display the content of the current directory.
+
+=head3 help
+
+Returns a succinct list of available commands.
 
 =head3 quit
 
@@ -255,7 +290,7 @@ The status names are those in the list given back by the show status command (se
 
 =head3 host_update_name_set HOSTNAME NEWNAME
 
-Change the current name of host objects from HOSTNAME to NEWNAME
+Change the current name of host objects from HOSTNAME to NEWNAME.
 
 
 =head2 CONTACT COMMANDS
@@ -310,19 +345,56 @@ For registries handling messages, like EPP poll features.
 
 =head3 message_retrieve [ID]
 
-Retrieve a message waiting at registry
+Retrieve a message waiting at registry.
 
 =head3 message_delete [ID]
 
-Delete a message waiting at registry
+Delete a message waiting at registry.
 
 =head3 message_waiting
 
-Notifies if messages are waiting at registry
+Notifies if messages are waiting at registry.
 
 =head3 message_count
 
-Get the numbers of messages waiting at the registry
+Get the numbers of messages waiting at the registry.
+
+=head1 COMPLETION
+
+If Term::Readline::Gnu or Term::Readline::Perl are installed, it will be automatically used by this shell 
+to provide standard shell autocompletion for commands and parameters.
+
+All commands described above will be available through autocompletion. As you use them,
+all parameters (domain names, contacts, hostnames, local files) will also be stored
+and provided to later autocompletion calls (with the [TAB] key).
+
+It will also autocomplete registry= and type= parameters during add/add_registry, from
+a basic default set of values: registry= values are taken from a basic Net::DRI install
+without taking into account any private DRD module, and type= values are a default set,
+not checked against registry= value.
+Same for target calls, where registry and/or profile name will be autocompleted as possible.
+
+It will even autocomplete TLD on domain names for your current registry after your typed
+the first label and a dot (and eventually some other characters), during any domain name operation.
+Same for durations and status values.
+
+Contacts and nameservers will also be autocompleted when used in any domain_* operation.
+
+Contacts attributes will be autocompleted during contact_create based on the current registry & profile.
+
+Information retrieved with domain_info calls will also be used in later autocompletion tries,
+regarding contact ids and hostnames. During a contact creation, the registry returned contact id
+is also added for later autocompletion tries.
+
+For autocompletion, contacts are specific to each registry. Hostnames are common to all registries,
+as are domain names, but domain names are checked against the available TLDs of the current registry when used 
+for autocompletion.
+
+=head1 LOGGING
+
+By default, all operations will have some logging information done in files stored in
+the working directory. There will be a core.log file for all operations and then one
+file per tuple (registry,profile).
 
 =head1 BATCH OPERATIONS
 
@@ -332,17 +404,20 @@ all domain_update commands. It can be used on a list of domain names for which
 all other parameters needed by the command are the same.
 
 To do that, just use the command normally as outlined above, but instead of the
-domain name, put a file path, with at least one / (so for a file batch.txt in the
-current directory, use ./batch.txt)
+domain name, put a file path, with at least one / (so for a file "batch.txt" in the
+current directory, use "./batch.txt").
+
+If you use backticks such as `command` for the domain name, the command will 
+be started locally and its output will be used just like a file.
 
 The shell will then apply the command and its parameters on the domain names
 listed in the specified file: you should have one domain name per line, blank
 lines and lines starting with # are ignored.
 
 At the same place a new file is created with a name derived from the given name
-in which the result of each domain name command will be written. If input is 
-the filename used, the results will be written to input.PID.TIME.results
-where PID is the program id of the running shell for these commands and time the
+in which the result of each domain name command will be written. If "input" is 
+the filename used, the results will be written to "input.PID.TIME.results"
+where PID is the program id of the running shell for these commands and TIME the
 Unix epoch when the batch started.
 
 As output the shell will give a summary of the number of operations done
@@ -366,7 +441,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -385,24 +460,37 @@ sub run
  my (@args)=@_;
  my $term=Term::ReadLine->new('Net::DRI shell');
  my $ctx={ term    => $term,
+           term_features => $term->Features(),
+           term_attribs => $term->Attribs(),
            dprompt => 'NetDRI',
            output  => $term->OUT() || \*STDOUT,
+           record_filename => undef,
+           record_filehandle => undef,
+           config => { verbose => 0 },
+           completion => { domains => {}, contacts => {}, hosts => {}, files => {} },
          };
+ if (exists $ctx->{term_features}->{ornaments}) { $term->ornaments(1); }
+ $ctx->{term_attribs}->{completion_function}=sub { return complete($ctx,@_); };
  $ctx->{prompt}=$ctx->{dprompt};
- my $oldfh=select($ctx->{output}); $|++; select($oldfh);
 
- output($ctx,"Welcome to Net::DRI experimental shell, version $VERSION\n");
+ output($ctx,"Welcome to Net::DRI shell, version $VERSION\n");
 
- $ctx->{dri}=Net::DRI->new(10);
- output($ctx,"Net::DRI object created with TTL=10s\n\n");
+ $ctx->{dri}=Net::DRI->new({cache_ttl => 10,logging=>'files'});
+ output($ctx,"Net::DRI object created with a cache TTL of 10 seconds and logging into current directory files\n\n");
 
+ $ctx->{file_quit}=0;
  shift(@args) if ($args[0] eq 'Net::DRI::Shell');
  handle_line($ctx,'run '.$args[0]) if (@args);
 
- while (defined(my $l=$ctx->{term}->readline($ctx->{prompt}.'> '))) 
+ unless ($ctx->{file_quit})
  {
-  last if handle_line($ctx,$l);
+  delete($ctx->{file_quit});
+  while (defined(my $l=$ctx->{term}->readline($ctx->{prompt}.'> '))) 
+  {
+   last if handle_line($ctx,$l);
+  }
  }
+
  $ctx->{dri}->end();
  return 0; ## TODO : should reflect true result of last command ?
 }
@@ -411,12 +499,24 @@ sub output
 {
  my $ctx=shift;
  print { $ctx->{output} } @_;
+ output_record($ctx,@_);
+}
+
+sub output_record
+{
+ my $ctx=shift;
+ return unless defined($ctx->{record_filehandle});
+ return if (@_==1 && ($_[0] eq '.' || $_[0] eq "\n"));
+ my $l=$ctx->{last_line};
+ print { $ctx->{record_filehandle} } scalar(localtime(time)),"\n\n",(defined($l)? ($l,"\n\n") : ('')),@_,"\n\n";
+ $ctx->{last_line}=undef;
 }
 
 sub handle_file
 {
  my ($ctx,$file)=@_;
  output($ctx,'Executing commands from file '.$file." :\n");
+ $ctx->{completion}->{files}->{$file}=time();
  open(my $ch,'<',$file) or die $!;
  while(defined(my $l=<$ch>))
  {
@@ -425,7 +525,11 @@ sub handle_file
   my $pl=$l;
   $pl=~s/(clID|client_login|client_password)=\S+/$1=********/g;
   output($ctx,$pl."\n");
-  handle_line($ctx,$l);
+  if (handle_line($ctx,$l))
+  {
+   $ctx->{file_quit}=1;
+   last;
+  }
  }
  close($ch) or die $!;
  return;
@@ -441,24 +545,175 @@ sub handle_line
  $l=~s/\s*$//;
 
  my ($rc,$msg);
- eval 
- { 
+ eval
+ {
   ($rc,$msg)=process($ctx,$l);
-  $msg.="\n".(process($ctx,'get_info_all'))[1] if ($l=~m/^(?:(?:domain|contact|host)_(?:check|info|create)|domain_renew) / && index($msg,'on average')==-1);
+  $msg.="\n".dump_info($ctx,scalar $rc->get_data_collection()) if (defined($rc) && (($l=~m/^(?:(?:domain|contact|host)_?(?:check|info|create)|domain_renew) / && (!defined($msg) || index($msg,'on average')==-1) && $rc->is_success()) || $ctx->{config}->{verbose}==1));
  };
+ $ctx->{last_line}=$l;
  if ($@)
  {
-  output($ctx,"An error happened:\n");
-  output($ctx,ref($@)? sprintf('EXCEPTION %d@%s : %s',$@->code(),$@->area(),$@->msg()) : $@);
-  output($ctx,"\n");
+  output($ctx,"An error happened:\n",ref($@)? sprintf('EXCEPTION %d@%s : %s',$@->code(),$@->area(),$@->msg()) : $@,"\n");
  } else
  {
-  output($ctx,$rc->as_string(1),"\n") if (defined($rc));
-  output($ctx,$msg,"\n") if (defined($msg));
+  my @r;
+  if (defined($rc))
+  {
+   push @r,$rc->as_string(1);
+  }
+  push @r,$msg if (defined($msg));
+  if (defined($rc) && $rc->is_closing() && $ctx->{dri}->transport()->has_state())
+  {
+   $ctx->{dri}->transport()->current_state(0);
+   push @r,'Server connection closed, will try to reconnect at next command.';
+  }
+  output($ctx,@r,"\n");
  }
 
  $ctx->{term}->addhistory($l);
+ $ctx->{last_line}=undef;
  return 0;
+}
+
+sub complete
+{
+ my ($ctx,$text,$line,$start)=@_; ## $text is last space separated word, $line the whole line, $start the position of the cursor in the line
+
+ ## Command completion
+ if ($start==0) ## command completion
+ {
+  return sort { $a cmp $b } grep { /^$text/ } qw/quit exit help run record message_retrieve message_delete domain_create domain_renew domain_delete domain_check domain_info domain_transfer_start domain_transfer_stop domain_transfer_query domain_transfer_accept domain_transfer_refuse domain_update_ns_set domain_update_ns_add domain_update_ns_del domain_update_status_set domain_update_status_add domain_update_status_del domain_update_contact_set domain_update_contact_add domain_update_contact_del host_create host_delete host_info host_check host_update_ip_set host_update_ip_add host_update_ip_del host_update_status_set host_update_status_add host_update_status_del host_update_name_set contact_create contact_info contact_check contact_delete contact_update contact_update_status_set contact_update_status_add contact_update_status_del contact_transfer_start contact_transfer_stop contact_transfer_query contact_transfer_accept contact_transfer_refuse set add add_registry target add_current_profile add_profile show get_info get_info_all message_waiting message_count domain_exist/;
+ }
+
+ ## Parameter completion
+ my ($cmd)=($line=~m/^(\S+)\s/);
+ if ($cmd eq 'show') { return sort { $a cmp $b } grep { /^$text/ } qw/profiles tlds periods objects status config/; }
+ if ($cmd eq 'set')  { return map { $_.'=' } sort { $a cmp $b } grep { /^$text/ } keys(%{$ctx->{config}}); }
+ if ($cmd eq 'run' || $cmd eq 'record') { return sort { $ctx->{completion}->{files}->{$b} <=> $ctx->{completion}->{files}->{$a} || $a cmp $b } grep { /^$text/ } keys(%{$ctx->{completion}->{files}}); }
+
+ if ($cmd eq 'add' || $cmd eq 'add_registry')
+ {
+  if (substr($line,$start-1-9+1,9) eq 'registry=')
+  {
+   my ($reg)=($text=~m/registry=(\S*)/);
+   $reg||='';
+   return sort { $a cmp $b } grep { /^$reg/ } qw/AERO AFNIC AG ARNES ASIA AT AU BE BIZ BookMyName BR BZ CAT CentralNic CoCCA COOP CZ DENIC EURid Gandi HN IENUMAT IM INFO LC LU ME MN MOBI NAME Nominet NO NU OpenSRS ORG OVH PL PRO PT SC SE SWITCH TRAVEL US VC VNDS WS/;
+  } elsif (substr($line,$start-1-5+1,5) eq 'type=')
+  {
+   my ($type)=($text=~m/type=(\S*)/);
+   $type||='';
+   return sort { $a cmp $b } grep { /^$type/ } qw/epp rrp rri dchk whois das ws email/;
+  } else
+  {
+   my @p=qw/registry clID name/;
+   push @p,'type' if $cmd eq 'add';
+   return map { $_.'=' } grep { /^$text/ } @p;
+  }
+ }
+
+ if ($cmd eq 'target')
+ {
+  my $regs=$ctx->{dri}->available_registries_profiles(0);
+  if (my ($reg)=($line=~m/^target\s+(\S+)\s+\S*$/))
+  {
+   return sort { $a cmp $b } grep { /^$text/ } (exists $regs->{$reg} ? @{$regs->{$reg}} : ());
+  } elsif ($line=~m/^target\s+\S*$/)
+  {
+   return sort { $a cmp $b } grep { /^$text/ } keys(%$regs);
+  }
+ }
+
+ if (substr($line,$start-1-9+1,9) eq 'duration=' && defined $ctx->{dri}->registry_name())
+ {
+  my ($p)=($text=~m/duration=(\S*)/);
+  $p||='';
+  my %p;
+  foreach my $pd ($ctx->{dri}->registry()->driver()->periods())
+  {
+   my $d=$pd->in_units('years');
+   if ($d > 0) { $p{$d.'Y'}=12*$d; next; }
+   $d=$pd->in_units('months');
+   if ($d > 0) { $p{$d.'M'}=$d; next; }
+  }
+  return sort { $p{$a} <=> $p{$b} } grep { /^$p/ } keys(%p); ## this is the correct ascending order, but it seems something else upstream is reordering it differently
+ }
+
+ if ($line=~m/^domain_\S+\s+\S*$/)
+ {
+  my @p=grep { /^$text/ } keys(%{$ctx->{completion}->{domains}});
+  if (defined $ctx->{dri}->registry())
+  {
+   my @tlds=$ctx->{dri}->registry()->driver()->tlds();
+   my $tlds=join('|',map { quotemeta($_) } @tlds);
+   @p=grep { /\.(?:$tlds)$/i } @p;
+   my $idx=index($text,'.');
+   if ( $idx >= 0 )
+   {
+    my $base=substr($text,0,$idx);
+    push @p,map { $base.'.'.$_ } @tlds;
+   }
+  }
+  return sort { ( $ctx->{completion}->{domains}->{$b} || 0) <=> ( $ctx->{completion}->{domains}->{$a} || 0 ) || $a cmp $b } @p;
+ }
+
+ if ($cmd eq 'domain_create') ## If we are here, we are sure the domain name has been completed already, due to previous test block
+ {
+  if (substr($line,$start-1-3+1,3) eq 'ns=')
+  {
+   my ($ns)=($text=~m/ns=(\S*)/);
+   $ns||='';
+   return _complete_hosts($ctx,$ns);
+  } elsif (grep { substr($line,$start-1-(1+length($_))+1,1+length($_)) eq $_.'=' } qw/admin registrant billing tech/)
+  {
+   my ($c)=($text=~m/(?:admin|registrant|billing|tech)=(\S*)/);
+   $c||='';
+   return _complete_contacts($ctx,$c);
+  } else
+  {
+   return map { $_.'=' } grep { /^$text/ } qw/duration ns admin registrant billing tech auth/;
+  }
+ }
+
+ if ($line=~m/^domain_update_ns_\S+\s+\S+\s+\S*/) { return _complete_hosts($ctx,$text); }
+
+ if ($line=~m/^(?:domain|host|contact)_update_status_\S+\s+\S+\s+\S*/)
+ {
+  my $o=$ctx->{dri}->local_object('status');
+  if (! defined $o) { return (); }
+  return sort { $a cmp $b } grep { /^$text/ } map { 'no'.$_ } $o->possible_no();
+ }
+
+ if ($line=~m/^domain_update_contact_\S+\s+\S+\s+\S*/) { return _complete_contacts($ctx,$text); }
+
+ if (my ($trans)=($line=~m/^domain_transfer_(\S+)\s+\S+\s+\S*/))
+ {
+  my @p=qw/auth/;
+  push @p,'duration' if $trans eq 'start';
+  return map { $_.'=' } sort { $a cmp $b } grep { /^$text/ } @p;
+ }
+
+ if ($cmd eq 'contact_create' && defined $ctx->{dri}->registry_name() && defined $ctx->{dri}->profile())
+ {
+  my $c=$ctx->{dri}->local_object('contact');
+  if (! defined $c) { return (); }
+  return map { $_.'=' } sort { $a cmp $b } grep { /^$text/ } $c->attributes();
+ }
+
+ if ($line=~m/^contact_\S+\s+\S*$/) { return _complete_contacts($ctx,$text); }
+ if ($line=~m/^host_\S+\s+\S*$/)    { return _complete_hosts($ctx,$text); }
+ if (my ($h)=($line=~m/^host_update_name_set\s+\S+\s+(\S*)$/)) { return _complete_hosts($ctx,$h); }
+
+ return ();
+}
+
+sub _complete_hosts    { my ($ctx,$text)=@_; return sort { $ctx->{completion}->{hosts}->{$b}    <=> $ctx->{completion}->{hosts}->{$a}    || $a cmp $b } grep { /^$text/ } keys(%{$ctx->{completion}->{hosts}}); }
+sub _complete_contacts
+{
+ my ($ctx,$text)=@_;
+ my @c=grep { /^$text/ } keys(%{$ctx->{completion}->{contacts}});
+ my $creg=$ctx->{dri}->registry_name();
+ if (defined $creg) { @c=grep { defined $ctx->{completion}->{contacts}->{$_}->[1] && $ctx->{completion}->{contacts}->{$_}->[1] eq $creg } @c; } ## Filtering per registry
+ return sort { $ctx->{completion}->{contacts}->{$b}->[0] <=> $ctx->{completion}->{contacts}->{$a}->[0] || $a cmp $b } @c;
 }
 
 sub process
@@ -467,6 +722,7 @@ sub process
  my ($rc,$m);
 
  my ($cmd,$params)=split(/\s+/,$wl,2);
+ $params='' unless defined($params);
  my @p=split(/\s+/,$params);
  my %p;
  my @g=($params=~m/\s*(\S+)=(\S[^=]*)(?:\s|$)/g);
@@ -484,13 +740,45 @@ sub process
   }
  }
 
+ foreach my $k (grep { /\./ } keys(%p))
+ {
+  my ($tk,$sk)=split(/\./,$k,2);
+  $p{$tk}={} unless exists($p{$tk});
+  $p{$tk}->{$sk}=$p{$k};
+  delete($p{$k});
+ }
+
+ return do_local($ctx,$cmd,\@p,\%p) if ($cmd=~m/^!/);
+ return help($ctx,$cmd,\@p,\%p) if ($cmd eq 'help');
  return handle_file($ctx,$p[0]) if ($cmd eq 'run');
- return do_dri($ctx,$cmd,\@p,\%p) if ($cmd=~m/^message_(?:retrieve|delete)$/); ## Not for contacts due to lc() !
- return do_domain($ctx,$cmd,\@p,\%p) if ($cmd=~m/^domain_(?:check|info)$/);
+ return record($ctx,$p[0])      if ($cmd eq 'record');
+ return do_dri($ctx,$cmd,\@p,\%p) if ($cmd=~m/^message_(?:retrieve|delete)$/);
+ return do_domain($ctx,$cmd,\@p,\%p) if ($cmd=~m/^domain_(?:check)$/);
  return do_domain_transfer($ctx,$cmd,\@p,\%p) if ($cmd=~m/^domain_transfer_(?:start|stop|query|accept|refuse)$/);
  return do_domain_update_ns($ctx,$cmd,\@p,\%p) if ($cmd=~m/^domain_update_ns_(?:add|del|set)$/);
  return do_domain_update_status($ctx,$cmd,\@p,\%p) if ($cmd=~m/^domain_update_status_(?:add|del|set)$/);
  return do_domain_update_contact($ctx,$cmd,\@p,\%p) if ($cmd=~m/^domain_update_contact_(?:add|del|set)$/);
+
+ if ($cmd eq 'domain_info')
+ {
+  my @r=do_domain($ctx,$cmd,\@p,\%p);
+  if (defined $r[0] && $r[0]->is_success())
+  {
+   my $ns=$ctx->{dri}->get_info('ns');
+   if (defined $ns) { foreach my $name ($ns->get_names()) { $ctx->{completion}->{hosts}->{$name}=time(); } }
+   $ns=$ctx->{dri}->get_info('host');
+   if (defined $ns) { foreach my $name ($ns->get_names()) { $ctx->{completion}->{hosts}->{$name}=time(); } }
+   my $cs=$ctx->{dri}->get_info('contact');
+   if (defined $cs)
+   {
+    foreach my $t ($cs->types())
+    {
+     foreach my $cc ($cs->get($t)) { $ctx->{completion}->{contacts}->{$cc->srid()}=[time(),$ctx->{dri}->registry_name()]; }
+    }
+   }
+  }
+  return @r;
+ }
 
  if ($cmd=~m/^host_(?:create|delete|info|check|update_(?:ip|status|name)_(?:add|del|set))$/)
  {
@@ -501,7 +789,13 @@ sub process
  if ($cmd=~m/^contact_(?:create|delete|info|check|update|update_status_(?:add|del|set)|transfer_(?:start|stop|query|accept|refuse))$/)
  {
   return (undef,'Registry does not support contact objects') unless $ctx->{dri}->has_object('contact');
-  return do_contact($ctx,$cmd,\@p,\%p);
+  my @r=do_contact($ctx,$cmd,\@p,\%p);
+  if ($cmd eq 'contact_create' && defined $r[0] && $r[0]->is_success())
+  {
+   my $id=$ctx->{dri}->get_info('id');
+   if (defined $id) { $ctx->{completion}->{contacts}->{$id}=[time(),$ctx->{dri}->registry_name()]; }
+  }
+  return @r;
  }
 
  {
@@ -513,12 +807,145 @@ sub process
  return (undef,'Unknown command '.$cmd);
 }
 
+sub do_local
+{
+ my ($ctx,$cmd,$ra,$rh)=@_;
+ $cmd=~s/^!//;
+ my $s=$cmd.' '.join(' ',@$ra);
+ my $out=qx($s);
+ return (undef,defined($out)? $out : 'Local command failed: '.$!);
+}
+
+sub help
+{
+ my ($ctx,$cmd,$ra,$rh)=@_;
+ my $m=<<EOF;
+Available commands:
+
+help
+add registry=REGISTRYNAME type=TYPE [cLID=YOURLOGIN]
+add_registry registry=REGISTRYNAME [clID=YOURLOGIN]
+add_current_profile name=PROFILENAME type=TYPE defer=0 client_login=YOURLOGIN client_password=YOURPASSWORD
+get_info_all
+show profiles
+show tlds
+show periods
+show objects
+show status
+show config
+set P=X
+target X Y
+run FILENAME
+record FILENAME
+quit
+domain_info DOMAIN
+domain_check DOMAIN
+domain_exist DOMAIN
+domain_transfer_start DOMAIN auth=AUTHCODE [duration=PERIOD]
+domain_transfer_stop DOMAIN [auth=AUTHCODE]
+domain_transfer_query DOMAIN [auth=AUTHCODE]
+domain_transfer_accept DOMAIN [auth=AUTHCODE]
+domain_transfer_refuse DOMAIN [auth=AUTHCODE]
+domain_update_ns_set DOMAIN HOSTNAMEA IPA1 IPA2 ... HOSTNAMEB IPB1 IPB2 ...
+domain_update_ns_add DOMAIN HOSTNAMEA IPA1 IPA2 ... HOSTNAMEB IPB1 IPB2 ...
+domain_update_ns_del DOMAIN HOSTNAMEA IPA1 IPA2 ... HOSTNAMEB IPB1 IPB2 ...
+domain_update_status_set DOMAIN STATUS1 STATUS2 ...
+domain_update_status_add DOMAIN STATUS1 STATUS2 ...
+domain_update_status_del DOMAIN STATUS1 STATUS2 ...
+domain_update_contact_set DOMAIN SRVID1 SRVID2 ...
+domain_update_contact_add DOMAIN SRVID2 SRVID2 ...
+domain_update_contact_del DOMAIN SRVID1 SRVID2 ...
+domain_renew DOMAIN [duration=X] [current_expiration=YYYY-MM-DD]
+domain_delete DOMAIN
+host_create HOSTNAME IP1 IP2 ...
+host_delete HOSTNAME
+host_info HOSTNAME
+host_check HOSTNAME
+host_update_ip_set HOSTNAME IP1 IP2 ...
+host_update_ip_add HOSTNAME IP1 IP2 ...
+host_update_ip_del HOSTNAME IP1 IP2 ...
+host_update_status_set HOSTNAME STATUS1 STATUS2 ...
+host_update_status_add HOSTNAME STATUS1 STATUS2 ...
+host_update_status_del HOSTNAME STATUS1 STATUS2 ...
+host_update_name_set HOSTNAME NEWNAME
+contact_create name=X org=Y street=Z1 street=Z2 email=A voice=B ...
+contact_delete SRID
+contact_info SRID
+contact_check SRID
+contact_update_status_set SRID STATUS1 STATUS2 ...
+contact_update_status_add SRID STATUS1 STATUS2 ...
+contact_update_status_del SRID STATUS1 STATUS2 ...
+contact_transfer_start SRID
+contact_transfer_stop SRID
+contact_transfer_query SRID
+contact_transfer_accept SRID
+contact_transfer_refuse SRID
+message_retrieve [ID]
+message_delete [ID]
+message_waiting
+message_count
+EOF
+ return (undef,$m);
+}
+
+sub record
+{
+ my ($ctx,$n)=@_;
+ my $m='';
+
+ ## Need to stop the current one in all cases ! (true record stop or a new record start)
+ if (defined($ctx->{record_filehandle}))
+ {
+  close($ctx->{record_filehandle});
+  $ctx->{record_filehandle}=undef;
+  $m='Stopped recording session to '.$ctx->{record_filename}."\n";
+ }
+
+ if (defined($n) && $n)
+ {
+  $ctx->{completion}->{files}->{$n}=time();
+  open(my $fh,'>',$n) or return (undef,$m.'Unable to write local file '.$n.' : '.$!);
+  $fh->autoflush(1);
+  $ctx->{record_filehandle}=$fh;
+  $ctx->{record_filename}=$n;
+  $m.='Started recording session to '.$ctx->{record_filename};
+ }
+ return (undef,$m? $m : 'Usage: record FILENAME (to start recording session to local FILENAME) or record (to stop current recording)');
+}
+
+## For local options, like verbose
+sub do_set
+{
+ my($ctx,$cmd,$ra,$rh)=@_;
+ $ctx->{config}={ %{$ctx->{config}},%$rh };
+ return;
+}
+
+sub do_add
+{
+ my($ctx,$cmd,$ra,$rh)=@_;
+ return (undef,'Usage: add registry=REGISTRYNAME type=PROTOCOLTYPE [clID=LOGIN] [name=PROFILENAME] [...]') unless (Net::DRI::Util::has_key($rh,'registry') && Net::DRI::Util::has_key($rh,'type'));
+ my %r=(registry => $rh->{registry});
+ $r{clID}=$rh->{clID} if exists($rh->{clID});
+ my @r=do_add_registry($ctx,'add_registry',$ra,\%r);
+ if (@r) { return @r; }
+ unless (exists($rh->{name}) && defined($rh->{name}))
+ {
+  my @p=$ctx->{dri}->available_profiles();
+  $rh->{name}=lc($rh->{registry}).(1+@p);
+ }
+ delete($rh->{registry});
+ delete($rh->{clID});
+ return do_add_current_profile($ctx,'add_current_profile',$ra,$rh);
+}
+
 sub do_add_registry
 {
  my ($ctx,$cmd,$ra,$rh)=@_;
+ return (undef,'Usage: add_registry registry=REGISTRYNAME [clID=LOGIN]') unless Net::DRI::Util::has_key($rh,'registry');
  my $reg=$rh->{registry};
  delete($rh->{registry});
- $ctx->{dri}->add_registry($reg,$rh);
+ if (! grep { $reg eq $_ } $ctx->{dri}->available_registries() ) { $ctx->{dri}->add_registry($reg,$rh); }
  $ctx->{dri}->target($reg);
  $ctx->{prompt}=$ctx->{dprompt}.'('.$reg.')';
  return;
@@ -532,22 +959,16 @@ sub do_target
  return;
 }
 
-## only this variant is handled: name, type, transport params, protocol params
-sub do_new_current_profile
+sub do_add_current_profile
 {
  my ($ctx,$cmd,$ra,$rh)=@_;
+ return (undef,'Usage: add_current_profile name=PROFILENAME type=PROTOCOL [defer=0] [client_login=YOURLOGIN] [client_password=YOURPASSWORD]') unless (Net::DRI::Util::has_key($rh,'name') && Net::DRI::Util::has_key($rh,'type'));
  my $name=$rh->{name};
  my $type=$rh->{type};
- my @p=split(/,/,$rh->{protocol}); ## not needed most of the time, otherwise find better API ?
+ my @p=split(/,/,$rh->{protocol} || ''); ## not needed most of the time, otherwise find better API ?
  delete(@{$rh}{qw/name type protocol/});
- if (exists($rh->{log_fh}))
- {
-  open(my $fh,'>>',$rh->{log_fh}) || die $!;
-  my $oldfh=select($fh); $|++; select($oldfh);
-  $rh->{log_fh}=$fh;
- }
- my $rc=$ctx->{dri}->$cmd($name,$type,[$rh],\@p);
- if ($rc->is_success() && $cmd eq 'new_current_profile')
+ my $rc=$ctx->{dri}->$cmd($name,$type,$rh,\@p);
+ if ($rc->is_success() && $cmd eq 'add_current_profile')
  {
   my @t=$ctx->{dri}->registry();
   $ctx->{prompt}=$ctx->{dprompt}.'('.$t[0].','.$t[1]->profile().')';
@@ -555,15 +976,17 @@ sub do_new_current_profile
  return ($rc,undef);
 }
 
-sub do_new_profile { return do_new_current_profile(@_); }
+sub do_add_profile { return do_add_current_profile(@_); }
 
 sub do_show
 {
  my ($ctx,$cmd,$ra,$rh)=@_;
- my $m='';
+ my $m='Usage: show profiles|tlds|periods|objects|status|config';
+ return (undef,$m) unless @$ra;
  if ($ra->[0] eq 'profiles')
  {
-  my $rp=$ctx->{dri}->available_registries_profiles();
+  my $rp=$ctx->{dri}->available_registries_profiles(1);
+  $m='';
   foreach my $reg (sort(keys(%$rp)))
   {
    $m.=$reg.': '.join(' ',@{$rp->{$reg}})."\n";
@@ -579,7 +1002,15 @@ sub do_show
   $m=join("\n",$ctx->{dri}->registry()->driver()->object_types());
  } elsif ($ra->[0] eq 'status')
  {
-  $m=join("\n",map { 'no'.$_ } $ctx->{dri}->local_object('status')->possible_no());
+  my $o=$ctx->{dri}->local_object('status');
+  $m=defined($o)? join("\n",map { 'no'.$_ } $o->possible_no()) : 'No status objects';
+ } elsif ($ra->[0] eq 'config')
+ {
+  $m='';
+  foreach my $k (sort(keys(%{$ctx->{config}})))
+  {
+   $m.=$k.'='.$ctx->{config}->{$k}."\n";
+  }
  }
  return (undef,$m);
 }
@@ -629,15 +1060,17 @@ sub do_domain
 {
  my ($ctx,$cmd,$ra,$rh)=@_;
  my $dom=shift(@$ra);
- return wrap_command_domain($ctx,$cmd,$dom);
+ return wrap_command_domain($ctx,$cmd,$dom,$rh);
 }
 
 sub do_domain_exist
 {
  my ($ctx,$cmd,$ra,$rh)=@_;
- my $e=$ctx->{dri}->$cmd(lc($ra->[0]));
- return (undef,'Unable to find if domain name '.$ra->[0].' exists') unless defined($e);
- return (undef,'Does domain name '.$ra->[0].' exists at registry? '.($e? 'YES' : 'NO'));
+ my $dom=lc($ra->[0]);
+ $ctx->{completion}->{domains}->{$dom}=time();
+ my $e=$ctx->{dri}->$cmd($dom);
+ return (undef,'Unable to find if domain name '.$dom.' exists') unless defined($e);
+ return (undef,'Does domain name '.$dom.' exists at registry? '.($e? 'YES' : 'NO'));
 }
 
 sub do_domain_transfer
@@ -674,6 +1107,7 @@ sub do_domain_update_contact
   foreach my $id (ref($ids)? @$ids : ($ids))
   {
    $cs->add($ctx->{dri}->local_object('contact')->srid($id),$type);
+   $ctx->{completion}->{contacts}->{$id}=[time(),$ctx->{dri}->registry_name()];
   }
  }
  return wrap_command_domain($ctx,$cmd,$dom,$cs);
@@ -693,6 +1127,7 @@ sub do_domain_create
   foreach my $c (ref($rh->{$t})? @{$rh->{$t}} : ($rh->{$t}))
   {
    $cs->add($ctx->{dri}->local_object('contact')->srid($c),$t);
+   $ctx->{completion}->{contacts}->{$c}=[time(),$ctx->{dri}->registry_name()];
   }
   delete($rh->{$t});
  }
@@ -741,6 +1176,8 @@ sub do_host
  {
   @p=@$ra;
  }
+ $ctx->{completion}->{hosts}->{$p[0]}=time();
+ $ctx->{completion}->{hosts}->{$p[1]}=time() if ($cmd eq 'host_update_name_set');
  return ($ctx->{dri}->$cmd(@p),undef);
 }
 
@@ -751,22 +1188,29 @@ sub do_contact
  my $c=$ctx->{dri}->local_object('contact');
  if ($cmd eq 'contact_create')
  {
-  build_contact($c,$rh);
+  $rh->{street}=[$rh->{street}] if (exists($rh->{street}) && !ref($rh->{street}));
+  build_contact($ctx,$c,$rh);
  } elsif ($cmd=~m/^contact_update_status_(?:add|del|set)$/)
  {
-  $c->srid(shift(@$ra));
+  my $id=shift(@$ra);
+  $c->srid($id);
+  $ctx->{completion}->{contacts}->{$id}=[time(),$ctx->{dri}->registry_name()];
   @p=(build_status($ctx,$ra));
  } elsif ($cmd eq 'contact_update')
  {
-  $c->srid(shift(@$ra));
+  my $id=shift(@$ra);
+  $c->srid($id);
+  $ctx->{completion}->{contacts}->{$id}=[time(),$ctx->{dri}->registry_name()];
   my $toc=$ctx->{dri}->local_object('changes');
   my $c2=$ctx->{dri}->local_object('contact');
-  build_contact($c2,$rh); 
+  build_contact($ctx,$c2,$rh); 
   $toc->set('info',$c2);
   @p=($toc);
  } else
  {
-  $c->srid(shift(@$ra));
+  my $id=shift(@$ra);
+  $c->srid($id);
+  $ctx->{completion}->{contacts}->{$id}=[time(),$ctx->{dri}->registry_name()];
   @p=@$ra;
  }
  return ($ctx->{dri}->$cmd($c,@p),undef);
@@ -781,77 +1225,92 @@ sub wrap_command_domain
  my $dom=shift;
  return (undef,'Undefined domain name') unless (defined($dom) && $dom);
 
+ my ($fin,$fout,$res);
+
  if ($dom=~m!/!) ## Local file
  {
   return (undef,'Local file '.$dom.' does not exist or unreadable') unless (-e $dom && -r _);
-  my $res=$dom.'.'.$$.'.'.time().'.results';
+  $res=$dom.'.'.$$.'.'.time().'.results'; ## TODO choose a predictable filename ? if so, use an option
   open(my $fin,'<',$dom)  or return (undef,'Unable to read local file '.$dom.' : '.$!);
   open(my $fout,'>',$res) or return (undef,'Unable to write (for results) local file '.$res.' : '.$!);
-  my $withinfo=($cmd eq 'domain_check' || $cmd eq 'domain_info')? 1 : 0;
-  my @rc;
-  my $tstart=Time::HiRes::time();
-  while(defined(my $l=<$fin>))
-  {
-   chomp($l);
-   my @r=($l);
-
-   if (Net::DRI::Util::is_hostname($l))
-   {
-    my $rc=$ctx->{dri}->$cmd(lc($l),@_);
-    push @r,$rc->as_string(1);
-    push @r,$ctx->{dri}->get_info_all() if $withinfo;
-   } else
-   {
-    push @r,'Invalid domain name';
-   }
-   push @rc,\@r;
-   output($ctx,'.');
-  }
-  my $tstop=Time::HiRes::time();
-  output($ctx,"\n");
-  close($fin);
-
-  my %r;
-  ## We write the whole file at the end for better performances (but we opened it right at the beginning to test its writability)
-  foreach my $rc (@rc)
-  {
-   my $l=shift(@$rc);
-   my $rcm=shift(@$rc);
-   if ($cmd eq 'domain_check')
-   {
-    my $rh=shift(@$rc);
-    $rcm.=' exist='.$rh->{exist}.' exist_reason='.$rh->{exist_reason};
-   } elsif ($cmd eq 'domain_info')
-   {
-    my $rh=shift(@$rc);
-    $rcm.=' '.join(' ',map { $_.'=['.pretty_string($rh->{$_},0).']' } qw/clID crDate exDate contact ns status auth/);
-   }
-   print { $fout } $l,' ',$rcm,"\n";
-   $r{$rcm}++;
-  }
-  close($fout);
-  my $t=@rc;
-
-  my $m=join("\n",map { sprintf('%d/%d (%.02f%%) : %s',$r{$_},$t,100*$r{$_}/$t,$_) } sort { $a cmp $b } keys(%r));
-  $m.="\n".sprintf('%d operations in %d seconds, on average %.2f op/s = %.2f s/op',$t,$tstop-$tstart,$t/($tstop-$tstart),($tstop-$tstart)/$t);
-  return (undef,$m);
- } else ## True domain name
+ } elsif ($dom=~m/`.+`/) ## Local executable
  {
+  $dom=~s/`(.+)`/$1/;
+  $res=$cmd.'.'.$$.'.'.time().'.results'; ## see above
+  open(my $fin,'-|',$dom) or return (undef,'Unable to execute local command '.$dom.' : '.$!);
+  open(my $fout,'>',$res) or return (undef,'Unable to write (for results) local file '.$res.' : '.$!);
+ }
+
+ unless (defined($fin) && defined($fout)) ## Pure unique domain name
+ {
+  $ctx->{completion}->{domains}->{$dom}=time();
   return (undef,'Invalid domain name: '.$dom) unless Net::DRI::Util::is_hostname($dom);
   return ($ctx->{dri}->$cmd(lc($dom),@_),undef);
  }
+
+ my $withinfo=($cmd eq 'domain_check' || $cmd eq 'domain_info')? 1 : 0;
+ my @rc;
+ my $tstart=Time::HiRes::time();
+ while(defined(my $l=<$fin>))
+ {
+  chomp($l);
+  my @r=($l);
+  $ctx->{completion}->{domains}->{$l}=time();
+  if (Net::DRI::Util::is_hostname($l))
+  {
+   my $rc=$ctx->{dri}->$cmd(lc($l),@_);
+   push @r,$rc->as_string(1);
+   push @r,$ctx->{dri}->get_info_all() if $withinfo;
+  } else
+  {
+   push @r,'Invalid domain name';
+  }
+  push @rc,\@r;
+  output($ctx,'.');
+ }
+ my $tstop=Time::HiRes::time();
+ output($ctx,"\n");
+ close($fin);
+
+ my %r;
+ ## We write the whole file at the end for better performances (but we opened it right at the beginning to test its writability)
+ foreach my $rc (@rc)
+ {
+  my $l=shift(@$rc);
+  my $rcm=shift(@$rc);
+  if ($cmd eq 'domain_check')
+  {
+   my $rh=shift(@$rc);
+   $rcm.=' exist='.$rh->{exist}.' exist_reason='.$rh->{exist_reason};
+  } elsif ($cmd eq 'domain_info')
+  {
+   my $rh=shift(@$rc);
+   $rcm.=' '.join(' ',map { $_.'=['.pretty_string($rh->{$_},0).']' } qw/clID crDate exDate contact ns status auth/);
+  }
+  print { $fout } $l,' ',$rcm,"\n";
+  $r{$rcm}++;
+ }
+ close($fout);
+ my $t=@rc;
+
+ my $m=join("\n",map { sprintf('%d/%d (%.02f%%) : %s',$r{$_},$t,100*$r{$_}/$t,$_) } sort { $a cmp $b } keys(%r));
+ $m.="\n".sprintf('%d operations in %d seconds, on average %.2f op/s = %.2f s/op',$t,$tstop-$tstart,$t/($tstop-$tstart),($tstop-$tstart)/$t); ## Warning, substring "on average" is used in handle_line(), do not change it
+ $m.="\nResults in local file: $res";
+ return (undef,$m);
 }
 
 ####################################################################################################
 
 sub build_contact
 {
- my ($c,$rh)=@_;
+ my ($ctx,$c,$rh)=@_;
  no strict 'refs'; ## no critic (ProhibitNoStrict)
  while(my ($m,$v)=each(%$rh))
  {
   $c->$m($v);
  }
+ if (exists $rh->{srid}) { $ctx->{completion}->{contacts}->{$rh->{srid}}=[time(),$ctx->{dri}->registry_name()]; }
+ if (exists $rh->{id})   { $ctx->{completion}->{contacts}->{$rh->{id}}  =[time(),$ctx->{dri}->registry_name()]; }
 }
 
 sub build_status
@@ -886,6 +1345,7 @@ sub build_hosts
   }
  }
  $ns->add($name,\@ips);
+ $ctx->{completion}->{hosts}->{$name}=time();
  return $ns;
 }
 
@@ -909,7 +1369,15 @@ sub pretty_string
 {
  my ($v,$full)=@_;
  $full||=0;
- return $v unless ref($v);
+ unless(ref($v))
+ {
+  return '<undef>' unless defined($v);
+  $v=~s/\s*$//;
+  return $v unless ($v=~m/^<\?xml /);
+  my $vi=Net::DRI::Util::xml_indent($v);
+  $vi=~s/\n/\n\t\t/g;
+  return $vi;
+ }
  return join(' ',@$v) if (ref($v) eq 'ARRAY');
  return join(' ',map { $_.'='.$v->{$_} } keys(%$v)) if (ref($v) eq 'HASH');
  return ($full? "Ns:\n": '').$v->as_string(1) if ($v->isa('Net::DRI::Data::Hosts'));
@@ -928,6 +1396,26 @@ sub pretty_string
  return ($full? "Date:\n" : '').$v->set_time_zone('UTC')->strftime('%Y-%m-%d %T').' UTC' if ($v->isa('DateTime'));
  return ($full? "Duration:\n" : '').sprintf('P%dY%dM%dDT%dH%dM%dS',$v->in_units(qw/years months days hours minutes seconds/)) if ($v->isa('DateTime::Duration')); ## ISO8601
  return $v;
+}
+
+sub dump_info
+{
+ my ($ctx,$rh)=@_;
+ my @r;
+ foreach my $k1 (sort(keys(%$rh)))
+ {
+  foreach my $k2 (sort(keys(%{$rh->{$k1}})))
+  {
+   push @r,$k1.','.$k2;
+   next if ($k1 eq 'session' && $k2 eq 'exchange' && $ctx->{config}->{verbose}==0);
+   foreach my $k3 (sort(keys(%{$rh->{$k1}->{$k2}})))
+   {
+    push @r,"\t${k3}: ".pretty_string($rh->{$k1}->{$k2}->{$k3},0);
+   } 
+   push @r,'';
+  }
+ }
+ return join("\n",@r);
 }
 
 ####################################################################################################

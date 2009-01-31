@@ -14,78 +14,78 @@ eval {
 ############################################################################################################
 
 $dri->add_registry('VNDS',{});
-$rc=$dri->target('VNDS')->new_current_profile('profile1','whois');
+$rc=$dri->target('VNDS')->add_current_profile('profile1','whois');
 die($rc) unless $rc->is_success();
 display('nsi.com',$dri);
 display('laposte.net',$dri);
 
 $dri->add_registry('AERO',{});
-$rc=$dri->target('AERO')->new_current_profile('profile1','whois');
+$rc=$dri->target('AERO')->add_current_profile('profile1','whois');
 die($rc) unless $rc->is_success();
 display('cdg.aero',$dri);
 
 $dri->add_registry('ORG',{});
-$rc=$dri->target('ORG')->new_current_profile('profile1','whois');
+$rc=$dri->target('ORG')->add_current_profile('profile1','whois');
 die($rc) unless $rc->is_success();
 display('laptop.org',$dri);
 
 $dri->add_registry('INFO',{});
-$rc=$dri->target('INFO')->new_current_profile('profile1','whois');
+$rc=$dri->target('INFO')->add_current_profile('profile1','whois');
 die($rc) unless $rc->is_success();
 display('mta.info',$dri);
 
 $dri->add_registry('EURid',{});
-$rc=$dri->target('EURid')->new_current_profile('profile1','whois');
+$rc=$dri->target('EURid')->add_current_profile('profile1','whois');
 die($rc) unless $rc->is_success();
 display('europa.eu',$dri);
 
 $dri->add_registry('BIZ',{});
-$rc=$dri->target('BIZ')->new_current_profile('profile1','whois');
+$rc=$dri->target('BIZ')->add_current_profile('profile1','whois');
 die($rc) unless $rc->is_success();
 display('neulevel.biz',$dri);
 
 $dri->add_registry('MOBI',{});
-$rc=$dri->target('MOBI')->new_current_profile('profile1','whois');
+$rc=$dri->target('MOBI')->add_current_profile('profile1','whois');
 die($rc) unless $rc->is_success();
 display('buongiorno.mobi',$dri);
 
 $dri->add_registry('NAME',{});
-$rc=$dri->target('NAME')->new_current_profile('profile1','whois');
+$rc=$dri->target('NAME')->add_current_profile('profile1','whois');
 die($rc) unless $rc->is_success();
 display('sudoku.name',$dri);
 
 $dri->add_registry('LU',{});
-$rc=$dri->target('LU')->new_current_profile('profile1','whois');
+$rc=$dri->target('LU')->add_current_profile('profile1','whois');
 die($rc) unless $rc->is_success();
 display('restena.lu',$dri);
 
 $dri->add_registry('WS',{});
-$rc=$dri->target('WS')->new_current_profile('profile1','whois');
+$rc=$dri->target('WS')->add_current_profile('profile1','whois');
 die($rc) unless $rc->is_success();
 display('website.ws',$dri);
 
 $dri->add_registry('SE',{});
-$rc=$dri->target('SE')->new_current_profile('profile1','whois');
+$rc=$dri->target('SE')->add_current_profile('profile1','whois');
 die($rc) unless $rc->is_success();
 display('malmo.se',$dri);
 
 $dri->add_registry('CAT',{});
-$rc=$dri->target('CAT')->new_current_profile('profile1','whois');
+$rc=$dri->target('CAT')->add_current_profile('profile1','whois');
 die($rc) unless $rc->is_success();
-display('madrid.cat',$dri);
+display('barcelona.cat',$dri);
 
 $dri->add_registry('AT',{});
-$rc=$dri->target('AT')->new_current_profile('profile1','whois');
+$rc=$dri->target('AT')->add_current_profile('profile1','whois');
 die($rc) unless $rc->is_success();
 display('stare.at',$dri);
 
 $dri->add_registry('TRAVEL',{});
-$rc=$dri->target('TRAVEL')->new_current_profile('profile1','whois');
+$rc=$dri->target('TRAVEL')->add_current_profile('profile1','whois');
 die($rc) unless $rc->is_success();
 display('paris.travel',$dri);
 
 $dri->add_registry('US',{});
-$rc=$dri->target('US')->new_current_profile('profile1','whois');
+$rc=$dri->target('US')->add_current_profile('profile1','whois');
 die($rc) unless $rc->is_success();
 display('disney.us',$dri);
 

@@ -18,10 +18,12 @@
 package Net::DRI::Protocol::DAS::Connection;
 
 use strict;
+
+use Net::DRI::Util;
 use Net::DRI::Data::Raw;
 use Net::DRI::Protocol::ResultStatus;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -77,14 +79,15 @@ sub read_data
   last if $l=~m/^Status: /;
  }
 
- die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED','Unable to read answer (connection closed by registry ?)','en')) unless $a[-1]=~m/^Status: /;
+ @a=map { Net::DRI::Util::decode_ascii($_); } @a;
+ die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED_CLOSING','Unable to read answer (connection closed by registry ?)','en')) unless $a[-1]=~m/^Status: /;
  return Net::DRI::Data::Raw->new_from_array(\@a);
 }
 
 sub write_message
 {
  my ($class,$to,$msg)=@_;
- return $msg->as_string();
+ return Net::DRI::Util::encode_ascii($msg->as_string());
 }
 
 ####################################################################################################

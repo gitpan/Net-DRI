@@ -20,10 +20,10 @@ sub myrecv
 {
  return Net::DRI::Data::Raw->new_from_string($R2? $R2 : "200 Command completed successfully\r\n.\r\n");
 }
+my $dri=Net::DRI::TrapExceptions->new(-1); ## we do not want caching for now
 
-my $dri=Net::DRI->new(-1); ## we do not want caching for now
 $dri->add_registry('VNDS',{tz=>'America/New_York'});
-$dri->target('VNDS')->new_current_profile('p1','Net::DRI::Transport::Dummy',[{f_send=>\&mysend,f_recv=>\&myrecv}],'Net::DRI::Protocol::RRP',[]);
+$dri->target('VNDS')->add_current_test_profile('p1','Dummy',{f_send=>\&mysend,f_recv=>\&myrecv},'RRP');
 
 $R2="200 Command completed successfully\r\nregistration expiration date:2009-09-22 10:27:00.0\r\nstatus:ACTIVE\r\n.\r\n";
 my $rc=$dri->domain_create('example2.com',{pure_create=>1,duration => DateTime::Duration->new(years => 10)});

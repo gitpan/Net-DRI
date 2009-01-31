@@ -1,6 +1,6 @@
 ## Domain Registry Interface, RRI Connection handling
 ##
-## Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
+## Copyright (c) 2007,2008,2009 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -19,12 +19,11 @@ package Net::DRI::Protocol::RRI::Connection;
 
 use strict;
 
-use Encode ();
-
+use Net::DRI::Util;
 use Net::DRI::Data::Raw;
 use Net::DRI::Protocol::ResultStatus;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -70,7 +69,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub login
 {
- my ($class, $to, $cm, $id, $pass, $cltrid, $dr, $newpass, $pdata) = @_;
+ my ($class, $cm, $id, $pass, $cltrid, $dr, $newpass, $pdata) = @_;
 
  my $mes=$cm->();
  $mes->command(['login']);
@@ -78,24 +77,24 @@ sub login
  push @d,['user',$id];
  push @d,['password',$pass];
  $mes->command_body(\@d);
- return $class->write_message($to,$mes);
+ return $mes;
 }
 
 sub logout
 {
- my ($class,$to,$cm,$cltrid)=@_;
+ my ($class,$cm,$cltrid)=@_;
  my $mes=$cm->();
  $mes->command(['logout']);
  $mes->cltrid($cltrid) if $cltrid;
- return $class->write_message($to,$mes);
+ return $mes;
 }
 
 sub keepalive
 {
- my ($class,$to,$cm,$cltrid)=@_;
+ my ($class,$cm,$cltrid)=@_;
  my $mes=$cm->();
  $mes->command(['hello']);
- return $class->write_message($to,$mes);
+ return $mes;
 }
 
 ####################################################################################################
@@ -105,32 +104,33 @@ sub read_data
  my ($class,$to,$sock)=@_;
 
  my $version = $to->{transport}->{protocol_version};
- my $m;
+ my $m='';
  my $c;
- $sock->read($c, 4); ## first 4 bytes are the packed length
- die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED',
+ $sock->sysread($c, 4); ## first 4 bytes are the packed length
+ die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED_CLOSING',
 	'Unable to read RRI 4 bytes length (connection closed by registry ?)',
 	'en')) unless $c;
  my $length = unpack('N', $c);
  while ($length > 0)
  {
   my $new;
-  $length-=$sock->read($new,$length);
+  $length-=$sock->sysread($new,$length);
   $m.=$new;
  }
 
+ $m=Net::DRI::Util::decode_utf8($m);
  die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_SYNTAX_ERROR',
 	$m ? $m : '<empty message from server>', 'en'))
 	unless ($m =~ m!</registry-response>$!);
 
- return Net::DRI::Data::Raw->new_from_string($m);
+ return Net::DRI::Data::Raw->new_from_xmlstring($m);
 }
 
 sub write_message
 {
  my ($self,$to,$msg)=@_;
 
- my $m=Encode::encode('utf8',$msg->as_string());
+ my $m=Net::DRI::Util::encode_utf8($msg->as_string());
  my $l = pack('N', length($m)); ## DENIC-11
  return $l.$m;
 }

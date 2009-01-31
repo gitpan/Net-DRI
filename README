@@ -2,7 +2,7 @@ Net::DRI
 ========
 
 A Perl library to access Domain Name Registries/Registrars
-Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>
+Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>
 with help and bugfix from various individuals
 (see Changes file and our website)
 
@@ -47,13 +47,14 @@ Currently Net::DRI ships with:
   * Domain/Contact/Host and other extensions needed for extra services in various TLD:
     .EU .COM .NET .MOBI .AERO .CAT .US .PL .SE .BE .AT .COOP .LU .ASIA .AU .NAME .ORG .UK
     .DE .CH .LI .HN .SC .VC .AG .BZ .LC .MN .ME .CZ .TRAVEL .NO .BR .JOBS .PRO .FR .PT
-    .CX .GS .TL .KI .MS .MU .NF .HT
+    .CX .GS .TL .KI .MS .MU .NF .HT .IM .SI .NG .NA
 - a full DAS (Domain Availability Service) implementation for .BE & .EU
 - a full Whois implementation (RFC 3912) for thin and thick registries :
      support included for domain names in .COM .NET .ORG .BIZ .INFO .AERO
      .EU .MOBI .NAME .LU .WS .SE .CAT .AT .TRAVEL .US
 - an IRIS (RFC3981) implementation with LWZ transport (RFC4993) for DCHK (5144):
   currently only DENIC registry (.DE) provide this service
+  XCP transport (RFC4992) is also available
 - an UDP/TCP/TLS socket transport
 - an HTTP/HTTPS transport
 - various SOAP transports over HTTP/HTTPS
@@ -61,12 +62,13 @@ Currently Net::DRI ships with:
 - Net::DRI::DRD::* modules for : .EU .COM .NET .TV .CC .WS .SE .PL .US .CAT .FR
 		.BE .MOBI .INFO .ORG .AT .LU .BIZ .NAME .NU .UK .AU .AERO .ASIA .COOP
 		IENUMAT .DE .CH .LI .HN .SC .VC .AG .BZ .LC .MN .ME .CZ .TRAVEL .PT
-                .NO .BR .PRO CoCCA CentralNic
+                .NO .BR .PRO CoCCA CentralNic IM SI
 - a Net::DRI::DRD::AFNIC covering AFNIC registry for .FR
      (only domain_check through web services and all operations by email)
 - Net::DRI::DRD::* modules to use registrars API for Gandi, OVH, BookMyName, OpenSRS
-- a shell (Net::DRI::Shell) providing logging and batch operations to be able
-  to leverage all Net::DRI power without writing any line of code
+- a shell (Net::DRI::Shell) providing autocompletion, logging and batch operations to be able
+  to leverage all Net::DRI power without writing any line of code 
+  (see Net::DRI::Shell module documentation for all details)
 
 If you are a registry/registrar/reseller, we would welcome
 the opportunity to be able to test Net::DRI against your system. Please
@@ -85,9 +87,9 @@ with utf8 handling which will cause errors for EPP.
 
 You also need the following modules:
 
-Carp (Perl internal)
-DateTime (*)
-DateTime::Duration (*)
+Carp (*)
+DateTime
+DateTime::Duration
 DateTime::Format::Strptime
 DateTime::Format::ISO8601 (>=0.06)
 DateTime::TimeZone
@@ -95,7 +97,7 @@ Class::Accessor
 Class::Accessor::Chained
 Time::HiRes
 Email::Valid
-IO::Socket::INET (Perl internal)
+IO::Socket::INET (*)
 IO::Socket::SSL (>=0.90)
 XML::LibXML
 UNIVERSAL::require
@@ -106,10 +108,13 @@ Net::SMTP (needed only for AFNIC emails)
 LWP::UserAgent (needed only for OpenSRS, and .PL)
 Digest::MD5 (needed only for OpenSRS)
 Net::DNS (needed only for .DE IRIS DCHK queries)
+IO::Uncompress::Inflate & IO::Uncompress::RawInflate (needed only for .DE IRIS DCHK queries) (*)
 
 
-(*) all dates and durations exchanged with Net::DRI should be
+All dates and durations exchanged with Net::DRI should be
 DateTime and DateTime::Duration objects
+
+Modules marked (*) are core Perl modules.
 
 Install
 -------
@@ -118,7 +123,7 @@ Use the standard procedure:
 perl Makefile.PL ; make ; make test ; make install
 Or just copy the content of the lib/ directory somewhere in your path.
 You can use tests available in t/ to make sure everything is well.
-(all tests are done locally and do not require a network connection ; 
+(all tests are done locally and do not require a network connection;
 those who require a network connection are not enabled by default)
 
 How to use
@@ -136,7 +141,7 @@ coop_epp.pl  : as registrar, connect to .COOP test systems
 epp_client_no.pl (+ xmlfilter.pl) : as registrar, do operations with the .NO registry
 eurid_das.pl : for anyone, to check domain availability in .EU
 whois.pl     : for anyone, to do whois queries for some TLDs.
-iris_dchk.pl : for anyoen, to do IRIS DCHK queries for some .DE domain names
+iris_dchk.pl : for anyone, to do IRIS DCHK queries for some .DE domain names
 
 In the t subdirectory, the test files can also be studied for insight
 of all the API available.
@@ -150,12 +155,18 @@ Net::DRI uses an internal cache (in the future many different backends will
 be available for this service), and you can provide the global time to live of objects
 in it when you create the Net::DRI object. A negative ttl means no cache at all.
 It is recommended not to completely disable the cache, and to have a ttl of at
-least of few seconds : it will cut down the use of checks and related verifications
+least of few seconds: it will cut down the use of checks and related verifications
 done at registry, especially for complex operations.
 
-Typical use of this library would go along those lines:
+Typical use of this library would be like the following:
+
 - $dri=Net::DRI->new(...) to create the global object. Save the result,
-  everything will be done with methods applied on this object
+  everything will be done with methods applied on this object.
+  You can choose the logging you wish (among base modules provided: no logging
+  at all, all logging to STDERR and logging into files, one per registry+profile)
+  and the cache time to live. See Net::DRI module documentation for more information
+  on caching and logging.
+
 - $dri->add_registry(...) to add a new registry driver
   First argument is the registry class name (Net::DRI::DRD:: will be added if no :: is found),
   second argument is an hash ref setting information : you should have at least
@@ -170,11 +181,10 @@ Typical use of this library would go along those lines:
   Besides the registry name you can also pass a domain name or a TLD, and the library
   will try to find the correct registry. This will work only if you have no overlap between
   your TLDs among various registries
-- $dri->new_profile('profilename','transport class',[transport params],'protocol class',[protocol params])
- (or new_current_profile with same parameters as in new_profile and it will also
+
+- $dri->add_profile('profilename','profiletype',{transport params},[protocol params])
+ (or add_current_profile with same parameters as in add_profile and it will also
    set the default profile to the one being created)
-  OR
-  $dri->new_profile('profilename','profiletype',[transport params],[protocol params])
   to use registry driver default for profiletype (see transport_protocol_default in each DRD modules)
   for transport & protocol classes.
 
@@ -191,7 +201,7 @@ Typical use of this library would go along those lines:
 
   You switch profile using the $dri->target('registry name','profile name') call.
 
-  new_profile() and new_current_profile() return a Net::DRI::Protocol::ResultStatus
+  add_profile() and add_current_profile() return a Net::DRI::Protocol::ResultStatus
   in all cases, and this should be tested with ->is_success() to be sure the profile
   has been created correctly.
   They may also die for some other internal errors.
@@ -213,13 +223,18 @@ Typical use of this library would go along those lines:
 
  You get back for most of the calls an object representing the status.
  It is an instance of Net::DRI::Protocol::ResultStatus, please see its documentation.
+ Through it you can access all details about the operation that has been done, including
+ raw data, using the get_data() and get_data_collection() methods (see module documentation).
+ As long as you keep the object, the data is there, and will not be deleted, when data
+ in cache (and accessed through $dri->get_info()) will be deleted after its time to live
+ has elapsed.
 
  You can also always use:
  result_is_success() result_code() result_native_code() result_message() result_lang() 
  result_is_pending() result_trid() methods
  to get back the same information (if not given by the methods or if you want to discard output)
 
- Information that has been sent by registry will be available through $dri->get_info(...)
+ Information that has been sent by registry will also be available through $dri->get_info(...)
  with a specific key. The key to use depends on the operation, but should be mostly registry-independent.
  get_info() gives back information related to the latest operation.
  If you use target() and later get_info() you will get information related to the latest operation
@@ -278,6 +293,7 @@ examples of use and full API coverage.
 
  The following operations are done (if pure creation is asked, only step 4 is done):
 
+ 0) we do a domain_check operation and stop if the domain exists already
  1) we separate nameservers : those being inside domain name being created, those being outside
  2) we test outside nameservers for existence at registry, and if it fails, we try to create them
  3) we create all needed contacts, for thick registries
@@ -314,7 +330,7 @@ examples of use and full API coverage.
  Ask for all information on a given domain name at the current registry and current profile.
  A second optional parameter is an hash ref. It can include an auth key, for EPP registries for example.
 
- You may use get_info with the following keys to get more information:
+ You may use get_info or ResultStatus::get_data with the following keys to get more information:
  - ns : a Net::DRI::Data::Hosts object representing the nameservers of the domain
  - status : a Net::DRI::Data::StatusList object representing the current status list of the domain queried
  - exDate, crDate, upDate, trDate : DateTime objects representing the expiration, creation, last update, and
@@ -333,7 +349,9 @@ examples of use and full API coverage.
  Check if the given list of domain names exist or not at the current registry and current profile.
 
  $dri->get_info('exist','domain',$domain) returns 0 or 1 for the given domain name in $domain
- (the cache ttl must be positive and large enough (few seconds) for that to work)
+ (the cache ttl must be positive and large enough (few seconds) for that to work) ;
+ you can also use $rc->get_data('domain',$domain,'exist') - please note the different API -
+ which will always have data, independently from cache.
 
 * domain_exist()
 
@@ -523,7 +541,7 @@ See corresponding domain_* methods.
 
 * contact_create()
 
- Create a new contact at registry. The first and only argument should be a Net::DRI::Data::Contact object.
+ Create a new contact at registry. The first and only argument should be a Net::DRI::Data::Contact object (or one of its subclasses).
 
 * contact_delete()
 * contact_info()

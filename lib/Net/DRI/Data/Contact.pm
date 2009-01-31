@@ -15,20 +15,21 @@
 #
 #########################################################################################
 
-
 package Net::DRI::Data::Contact;
 
 use strict;
 use base qw(Class::Accessor::Chained); ## provides a new() method
-__PACKAGE__->mk_accessors(qw(name org street city sp pc cc email voice fax loid roid srid auth disclose));
+
+our @ATTRS=qw(name org street city sp pc cc email voice fax loid roid srid auth disclose);
+__PACKAGE__->register_attributes(@ATTRS);
 
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
 use Email::Valid;
-use Encode ();
+use Encode (); ## we need here direct use of Encode, not through Net::DRI::Util::encode_* as we need the default substitution for unknown data
 
-our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -134,6 +135,15 @@ create the internationalized part from the localized part ; existing localized d
 as the internationalized part must be a subset of UTF-8 when the localized one can be the full UTF-8,
 this operation may creates undefined characters (?) as result
 
+=head2 as_string()
+
+return a string formed with all data contained in this contact object ; this is mostly useful for debugging and logging, this
+string should not be parsed as its format is not guaranteed to remain stable, you should use the above accessors
+
+=head2 attributes()
+
+return an array of attributes name available in this contact object (taking into account any subclass specific attribute)
+
 =head1 SUPPORT
 
 For now, support questions should be sent to:
@@ -167,6 +177,24 @@ See the LICENSE file that comes with this distribution for more details.
 ####################################################################################################
 ## Needed for ContactSet
 sub id { return shift->srid(@_); }
+
+sub register_attributes
+{
+ my $class=shift;
+ my @a=@_;
+ __PACKAGE__->mk_accessors(@a);
+ no strict 'refs'; ## no critic (ProhibitNoStrict)
+ ${$class.'::ATTRS'}=($class eq 'Net::DRI::Data::Contact')? \@a : [ @ATTRS,@a ];
+ ${$class.'::ATTRS'};
+}
+
+sub attributes
+{
+ my $class=shift;
+ $class=ref($class) || $class;
+ no strict 'refs'; ## no critic (ProhibitNoStrict)
+ return @{${$class.'::ATTRS'}}; 
+}
 
 ## Overrides method in Class::Accessor, needed for int/loc data
 sub get
@@ -273,7 +301,29 @@ sub as_string
  $sep='|' unless (defined($sep) && $sep);
  my $st=$self->street();
  my @v=grep { defined } ($self->srid(),$self->name(),$self->org(),defined($st)? join(' // ',@$st) : undef,$self->city(),$self->sp(),$self->pc(),$self->cc(),$self->voice(),$self->fax(),$self->email());
- return join($sep,@v);
+ my @ot=grep { ! /^(?:name|org|street|city|sp|pc|cc|email|voice|fax|loid|roid|srid|auth|disclose)$/ } sort(keys(%$self));
+ foreach my $ot (@ot) ## extra attributes defined in subclasses
+ {
+  my $v=$self->$ot();
+  next unless defined($v);
+  if (ref($v) eq 'HASH')
+  {
+   my @iv=sort(keys(%$v));
+   my @r;
+   foreach my $k (@iv)
+   {
+    push @r,sprintf('%s.%s=%s',$ot,$k,defined($v->{$k})? $v->{$k} : '<undef>');
+   }
+   push @v,join(' ',@r);
+  } else
+  {
+   push @v,$ot.'='.$v;
+  }
+ }
+
+ my $c=ref($self);
+ $c=~s/^Net::DRI::Data:://;
+ return '('.$c.') '.join($sep,@v);
 }
 
 ####################################################################################################

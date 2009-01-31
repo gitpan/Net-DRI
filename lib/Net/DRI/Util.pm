@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Misc. useful functions
 ##
-## Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -20,9 +20,10 @@ package Net::DRI::Util;
 use strict;
 
 use Time::HiRes ();
+use Encode ();
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.18 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.19 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -52,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -73,7 +74,7 @@ sub all_valid
 {
  foreach (@_)
  {
-  return 0 unless (defined($_) && $_);
+  return 0 unless (defined($_) && (ref($_) || length($_)));
  }
  return 1;
 }
@@ -198,6 +199,13 @@ sub microtime
  return $t.sprintf('%06d',$v);
 }
 
+sub fulltime
+{
+ my ($t,$v)=Time::HiRes::gettimeofday();
+ my @t=localtime($t);
+ return sprintf('%d-%02d-%02d %02d:%02d:%02d.%06d',1900+$t[5],1+$t[4],$t[3],$t[2],$t[1],$t[0],$v);
+}
+
 ## From EPP, trID=token from 3 to 64 characters
 sub create_trid_1
 {
@@ -276,7 +284,7 @@ sub is_ipv6
  ## RFC 3513 §2.4
  return 0 if ($bip=~m/^0{127}/); ## unspecified + loopback
  return 0 if ($bip=~m/^1{7}/); ## multicast + link-local unicast + site-local unicast
- ## everything else is global unicast, 
+ ## everything else is global unicast,
  ## but see §4 and http://www.iana.org/assignments/ipv6-address-space
  return 0 if ($bip=~m/^000/); ## unassigned + reserved (first 6 lines)
  return 1 if ($bip=~m/^001/); ## global unicast (2000::/3)
@@ -428,6 +436,40 @@ sub xml_write
  return @t;
 }
 
+sub xml_indent
+{
+ my $xml=shift;
+ chomp($xml);
+ my $r;
+
+ $xml=~s!(<)!\n$1!g;
+ $xml=~s!<(\S+)>(.+)\n</\1>!<$1>$2</$1>!g;
+ $xml=~s!<(\S+)((?:\s+\S+=['"][^'"]+['"])+)>(.+)\n</\1>!<$1$2>$3</$1>!g;
+
+ my $s=0;
+ foreach my $m (split(/\n/,$xml))
+ {
+  next if $m=~m/^\s*$/;
+  $s-- if ($m=~m!^</\S+>$!);
+
+  $r.=' ' x $s;
+  $r.=$m."\n";
+
+  $s++ if ($m=~m!^<[^>?]+[^/](?:\s+\S+=['"][^'"]+['"])*>$!);
+  $s-- if ($m=~m!^</\S+>$!);
+ }
+
+ ## As xml_indent is used during logging, we do a final quick check (spaces should not be relevant anyway)
+ ## This test should probably be dumped as some point in the future when we are confident enough. But we got hit in the past by some subtleties, so...
+ my $in=$xml;
+ $in=~s/\s+//g;
+ my $out=$r;
+ $out=~s/\s+//g;
+ if ($in ne $out) { Net::DRI::Exception::err_assert('xml_indent failed to do its job, please report !'); }
+
+ return $r;
+}
+
 ####################################################################################################
 
 sub remcam
@@ -438,9 +480,18 @@ sub remcam
  return lc($in);
 }
 
+sub encode       { my ($cs,$data)=@_; return Encode::encode($cs,ref $data? $data->as_string() : $data,1); } ## Will croak on malformed data (a case that should not happen)
+sub encode_utf8  { return encode('UTF-8',$_[0]); }
+sub encode_ascii { return encode('ascii',$_[0]); }
+sub decode       { my ($cs,$data)=@_; return Encode::decode($cs,$data,1); } ## Will croak on malformed data (a case that should not happen)
+sub decode_utf8  { return decode('UTF-8',$_[0]); }
+sub decode_ascii { return decode('ascii',$_[0]); }
+
 ####################################################################################################
 
 ## RFC2782
+## (Net::DNS rrsort for SRV records does not seem to implement the same algorithm as the one specificied in the RFC,
+##  as it just does a comparison on priority then weight)
 sub dns_srv_order
 {
  my (@r,%r);

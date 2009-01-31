@@ -13,21 +13,14 @@ use DateTime::Duration;
 my $CLID='YOUR TEST CLIENT ID'; ### Change this information
 my $PASS='YOUR PASSWORD'; ### Change this information
 
-my $dri=Net::DRI->new(10);
+my $dri=Net::DRI->new({cache_ttl=>10,logging=>'files'});
 
 eval {
 ############################################################################################################
 $dri->add_registry('CAT',{clid=>$CLID});
 
-my $file='results-'.time().'.log';
-open(my $fh,'>>',$file) || die $!;
-select($fh);
-$|++;
-select(STDOUT);
-print "Dumping XML exchange to $file\n";
-
 ## This connects to .CAT server for tests
-my $rc=$dri->target('CAT')->new_current_profile('profile1','epp',[{log_fh=>$fh,remote_host=>'epp.ote.puntcat.corenic.net',client_login=>$CLID,client_password=>$PASS}],[]);
+my $rc=$dri->target('CAT')->add_current_profile('profile1','epp',{remote_host=>'epp.ote.puntcat.corenic.net',client_login=>$CLID,client_password=>$PASS});
 
 die($rc) unless $rc->is_success(); ## Here we catch all errors during setup of transport, such as authentication errors
 
@@ -122,7 +115,6 @@ $rc=$dri->contact_delete($c4);
 print "Contact4 deleted successfully\n" if $rc->is_success();
 
 $dri->end();
-close($fh);
 };
 
 if ($@)

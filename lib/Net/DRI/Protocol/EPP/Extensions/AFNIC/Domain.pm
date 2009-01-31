@@ -23,7 +23,7 @@ use Net::DRI::Util;
 use Net::DRI::Exception;
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -225,7 +225,7 @@ sub trade_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- parse_trade_recover($po,$otype,'trade',$oname,$rinfo,'traData');
+ parse_trade_recover($po,$otype,'trade',$oname,$rinfo,'trdData');
 }
 
 sub recover_request

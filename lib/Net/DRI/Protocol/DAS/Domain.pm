@@ -1,6 +1,6 @@
 ## Domain Registry Interface, DAS Domain commands
 ##
-## Copyright (c) 2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2007,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -22,7 +22,7 @@ use strict;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -52,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2007,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -99,7 +99,7 @@ sub check_parse
  my $domain=lc($rr->{Domain}.'.'.$po->tld());
  $rinfo->{domain}->{$domain}->{action}='check';
  my $s=uc($rr->{Status});
- $rinfo->{domain}->{$domain}->{exist}=($s eq 'FREE')? 0 : 1;
+ $rinfo->{domain}->{$domain}->{exist}=($s eq 'FREE' || $s eq 'AVAILABLE')? 0 : 1;
  $rinfo->{domain}->{$domain}->{exist_reason}=$s;
 }
 

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, SMTP Transport
 ##
-## Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2007,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -25,7 +25,7 @@ use Email::Valid;
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -55,7 +55,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2007,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -71,14 +71,11 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $proto=shift;
- my $class=ref($proto) || $proto;
-
- my $drd=shift;
- my $po=shift;
+ my $class=shift;
+ my $ctx=shift;
 
  my %opts=(@_==1 && ref($_[0]))? %{$_[0]} : @_;
- my $self=$class->SUPER::new(\%opts); ## We are now officially a Net::DRI::Transport instance
+ my $self=$class->SUPER::new($ctx,\%opts); ## We are now officially a Net::DRI::Transport instance
  $self->has_state(0); ## We could be stateful by keeping a live connection to the SMTP host. But it would be useful only for high volumes
  $self->is_sync(0);
  $self->name('smtp');
@@ -100,13 +97,12 @@ sub new
 
 ####################################################################################################
  
-sub end {}
+sub end { }
 
 sub send
 {
- my ($self,$trid,$tosend)=@_;
- 
- $self->SUPER::send($trid,$tosend,\&_send,undef);
+ my ($self,$ctx,$tosend)=@_;
+ $self->SUPER::send($ctx,$tosend,\&_send,undef);
 }
 
 sub _send
@@ -131,6 +127,7 @@ sub _send
 
 sub receive
 {
+ my ($self,$ctx,$count)=@_;
 
 }
 

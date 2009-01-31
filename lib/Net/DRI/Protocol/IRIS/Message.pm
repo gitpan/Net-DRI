@@ -28,7 +28,7 @@ use Net::DRI::Util;
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw/version tid authority search results/);
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -117,6 +117,7 @@ sub as_string
  ## TODO : handle other top nodes, see RFC4991, + control node in <request>
  Net::DRI::Exception::err_assert('Net::DRI::Protocol::IRIS::Message can only handle <request> operations for now') unless defined($self->search());
  my @d;
+ push @d,'<?xml version="1.0" encoding="UTF-8" standalone="no"?>';
  push @d,sprintf('<request xmlns="%s" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="%s %s">',$self->nsattrs('iris1'));
 
  foreach my $search (@{$self->search()}) ## $search is a refhash comme il faut

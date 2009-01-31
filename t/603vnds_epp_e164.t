@@ -35,7 +35,7 @@ use Net::DRI::DRD::VNDS;
 }
 
 $dri->add_registry('VNDS');
-$dri->target('VNDS')->new_current_profile('p1','Net::DRI::Transport::Dummy',[{f_send=>\&mysend,f_recv=>\&myrecv}],'Net::DRI::Protocol::EPP',['1.0',['E164']]);
+$dri->target('VNDS')->add_current_test_profile('p1','Dummy',{f_send=>\&mysend,f_recv=>\&myrecv},'EPP',['1.0',['E164']]);
 
 my ($rc,$e,$toc);
 

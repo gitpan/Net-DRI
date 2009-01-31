@@ -26,9 +26,9 @@ sub myrecv
  return Net::DRI::Data::Raw->new_from_string($R2? $R2 : $E1.'<response>'.r().$TRID.'</response>'.$E2);
 }
 
-my $dri=Net::DRI->new(10);
+my $dri=Net::DRI::TrapExceptions->new({cache_ttl=>10,trid_factory => sub { return 'coricopat-9978-1002'}});
 $dri->add_registry('VNDS');
-$dri->target('VNDS')->new_current_profile('p1','Net::DRI::Transport::Dummy',[{f_send=>\&mysend,f_recv=>\&myrecv}],'Net::DRI::Protocol::EPP::Extensions::US',[]);
+$dri->target('VNDS')->add_current_test_profile('p1','Dummy',{f_send=>\&mysend,f_recv=>\&myrecv},'Net::DRI::Protocol::EPP::Extensions::US');
 
 #########################################################################################################
 ## Examples taken from draft-liu-epp-usTLD-00 + updates to current EPP

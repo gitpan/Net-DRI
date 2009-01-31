@@ -1,6 +1,6 @@
 ## Domain Registry Interface, RRP Connection handling
 ##
-## Copyright (c) 2005,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -22,10 +22,9 @@ use strict;
 use Net::DRI::Protocol::RRP::Message;
 use Net::DRI::Protocol::ResultStatus;
 use Net::DRI::Data::Raw;
+use Net::DRI::Util;
 
-use Encode ();
-
-our $VERSION=do { my @r=(q$Revision: 1.15 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.16 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -55,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -71,25 +70,25 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub login
 {
- my ($class,$to,$cm,$id,$pass,$cltrid,$dr,$newpass)=@_;
+ my ($class,$cm,$id,$pass,$cltrid,$dr,$newpass)=@_;
  my %h=(Id => $id, Password => $pass);
  $h{NewPassword}=$newpass if (defined($newpass) && $newpass);
  my $mes=Net::DRI::Protocol::RRP::Message->new({ command => 'session', options => \%h});
- return $class->write_message($to,$mes);
+ return $mes;
 }
 
 sub logout
 {
- my ($class,$to,$cm,$cltrid)=@_;
+ my ($class,$cm,$cltrid)=@_;
  my $mes=Net::DRI::Protocol::RRP::Message->new({ command => 'quit' });
- return $class->write_message($to,$mes);
+ return $mes;
 }
 
 sub keepalive
 {
- my ($class,$to,$cm,$cltrid)=@_;
+ my ($class,$cm,$cltrid)=@_;
  my $mes=Net::DRI::Protocol::RRP::Message->new({ command => 'describe' });
- return $class->write_message($to,$mes);
+ return $mes;
 }
 
 ####################################################################################################
@@ -104,14 +103,15 @@ sub read_data
   push @l,$l;
   last if ($l=~m/^\.\s*\n?$/);
  }
- die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED',@l? $l[0] : '<empty message from server>','en')) unless (@l && $l[-1]=~m/^\.\s*\n?$/);
+ @l=map { Net::DRI::Util::decode_ascii($_); } @l;
+ die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED_CLOSING',@l? $l[0] : '<empty message from server>','en')) unless (@l && $l[-1]=~m/^\.\s*\n?$/);
  return Net::DRI::Data::Raw->new_from_array(\@l);
 }
 
 sub write_message
 {
  my ($self,$to,$msg)=@_;
- return Encode::encode('ascii',$msg->as_string());
+ return Net::DRI::Util::encode_ascii($msg);
 }
 
 sub parse_greeting

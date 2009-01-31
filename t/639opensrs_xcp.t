@@ -16,7 +16,7 @@ sub munge { my $in=shift; $in=~s/>\s*</></sg; chomp($in); return $in; }
 
 my $dri=Net::DRI::TrapExceptions->new(10);
 $dri->add_registry('OpenSRS');
-$dri->target('OpenSRS')->new_current_profile('p1','Net::DRI::Transport::Dummy',[{f_send=>\&mysend,f_recv=>\&myrecv,client_login=>'LOGIN',client_password=>'PASSWORD',remote_url=>'http://localhost/'}],'Net::DRI::Protocol::OpenSRS::XCP',[]);
+$dri->target('OpenSRS')->add_current_test_profile('p1','Dummy',{f_send=>\&mysend,f_recv=>\&myrecv,client_login=>'LOGIN',client_password=>'PASSWORD',remote_url=>'http://localhost/'},'Net::DRI::Protocol::OpenSRS::XCP');
 
 my ($r,$rc,$rd,$ns,$cs);
 

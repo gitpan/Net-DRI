@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Superclass of all Transport/* modules (hence virtual class, never used directly)
 ##
-## Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,26 +18,36 @@
 package Net::DRI::Transport;
 
 use strict;
+use warnings;
 
-use base qw(Class::Accessor::Chained::Fast);
-__PACKAGE__->mk_accessors(qw/name version retry pause trace timeout defer current_state has_state is_sync time_creation time_open time_used/);
-
-use Encode ();
-use Time::HiRes;
+use base qw(Class::Accessor::Chained::Fast Net::DRI::BaseClass);
+__PACKAGE__->mk_accessors(qw/name version retry pause trace timeout defer current_state has_state is_sync time_creation time_open time_used trid_factory logging/);
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.17 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.18 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Transport - Superclass of all transport modules in Net::DRI
+Net::DRI::Transport - Superclass of all Transport Modules in Net::DRI
 
 =head1 DESCRIPTION
 
 Please see the README file for details.
+
+This is a superclass that should never be used directly, but only through its subclasses.
+
+=head1 METHODS
+
+During the new() call, subclasses will call this new() method, which expects a ref hash with some
+keys (other are handled by the subclasses), among which:
+
+=head2 trid
+
+(optional) code reference of a subroutine generating a transaction id when passed a name ; 
+if not defined, $dri->trid_factory() is used, which is Net::DRI::Util::create_trid_1 by default
 
 =head1 SUPPORT
 
@@ -57,7 +67,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -72,29 +82,33 @@ See the LICENSE file that comes with this distribution for more details.
 ####################################################################################################
 sub new
 {
- my $class=shift;
+ my ($class,$ctx,$ropts)=@_;
+ my $ndr=$ctx->{registry};
+ my $pname=$ctx->{profile};
 
- my %opts=(@_==1 && ref($_[0]))? %{$_[0]} : @_;
  my $self={
- 	   is_sync   => exists($opts{is_sync})? $opts{is_sync} : 1, ## do we need to wait for reply as soon as command sent ?
-           retry     => exists($opts{retry})?   $opts{retry}   : 1,  ## by default, we will try once only
-           pause     => exists($opts{pause})?   $opts{pause}   : 10, ## time in seconds to wait between two retries
-#           trace     => exists($opts{trace})?   $opts{trace}   : 0, ## NOT IMPL
-           timeout   => exists($opts{timeout})? $opts{timeout} : 0,
-           defer     => exists($opts{defer})?   $opts{defer}   : 0, ## defer opening connection as long as possible (irrelevant if stateless) ## XX maybe not here, too low
-           logging   => exists($opts{logging})? $opts{logging} : undef, ## object ref (with a logging method) or ref array of coderef and one opaque data
+ 	   is_sync   => exists($ropts->{is_sync})? $ropts->{is_sync} : 1, ## do we need to wait for reply as soon as command sent ?
+           retry     => exists($ropts->{retry})?   $ropts->{retry}   : 1,  ## by default, we will try once only
+           pause     => exists($ropts->{pause})?   $ropts->{pause}   : 10, ## time in seconds to wait between two retries
+#           trace     => exists($ropts->{trace})?   $ropts->{trace}   : 0, ## NOT IMPL
+           timeout   => exists($ropts->{timeout})? $ropts->{timeout} : 0,
+           defer     => exists($ropts->{defer})?   $ropts->{defer}   : 0, ## defer opening connection as long as possible (irrelevant if stateless) ## XX maybe not here, too low
+           logging   => exists($ropts->{logging})? $ropts->{logging} : $ndr->logging(),
+           trid_factory => (exists($ropts->{trid}) && (ref($ropts->{trid}) eq 'CODE'))? $ropts->{trid} : $ndr->trid_factory(),
            current_state => undef, ## for stateless transport, otherwise 0=close, 1=open
            has_state     => undef, ## do we need to open a session before sending commands ?
            transport     => undef, ## will be defined in subclasses
            time_creation => time(),
           };
 
- if (exists($opts{log_fh}) && defined($opts{log_fh})) ## convert to new api
+ if (exists($ropts->{log_fh}) && defined($ropts->{log_fh}))
  {
-  $self->{logging}=[ \&xmldump_to_filehandle,$opts{log_fh} ];
+  print STDERR 'log_fh is deprecated and will not be used now, please use new Logging framework',"\n";
  }
 
- bless($self,$class);
+ bless $self,$class;
+ $self->log_setup_channel($class,'transport',{ registry => $ndr, profile => $pname }); ## if we need the transport name here, we will have to put that further below, in another method called after new() ; otherwise we derive it from $class
+ $self->log_output('debug','core',sprintf('Added transport %s for registry %s',$class,$ndr->name()));
  return $self;
 }
 
@@ -102,133 +116,37 @@ sub transport_data { return shift->{transport}; }
 
 sub send
 {
- my ($self,$trid,$tosend,$cb1,$cb2)=@_; ## $cb1=how to send, $cb2=how to test if fatal (to break loop) or not (retry once more)
-
+ my ($self,$ctx,$tosend,$cb1,$cb2,$count)=@_; ## $cb1=how to send, $cb2=how to test if fatal (to break loop) or not (retry once more)
  Net::DRI::Exception::err_insufficient_parameters() unless ($cb1 && (ref($cb1) eq 'CODE'));
-
- my $timeout=$self->timeout();
- my $prevalarm=alarm(0); ## removes current alarm
- my $c=0;
  my $ok=0;
- while (++$c <= $self->retry())
- {
-  sleep($self->pause()) if ($self->pause() && ($c > 1));
-  eval
-  {
-   local $SIG{ALRM}=sub { die 'timeout' };
-   alarm($timeout) if ($timeout);
 
-   ## Try to reconnect if needed
-   $self->open_connection() if ($self->has_state() && !$self->current_state());
-   $self->logging($trid,2,0,1,$tosend);
-   $ok=$self->$cb1($c,$tosend);
-   $self->time_used(time());
-  }; ## end of try
+ ## Try to reconnect if needed
+ $self->open_connection() if ($self->has_state() && !$self->current_state());
+ ## Here $tosend is a Net::DRI::Protocol::Message object (in fact, a subclass of that), in perl internal encoding, no transport related data (such as EPP 4 bytes header)
+ $self->log_output('notice','transport',{ctx=>$ctx,trid=>$ctx->{trid},phase=>'active',direction=>'out',driver=>$self->name().'/'.$self->version(),message=>$tosend});
+ $ok=$self->$cb1($count,$tosend);
+ $self->time_used(time());
 
-  alarm(0) if ($timeout); ## removes our alarm
-  if ($@) ## some die happened inside the eval
-  {
-   die($@) if (ref($@) eq 'Net::DRI::Protocol::ResultStatus');
-   my $is_timeout=(!ref($@) && ($@=~m/timeout/))? 1 : 0;
-   $@=Net::DRI::Exception->new(1,'internal',0,'Error not handled: '.$@) unless ref($@);
-   die($@) unless ($cb2 && (ref($cb2) eq 'CODE'));
-   $self->$cb2($@,$c,$is_timeout,$ok); ## will determine if 1) we break now the loop/we propagate the error (fatal error) 2) we retry
-  }
-
-  last if ($ok);
- }
-
- ## Get inner error message ?
  Net::DRI::Exception->die(0,'transport',4,'Unable to send message to registry') unless $ok;
-
- alarm($prevalarm) if $prevalarm; ## re-enable previous alarm (warning, time is off !!)
 }
 
 sub receive
 {
- my ($self,$trid,$cb1,$cb2)=@_;
+ my ($self,$ctx,$cb1,$cb2,$count)=@_;
  Net::DRI::Exception::err_insufficient_parameters() unless ($cb1 && (ref($cb1) eq 'CODE'));
- my $timeout=$self->timeout();
- my $prevalarm=alarm(0); ## removes current alarm
- my $c=0;
+
  my $ans;
-
- while (++$c <= $self->retry())
- {
-  sleep($self->pause()) if ($self->pause() && ($c > 1));
-  eval
-  {
-   local $SIG{ALRM}=sub { die 'timeout' };
-   alarm($timeout) if ($timeout);
-
-   $ans=$self->$cb1($c);
-  }; ## end of try
-
-  alarm(0) if ($timeout); ## removes our alarm
-  if ($@) ## some die happened inside the eval
-  {
-   my $is_timeout=(!ref($@) && ($@=~m/timeout/))? 1 : 0;
-   $@=Net::DRI::Exception->new(1,'internal',0,'Error not handled: '.$@) unless ref($@);
-   die($@) unless ($cb2 && (ref($cb2) eq 'CODE'));
-   $self->$cb2($@,$c,$is_timeout,defined($ans)); ## will determine if 1) we break now the loop/we propagate the error (fatal error) 2) we retry
-  }
-
-  last if (defined($ans));
- }
-
+ $ans=$self->$cb1($count); ## a Net::DRI::Data::Raw object
  Net::DRI::Exception->die(0,'transport',5,'Unable to receive message from registry') unless defined($ans);
-
- alarm($prevalarm) if $prevalarm; ## re-enable previous alarm (warning, time is off !!)
- $self->logging($trid,2,1,1,$ans);
+ ## $ans should have been properly decoded into a native Perl string
+ $self->log_output('notice','transport',{ctx=>$ctx,trid=>$ctx->{trid},phase=>'active',direction=>'in',driver=>$self->name().'/'.$self->version(),message=>$ans});
  return $ans;
 }
 
-sub dump_to_filehandle ## NOT a class method
+sub try_again ## TO BE SUBCLASSED
 {
- my ($fh,$tname,$tversion,$trid,$step,$dir,$type,$data)=@_; ## $tname,$tversion,$step not used here
- my $c=(ref($data) && UNIVERSAL::can($data,'as_string'))? $data->as_string() : $data;
- $c=Encode::encode('UTF-8', $c) if (Encode::is_utf8($c)); ## Should be only a temporary fix
- my ($t,$v)=Time::HiRes::gettimeofday();
- my @t=localtime($t);
- my $tp=sprintf('%d-%02d-%02d %02d:%02d:%02d.%06d C%sS [%s] ',1900+$t[5],1+$t[4],$t[3],$t[2],$t[1],$t[0],$v,($dir==0)? '=>' : '<=',$trid || '').$c."\n";
- if (UNIVERSAL::can($fh,'print'))
- {
-  $fh->print($tp);
- } else
- {
-  print {$fh} $tp;
- }
-}
-
-sub xmldump_to_filehandle ## NOT a class method
-{
- my ($fh,$tname,$tversion,$trid,$step,$dir,$type,$data)=@_;
- my $c=(ref($data) && UNIVERSAL::can($data,'as_string'))? $data->as_string() : $data; ## Handle other cases, based on $type
- $c=~s/^\s+//mg;
- $c=~s/\s+$//mg;
- $c=~s/\n/ /g;
- $c=~s/> </></g;
- substr($c,0,4,'') if index($c,'<',0) > 0; ## remove TCP length if there
- dump_to_filehandle($fh,$tname,$tversion,$trid,$step,$dir,$type,$c);
-}
-
-sub logging
-{
- ## $self,(cl)TRID,Step (1=Init,2=Live,3=Closing),Direction(0=outgoing,1=incoming),Type of data given(1=Net::DRI::Data::Raw or something with as_string() method,2=string),Data to log
- my ($self,$trid,$step,$dir,$type,$data)=@_;
- my $tname=$self->name();
- my $tversion=$self->version();
- my $l=$self->{logging};
- return unless defined($l) && ref($l);
- if (ref($l) eq 'ARRAY')
- {
-  my ($fn,$p)=@$l;
-  return unless (ref($fn) eq 'CODE');
-  $fn->($p,$tname,$tversion,$trid,$step,$dir,$type,$data);
- } elsif (UNIVERSAL::can($l,'logging'))
- {
-  $l->logging($tname,$tversion,$trid,$step,$dir,$type,$data);
- }
+ my ($self,$po,$err,$count,$istimeout,$step,$rpause,$rtimeout)=@_; ## $step is 0 before send, 1 after, and 2 after receive successful
+ return 0; ## should return 1 if we try again, or 0 if we should stop processing now
 }
 
 ####################################################################################################

@@ -21,7 +21,7 @@ use strict;
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -111,7 +111,6 @@ sub create
   push @n,['frnic:legalEntityInfos',@d];
  } else # PP
  {
-  push @n,['frnic:firstName',$contact->firstname()];
   push @n,['frnic:list','restrictedPublication'] if ($contact->disclose() eq 'N');
   my @d;
   my $b=$contact->birth();
@@ -119,15 +118,16 @@ sub create
   push @d,['frnic:birthDate',(ref($b->{date}))? $b->{date}->strftime('%Y-%m-%d') : $b->{date}];
   if ($b->{place}=~m/^[A-Z]{2}$/i) ## country not France
   {
-   push @d,['frnic:cc',$b->{place}];
+   push @d,['frnic:birthCc',$b->{place}];
   } else
   {
    my @p=($b->{place}=~m/^\s*(\S.*\S)\s*,\s*(\S.+\S)\s*$/);
    push @d,['frnic:birthCity',$p[1]];
-   push @d,['frnic:pc',$p[0]];
-   push @d,['frnic:cc','FR'];
+   push @d,['frnic:birthPc',$p[0]];
+   push @d,['frnic:birthCc','FR'];
   }
   push @n,['frnic:individualInfos',@d];
+  push @n,['frnic:firstName',$contact->firstname()];
  }
 
  my $eid=build_command_extension($mes,$epp,'frnic:ext');
@@ -232,10 +232,10 @@ sub info_parse
       } elsif ($nn eq 'birthCity')
       {
         $b{place}=$cc->getFirstChild()->getData();
-      } elsif ($nn eq 'pc')
+      } elsif ($nn eq 'birthPc')
       {
        $b{place}=sprintf('%s, %s',$cc->getFirstChild()->getData(),$b{place});
-      } elsif ($nn eq 'cc')
+      } elsif ($nn eq 'birthCc')
       {
        my $v=$cc->getFirstChild()->getData();
        $b{place}=$v unless ($v eq 'FR');

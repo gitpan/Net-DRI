@@ -31,11 +31,11 @@ sub munge_xmailer
  return $in;
 }
 
-my $dri=Net::DRI->new(10);
+my $dri=Net::DRI::TrapExceptions->new({cache_ttl=>10});
 $dri->{trid_factory}=sub { return 'TRID-12345'; };
 
 $dri->add_registry('AFNIC');
-$dri->target('AFNIC')->new_current_profile('profile1','Net::DRI::Transport::Dummy',[{f_send=>\&mysend, f_recv=> sub {}}],'Net::DRI::Protocol::AFNIC::Email',['CLIENTID','CLIENTPW','test@localhost']);
+$dri->target('AFNIC')->add_current_test_profile('profile1','Dummy',{f_send=>\&mysend, f_recv=> sub {}},'email',['CLIENTID','CLIENTPW','test@localhost']);
 $dri->transport->is_sync(0);
 
 
@@ -67,7 +67,7 @@ $cs->set($co,'tech');
 $ns->add('ns.toto.fr',['123.45.67.89']);
 $ns->add('ns.toto.com');
 
-$rc=$dri->domain_create('toto.fr',{pure_create=>1, contact => $cs, maintainer => 'ABCD', ns => $ns});
+$rc=$dri->domain_create('toto.fr',{pure_create=>1, contact => $cs, maintainer => 'ABCD', ns => $ns, auth => { pw=> 'nowmandatory!'} });
 
 is($rc->code(),1001,'domain_create PM code');
 is($rc->is_success(),1,'domain_create PM is_success');
@@ -78,7 +78,7 @@ Content-Type: text/plain; charset="iso-8859-15"
 Content-Disposition: inline
 Content-Transfer-Encoding: 8bit
 MIME-Version: 1.0
-X-Mailer: Net::DRI 0.92/1.01 via MIME-tools 5.417 (Entity 5.417)
+X-Mailer: Net::DRI 0.92_01/1.02 via MIME-tools 5.417 (Entity 5.417)
 From: test@localhost
 To: domain@nic.fr
 Subject: CLIENTID domain_create [TRID-12345]
@@ -87,8 +87,9 @@ Subject: CLIENTID domain_create [TRID-12345]
 1b..: CLIENTID
 1c..: CLIENTPW
 1e..: TRID-12345
-1f..: 2.0.0
+1f..: 2.5.0
 2a..: toto.fr
+2z..: nowmandatory!
 3a..: MyORG
 3b..: Whatever street 35
 3c..: יחp אפ
@@ -119,7 +120,7 @@ $co->disclose('N');
 $co->key('ABCDEFGH-100');
 $cs->set($co,'registrant');
 
-$rc=$dri->domain_create('toto.fr',{pure_create=>1, contact => $cs, maintainer => 'ABCD', ns => $ns});
+$rc=$dri->domain_create('toto.fr',{pure_create=>1, contact => $cs, maintainer => 'ABCD', ns => $ns, auth => { pw => 'nowmandatory!'} });
 is($rc->code(),1001,'domain_create PPreduced code');
 is($rc->is_success(),1,'domain_create PPreduced is_success');
 is($rc->is_pending(),1,'domain_create PPreduced is_pending');
@@ -129,7 +130,7 @@ Content-Type: text/plain; charset="iso-8859-15"
 Content-Disposition: inline
 Content-Transfer-Encoding: 8bit
 MIME-Version: 1.0
-X-Mailer: Net::DRI 0.92/1.01 via MIME-tools 5.417 (Entity 5.417)
+X-Mailer: Net::DRI 0.92_01/1.02 via MIME-tools 5.417 (Entity 5.417)
 From: test@localhost
 To: domain@nic.fr
 Subject: CLIENTID domain_create [TRID-12345]
@@ -138,8 +139,9 @@ Subject: CLIENTID domain_create [TRID-12345]
 1b..: CLIENTID
 1c..: CLIENTPW
 1e..: TRID-12345
-1f..: 2.0.0
+1f..: 2.5.0
 2a..: toto.fr
+2z..: nowmandatory!
 3q..: ABCDEFGH-100
 3w..: PP
 3x..: JOHN-FRNIC

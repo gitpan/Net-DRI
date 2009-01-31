@@ -13,7 +13,7 @@ eval {
 ############################################################################################################
 $dri->add_registry('EURid',{});
 
-my $rc=$dri->target('EURid')->new_current_profile('profile1','das');
+my $rc=$dri->target('EURid')->add_current_profile('profile1','das');
 
 die($rc) unless $rc->is_success();
 

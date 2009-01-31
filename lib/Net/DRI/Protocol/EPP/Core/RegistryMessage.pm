@@ -22,7 +22,7 @@ use strict;
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -82,7 +82,7 @@ sub pollack
 {
  my ($epp,$msgid)=@_;
  my $mes=$epp->message();
- Net::DRI::Exception::usererr_invalid_parameters('In EPP, you must specify the message id you want to delete') unless (defined($msgid) && $msgid=~m/^\d+$/);
+ Net::DRI::Exception::usererr_invalid_parameters('In EPP, you must specify the message id (XML token) you want to delete') unless Net::DRI::Util::xml_is_token($msgid);
  $mes->command([['poll',{op=>'ack',msgID=>$msgid}]]);
 }
 

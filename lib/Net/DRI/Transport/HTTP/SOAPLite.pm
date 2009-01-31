@@ -1,6 +1,6 @@
 ## Domain Registry Interface, SOAP Transport
 ##
-## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -13,7 +13,7 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::Transport::HTTP::SOAPLite;
 
@@ -25,7 +25,7 @@ use Net::DRI::Data::Raw;
 use Net::DRI::Util;
 use SOAP::Lite;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -55,7 +55,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -71,16 +71,16 @@ See the LICENSE file that comes with this distribution for more details.
 sub new
 {
  my $class=shift;
- my $drd=shift;
- my $po=shift;
+ my $ctx=shift;
+ my $po=$ctx->{protocol};
+
  my %opts=(@_==1 && ref($_[0]))? %{$_[0]} : @_;
- my $self=$class->SUPER::new(\%opts); ## We are now officially a Net::DRI::Transport instance
+ my $self=$class->SUPER::new($ctx,\%opts); ## We are now officially a Net::DRI::Transport instance
  $self->is_sync(1);
  $self->name('soaplite');
  $self->version($VERSION);
 
  my %t=(message_factory => $po->factories()->{message});
- $t{trid_factory}=(exists($opts{trid}) && (ref($opts{trid}) eq 'CODE'))? $opts{trid} : \&Net::DRI::Util::create_trid_1;
  $t{has_login}=(exists($opts{has_login}) && defined($opts{has_login}))? $opts{has_login} : 0;
  $t{has_logout}=(exists($opts{has_logout}) && defined($opts{has_logout}))? $opts{has_logout} : 0;
  $self->has_state($t{has_login});
@@ -137,7 +137,7 @@ sub new
    $self->current_state(0);
   } else ## we will open NOW 
   {
-   $self->open_connection();
+   $self->open_connection($ctx);
   }
  } else
  {
@@ -168,7 +168,7 @@ sub init
 
 sub send_login
 {
- my ($self)=@_;
+ my ($self,$ctx)=@_;
  my $t=$self->{transport};
  return unless $t->{has_login};
  foreach my $p (qw/client_login client_password/)
@@ -177,13 +177,13 @@ sub send_login
  }
 
  my $pc=$t->{protocol_connection};
- my $cltrid=$t->{trid_factory}->($self->name());
+ my $cltrid=$self->generate_trid();
  my $login=$pc->login($t->{message_factory},$t->{client_login},$t->{client_password},$cltrid);
  my $lm=$login->method();
  my $res=$self->soap()->$lm(@{$login->params()});
- ## $self->logging($cltrid,1,0,1,$login);
+ ## TODO logging
  Net::DRI::Exception->die(1,'transport/soapwsdl',4,'Unable to send login message due to SOAP fault: '.$res->faultcode().' '.$res->faultstring()) if ($res->fault());
- ## $self->logging($cltrid,1,1,1,$dr);
+ ## TODO logging
  my $msg=$t->{message_factory}->();
  $msg->parse(Net::DRI::Data::Raw->new(1,[$res->result()]));
  my $rc=$pc->parse_login($msg);
@@ -194,18 +194,18 @@ sub send_login
 
 sub send_logout
 {
- my ($self)=@_;
+ my ($self,$ctx)=@_;
  my $t=$self->{transport};
  return unless $t->{has_logout};
 
  my $pc=$t->{protocol_connection};
- my $cltrid=$t->{trid_factory}->($self->name());
+ my $cltrid=$self->generate_trid();
  my $logout=$pc->logout($t->{message_factory},$cltrid,$t->{session_data});
  my $lm=$logout->method();
  my $res=$self->soap()->$lm(@{$logout->params()});
- ## $self->logging($cltrid,3,0,1,$logout);
+ ## TODO logging
  Net::DRI::Exception->die(1,'transport/soapwsdl',4,'Unable to send logout message due to SOAP fault: '.$res->faultcode().' '.$res->faultstring()) if ($res->fault());
- ## $self->logging($cltrid,3,1,1,$dr);
+ ## TODO logging
  my $msg=$t->{message_factory}->();
  $msg->parse(Net::DRI::Data::Raw->new(1,[$res->result()]));
  my $rc=$pc->parse_logout($msg);
@@ -216,9 +216,9 @@ sub send_logout
 
 sub open_connection
 {
- my ($self)=@_;
+ my ($self,$ctx)=@_;
  $self->init();
- $self->send_login();
+ $self->send_login($ctx);
  $self->current_state(1);
  $self->time_open(time());
  $self->time_used(time());
@@ -226,22 +226,22 @@ sub open_connection
 
 sub close_connection
 {
- my ($self)=@_;
- $self->send_logout();
+ my ($self,$ctx)=@_;
+ $self->send_logout($ctx);
  $self->soap(undef);
  $self->current_state(0);
 }
 
 sub end
 {
- my $self=shift;
+ my ($self,$ctx)=@_;
  if ($self->has_state() && $self->current_state())
  {
   eval
   {
    local $SIG{ALRM}=sub { die 'timeout' };
    alarm(10);
-   $self->close_connection();
+   $self->close_connection($ctx);
   };
   alarm(0); ## since close_connection may die, this must be outside of eval to be executed in all cases
  }
@@ -251,8 +251,8 @@ sub end
 
 sub send
 {
- my ($self,$trid,$tosend)=@_;
- $self->SUPER::send($trid,$tosend,\&_soap_send,sub {});
+ my ($self,$ctx,$tosend)=@_;
+ $self->SUPER::send($ctx,$tosend,\&_soap_send,sub {});
 }
 
 sub _soap_send
@@ -268,8 +268,8 @@ sub _soap_send
 
 sub receive
 {
- my ($self,$trid)=@_;
- return $self->SUPER::receive($trid,\&_soap_receive);
+ my ($self,$ctx,$count)=@_;
+ return $self->SUPER::receive($ctx,\&_soap_receive);
 }
 
 sub _soap_receive

@@ -25,7 +25,7 @@ use Net::DRI::Util;
 use Net::DRI::Data::ContactSet;
 use Net::DRI::Data::Contact::BR;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -250,6 +250,7 @@ sub update
 
  Net::DRI::Exception::usererr_invalid_parameters('contact must be Net::DRI::Data::Contact::BR object') unless Net::DRI::Util::isa_contact($contact,'Net::DRI::Data::Contact::BR');
  my $orgid=$contact->orgid();
+ return unless defined($orgid); ## to be able to update pure contacts
  Net::DRI::Exception::usererr_invalid_parameters('orgid must be an xml token string with 1 to 30 characters') unless Net::DRI::Util::xml_is_token($orgid,1,30);
 
  my $cadd=$todo->add('associated_contacts');

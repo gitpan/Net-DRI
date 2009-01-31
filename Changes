@@ -1,3 +1,87 @@
+0.95 NOT RELEASED YET
+
+If you are upgrading your Net::DRI installation, from version 0.92 or older
+we advise you to first upgrade to 0.92_01, test everything, adapt your program to use
+the new API (see below), and then upgrade to 0.95 which introduce some incompatibilities
+with prior versions. If you test first with version 0.92_01 you will be able to make
+sure your programs work the same way from old to new API, without changing versions
+and you will be warned if you are using deprecated features.
+
+0.92_01 2009-01-XX DEVELOPMENT RELEASE (not to be used in production without extensive testing if upgrading from some previous version)
+
+UPGRADE instructions from previous versions:
+- use add_profile/add_current_profile instead of new_profile/new_current_profile (warning: you may hit different APIs, depending on how you used new_profile/new_current_profile !)
+- remove use of log_fh attribute during transport setup, and use instead the new Logging framework (see Net::DRI and Net::DRI::Logging modules documentation)
+
+Detailed changes:
+
++ Registry add_profile()/add_current_profile() : new methods that will replace in the future new_profile()/new_current_profile() with a better API; this will also make it possible to have DRD protocol agnostic again the future (when old API completely removed) ; all scripts in eg/ and test files in t/ have been updated
++ Logging : a new framework has been put in place, for better extensibility ; fix of encoding bug ; various logging has been added, at debug level, to facilitate debugging (such as methods called, cache handling, transport loops/timeouts/retries) ; see document of modules Net::DRI, Net::DRI::Logging and Net::DRI::Logging::{Stderr,Files,Null}
++ Protocol/ResultStatus : $rc objects returned from most operations do also contain now all data retrieved with the operation (including the raw messages exchange), which can be accessed by get_data()/get_data_collection() method on the the $rc object, see module documentation
++ Shell autocompletion support for commands and parameters (domain names, contacts, hostnames, local filenames), see Net::DRI::Shell documentation
++ Shell new commands: add, record, set, show config, !cmd, help and add_current_profile (replacing new_current_profile) + backticks for batch operations ; see Net::DRI::Shell documentation
++ .IM support (EPP) : interoperability not tested
++ .SI support (EPP) : interoperability not tested
++ Data/Contact (and all subclasses) : a new method attributes() allows to know what attributes exist for this specific class of contact data
++ Data/Contact as_string() : better handling of subclasses attributes, now also automatically included in output, as well as class name (to know the contact type)
++ DRD/EURid : add registrar DAS (type=das-registrar) & registrar Whois (type=whois-registrar) profile types
++ DRD/CoCCA : .NA and .NG added
++ DRD/DENIC : add 9.4.e164.arpa in list of tlds, as they can be queried with IRIS DCHK
++ DRD/ICANN : .MOBI and .COOP can have one character domain name
++ DRD/WS : domain transfer operations are now possible
++ DRI del_registry() : to properly close all profiles in a given registry name (or the current one if no parameter given)
++ Registry del_profile() : deletes the current profile (or the name specified as input), which will also close transport connections associated with the profile as needed
++ Protocol/IRIS/XCP (RFC4992) : prototype implementation (no publicly known server uses this for now), only SASL PLAIN is supported
++ Protocol/IRIS/Core parse_authentication() : to support SASL in IRIS (RFC4991 authentication messages)
++ Shell : if we detect the server has closed connection, we try to reopen it at next command
++ DRI : cache() method to return the current underlying cache object
++ Cache : ttl() accessor/mutator to query or change the current time to live for cached data
++ DRD registry_can() : returns 1 or 0 if the operation given as input parameter (ex: domain_create) is available for the currently selected registry
++ Protocol/ResultStatus : new method is_closing() returns 1 if the server has closed connection (after successful operation or not)
++ Protocol/ResultStatus : new method is() to check symbolic return codes, see module documentation
++ Protocol/IRIS/LWZ : now supports compressed responses (with some help by Felix Antonius Wilhelm Ostmann) ; nicely handling of current mismatch between RFC LWZ compression method (RFC1951) and DENIC IRIS DCHK server (RFC1950)
++ Protocol/EPP/Extensions/Neulevel/IDNLanguage (contributed by Jouanne Mickael)
++ Protocol/EPP/Message : added a message/info/checked_on key always there with a DateTime object to know when we got information on number of messages waiting
+= Protocol/EPP/Message : we always set message/info/count attribute, including to 0 if nothing pending
+= Protocol/.../Connection classes : we use EPP code 2500 instead of 2400 (through ResultStatus new COMMAND_FAILED_CLOSING symbolic name) to warn where we were not able to get registry response, probably due to a closed connection
+= Protocol/.../Message classes : as_string() is now mandatory to be implemented (for logging purposes), so add it where needed
+= Protocol/EPP/Extensions/DNSBE/Domain : trade operation now needs op=>'request' (bugfix by Roger Heykoop)
+= Protocol/IRIS/Message : add xml preambule to outgoing messages
+= Registry available_profiles() : returns list of fullnames (profile name + protocol name + transport name) if passed a true value
+= Protocol/ResultStatus info() has been renamed to get_extended_results()
+= DRI trid_factory() accessor/mutator, this is a coderef used everywhere (including in Transport classes) to generate transaction identificators such as clTRID in EPP (all Transport classed have been modified to use that)
+= Caching changes (see Registry::try_restore_from_cache, DRD and various DRD subclasses): Registry::set_info_from_cache() disappears and its features are subsumed by try_restore_from_cache() ; two major changes (that will make the cache less often used) : we use it only for the same action, and we use data from the same profile only ; logging is done (at debug level) to be able to track each cache miss or hit ; when results are given from the cache, the result_from_cache (in branch session/exchange) key has a value of 1, otherwise 0
+= Transport + DRD/Registry : total rework of sending/receiving messages, better handling of timeouts and retries ; this is specially needed for servers difficult to reach, like public Whois/IRIS/DAS ones
+= Registry : after exchange with registry, add in ResultStatus data a session+exchange branch with keys: duration_seconds (the duration in seconds of the exchange), command (a string representation of what has been sent to the registry), reply (a string representation of what has been received from registry), result_from_cache (=0), action (name of action that has been done) and type (type of object on which this operation has been done)
+= DRD {domain,host,contact}_check_multi() : if the currently selected protocol does not support check_multi, we emulate by doing multiple check calls, as needed
+= DRD domain_create() : if not pure_create, we start by doing a domain_check and stop there if domain exists already (so that we do not trigger an hitpoint at registry like EURid)
+= DRD/NO : verify_name_domain() updates
+= DRD/DENIC : better parameters for IRIS DCHK timeouts and retries
+= Util : fulltime() and xml_indent() methods added, used by Logging framework
+= Util : encode() encode_utf8() encode_ascii() decode() decode_utf8() decode_ascii() methods added, as wrapper around Encode
+= When using Encode::{encode,decode}(), use check=1 (die on malformed data)
+= Protocol : the name key is only set for domain and host object types, not in all cases
+= Connection classes for EPP,RRI,IRIS : using sysread() instead of read(), since we do not want any buffering
+= Connection classes for EPP/Extensions/PL,OpenSRS/XCP : using HTTP::Response::decoded_content() method instead of just content()
+= Connection classes read_data method : make sure to translate what we received into perl native strings (Encode::decode & similar stuff)
+= EPP/Extensions/PL/Connection write_message() : encode perl string in utf8 before putting in HTTP::Message::content
+= DRD : add a default verify_name_domain() and domain_operation_needs_is_mine() for all subclasses, this make many DRD subclasses simpler and shorter
+= DRD classes : various simplifications and removals (verify_duration_transfer, is_my_tld, domain_operation_needs_is_mine), plus use of BaseClass::make_exception_for_unavailable_operations
+= DRD classes : sanitization of the internal API for verify_name_domain, and rewrite in the new framework (using DRD::_verify_name_rules)
+= Protocol/EPP/Extensions/AFNIC : various updates following registry new prototype
+= Protocol/AFNIC/Email : various updates for form version 2.5.0 (notably: authinfo mandatory, nameservers not mandatory)
+- DRD contact_check_multi() : make sure to allow a ref hash for optional parameters, as with all other contact methods
+- Protocol/IRIS/LWZ : make sure to start with a clean empty DNS resolver
+- DRD/DENIC : make sure to use "de." and not "de" for DNS queries (finding NAPTR servers)
+- Protocol/EPP/Core/RegistryMessage pollack() : message ids are not necessarily numbers, but XML token (RT#41032 reported by Joaquim Carandell)
+- Protocol/EPP/Core/{Contact,Domain,Host} : for registry notifications (poll messages), we do not set the exist key anymore as the operation may be related to a creation or something else ; this would need to be handled by extensions
+- Shell : properly take into account quit commands in script files (reported by Eberhard Lisse)
+- DRD domain_{delete,create}_only() : deprecated methods, now removed (see previous version)
+- Protocol/{EPP,RRI,IRIS}/Connection : use strict utf8 ("UTF-8") and not Perl lax utf8 ("utf8") when encoding before sending to server (through Util::encode_utf8 function)
+- Protocol Connection classes login() logout() keepalive() methods : now they return the message, and do not call write_message themselves, this is done by Transport class (for homogeneity and logging reasons)
+- Protocol/IRIS/Core parse_error() : correct parsing of messages/languages (they were swapped)
+- Protocol/EPP/Extensions/BR/Contact : allow update of pure contacts (no orgid)
+
 0.92 2008-10-08
 
 + IRIS support (RFC3981) with LWZ transport (RFC4993) for DCHK (RFC5144): currently only DENIC registry (.DE) provide this service, 

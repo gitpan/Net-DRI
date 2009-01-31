@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Connection handling for .PL
 ##
-## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,16 +18,18 @@
 package Net::DRI::Protocol::EPP::Extensions::PL::Connection;
 
 use strict;
+use warnings;
+
 use base qw/Net::DRI::Protocol::EPP::Connection/;
 
-use Encode ();
 use HTTP::Request ();
 
+use Net::DRI::Util;
 use Net::DRI::Exception;
 use Net::DRI::Data::Raw;
 use Net::DRI::Protocol::ResultStatus;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -57,7 +59,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -84,8 +86,8 @@ sub init
 
 sub greeting
 {
- my ($class,$to,$cm)=@_;
- return $class->keepalive($to,$cm); ## will send an <hello/> message, which is in fact a greeting !
+ my ($class,$cm)=@_;
+ return $class->keepalive($cm); ## will send an <hello/> message, which is in fact a greeting !
 }
 
 ####################################################################################################
@@ -93,8 +95,8 @@ sub greeting
 sub read_data
 {
  my ($class,$to,$res)=@_;
- die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED',sprintf('Got unsuccessfull HTTP response: %d %s',$res->code(),$res->message()),'en')) unless $res->is_success();
- return Net::DRI::Data::Raw->new_from_string($res->content());
+ die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED_CLOSING',sprintf('Got unsuccessfull HTTP response: %d %s',$res->code(),$res->message()),'en')) unless $res->is_success();
+ return Net::DRI::Data::Raw->new_from_xmlstring($res->decoded_content());
 }
 
 sub write_message
@@ -103,7 +105,7 @@ sub write_message
  my $t=$to->transport_data();
  my $req=HTTP::Request->new('POST',$t->{remote_url});
  $req->header('Content-Type','text/xml');
- $req->content(Encode::encode('utf8',$msg->as_string()));
+ $req->content(Net::DRI::Util::encode_utf8($msg));
  ## Content-Length will be automatically computed during Transport by LWP::UserAgent
  return $req;
 }

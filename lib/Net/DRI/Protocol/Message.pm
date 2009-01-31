@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Protocol messages (pure virtual superclass)
 ##
-## Copyright (c) 2005,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -19,9 +19,11 @@ package Net::DRI::Protocol::Message;
 
 use strict;
 
-use Net::DRI::Exception;
+use base qw/Net::DRI::BaseClass/;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+__PACKAGE__->make_exception_if_not_implemented(qw/new is_success result_status parse version as_string/);
+
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -51,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -62,14 +64,6 @@ the Free Software Foundation; either version 2 of the License, or
 See the LICENSE file that comes with this distribution for more details.
 
 =cut
-
-####################################################################################################
-
-sub new           { Net::DRI::Exception::err_method_not_implemented(); }
-sub is_success    { Net::DRI::Exception::err_method_not_implemented(); }
-sub result_status { Net::DRI::Exception::err_method_not_implemented(); }
-sub parse         { Net::DRI::Exception::err_method_not_implemented(); }
-sub version       { Net::DRI::Exception::err_method_not_implemented(); }
 
 ####################################################################################################
 

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Encapsulating raw data
 ##
-## Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,10 +18,14 @@
 package Net::DRI::Data::Raw;
 
 use strict;
+use warnings;
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+use base qw(Class::Accessor::Fast);
+__PACKAGE__->mk_ro_accessors(qw(type data hint));
+
+our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -51,7 +55,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -63,13 +67,12 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
-
 ####################################################################################################
 
 sub new
 {
  my $class=shift;
- my ($type,$data)=@_;
+ my ($type,$data,$hint)=@_;
 
 ## type=1, data=ref to array
 ## type=2, data=string
@@ -79,6 +82,7 @@ sub new
 
  my $self={type => $type,
            data => $data,
+           hint => $hint || '',
           };
 
  bless($self,$class);
@@ -93,13 +97,9 @@ sub new_from_array
  return $class->new(1,\@a);
 }
 
-sub new_from_string { return shift->new(2,shift); }
-sub new_from_object { return shift->new(5,shift); }
-
-####################################################################################################
-
-sub type { return shift->{type}; }
-sub data { return shift->{data}; }
+sub new_from_string    { return shift->new(2,@_); }
+sub new_from_xmlstring { return shift->new(2,$_[0],'xml'); }
+sub new_from_object    { return shift->new(5,@_); }
 
 ####################################################################################################
 

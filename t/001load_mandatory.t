@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-use Test::More tests => 260;
+use Test::More tests => 273;
 
 BEGIN { 
 use_ok('Net::DRI');
@@ -11,6 +11,11 @@ use_ok('Net::DRI::Protocol');
 use_ok('Net::DRI::Util');
 use_ok('Net::DRI::Registry');
 use_ok('Net::DRI::Shell');
+use_ok('Net::DRI::BaseClass');
+use_ok('Net::DRI::Logging');
+use_ok('Net::DRI::Logging::Null');
+use_ok('Net::DRI::Logging::Files');
+use_ok('Net::DRI::Logging::Stderr');
 use_ok('Net::DRI::DRD');
 use_ok('Net::DRI::DRD::ICANN');
 use_ok('Net::DRI::DRD::VNDS');
@@ -58,6 +63,8 @@ use_ok('Net::DRI::DRD::OpenSRS');
 use_ok('Net::DRI::DRD::PT');
 use_ok('Net::DRI::DRD::CentralNic');
 use_ok('Net::DRI::DRD::CoCCA');
+use_ok('Net::DRI::DRD::ARNES');
+use_ok('Net::DRI::DRD::IM');
 use_ok('Net::DRI::Data::Raw');
 use_ok('Net::DRI::Data::Hosts');
 use_ok('Net::DRI::Data::Changes');
@@ -84,6 +91,7 @@ use_ok('Net::DRI::Data::Contact::NO');
 use_ok('Net::DRI::Data::Contact::BR');
 use_ok('Net::DRI::Data::Contact::JOBS');
 use_ok('Net::DRI::Data::Contact::FCCN');
+use_ok('Net::DRI::Data::Contact::ARNES');
 use_ok('Net::DRI::Transport::Socket');
 use_ok('Net::DRI::Transport::Dummy');
 use_ok('Net::DRI::Transport::Defer');
@@ -190,6 +198,7 @@ use_ok('Net::DRI::Protocol::EPP::Extensions::CZ::Contact');
 use_ok('Net::DRI::Protocol::EPP::Extensions::CZ::Domain');
 use_ok('Net::DRI::Protocol::EPP::Extensions::CZ::NSSET');
 use_ok('Net::DRI::Protocol::EPP::Extensions::NeuLevel::UIN');
+use_ok('Net::DRI::Protocol::EPP::Extensions::NeuLevel::IDNLanguage');
 use_ok('Net::DRI::Protocol::EPP::Extensions::NO');
 use_ok('Net::DRI::Protocol::EPP::Extensions::NO::Contact');
 use_ok('Net::DRI::Protocol::EPP::Extensions::NO::Domain');
@@ -210,6 +219,9 @@ use_ok('Net::DRI::Protocol::EPP::Extensions::PRO::Domain');
 use_ok('Net::DRI::Protocol::EPP::Extensions::FCCN');
 use_ok('Net::DRI::Protocol::EPP::Extensions::FCCN::Domain');
 use_ok('Net::DRI::Protocol::EPP::Extensions::FCCN::Contact');
+use_ok('Net::DRI::Protocol::EPP::Extensions::ARNES');
+use_ok('Net::DRI::Protocol::EPP::Extensions::ARNES::Domain');
+use_ok('Net::DRI::Protocol::EPP::Extensions::ARNES::Contact');
 use_ok('Net::DRI::Protocol::DAS');
 use_ok('Net::DRI::Protocol::DAS::Message');
 use_ok('Net::DRI::Protocol::DAS::Connection');
@@ -263,6 +275,7 @@ use_ok('Net::DRI::Protocol::IRIS::Message');
 use_ok('Net::DRI::Protocol::IRIS::Core');
 use_ok('Net::DRI::Protocol::IRIS::DCHK::Domain');
 use_ok('Net::DRI::Protocol::IRIS::DCHK::Status');
+use_ok('Net::DRI::Protocol::IRIS::XCP');
 }
 
 exit 0;

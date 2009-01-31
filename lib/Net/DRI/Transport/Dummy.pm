@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Dummy transport for tests & debug
 ##
-## Copyright (c) 2005,2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2007,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -22,7 +22,7 @@ use strict;
 
 use Net::DRI::Data::Raw;
 
-our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -52,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2007,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -67,14 +67,11 @@ See the LICENSE file that comes with this distribution for more details.
 ####################################################################################################
 sub new
 {
- my $proto=shift;
- my $class=ref($proto) || $proto;
-
- my $drd=shift;
- my $po=shift;
+ my $class=shift;
+ my $ctx=shift;
  my $rh=shift;
 
- my $self=$class->SUPER::new($rh); ## We are now officially a Net::DRI::Transport instance
+ my $self=$class->SUPER::new($ctx,$rh); ## We are now officially a Net::DRI::Transport instance
  $self->has_state(0);
  $self->is_sync(1);
  $self->name('dummy');
@@ -91,8 +88,8 @@ sub is_compatible_with_protocol { return 1; }
 
 sub send
 {
- my ($self,$trid,$tosend)=@_;
- $self->SUPER::send($trid,$tosend,$self->{f_send},\&handle_error);
+ my ($self,$ctx,$tosend)=@_;
+ $self->SUPER::send($ctx,$tosend,$self->{f_send},\&handle_error);
 }
 
 sub handle_error
@@ -112,8 +109,8 @@ sub _print
 
 sub receive
 {
- my ($self,$trid)=@_;
- return $self->SUPER::receive($trid,$self->{f_recv});
+ my ($self,$ctx,$count)=@_;
+ return $self->SUPER::receive($ctx,$self->{f_recv});
 }
 
 sub _got_ok

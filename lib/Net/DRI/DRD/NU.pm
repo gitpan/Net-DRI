@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .NU policies
 ##
-## Copyright (c) 2007,2008 HEXONET Support GmbH, http://www.hexonet.com,
+## Copyright (c) 2007,2008,2009 HEXONET Support GmbH, http://www.hexonet.com,
 ##                    Alexander Biehl <info@hexonet.com>.
 ##                    All rights reserved.
 ##
@@ -24,7 +24,7 @@ use base qw/Net::DRI::DRD/;
 
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -54,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007,2008 HEXONET Support GmbH, E<lt>http://www.hexonet.comE<gt>,
+Copyright (c) 2007,2008,2009 HEXONET Support GmbH, E<lt>http://www.hexonet.comE<gt>,
 Alexander Biehl <info@hexonet.com>.
 All rights reserved.
 
@@ -71,9 +71,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $proto=shift;
- my $class=ref($proto) || $proto;
-
+ my $class=shift;
  my $self=$class->SUPER::new(@_);
  $self->{info}->{host_as_attr}=0;
 
@@ -102,32 +100,6 @@ sub transport_protocol_default
  my ($drd,$ndr,$type,$ta,$pa)=@_;
  $type='epp' if (!defined($type) || ref($type));
  return Net::DRI::DRD::_transport_protocol_default_epp('Net::DRI::Protocol::EPP',$ta,$pa) if ($type eq 'epp');
-}
-
-####################################################################################################
-
-sub verify_name_domain
-{
- my ($self,$ndr,$domain,$op)=@_;
- ($domain,$op)=($ndr,$domain) unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
-
- my $r=$self->SUPER::check_name($domain,1);
- return $r if ($r);
- return 10 unless $self->is_my_tld($domain);
-
- return 0;
-}
-
-sub domain_operation_needs_is_mine
-{
- my ($self,$ndr,$domain,$op)=@_;
- ($domain,$op)=($ndr,$domain) unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
-
- return unless defined($op);
-
- return 1 if ($op=~m/^(?:renew|update|delete)$/);
- return 0 if ($op eq 'transfer');
- return;
 }
 
 ####################################################################################################

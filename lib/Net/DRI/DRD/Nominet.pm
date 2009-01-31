@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .UK (Nominet) policies for Net::DRI
 ##
-## Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -25,7 +25,14 @@ use Net::DRI::Exception;
 
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+
+## No status at all with Nominet
+## Only domain:check is available
+## Only domain transfer op=req and refuse/accept
+## The delete command applies only to domain names.  Accounts, contacts and nameservers cannot be explicitly deleted, but are automatically deleted when no longer referenced.
+## No direct contact/host create
+__PACKAGE__->make_exception_for_unavailable_operations(qw/domain_update_status_add domain_update_status_del domain_update_status_set domain_update_status domain_status_allows_delete domain_status_allows_update domain_status_allows_transfer domain_status_allows_renew domain_status_allows domain_current_status host_update_status_add host_update_status_del host_update_status_set host_update_status host_current_status contact_update_status_add contact_update_status_del contact_update_status_set contact_update_status contact_current_status host_check host_check_multi host_exist contact_check contact_check_multi contact_exist contact_transfer contact_transfer_start contact_transfer_stop contact_transfer_query contact_transfer_accept contact_transfer_refuse domain_transfer_stop domain_transfer_query host_delete contact_delete host_create contact_create/);
 
 =pod
 
@@ -55,7 +62,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -129,16 +136,6 @@ sub _filter_objuri
 }
 
 ####################################################################################################
-sub verify_name_domain
-{
- my ($self,$ndr,$domain,$op)=@_;
- ($domain,$op)=($ndr,$domain) unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
-
- my $r=$self->SUPER::check_name($domain,2); ## 2 dots needed
- return $r if ($r);
- return 10 unless $self->is_my_tld($domain);
- return 0;
-}
 
 ## http://www.nominet.org.uk/registrars/systems/epp/renew/
 sub verify_duration_renew
@@ -160,19 +157,11 @@ sub verify_duration_renew
 sub host_info
 {
  my ($self,$ndr,$dh,$rh)=@_;
-
  my $roid=Net::DRI::Util::isa_hosts($dh)? $dh->roid() : $dh;
 
- my ($rc,$exist);
-## when we do a domain:info we get all info needed to later on reply to a host:info (cache delay permitting)
- if (defined($exist=$ndr->get_info('exist','host',$roid)) && $exist && defined($ndr->get_info('self','host',$roid)))
- {
-  $ndr->set_info_from_cache('host',$roid);
-  $rc=$ndr->get_info('result_status');
- } else
- {
-  $rc=$ndr->process('host','info',[$dh,$rh]); ## cache was empty, go to registry
- }
+ ## when we do a domain:info we get all info needed to later on reply to a host:info (cache delay permitting) ; we do not take this information into account here
+ my $rc=$ndr->try_restore_from_cache('host',$roid,'info');
+ if (! defined $rc) { $rc=$ndr->process('host','info',[$dh,$rh]); }
 
  return $rc unless $rc->is_success();
  return (wantarray())? ($rc,$ndr->get_info('self')) : $rc;
@@ -245,58 +234,6 @@ sub account_merge
  my ($self,$ndr,$c,$cs)=@_;
  return $ndr->process('account','merge',[$c,$cs]);
 }
-
-####################################################################################################
-
-## No status at all with Nominet
-sub domain_update_status_add { Net::DRI::Exception->die(0,'DRD',4,'No domain status update available in .UK'); }
-sub domain_update_status_del { Net::DRI::Exception->die(0,'DRD',4,'No domain status update available in .UK'); }
-sub domain_update_status_set { Net::DRI::Exception->die(0,'DRD',4,'No domain status update available in .UK'); }
-sub domain_update_status { Net::DRI::Exception->die(0,'DRD',4,'No domain status update available in .UK'); }
-sub domain_status_allows_delete { Net::DRI::Exception->die(0,'DRD',4,'No domain status update available in .UK'); }
-sub domain_status_allows_update { Net::DRI::Exception->die(0,'DRD',4,'No domain status update available in .UK'); }
-sub domain_status_allows_transfer { Net::DRI::Exception->die(0,'DRD',4,'No domain status update available in .UK'); }
-sub domain_status_allows_renew { Net::DRI::Exception->die(0,'DRD',4,'No domain status update available in .UK'); }
-sub domain_status_allows { Net::DRI::Exception->die(0,'DRD',4,'No domain status update available in .UK'); }
-sub domain_current_status { Net::DRI::Exception->die(0,'DRD',4,'No domain status update available in .UK'); }
-sub host_update_status_add { Net::DRI::Exception->die(0,'DRD',4,'No host status update available in .UK'); }
-sub host_update_status_del { Net::DRI::Exception->die(0,'DRD',4,'No host status update available in .UK'); }
-sub host_update_status_set { Net::DRI::Exception->die(0,'DRD',4,'No host status update available in .UK'); }
-sub host_update_status { Net::DRI::Exception->die(0,'DRD',4,'No host status update available in .UK'); }
-sub host_current_status { Net::DRI::Exception->die(0,'DRD',4,'No host status update available in .UK'); }
-sub contact_update_status_add { Net::DRI::Exception->die(0,'DRD',4,'No contact status update available in .UK'); }
-sub contact_update_status_del { Net::DRI::Exception->die(0,'DRD',4,'No contact status update available in .UK'); }
-sub contact_update_status_set { Net::DRI::Exception->die(0,'DRD',4,'No contact status update available in .UK'); }
-sub contact_update_status { Net::DRI::Exception->die(0,'DRD',4,'No contact status update available in .UK'); }
-sub contact_current_status { Net::DRI::Exception->die(0,'DRD',4,'No contact status update available in .UK'); }
-
-## Only domain:check is available
-sub host_check { Net::DRI::Exception->die(0,'DRD',4,'No host check available in .UK'); }
-sub host_check_multi { Net::DRI::Exception->die(0,'DRD',4,'No host check available in .UK'); }
-sub host_exist { Net::DRI::Exception->die(0,'DRD',4,'No host check available in .UK'); }
-sub contact_check { Net::DRI::Exception->die(0,'DRD',4,'No contact check available in .UK'); }
-sub contact_check_multi { Net::DRI::Exception->die(0,'DRD',4,'No contact check available in .UK'); }
-sub contact_exist { Net::DRI::Exception->die(0,'DRD',4,'No contact check available in .UK'); }
-
-## Only domain transfer
-sub contact_transfer { Net::DRI::Exception->die(0,'DRD',4,'No contact transfer available in .UK'); }
-sub contact_transfer_start { Net::DRI::Exception->die(0,'DRD',4,'No contact transfer available in .UK'); }
-sub contact_transfer_stop { Net::DRI::Exception->die(0,'DRD',4,'No contact transfer available in .UK'); }
-sub contact_transfer_query { Net::DRI::Exception->die(0,'DRD',4,'No contact transfer available in .UK'); }
-sub contact_transfer_accept { Net::DRI::Exception->die(0,'DRD',4,'No contact transfer available in .UK'); }
-sub contact_transfer_refuse { Net::DRI::Exception->die(0,'DRD',4,'No contact transfer available in .UK'); }
-
-## Only transfer op=req and refuse/accept
-sub domain_transfer_stop { Net::DRI::Exception->die(0,'DRD',4,'Not possible to stop an ongoing transfer in .UK'); }
-sub domain_transfer_query { Net::DRI::Exception->die(0,'DRD',4,'Not possible to query an ongoing transfer in .UK'); }
-
-## The delete command applies only to domain names.  Accounts, contacts and nameservers cannot be explicitly deleted, but are automatically deleted when no longer referenced.
-sub host_delete { Net::DRI::Exception->die(0,'DRD',4,'No host delete available in .UK'); }
-sub contact_delete { Net::DRI::Exception->die(0,'DRD',4,'No contact delete available in .UK'); }
-
-## No direct contact/host create
-sub host_create { Net::DRI::Exception->die(0,'DRD',4,'No direct host creation possible in .UK'); }
-sub contact_create { Net::DRI::Exception->die(0,'DRD',4,'No direct contact creation possible in .UK'); }
 
 ####################################################################################################
 1;

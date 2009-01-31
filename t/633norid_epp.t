@@ -27,7 +27,7 @@ sub myrecv
 my $dri=Net::DRI::TrapExceptions->new(10);
 $dri->{trid_factory}=sub { return 'ABC-12345'; };
 $dri->add_registry('NO');
-$dri->target('NO')->new_current_profile('p1','Net::DRI::Transport::Dummy',[{f_send=>\&mysend,f_recv=>\&myrecv}],'Net::DRI::Protocol::EPP::Extensions::NO',[]);
+$dri->target('NO')->add_current_test_profile('p1','Dummy',{f_send=>\&mysend,f_recv=>\&myrecv},'Net::DRI::Protocol::EPP::Extensions::NO');
 
 my $rc;
 my $s;

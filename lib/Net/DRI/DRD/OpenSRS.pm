@@ -1,6 +1,6 @@
 ## Domain Registry Interface, OpenSRS Registry Driver
 ##
-## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -23,7 +23,7 @@ use base qw/Net::DRI::DRD/;
 use DateTime::Duration;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -57,7 +57,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -108,53 +108,27 @@ sub transport_protocol_default
 
 ####################################################################################################
 
-sub verify_name_domain
-{
- my ($self,$ndr,$domain)=@_;
- $domain=$ndr unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
-
- my $r=$self->SUPER::check_name($domain,[1,2]);
- return $r if ($r);
- return 10 unless $self->is_my_tld($domain);
- return 0;
-}
-
 sub domain_operation_needs_is_mine
 {
  my ($self,$ndr,$domain,$op)=@_;
- ($domain,$op)=($ndr,$domain) unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
-
  return;
 }
 
 sub account_list_domains
 {
  my ($self,$ndr)=@_;
- my $rc;
- if (defined($ndr->get_info('list','account','domains')))
- {
-  $ndr->set_info_from_cache('account','domains');
-  $rc=$ndr->get_info('result_status');
- } else
- {
-  $rc=$ndr->process('account','list_domains');
- }
+ my $rc=$ndr->try_restore_from_cache('account','domains','list');
+ if (! defined $rc) { $rc=$ndr->process('account','list_domains'); }
  return $rc;
 }
 
 sub domain_info
 {
  my ($self,$ndr,$domain,$rd)=@_;
- $self->err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'info');
+ $self->err_invalid_domain_name($domain) if $self->verify_name_domain($ndr,$domain,'info');
 
- my $rc;
- my $exist;
- ## After a successfull domain_info, get_info('ns') must be defined and is an Hosts object, even if empty
- if (defined($exist=$ndr->get_info('exist','domain',$domain)) && $exist && defined($ndr->get_info('ns','domain',$domain)))
- {
-  $ndr->set_info_from_cache('domain',$domain);
-  $rc=$ndr->get_info('result_status');
- } else
+ my $rc=$ndr->try_restore_from_cache('domain',$domain,'info');
+ if (! defined $rc)
  {
   ## First grab a cookie, if needed
   unless (Net::DRI::Util::has_key($rd,'cookie'))

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, AFNIC Email Message
 ##
-## Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -23,11 +23,11 @@ use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version trid email_from client_auth));
 
 use MIME::Entity ();
-use Encode ();
 
 use Net::DRI::Protocol::ResultStatus;
+use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -57,7 +57,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -106,7 +106,7 @@ sub email_body
   push @l,sprintf('%s..: %s',$c,$self->{lines}->{$c});
  }
 
- return Encode::encode('iso-8859-15',join("\n",@l)."\n",$Encode::FB_CROAK);
+ return Net::DRI::Util::encode('iso-8859-15',join("\n",@l)."\n");
 }
 
 sub as_mime

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, AFNIC Email Domain commands
 ##
-## Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -20,7 +20,7 @@ package Net::DRI::Protocol::AFNIC::Email::Domain;
 use strict;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -50,7 +50,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -97,7 +97,7 @@ sub add_starting_block
  $mes->line('1b',$ca->{id}); ## code fournisseur
  $mes->line('1c',$ca->{pw}); ## mot de passe
  $mes->line('1e',$mes->trid()); ## reference client (=trid) ## allow more/other ?
- $mes->line('1f','2.0.0');
+ $mes->line('1f','2.5.0');
  $mes->line('1g',$rd->{auth_code}) if ($action=~m/^[CD]$/ && Net::DRI::Util::has_key($rd,'auth_code') && $rd->{auth_code}); ## authorization code for reserved domain names
 
  $mes->line('2a',$domain);
@@ -109,7 +109,9 @@ sub create
  my $mes=$a->message();
 
  add_starting_block('C',$domain,$mes,$rd);
- 
+ Net::DRI::Exception::usererr_insufficient_parameters('authInfo is mandatory') unless Net::DRI::Util::has_auth($rd);
+ $mes->line('2z',$rd->{auth}->{pw});
+
  Net::DRI::Exception::usererr_insufficient_parameters('contacts are mandatory') unless Net::DRI::Util::has_contact($rd);
  my $cs=$rd->{contact};
  my $co=$cs->get('registrant');
@@ -117,13 +119,13 @@ sub create
  $co->validate();
  $co->validate_is_french() unless ($co->roid()); ## registrant must be in France
 
- $mes->line('3w',$co->org()? 'PM' : 'PP');
-
  if ($co->org() && $co->legal_form()) ## PM
  {
+  $mes->line('3w','PM');
   add_company_info($mes,$co);
  } else ## PP
  {
+  $mes->line('3w','PP');
   Net::DRI::Exception::usererr_insufficient_parameters('name or key needed for PP') unless ($co->name() || $co->key());
   if ($co->key())
   {
@@ -143,8 +145,7 @@ sub create
  add_admin_contact($mes,$cs); ## optional
  add_tech_contacts($mes,$cs); ## mandatory
 
- Net::DRI::Exception::usererr_insufficient_parameters('nameservers (at least 2) are mandatory for create') unless Net::DRI::Util::has_ns($rd);
- add_all_ns($domain,$mes,$rd->{ns});
+ add_all_ns($domain,$mes,$rd->{ns}) if Net::DRI::Util::has_ns($rd);
  add_installation($mes,$rd);
 }
 
@@ -294,7 +295,7 @@ sub update
  {
   add_starting_block('T',$domain,$mes); ## no $rd here !
   add_tech_contacts($mes,$cs); ##  tech contacts mandatory even for only nameserver changes !
-  add_all_ns($domain,$mes,$ns);
+  add_all_ns($domain,$mes,$ns) if (defined $ns && Net::DRI::Util::isa_hosts($ns,'Net::DRI::Data::Hosts'));
   add_installation($mes,$rd);
   return;
  }
@@ -304,7 +305,7 @@ sub update
  {
   add_starting_block('A',$domain,$mes);
   my $co=$cs->get('registrant');
-  if (Net::DRI::Util::isa_contact($co) && $co->org()) ## only for PM
+  if (Net::DRI::Util::isa_contact($co) && $co->org() && $co->legal_form()) ## only for PM
   {
    $co->validate();
    $mes->line('3a',$co->org());
@@ -328,8 +329,17 @@ sub trade
  my $mes=$a->message();
 
  create($a,$domain,$rd);
+ my $type=(Net::DRI::Util::has_key($rd,'trade_type') && $rd->{trade_type}=~m/^[VF]$/)? $rd->{trade_type} : 'V';
+
  $mes->line('1a','P');
- $mes->line('1h',(Net::DRI::Util::has_key($rd,'trade_type') && $rd->{trade_type}=~m/^[VF]$/)? $rd->{trade_type} : 'V');
+ $mes->line('1h',$type);
+
+ if ($type eq 'F')
+ {
+  Net::DRI::Exception::usererr_insufficient_parameters('authInfo is mandatory') unless Net::DRI::Util::has_auth($rd);
+  $mes->line('2z',$rd->{auth}->{pw});
+ }
+
 }
 
 sub transfer_request
@@ -346,7 +356,10 @@ sub transfer_request
  $co->validate();
  $co->validate_is_french() unless ($co->roid()); ## registrant must be in France
 
- if ($co->org()) ## PM
+ Net::DRI::Exception::usererr_insufficient_parameters('authInfo is mandatory') unless Net::DRI::Util::has_auth($rd);
+ $mes->line('2z',$rd->{auth}->{pw});
+
+ if ($co->org() && $co->legal_form()) ## PM
  {
   add_company_info($mes,$co);
  } else ## PP
@@ -356,7 +369,7 @@ sub transfer_request
  }
 
  add_tech_contacts($mes,$cs); ##  tech contacts mandatory
- add_all_ns($domain,$mes,$rd->{ns}); ## ns mandatory
+ add_all_ns($domain,$mes,$rd->{ns}) if Net::DRI::Util::has_ns($rd);
  add_installation($mes,$rd);
 }
 

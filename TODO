@@ -5,7 +5,7 @@ Send your wishlist to <netdri@dotandco.com>
 All
 	* sign the distribution with Module::Signature (1)
 	* add some introspections to be able to know what methods are really available per DRD, instead of throwing an exception ?
-	* implement RFC5105
+	* implement RFC5105 « ENUM Validation Token Format Definition »
 
 Net::DRI
 	* IDN support (in a cross registry fashion) with Net-IDN-Tools (1)
@@ -15,17 +15,15 @@ Net::DRI
 Net::DRI::DRD
 	* bulk operations (many domains at once)
 	* domain_delete() : try to rename nameservers created in domain about to be deleted
-	* domain_create() : create contacts if needed
 	* domain_update() / host_update()
 	  - try to accomodate (set=>info+add+del, add=>info+set, del=>info+set)
           - verify not same info in add & del
           - verify final change is not empty ?
+        * split the module in DRD::Objects::{Domain,Host,Contact,...} + smart loader (like Protocol register_commands)
+          to load the relevant modules based on DRD::object_types() and/or Protocol registered actions and objects
 
 Net::DRI::Protocol::ResultStatus + Net::DRI::Registry
 	* implement the results_* methods added in EPP/Message. Or change API based on wantarray
-
-Net::DRI::DRD::AFNIC
-	* implement all(?) webservices (probably not needed since EPP is coming)
 
 Net::DRI::DRD::LU
 	* implement startTLS extension ?
@@ -41,4 +39,4 @@ Net::DRI::Transport::HTTP::*
 
 
 
-(1) should probaby be done before releasing Net::DRI version 1.0
+(1) would be great to have before releasing Net::DRI version 1.0

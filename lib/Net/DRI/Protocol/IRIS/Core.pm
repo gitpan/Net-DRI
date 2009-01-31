@@ -1,6 +1,6 @@
 ## Domain Registry Interface, IRIS Core functions
 ##
-## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,11 +18,12 @@
 package Net::DRI::Protocol::IRIS::Core;
 
 use strict;
+use warnings;
 
 use Carp;
 use Net::DRI::Protocol::ResultStatus;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -52,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -81,25 +82,50 @@ our %ERRORS=(insufficientResources => 2400,
 
 sub parse_error
 {
- my ($mes,$node)=@_; ## $node should be a topmost <resultSet> to be able to catch all errors type
+ my ($node)=@_; ## $node should be a topmost <resultSet> to be able to catch all errors type
  my $c=$node->getFirstChild();
  while ($c)
  {
   next unless ($c->nodeType() == 1); ## only for element nodes
   my $name=$c->localname();
-  next unless $name;
+  next unless (defined $name && $name);
   next if ($name eq 'answer' || $name eq 'additional');
   carp('Got unknown error <'.$name.'>, please report') unless exists($ERRORS{$name});
   my (@i,$msg,$lang);
   foreach my $expl ($c->getChildrenByTagNameNS($c->namespaceURI(),'explanation'))
   {
-   ($msg,$lang)=($expl->getAttribute('language'),$expl->textContent()) unless defined($msg);
+   if (! defined $msg) { ($lang,$msg)=($expl->getAttribute('language'),$expl->textContent()); }
    push @i,sprintf('[%s] %s',$expl->getAttribute('language'),$expl->textContent());
   }
   ## We have only one error element at most, so break here if we found one
   return Net::DRI::Protocol::ResultStatus->new('iris',$name,exists($ERRORS{$name})? $ERRORS{$name} : 'GENERIC_ERROR',0,$msg,$lang,\@i);
  } continue { $c=$c->getNextSibling(); }
  return Net::DRI::Protocol::ResultStatus->new_generic_success();
+}
+
+## RFC4991 §6 §7
+sub parse_authentication
+{
+ my ($node)=@_; ## $node should be a topmost <resultSet> to be able to catch all errors type
+ my (@i,$msg,$lang);
+
+ my $c=$node->getFirstChild();
+ while ($c)
+ {
+  next unless ($c->nodeType() == 1); ## only for element nodes
+  my $name=$c->localname();
+  next unless (defined $name && $name);
+  next unless ($name eq 'authenticationSuccess' || $name eq 'authenticationFailure');
+
+  foreach my $expl ($c->getChildrenByTagNameNS($c->namespaceURI(),'description'))
+  {
+   if (! defined $msg) { ($lang,$msg)=($expl->getAttribute('language'),$expl->textContent()); }
+   push @i,sprintf('[%s] %s',$expl->getAttribute('language'),$expl->textContent());
+  }
+  last;
+ } continue { $c=$c->getNextSibling(); }
+
+ return ($msg,$lang,\@i);
 }
 
 ####################################################################################################

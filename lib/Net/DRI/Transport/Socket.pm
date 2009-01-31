@@ -1,6 +1,6 @@
 ## Domain Registry Interface, TCP/SSL Socket Transport
 ##
-## Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -20,6 +20,7 @@ package Net::DRI::Transport::Socket;
 use base qw(Net::DRI::Transport);
 
 use strict;
+use warnings;
 
 use IO::Socket::INET;
 ## At least this version is needed, to have getline()
@@ -29,7 +30,7 @@ use Net::DRI::Exception;
 use Net::DRI::Util;
 use Net::DRI::Data::Raw;
 
-our $VERSION=do { my @r=(q$Revision: 1.28 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.29 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -91,18 +92,9 @@ similar array; it can be used to filter out some services from those given by th
 
 number of protocol commands to send to server (we will automatically close and re-open connection if needed)
 
-=head2 log_fh
-
-either a reference to something that have a print() method or a filehandle (ex: \*STDERR or an anonymous filehandle) on something already opened for write ;
-if defined, all exchanges (messages sent to server, messages received from server) will be printed to this filehandle
-
 =head2 local_host
 
 (optional) the local address (hostname or IP) you want to use to connect
-
-=head2 trid
-
-(optional) code reference of a subroutine generating transaction id ; if not defined, Net::DRI::Util::create_trid_1 is used
 
 =head1 SUPPORT
 
@@ -122,7 +114,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -139,19 +131,17 @@ See the LICENSE file that comes with this distribution for more details.
 sub new
 {
  my $class=shift;
- my $drd=shift;
- my $po=shift;
+ my $ctx=shift;
+ my $po=$ctx->{protocol};
 
  my %opts=(@_==1 && ref($_[0]))? %{$_[0]} : @_;
- my $self=$class->SUPER::new(\%opts); ## We are now officially a Net::DRI::Transport instance
+ my $self=$class->SUPER::new($ctx,\%opts); ## We are now officially a Net::DRI::Transport instance
  $self->has_state(1);
  $self->is_sync(1);
  $self->name('socket_inet');
  $self->version('0.2');
 
  my %t=(message_factory => $po->factories()->{message});
- $t{trid_factory}=(exists($opts{trid}) && (ref($opts{trid}) eq 'CODE'))? $opts{trid} : \&Net::DRI::Util::create_trid_1;
-
  Net::DRI::Exception::usererr_insufficient_parameters('socktype must be defined') unless (exists($opts{socktype}));
  Net::DRI::Exception::usererr_invalid_parameters('socktype must be ssl, tcp or udp') unless ($opts{socktype}=~m/^(ssl|tcp|udp)$/);
  $t{socktype}=$opts{socktype};
@@ -210,7 +200,7 @@ sub new
   $self->current_state(0);
  } else ## we will open NOW
  {
-  $self->open_connection();
+  $self->open_connection($ctx);
   $self->current_state(1);
  }
 
@@ -256,10 +246,21 @@ sub open_socket
 
 sub send_login
 {
- my $self=shift;
+ my ($self,$ctx)=@_;
  my $t=$self->transport_data();
  my $sock=$self->sock();
  my $pc=$t->{pc};
+ my $dr;
+ my $cltrid=$self->generate_trid();
+
+ ## Get server greeting, if any
+ if ($pc->can('parse_greeting'))
+ {
+  $dr=$pc->read_data($self,$sock);
+  $self->log_output('notice','transport',{ctx=>$ctx,trid=>$cltrid,phase=>'opening',direction=>'in',driver=>$self->name().'/'.$self->version(),message=>$dr});
+  my $rc1=$pc->parse_greeting($dr); ## gives back a Net::DRI::Protocol::ResultStatus
+  die($rc1) unless $rc1->is_success();
+ }
 
  return unless ($pc->can('login') && $pc->can('parse_login'));
  foreach my $p (qw/client_login client_password/)
@@ -267,53 +268,42 @@ sub send_login
   Net::DRI::Exception::usererr_insufficient_parameters($p.' must be defined') unless (exists($t->{$p}) && $t->{$p});
  }
 
- ## Get registry greeting, if available
- my $cltrid=$t->{trid_factory}->($self->name());
- my $dr;
-
- if ($pc->can('parse_greeting'))
- {
-  $dr=$pc->read_data($self,$sock);
-  $self->logging($cltrid,1,1,1,$dr);
-  my $rc1=$pc->parse_greeting($dr); ## gives back a Net::DRI::Protocol::ResultStatus
-  die($rc1) unless $rc1->is_success();
- }
-
- my $login=$pc->login($self,$t->{message_factory},$t->{client_login},$t->{client_password},$cltrid,$dr,$t->{client_newpassword},$t->{protocol_data});
- $self->logging($cltrid,1,0,1,$login);
- Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send login message') unless ($sock->print($login));
+ $cltrid=$self->generate_trid();
+ my $login=$pc->login($t->{message_factory},$t->{client_login},$t->{client_password},$cltrid,$dr,$t->{client_newpassword},$t->{protocol_data});
+ $self->log_output('notice','transport',{ctx=>$ctx,trid=>$cltrid,phase=>'opening',direction=>'out',driver=>$self->name().'/'.$self->version(),message=>$login});
+ Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send login message') unless ($sock->print($pc->write_message($self,$login)));
 
  ## Verify login successful
  $dr=$pc->read_data($self,$sock);
- $self->logging($cltrid,1,1,1,$dr);
+ $self->log_output('notice','transport',{ctx=>$ctx,trid=>$cltrid,phase=>'opening',direction=>'in',driver=>$self->name().'/'.$self->version(),message=>$dr});
  my $rc2=$pc->parse_login($dr); ## gives back a Net::DRI::Protocol::ResultStatus
  die($rc2) unless $rc2->is_success();
 }
 
 sub send_logout
 {
- my $self=shift;
+ my ($self,$ctx)=@_;
  my $t=$self->transport_data();
  my $sock=$self->sock();
  my $pc=$t->{pc};
 
  return unless ($pc->can('logout') && $pc->can('parse_logout'));
 
- my $cltrid=$t->{trid_factory}->($self->name());
- my $logout=$pc->logout($self,$t->{message_factory},$cltrid);
- $self->logging($cltrid,3,0,1,$logout);
- Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send logout message') unless ($sock->print($logout));
+ my $cltrid=$self->generate_trid();
+ my $logout=$pc->logout($t->{message_factory},$cltrid);
+ $self->log_output('notice','transport',{ctx=>$ctx,trid=>$cltrid,phase=>'closing',direction=>'out',driver=>$self->name().'/'.$self->version(),message=>$logout});
+ Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send logout message') unless ($sock->print($pc->write_message($self,$logout)));
  my $dr=$pc->read_data($self,$sock); ## We expect this to throw an exception, since the server will probably cut the connection
- $self->logging($cltrid,3,1,1,$dr);
+ $self->log_output('notice','transport',{ctx=>$ctx,trid=>$cltrid,phase=>'closing',direction=>'in',driver=>$self->name().'/'.$self->version(),message=>$dr});
  my $rc1=$pc->parse_logout($dr);
  die($rc1) unless $rc1->is_success();
 }
 
 sub open_connection
 {
- my ($self)=@_;
+ my ($self,$ctx)=@_;
  $self->open_socket();
- $self->send_login();
+ $self->send_login($ctx);
  $self->current_state(1);
  $self->time_open(time());
  $self->time_used(time());
@@ -322,25 +312,25 @@ sub open_connection
 
 sub ping
 {
- my ($self,$autorecon)=@_;
+ my ($self,$autorecon,$ctx)=@_;
  $autorecon||=0;
  my $t=$self->transport_data();
  my $sock=$self->sock();
  my $pc=$t->{pc};
  Net::DRI::Exception::err_method_not_implemented() unless ($pc->can('keepalive') && $pc->can('parse_keepalive'));
 
- my $cltrid=$t->{trid_factory}->($self->name());
+ my $cltrid=$self->generate_trid();
  eval
  {
   local $SIG{ALRM}=sub { die 'timeout' };
   alarm(10);
-  my $noop=$pc->keepalive($self,$t->{message_factory},$cltrid);
-  $self->logging($cltrid,2,0,1,$noop);
-  Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send ping message') unless ($sock->print($noop));
+  my $noop=$pc->keepalive($t->{message_factory},$cltrid);
+  $self->log_output('notice','transport',{ctx=>$ctx,trid=>$cltrid,phase=>'keepalive',direction=>'out',driver=>$self->name().'/'.$self->version(),message=>$noop});
+  Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send ping message') unless ($sock->print($pc->write_message($self,$noop)));
   $self->time_used(time());
   $t->{exchanges_done}++;
   my $dr=$pc->read_data($self,$sock);
-  $self->logging($cltrid,2,1,1,$dr);
+  $self->log_output('notice','transport',{ctx=>$ctx,trid=>$cltrid,phase=>'keepalive',direction=>'in',driver=>$self->name().'/'.$self->version(),message=>$dr});
   my $rc=$pc->parse_keepalive($dr);
   die($rc) unless $rc->is_success();
  };
@@ -357,25 +347,31 @@ sub ping
  return $self->current_state();
 }
 
-sub close_connection
+sub close_socket
 {
  my ($self)=@_;
- $self->send_logout();
  $self->sock()->close();
  $self->sock(undef);
+}
+
+sub close_connection
+{
+ my ($self,$ctx)=@_;
+ $self->send_logout($ctx);
+ $self->close_socket();
  $self->current_state(0);
 }
 
 sub end
 {
- my $self=shift;
+ my ($self,$ctx)=@_;
  if ($self->current_state())
  {
   eval
   {
    local $SIG{ALRM}=sub { die 'timeout' };
    alarm(10);
-   $self->close_connection();
+   $self->close_connection($ctx);
   };
   alarm(0); ## since close_connection may die, this must be outside of eval to be executed in all cases
  }
@@ -385,10 +381,10 @@ sub end
 
 sub send
 {
- my ($self,$trid,$tosend)=@_;
+ my ($self,$ctx,$tosend,$count)=@_;
  ## We do a very crude error handling : if first send fails, we reset connection.
  ## Thus if you put retry=>2 when creating this object, the connection will be re-established and the message resent
- $self->SUPER::send($trid,$tosend,\&_print,sub { shift->current_state(0) });
+ $self->SUPER::send($ctx,$tosend,\&_print,sub { shift->current_state(0) },$count);
 }
 
 sub _print ## here we are sure open_connection() was called before
@@ -405,9 +401,8 @@ sub _print ## here we are sure open_connection() was called before
 
 sub receive
 {
- my ($self,$trid)=@_;
-
- return $self->SUPER::receive($trid,\&_get);
+ my ($self,$ctx,$count)=@_;
+ return $self->SUPER::receive($ctx,\&_get,undef,$count);
 }
 
 sub _get
@@ -429,6 +424,30 @@ sub _get
 
  return $dr;
 }
+
+sub try_again
+{
+ my ($self,$po,$err,$count,$istimeout,$step,$rpause,$rtimeout)=@_;
+ if ($step==0) ## sending not already done, hence error during send
+ {
+  $self->current_state(0);
+  return 1;
+ }
+
+ ## We do a more agressive retry procedure in case of udp (that is IRIS basically)
+ ## See RFC4993 section 4
+ if ($step==1 && $istimeout==1 && $self->transport_data()->{socktype} eq 'udp')
+ {
+  $self->log_output('debug','transport',sprintf('In try_again, currently: pause=%f timeout=%f',$$rpause,$$rtimeout));
+  $$rtimeout=2*$$rtimeout;
+  $$rpause+=rand(1+int($$rpause/2));
+  $self->log_output('debug','transport',sprintf('In try_again, new values: pause=%f timeout=%f',$$rpause,$$rtimeout));
+  return 1; ## we will retry
+ }
+
+ return 0; ## we do not handle other cases, hence no retry and fatal error
+}
+
 
 ####################################################################################################
 1;

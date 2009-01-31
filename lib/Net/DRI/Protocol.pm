@@ -25,7 +25,7 @@ __PACKAGE__->mk_accessors(qw(name version commands message default_parameters));
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.20 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.21 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -177,9 +177,10 @@ sub reaction
  Net::DRI::Exception->die(0,'protocol',1,'Unsuccessfull message creation') unless ($msg && ref($msg) && $msg->isa('Net::DRI::Protocol::Message'));
 
  my %info;
+ ## TODO is $sent needed here really ? if not remove from API above also !
  $msg->parse($dr,\%info,$otype,$oaction,$sent); ## will trigger an Exception by itself if problem ## TODO : add  later the whole LocalStorage stuff done when sending ? (instead of otype/oaction/message sent)
  $self->message($msg); ## store it for later use (in loop below)
- $info{$otype}->{$oname}->{name}=$oname;
+ $info{$otype}->{$oname}->{name}=$oname if ($otype eq 'domain' || $otype eq 'host');
 
  foreach my $t (@{$h->{$otype}->{$oaction}})
  {

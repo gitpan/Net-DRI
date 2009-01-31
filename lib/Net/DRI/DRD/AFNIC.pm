@@ -1,6 +1,6 @@
 ## Domain Registry Interface, AFNIC Registry Driver for .FR/.RE
 ##
-## Copyright (c) 2005,2006,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -22,10 +22,11 @@ use base qw/Net::DRI::DRD/;
 
 use Carp;
 use DateTime::Duration;
-use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+
+__PACKAGE__->make_exception_for_unavailable_operations(qw/host_update host_current_status host_check host_check_multi host_exist host_delete host_create host_info contact_delete/);
 
 =pod
 
@@ -61,7 +62,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -72,7 +73,6 @@ the Free Software Foundation; either version 2 of the License, or
 See the LICENSE file that comes with this distribution for more details.
 
 =cut
-
 
 ####################################################################################################
 
@@ -112,6 +112,9 @@ sub transport_protocol_default
  if ($type eq 'email')
  {
   return ('Net::DRI::Transport::SMTP',[\%ta],'Net::DRI::Protocol::AFNIC::Email',\@pa);
+ } elsif ($type eq 'ws')
+ {
+  return ('Net::DRI::Transport::SOAP',[\%ta],'Net::DRI::Protocol::AFNIC::WS',\@pa);
  } elsif ($type eq 'epp')
  {
   carp('AFNIC EPP support is currently being developed, use it only for tests');
@@ -122,39 +125,17 @@ sub transport_protocol_default
 
 ####################################################################################################
 
-sub verify_name_domain
-{
- my ($self,$ndr,$domain)=@_;
- $domain=$ndr unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
-
- my $r=$self->SUPER::check_name($domain,1);
- return $r if ($r);
- return 10 unless $self->is_my_tld($domain);
- return 0;
-}
-
 sub domain_operation_needs_is_mine
 {
  my ($self,$ndr,$domain,$op)=@_;
- ($domain,$op)=($ndr,$domain) unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
-
+ return $self->SUPER::domain_operation_needs_is_mine($ndr,$domain,$op) if ($ndr->protocol()->name() eq 'EPP');
  return;
 }
-
-sub host_update { Net::DRI::Exception->die(0,'DRD',4,'No host update available for AFNIC'); }
-sub host_current_status { Net::DRI::Exception->die(0,'DRD',4,'No host status update available for AFNIC'); }
-sub host_check { Net::DRI::Exception->die(0,'DRD',4,'No host check available for AFNIC'); }
-sub host_check_multi { Net::DRI::Exception->die(0,'DRD',4,'No host check available for AFNIC'); }
-sub host_exist { Net::DRI::Exception->die(0,'DRD',4,'No host check available for AFNIC'); }
-sub host_delete { Net::DRI::Exception->die(0,'DRD',4,'No host delete available for AFNIC'); }
-sub host_create { Net::DRI::Exception->die(0,'DRD',4,'No host creation possible for AFNIC'); }
-sub host_info { Net::DRI::Exception->die(0,'DRD',4,'No host info possible for AFNIC'); }
-sub contact_delete { Net::DRI::Exception->die(0,'DRD',4,'No contact delete possible for AFNIC'); }
 
 sub domain_create
 {
  my ($self,$ndr,$domain,$rd)=@_;
- return $self->SUPER::domain_create($ndr,$domain,$rd) unless $ndr->protocol()->name() eq 'EPP';
+ return $self->SUPER::domain_create($ndr,$domain,$rd) unless ($ndr->protocol()->name() eq 'EPP');
  return $self->SUPER::domain_create($ndr,$domain,$rd) unless (Net::DRI::Util::has_key($rd,'pure_create') && $rd->{pure_create}==1);
  my $ns;
  if (defined($rd) && (ref($rd) eq 'HASH'))
@@ -171,21 +152,21 @@ sub domain_create
 sub domain_trade_start
 {
  my ($self,$ndr,$domain,$rd)=@_;
- $self->err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'trade');
+ $self->err_invalid_domain_name($domain) if $self->verify_name_domain($ndr,$domain,'trade');
  return $ndr->process('domain','trade_request',[$domain,$rd]);
 }
 
 sub domain_trade_query
 {
  my ($self,$ndr,$domain)=@_;
- $self->err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'trade');
+ $self->err_invalid_domain_name($domain) if $self->verify_name_domain($ndr,$domain,'trade');
  return $ndr->process('domain','trade_query',[$domain]);
 }
 
 sub domain_recover_start
 {
  my ($self,$ndr,$domain,$rd)=@_;
- $self->err_invalid_domain_name($domain) if $self->verify_name_domain($domain,'recover');
+ $self->err_invalid_domain_name($domain) if $self->verify_name_domain($ndr,$domain,'recover');
  return $ndr->process('domain','recover_request',[$domain,$rd]);
 }
 

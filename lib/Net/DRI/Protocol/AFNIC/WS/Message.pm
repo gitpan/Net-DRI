@@ -1,6 +1,6 @@
 ## Domain Registry Interface, AFNIC WS Message
 ##
-## Copyright (c) 2005,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -24,7 +24,7 @@ use Net::DRI::Protocol::ResultStatus;
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version service method params result errcode));
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -54,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -70,9 +70,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $proto=shift;
- my $class=ref($proto) || $proto;
-
+ my $class=shift;
  my $self={errcode => undef};
  bless($self,$class);
 
@@ -87,7 +85,18 @@ sub new
  return $self;
 }
 
-sub as_string { return; }
+sub as_string 
+{
+ my ($self)=@_;
+ my @p=@{$self->params()};
+ my @pr;
+ foreach my $i (0..$#p)
+ {
+  push @pr,sprintf 'PARAM%d=%s',$i+1,$p[$i];
+ }
+
+ return sprintf "SERVICE=%s\nMETHOD=%s\n%s\n",$self->service(),$self->method(),join("\n",@pr);
+}
 
 sub parse
 {

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, local global cache
 ##
-## Copyright (c) 2005,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,11 +18,15 @@
 package Net::DRI::Cache;
 
 use strict;
+use warnings;
+
+use base qw(Class::Accessor::Chained::Fast);
+__PACKAGE__->mk_accessors(qw/ttl/);
 
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -52,7 +56,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -117,7 +121,7 @@ sub get
 {
  my ($self,$type,$key,$data,$from)=@_;
 
- return unless ($self->{ttl} >= 0);
+ return if ($self->{ttl} < 0);
  Net::DRI::Exception::err_insufficient_parameters() unless Net::DRI::Util::all_valid($type,$key);
 
  $type=lc($type);

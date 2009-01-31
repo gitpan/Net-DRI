@@ -25,7 +25,7 @@ use base qw/Net::DRI::Protocol::EPP/;
 use Net::DRI::Data::Contact::AFNIC;
 use Net::DRI::Protocol::EPP::Extensions::AFNIC::Status;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -89,6 +89,8 @@ sub new
  $self->default_parameters({domain_create => { ns => undef } }); ## No nameservers allowed during domain create
  return $self;
 }
+
+sub core_contact_types { return ('admin','tech'); } ## No billing contact in .FR
 
 ####################################################################################################
 1;

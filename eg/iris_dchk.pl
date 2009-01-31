@@ -13,10 +13,12 @@ my $rc;
 eval {
 
 $dri->add_registry('DENIC',{});
-$rc=$dri->target('DENIC')->new_current_profile('profile1','dchk',{},[]);
+$rc=$dri->target('DENIC')->add_current_profile('profile1','dchk');
 die($rc) unless $rc->is_success();
 display($dri,'denic.de');
 display($dri,'ecb.de');
+display($dri,'flmeplepvkepana.de'); ## this one does not exist
+display($dri,'1.5.3.2.7.2.9.6.9.4.e164.arpa'); ## example with ENUM domain names
 
 $dri->end();
 };
@@ -44,13 +46,13 @@ sub display
  my ($dri,$dom)=@_;
  print 'DOMAIN: '.$dom."\n";
  my $rc=$dri->domain_info($dom);
- print 'IS_SUCCESS: '.$dri->result_is_success().' [CODE: '.$dri->result_code().' / '.$dri->result_native_code()."]\n";
- unless ($dri->result_is_success())
+ print 'IS_SUCCESS: '.$rc->is_success().' [CODE: '.$rc->code().' / '.$rc->native_code()."]\n";
+ unless ($rc->is_success())
  {
-  print $dri->result_message(),"\n";
+  print $rc->message(),"\n";
   return;
  }
- my $e=$dri->get_info('exist') || '?';
+ my $e=$dri->get_info('exist');
  print 'EXIST: '.$e."\n";
  if ($e eq '1')
  {

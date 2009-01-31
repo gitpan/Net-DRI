@@ -34,7 +34,7 @@ print $@->as_string() if $@;
 $dri->{trid_factory}=sub { return 'ABC-12345'; };
 $dri->add_registry('DENIC');
 eval {
-$dri->target('DENIC')->new_current_profile('p1','Net::DRI::Transport::Dummy',[{f_send=>\&mysend,f_recv=>\&myrecv}],'Net::DRI::Protocol::RRI',[]);
+$dri->target('DENIC')->add_current_test_profile('p1','Dummy',{f_send=>\&mysend,f_recv=>\&myrecv},'RRI');
 };
 print $@->as_string() if $@;
 

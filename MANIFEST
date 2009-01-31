@@ -8,17 +8,18 @@ eg/epp_server.pl
 eg/eurid_das.pl
 eg/eurid_epp.pl
 eg/iris_dchk.pl
-eg/vnds_rrp.pl
 eg/whois.pl
 eg/ws_rrp.pl
 eg/xmlfilter.pl
 INSTALL
 lib/Net/DRI.pm
+lib/Net/DRI/BaseClass.pm
 lib/Net/DRI/Cache.pm
 lib/Net/DRI/Data/Changes.pm
 lib/Net/DRI/Data/Contact.pm
 lib/Net/DRI/Data/Contact/AERO.pm
 lib/Net/DRI/Data/Contact/AFNIC.pm
+lib/Net/DRI/Data/Contact/ARNES.pm
 lib/Net/DRI/Data/Contact/ASIA.pm
 lib/Net/DRI/Data/Contact/AT.pm
 lib/Net/DRI/Data/Contact/BE.pm
@@ -45,6 +46,7 @@ lib/Net/DRI/DRD.pm
 lib/Net/DRI/DRD/AERO.pm
 lib/Net/DRI/DRD/AFNIC.pm
 lib/Net/DRI/DRD/AG.pm
+lib/Net/DRI/DRD/ARNES.pm
 lib/Net/DRI/DRD/ASIA.pm
 lib/Net/DRI/DRD/AT.pm
 lib/Net/DRI/DRD/AU.pm
@@ -64,6 +66,7 @@ lib/Net/DRI/DRD/Gandi.pm
 lib/Net/DRI/DRD/HN.pm
 lib/Net/DRI/DRD/ICANN.pm
 lib/Net/DRI/DRD/IENUMAT.pm
+lib/Net/DRI/DRD/IM.pm
 lib/Net/DRI/DRD/INFO.pm
 lib/Net/DRI/DRD/LC.pm
 lib/Net/DRI/DRD/LU.pm
@@ -89,6 +92,10 @@ lib/Net/DRI/DRD/VC.pm
 lib/Net/DRI/DRD/VNDS.pm
 lib/Net/DRI/DRD/WS.pm
 lib/Net/DRI/Exception.pm
+lib/Net/DRI/Logging.pm
+lib/Net/DRI/Logging/Files.pm
+lib/Net/DRI/Logging/Null.pm
+lib/Net/DRI/Logging/Stderr.pm
 lib/Net/DRI/Protocol.pm
 lib/Net/DRI/Protocol/AFNIC/Email.pm
 lib/Net/DRI/Protocol/AFNIC/Email/Domain.pm
@@ -123,6 +130,9 @@ lib/Net/DRI/Protocol/EPP/Extensions/AFNIC/Contact.pm
 lib/Net/DRI/Protocol/EPP/Extensions/AFNIC/Domain.pm
 lib/Net/DRI/Protocol/EPP/Extensions/AFNIC/Notifications.pm
 lib/Net/DRI/Protocol/EPP/Extensions/AFNIC/Status.pm
+lib/Net/DRI/Protocol/EPP/Extensions/ARNES.pm
+lib/Net/DRI/Protocol/EPP/Extensions/ARNES/Contact.pm
+lib/Net/DRI/Protocol/EPP/Extensions/ARNES/Domain.pm
 lib/Net/DRI/Protocol/EPP/Extensions/ASIA.pm
 lib/Net/DRI/Protocol/EPP/Extensions/ASIA/CED.pm
 lib/Net/DRI/Protocol/EPP/Extensions/ASIA/IPR.pm
@@ -178,6 +188,7 @@ lib/Net/DRI/Protocol/EPP/Extensions/MOBI.pm
 lib/Net/DRI/Protocol/EPP/Extensions/MOBI/Domain.pm
 lib/Net/DRI/Protocol/EPP/Extensions/NAME.pm
 lib/Net/DRI/Protocol/EPP/Extensions/NAME/EmailFwd.pm
+lib/Net/DRI/Protocol/EPP/Extensions/NeuLevel/IDNLanguage.pm
 lib/Net/DRI/Protocol/EPP/Extensions/NeuLevel/UIN.pm
 lib/Net/DRI/Protocol/EPP/Extensions/NO.pm
 lib/Net/DRI/Protocol/EPP/Extensions/NO/Contact.pm
@@ -226,6 +237,7 @@ lib/Net/DRI/Protocol/IRIS/DCHK/Domain.pm
 lib/Net/DRI/Protocol/IRIS/DCHK/Status.pm
 lib/Net/DRI/Protocol/IRIS/LWZ.pm
 lib/Net/DRI/Protocol/IRIS/Message.pm
+lib/Net/DRI/Protocol/IRIS/XCP.pm
 lib/Net/DRI/Protocol/Message.pm
 lib/Net/DRI/Protocol/OpenSRS/XCP.pm
 lib/Net/DRI/Protocol/OpenSRS/XCP/Account.pm

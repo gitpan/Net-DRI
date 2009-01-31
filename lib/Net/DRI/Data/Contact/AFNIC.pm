@@ -20,11 +20,12 @@ package Net::DRI::Data::Contact::AFNIC;
 use strict;
 use encoding 'iso-8859-15';
 use base qw/Net::DRI::Data::Contact/;
-__PACKAGE__->mk_accessors(qw(firstname legal_form legal_form_other legal_id jo trademark key birth));
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+
+__PACKAGE__->register_attributes(qw(firstname legal_form legal_form_other legal_id jo trademark key birth));
 
 =pod
 
@@ -208,7 +209,6 @@ sub validate
  }
  push @errs,'email' if ($self->email() && !Email::Valid->rfc822($self->email()));
 
- ## No need to test type, we will set it up automatically when needed (organisation empty => PP, otherwise PM)
  ## Maintainer is not tied to contact
 
  push @errs,'disclose' if ($self->disclose() && $self->disclose()!~m/^[ONY]$/i);

@@ -17,7 +17,7 @@ eval {
 ## test@localhost is the address that will be put in the From: field of all outgoing messages.
 
 $dri->add_registry('AFNIC', { clid => 'CLIENTID' } );
-$dri->target('AFNIC')->new_current_profile('profile1','Net::DRI::Transport::SMTP',[{cc=>'testcc@localhost',bcc=>'testbcc@localhost',smtphost=>'localhost'}],'Net::DRI::Protocol::AFNIC::Email',['CLIENTID','CLIENTPW','test@localhost']);
+$dri->target('AFNIC')->add_current_profile('profile1','email',{cc=>'testcc@localhost',bcc=>'testbcc@localhost',smtphost=>'localhost'},['CLIENTID','CLIENTPW','test@localhost']);
 
 my $cs=$dri->local_object('contactset');
 my $co=$dri->local_object('contact');

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Connection handling
 ##
-## Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,19 +18,19 @@
 package Net::DRI::Protocol::EPP::Connection;
 
 use strict;
+use warnings;
 
+use Net::DRI::Util;
 use Net::DRI::Data::Raw;
 use Net::DRI::Protocol::ResultStatus;
 
-use Encode ();
-
-our $VERSION=do { my @r=(q$Revision: 1.15 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.16 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Protocol::EPP::Connection - EPP over TCP connection handling (RFC4934) for Net::DRI
+Net::DRI::Protocol::EPP::Connection - EPP over TCP (and TLS) Connection Handling (RFC4934) for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -54,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -70,7 +70,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub login
 {
- my ($class,$to,$cm,$id,$pass,$cltrid,$dr,$newpass,$pdata)=@_;
+ my ($class,$cm,$id,$pass,$cltrid,$dr,$newpass,$pdata)=@_;
 
  my $got=$cm->();
  $got->parse($dr);
@@ -92,24 +92,24 @@ sub login
 
  $mes->command_body(\@d);
  $mes->cltrid($cltrid) if $cltrid;
- return $class->write_message($to,$mes);
+ return $mes;
 }
 
 sub logout
 {
- my ($class,$to,$cm,$cltrid)=@_;
+ my ($class,$cm,$cltrid)=@_;
  my $mes=$cm->();
  $mes->command(['logout']);
  $mes->cltrid($cltrid) if $cltrid;
- return $class->write_message($to,$mes);
+ return $mes;
 }
 
 sub keepalive
 {
- my ($class,$to,$cm)=@_;
+ my ($class,$cm)=@_;
  my $mes=$cm->();
  $mes->command(['hello']);
- return $class->write_message($to,$mes);
+ return $mes;
 }
 
 ####################################################################################################
@@ -119,28 +119,28 @@ sub read_data
  my ($class,$to,$sock)=@_;
 
  my $c;
- $sock->read($c,4); ## first 4 bytes are the packed length
- die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED','Unable to read EPP 4 bytes length (connection closed by registry ?)','en')) unless $c;
+ $sock->sysread($c,4); ## first 4 bytes are the packed length
+ die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED_CLOSING','Unable to read EPP 4 bytes length (connection closed by registry ?)','en')) unless $c;
  my $length=unpack('N',$c)-4;
- my ($m);
+ my $m='';
  while ($length > 0)
  {
   my $new;
-  $length-=$sock->read($new,$length);
+  $length-=$sock->sysread($new,$length);
   $m.=$new;
  }
+ $m=Net::DRI::Util::decode_utf8($m);
  die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_SYNTAX_ERROR',$m? 'Got unexpected EPP message: '.$m : '<empty message from server>','en')) unless ($m=~m!</epp>\s*$!s);
-
- return Net::DRI::Data::Raw->new_from_string($m);
+ return Net::DRI::Data::Raw->new_from_xmlstring($m);
 }
 
 sub write_message
 {
  my ($self,$to,$msg)=@_;
 
- my $m=Encode::encode('utf8',$msg->as_string());
+ my $m=Net::DRI::Util::encode_utf8($msg);
  my $l=pack('N',4+length($m)); ## RFC 4934 §4
- return $l.$m; ## We do not support EPP «0.4» at all (which lacks length before data)
+ return $l.$m; ## We do not support EPP "0.4" at all (which lacks length before data)
 }
 
 sub parse_greeting

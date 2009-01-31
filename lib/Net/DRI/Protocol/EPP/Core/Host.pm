@@ -26,7 +26,7 @@ use Net::DRI::Protocol::EPP;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -327,7 +327,6 @@ sub pandata_parse
    $oname=lc($c->getFirstChild()->getData());
    $rinfo->{host}->{$oname}->{action}='review';
    $rinfo->{host}->{$oname}->{result}=Net::DRI::Util::xml_parse_boolean($c->getAttribute('paResult'));
-   $rinfo->{host}->{$oname}->{exist}=$rinfo->{host}->{$oname}->{result};
   } elsif ($name eq 'paTRID')
   {
    my @tmp=$c->getChildrenByTagNameNS($mes->ns('_main'),'clTRID');
