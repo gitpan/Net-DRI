@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .UK EPP Host commands
 ##
-## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,14 +18,12 @@
 package Net::DRI::Protocol::EPP::Extensions::Nominet::Host;
 
 use strict;
+use warnings;
 
 use Net::DRI::Util;
 use Net::DRI::Exception;
-use Net::DRI::Data::Hosts;
 
-use DateTime::Format::ISO8601;
-
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -55,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -107,9 +105,8 @@ sub info_parse
  my ($po,$otype,$oaction,$oname,$rinfo)=@_;
  my $mes=$po->message();
  return unless $mes->is_success();
-
  my $infdata=$mes->get_response('ns','infData');
- return unless $infdata;
+ return unless defined $infdata;
  parse_infdata($po,$mes,$infdata,$oname,$rinfo);
 }
 
@@ -117,45 +114,41 @@ sub parse_infdata
 {
  my ($po,$mes,$infdata,$oname,$rinfo)=@_;
  my ($hostname,@ip4,@ip6);
- my $pd=DateTime::Format::ISO8601->new();
- my $c=$infdata->getFirstChild();
  my %i;
- while ($c)
- {
-  next unless ($c->nodeType() == 1); ## only for element nodes
-  my $name=$c->localname() || $c->nodeName();
-  next unless $name;
 
+ foreach my $el (Net::DRI::Util::xml_list_children($infdata))
+ {
+  my ($name,$c)=@$el;
   if ($name eq 'roid')
   {
-   $oname=$c->getFirstChild()->getData();
+   $oname=$c->textContent();
    $i{action}='info';
    $i{exist}=1;
    $i{roid}=$oname;
   } elsif ($name eq 'name')
   {
-   $hostname=lc($c->getFirstChild()->getData());
+   $hostname=lc($c->textContent());
    $i{name}=$hostname;
   } elsif ($name=~m/^(clID|crID|upID)$/)
   {
-   $i{$1}=$c->getFirstChild()->getData();
+   $i{$1}=$c->textContent();
   } elsif ($name=~m/^(crDate|upDate)$/)
   {
-   $i{$1}=$pd->parse_datetime($c->getFirstChild()->getData());
+   $i{$1}=$po->parse_iso8601($c->textContent());
   } elsif ($name eq 'addr')
   {
-   my $ip=$c->getFirstChild()->getData();
+   my $ip=$c->textContent();
    my $ipv=$c->getAttribute('ip');
    push @ip4,$ip if ($ipv eq 'v4');
    push @ip6,$ip if ($ipv eq 'v6');
   }
- } continue { $c=$c->getNextSibling(); }
+ }
 
  while(my ($k,$v)=each(%i))
  {
   $rinfo->{host}->{$hostname}->{$k}=$rinfo->{host}->{$oname}->{$k}=$v;
  }
- $rinfo->{host}->{$hostname}->{self}=$rinfo->{host}->{$oname}->{self}=Net::DRI::Data::Hosts->new($hostname,\@ip4,\@ip6,1,{roid=>$oname});
+ $rinfo->{host}->{$hostname}->{self}=$rinfo->{host}->{$oname}->{self}=$po->create_local_object('hosts',$hostname,\@ip4,\@ip6,1,{roid=>$oname});
  return $rinfo->{host}->{$hostname}->{self};
 }
 

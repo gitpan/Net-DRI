@@ -18,16 +18,16 @@
 package Net::DRI::Protocol::EPP;
 
 use strict;
+use warnings;
 
 use base qw(Net::DRI::Protocol);
 
 use Net::DRI::Util;
-
 use Net::DRI::Protocol::EPP::Message;
 use Net::DRI::Protocol::EPP::Core::Status;
 use Net::DRI::Data::Contact;
 
-our $VERSION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -73,12 +73,10 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $c=shift;
- my ($drd,$version,$extrah,$coremods)=@_;
-
+ my ($c,$drd,$rp)=@_;
  my $self=$c->SUPER::new();
  $self->name('EPP');
- $version=Net::DRI::Util::check_equal($version,['1.0'],'1.0');
+ my $version=Net::DRI::Util::check_equal($rp->{version},['1.0'],'1.0');
  $self->version($version);
 
  foreach my $o (qw/ip status/) { $self->capabilities('host_update',$o,['add','del']); }
@@ -98,41 +96,41 @@ sub new
              contact => ['urn:ietf:params:xml:ns:contact-1.0','contact-1.0.xsd'],
            });
 
+ $drd->set_factories($self) if $drd->can('set_factories');
  $self->factories('message',sub { my $m=Net::DRI::Protocol::EPP::Message->new(@_); $m->ns($self->ns()); $m->version($version); return $m; });
  $self->factories('status',sub { return Net::DRI::Protocol::EPP::Core::Status->new(); });
- $self->factories('contact',sub { return Net::DRI::Data::Contact->new(); });
 
- $self->_load($extrah,$coremods);
+ $self->_load($rp);
+ $self->setup($rp);
  return $self;
 }
 
 sub _load
 {
- my ($self,$extrah,$coremods)=@_;
- my (@core,@class);
-
- if (defined($coremods))
- {
-  @core=(ref($coremods) eq 'ARRAY')? @$coremods : ($coremods);
- } else
- {
-  @core=qw/Session RegistryMessage Domain Contact/;
-  push @core,'Host' unless $self->{hostasattr};
- }
- push @class,map { /::/? $_ : 'Net::DRI::Protocol::EPP::Core::'.$_ } @core;
- if (defined($extrah) && $extrah)
- {
-  push @class,map { my $f=$_; $f=~s!/!::!g; $f; } map { /::/? $_ : 'Net::DRI::Protocol::EPP::Extensions::'.$_ } (ref($extrah)? @$extrah : ($extrah));
- }
+ my ($self,$rp)=@_;
+ my $extramods=$rp->{extensions};
+ my @class=$self->core_modules($rp);
+ push @class,map { 'Net::DRI::Protocol::EPP::Extensions::'.$_; } $self->default_extensions($rp) if $self->can('default_extensions');
+ push @class,map { my $f=$_; $f='Net::DRI::Protocol::EPP::Extensions::'.$f unless $f=~m/::/; $f=~s!/!::!g; $f; } (ref($extramods)? @$extramods : ($extramods)) if defined $extramods && $extramods;
 
  $self->SUPER::_load(@class);
+}
+
+sub setup {} ## subclass as needed
+
+sub core_modules
+{
+ my ($self,$rp)=@_;
+ my @core=qw/Session RegistryMessage Domain Contact/;
+ push @core,'Host' unless $self->{hostasattr};
+ return map { 'Net::DRI::Protocol::EPP::Core::'.$_ } @core;
 }
 
 sub server_greeting { my ($self,$v)=@_; $self->{server_greeting}=$v if $v; return $self->{server_greeting}; }
 
 sub parse_status
 {
- my $node=shift;
+ my ($self,$node)=@_;
  my %tmp;
  $tmp{name}=$node->getAttribute('s');
  $tmp{lang}=$node->getAttribute('lang') || 'en';
@@ -149,17 +147,10 @@ sub ns
  return $self->{ns};
 }
 
-## TODO : should that be in EPP/Connection ? <=> see IRIS/XCP.pm
-## Was previously %PROTOCOL_DEFAULT_EPP in DRD.pm
 sub transport_default
 {
- my ($self,$name)=@_;
- my %r;
- if (defined $name && $name eq 'socket_inet')
- {
-  %r=(defer => 0, socktype => 'ssl', ssl_cipher_list => 'TLSv1', remote_port => 700, protocol_connection => 'Net::DRI::Protocol::EPP::Connection', protocol_version => 1);
- }
- return \%r;
+ my ($self)=@_;
+ return (protocol_connection => 'Net::DRI::Protocol::EPP::Connection', protocol_version => 1);
 }
 
 ####################################################################################################

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, RRI Message
 ##
-## Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
+## Copyright (c) 2007,2008,2009 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,6 +18,7 @@
 package Net::DRI::Protocol::RRI::Message;
 
 use strict;
+use warnings;
 
 use XML::LibXML ();
 
@@ -29,7 +30,7 @@ use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version command command_body cltrid svtrid result
 	errcode errmsg node_resdata result_extra_info));
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -117,7 +118,7 @@ sub result_status
 
 sub as_string
 {
- my ($self,$to)=@_;
+ my ($self)=@_;
  my $rns=$self->ns();
  my $topns=$rns->{_main};
  my $ens=sprintf('xmlns="%s"', $topns->[0]);

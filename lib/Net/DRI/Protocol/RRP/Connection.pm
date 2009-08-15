@@ -24,7 +24,7 @@ use Net::DRI::Protocol::ResultStatus;
 use Net::DRI::Data::Raw;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.16 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.17 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -164,6 +164,12 @@ sub find_code
  return () unless $a[-1]=~m/^\.\s*\n?$/;
  return () unless $a[0]=~m/^(\d+) (\S.+)$/;
  return (0+$1,$2);
+}
+
+sub transport_default
+{
+ my ($self,$tname)=@_;
+ return (defer => 0, socktype => 'ssl', ssl_cipher_list => 'TLSv1', remote_port => 648);
 }
 
 ####################################################################################################

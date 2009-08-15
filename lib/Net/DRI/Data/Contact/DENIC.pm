@@ -23,7 +23,7 @@ use Net::DRI::Exception;
 use Net::DRI::Util;
 use Email::Valid;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 __PACKAGE__->register_attributes(qw(type sip remarks));
 
@@ -102,6 +102,7 @@ sub validate ## See DENIC-11
 				3, 32);
 	}
 
+	## TODO: convert that to a test on srid(), testing roid() is useless
 	## \w includes _ in Perl
 	push(@errs,'roid') if ($self->roid() &&
 		$self->roid() !~ m/^\w{1,80}-\w{1,8}$/);

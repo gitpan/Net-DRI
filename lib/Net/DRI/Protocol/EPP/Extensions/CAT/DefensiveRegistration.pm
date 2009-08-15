@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .CAT Defensive Registration EPP extension commands
 ##
-## Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,13 +18,13 @@
 package Net::DRI::Protocol::EPP::Extensions::CAT::DefensiveRegistration;
 
 use strict;
+use warnings;
 
 use Net::DRI::Util;
 use Net::DRI::Exception;
 use Net::DRI::Protocol::EPP::Core::Domain;
-use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -54,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -210,28 +210,24 @@ sub check_parse
 
  my $ns=ns($mes);
  my $chkdata=$mes->get_response($ns,'chkData');
- return unless $chkdata;
+ return unless defined $chkdata;
 
  foreach my $cd ($chkdata->getChildrenByTagNameNS($ns,'cd'))
  {
-  my $c=$cd->getFirstChild();
   my $id;
-  while($c)
+  foreach my $el (Net::DRI::Util::xml_list_children($cd))
   {
-   next unless ($c->nodeType() == 1); ## only for element nodes
-   my $n=$c->localname() || $c->nodeName();
-   next unless $n;
-
+   my ($n,$c)=@$el;
    if ($n eq 'id')
    {
-    $id=$c->getFirstChild()->getData();
+    $id=$c->textContent();
     $rinfo->{defreg}->{$id}->{action}='check';
     $rinfo->{defreg}->{$id}->{exist}=1-Net::DRI::Util::xml_parse_boolean($c->getAttribute('avail'));
    } elsif ($n eq 'reason')
    {
-    $rinfo->{defreg}->{$id}->{exist_reason}=$c->getFirstChild()->getData();
+    $rinfo->{defreg}->{$id}->{exist_reason}=$c->textContent();
    }
-  } continue { $c=$c->getNextSibling(); }
+  }
  }
 }
 
@@ -251,74 +247,66 @@ sub info_parse
 
  my $ns=ns($mes);
  my $infdata=$mes->get_response($ns,'infData');
- return unless $infdata;
+ return unless defined $infdata;
 
  my (@s,%t);
- my $cs=Net::DRI::Data::ContactSet->new();
- my $cf=$po->factories()->{contact};
- my $pd=DateTime::Format::ISO8601->new();
- my $c=$infdata->getFirstChild();
- while ($c)
- {
-  next unless ($c->nodeType() == 1); ## only for element nodes
-  my $name=$c->localname() || $c->nodeName();
-  next unless $name;
+ my $cs=$po->create_local_object('contactset');
 
+ foreach my $el (Net::DRI::Util::xml_list_children($infdata))
+ {
+  my ($name,$c)=@$el;
   if ($name eq 'id')
   {
-   $oname=$c->getFirstChild()->getData();
+   $oname=$c->textContent();
    $rinfo->{defreg}->{$oname}->{id}=$oname;
   } elsif ($name eq 'roid')
   {
-   $rinfo->{defreg}->{$oname}->{roid}=$c->getFirstChild()->getData();
+   $rinfo->{defreg}->{$oname}->{roid}=$c->textContent();
   } elsif ($name eq 'pattern')
   {
-   $rinfo->{defreg}->{$oname}->{pattern}=$c->getFirstChild()->getData();
+   $rinfo->{defreg}->{$oname}->{pattern}=$c->textContent();
   } elsif ($name eq 'status')
   {
-   push @s,Net::DRI::Protocol::EPP::parse_status($c);
+   push @s,$po->parse_status($c);
   } elsif ($name eq 'registrant')
   {
-   $cs->set($cf->()->srid($c->getFirstChild()->getData()),'registrant');
+   $cs->set($po->create_local_object('contact')->srid($c->textContent()),'registrant');
   } elsif ($name eq 'contact')
   {
-   $cs->add($cf->()->srid($c->getFirstChild()->getData()),$c->getAttribute('type'));
+   $cs->add($po->create_local_object('contact')->srid($c->textContent()),$c->getAttribute('type'));
   } elsif ($name=~m/^(clID|crID|upID)$/)
   {
-   $rinfo->{defreg}->{$oname}->{$1}=$c->getFirstChild()->getData();
+   $rinfo->{defreg}->{$oname}->{$1}=$c->textContent();
   } elsif ($name=~m/^(crDate|upDate|exDate)$/)
   {
-   $rinfo->{defreg}->{$oname}->{$1}=$pd->parse_datetime($c->getFirstChild()->getData());
+   $rinfo->{defreg}->{$oname}->{$1}=$po->parse_iso8601($c->textContent());
   } elsif ($name eq 'authInfo')
   {
-   $rinfo->{defreg}->{$oname}->{auth}={pw=>($c->getChildrenByTagNameNS($ns,'pw'))[0]->getFirstChild()->getData()};
+   $rinfo->{defreg}->{$oname}->{auth}={ pw => Net::DRI::Util::xml_child_content($c,$ns,'pw') };
   } elsif ($name eq 'maintainer')
   {
-   $rinfo->{defreg}->{$oname}->{maintainer}=$c->getFirstChild()->getData();
+   $rinfo->{defreg}->{$oname}->{maintainer}=$c->textContent();
   } elsif ($name eq 'trademark')
   {
-   my $cc=$c->getFirstChild();
-   while($cc)
+   foreach my $sel (Net::DRI::Util::xml_list_children($c))
    {
-    next unless ($cc->nodeType() == 1); ## only for element nodes
-    my $name2=$cc->localname() || $cc->nodeName();
-    next unless $name2;
+    my ($name2,$cc)=@$sel;
     if ($name2 eq 'name')
     {
-     $t{name}=$cc->getFirstChild()->getData();
+     $t{name}=$cc->textContent();
     } elsif ($name2 eq 'issueDate')
     {
-     $t{issue_date}=$pd->parse_datetime($cc->getFirstChild()->getData());
+     $t{issue_date}=$po->parse_iso8601($cc->textContent());
     } elsif ($name2 eq 'country')
     {
-     $t{country}=$cc->getFirstChild()->getData();
+     $t{country}=$cc->textContent();
     } elsif ($name2 eq 'number')
     {
-     $t{number}=$cc->getFirstChild()->getData();
+     $t{number}=$cc->textContent();
     }
-   } continue { $cc=$cc->getNextSibling(); }
+   }
   }
- } continue { $c=$c->getNextSibling(); }
+ }
 
  $rinfo->{defreg}->{$oname}->{action}='info';
  $rinfo->{defreg}->{$oname}->{exist}=1;

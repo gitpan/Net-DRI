@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Grace Period commands (RFC3915)
 ##
-## Copyright (c) 2005,2006,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,11 +18,12 @@
 package Net::DRI::Protocol::EPP::Extensions::GracePeriod;
 
 use strict;
+use warnings;
 
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 our $NS='urn:ietf:params:xml:ns:rgp-1.0';
 
 =pod
@@ -53,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -90,7 +91,7 @@ sub info_parse
  return unless $mes->is_success();
 
  my $infdata=$mes->get_extension($NS,'infData');
- return unless $infdata;
+ return unless defined $infdata;
 
  my $cs=$rinfo->{domain}->{$oname}->{status}; ## a Net::DRI::Protocol::EPP::Core::Status object
 
@@ -108,13 +109,13 @@ sub update
  my $mes=$epp->message();
 
  my $rgp=$todo->set('rgp');
- return unless (defined($rgp) && $rgp && (ref($rgp) eq 'HASH'));
+ return unless (defined $rgp && $rgp && ref $rgp eq 'HASH');
 
  my $op=$rgp->{op} || '';
  Net::DRI::Exception::usererr_invalid_parameters('RGP op must be request or report') unless ($op=~m/^(?:request|report)$/);
- Net::DRI::Exception::usererr_invalid_parameters('Report data must be included if the operation is a report') unless (($op eq 'request') xor exists($rgp->{report}));
+ Net::DRI::Exception::usererr_invalid_parameters('Report data must be included if the operation is a report') unless (($op eq 'request') xor exists $rgp->{report});
 
- my $eid=$mes->command_extension_register('rgp:update','xmlns:rgp="urn:ietf:params:xml:ns:rgp-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:rgp-1.0 rgp-1.0.xsd"');
+ my $eid=$mes->command_extension_register('rgp:update',sprintf('xmlns:rgp="%s" xsi:schemaLocation="%s rgp-1.0.xsd"',$NS,$NS));
 
  if ($op eq 'request')
  {
@@ -123,7 +124,7 @@ sub update
  {
   my %r=%{$rgp->{report}};
   my $def=$epp->default_parameters();
-  my $data=($def && (ref($def) eq 'HASH') && exists($def->{breaks_rfc3915}) && $def->{breaks_rfc3915})? 'Whois' : 'Data'; ## VeriSign does not respect its own RFC
+  my $data=(Net::DRI::Util::has_key($def,'breaks_rfc3915') && $def->{breaks_rfc3915})? 'Whois' : 'Data'; ## VeriSign does not respect its own RFC
   my @d;
   push @d,['rgp:pre'.$data,$r{predata}]; ## XML data is possible in the RFC, but not here ?!
   push @d,['rgp:post'.$data,$r{postdata}]; ## ditto
@@ -133,21 +134,9 @@ sub update
   Net::DRI::Util::check_isa($r{restime},'DateTime');
   push @d,['rgp:resTime',$r{restime}->strftime('%Y-%m-%dT%T.%1NZ')];
   push @d,['rgp:resReason',$r{reason}];
-  if (exists($r{statement1_lang}))
-  {
-   push @d,['rgp:statement',$r{statement1},{lang => $r{statement1_lang}}];
-  } else
-  {
-   push @d,['rgp:statement',$r{statement1}];
-  }
-  if (exists($r{statement2_lang}))
-  {
-   push @d,['rgp:statement',$r{statement2},{lang => $r{statement2_lang}}];
-  } else
-  {
-   push @d,['rgp:statement',$r{statement2}];
-  }
-  push @d,['rgp:other',$r{other}] if exists($r{other});
+  push @d,['rgp:statement',$r{statement1},exists $r{statement1_lang} ? {lang => $r{statement1_lang}} : ()];
+  push @d,['rgp:statement',$r{statement2},exists $r{statement2_lang} ? {lang => $r{statement2_lang}} : ()];
+  push @d,['rgp:other',$r{other}] if exists $r{other};
   $mes->command_extension($eid,['rgp:restore',['rgp:report',@d],{ op => $op }]);
  }
 }
@@ -159,7 +148,7 @@ sub update_parse
  return unless $mes->is_success();
 
  my $updata=$mes->get_extension($NS,'upData');
- return unless $updata;
+ return unless defined $updata;
 
  ## We do nothing, since the rgpStatus alone is useless
  ## (we do not have the other status)

@@ -18,12 +18,14 @@
 package Net::DRI::DRD::OpenSRS;
 
 use strict;
+use warnings;
+
 use base qw/Net::DRI::DRD/;
 
 use DateTime::Duration;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -80,30 +82,16 @@ sub new
 
 sub periods      { return map { DateTime::Duration->new(years => $_) } (1..10); }
 sub name         { return 'OpenSRS'; }
-sub tlds         { return (qw/com net org info biz mobi name asia at be ca cc ch cn de dk es eu fr it li me com.mx nl tv uk us/); } ## see http://services.tucows.com/services/domains/pricing.php
+sub tlds         { return (qw/example com net org info biz mobi name asia at be ca cc ch cn de dk es eu fr it li me com.mx nl tv uk us/); } ## see http://services.tucows.com/services/domains/pricing.php
 sub object_types { return ('domain'); }
-
-sub transport_protocol_compatible 
-{
- my ($self,$to,$po)=@_;
- my $pn=$po->name();
- my $pv=$po->version();
- my $tn=$to->name();
-
- return 1 if (($pn eq 'opensrs_xcp') && ($tn eq 'http'));
- return;
-}
+sub profile_types { return qw/xcp/; }
 
 sub transport_protocol_default
 {
- my ($drd,$ndr,$type,$ta,$pa)=@_;
- if ($type eq 'xcp')
- {
-  my %ta=(ref($ta) eq 'ARRAY')? %{$ta->[0]} : %$ta;
-  $ta{protocol_connection}='Net::DRI::Protocol::OpenSRS::XCP::Connection';
-  my @pa=(ref($pa) eq 'ARRAY' && @$pa)? @$pa : ();
-  return ('Net::DRI::Transport::HTTP',[\%ta],'Net::DRI::Protocol::OpenSRS::XCP',\@pa);
- }
+ my ($self,$type)=@_;
+
+ return ('Net::DRI::Transport::HTTP',{},'Net::DRI::Protocol::OpenSRS::XCP',{}) if $type eq 'xcp';
+ return;
 }
 
 ####################################################################################################
@@ -125,7 +113,7 @@ sub account_list_domains
 sub domain_info
 {
  my ($self,$ndr,$domain,$rd)=@_;
- $self->err_invalid_domain_name($domain) if $self->verify_name_domain($ndr,$domain,'info');
+ $self->enforce_domain_name_constraints($ndr,$domain,'info');
 
  my $rc=$ndr->try_restore_from_cache('domain',$domain,'info');
  if (! defined $rc)

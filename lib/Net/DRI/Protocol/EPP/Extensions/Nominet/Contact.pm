@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .UK EPP Contact commands
 ##
-## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,14 +18,13 @@
 package Net::DRI::Protocol::EPP::Extensions::Nominet::Contact;
 
 use strict;
+use warnings;
 
 use Net::DRI::Protocol::EPP::Core::Contact;
 use Net::DRI::Util;
 use Net::DRI::Exception;;
 
-use DateTime::Format::ISO8601;
-
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -55,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -111,41 +110,38 @@ sub info_parse
  return unless $mes->is_success();
 
  my $infdata=$mes->get_response('contact','infData');
- return unless $infdata;
+ return unless defined $infdata;
 
- my $contact=$po->factories()->{contact}->();
- parse_infdata($infdata,$contact,$oname,$rinfo);
+ my $contact=$po->create_local_object('contact');
+ parse_infdata($po,$infdata,$contact,$oname,$rinfo);
 }
 
 sub parse_infdata
 {
- my ($infdata,$contact,$oname,$rinfo)=@_;
- my $pd=DateTime::Format::ISO8601->new();
- my $c=$infdata->getFirstChild();
- while ($c)
+ my ($po,$infdata,$contact,$oname,$rinfo)=@_;
+
+ foreach my $el (Net::DRI::Util::xml_list_children($infdata))
  {
-  next unless ($c->nodeType() == 1);
-  my $name=$c->localname() || $c->nodeName();
-  next unless $name;
+  my ($name,$c)=@$el;
   if ($name eq 'roid')
   {
-   $oname=$c->getFirstChild()->getData();
+   $oname=$c->textContent();
    $contact->roid($oname);
    $rinfo->{contact}->{$oname}->{roid}=$contact->roid();
    $rinfo->{contact}->{$oname}->{action}='info';
    $rinfo->{contact}->{$oname}->{exist}=1;
   } elsif ($name eq 'name')
   {
-   $contact->name($c->getFirstChild()->getData());
+   $contact->name($c->textContent());
   } elsif ($name=~m/^(clID|crID|upID)$/)
   {
-   $rinfo->{contact}->{$oname}->{$1}=Net::DRI::Protocol::EPP::Core::Contact::get_data($c);
+   $rinfo->{contact}->{$oname}->{$1}=$c->textContent();
   } elsif ($name=~m/^(crDate|upDate)$/)
   {
-   $rinfo->{contact}->{$oname}->{$1}=$pd->parse_datetime($c->getFirstChild()->getData());
+   $rinfo->{contact}->{$oname}->{$1}=$po->parse_iso8601($c->textContent());
   } elsif ($name eq 'email')
   {
-   $contact->email($c->getFirstChild()->getData());
+   $contact->email($c->textContent());
   } elsif ($name eq 'phone') ## diverving from EPP voice
   {
    $contact->voice(Net::DRI::Protocol::EPP::Core::Contact::parse_tel($c));
@@ -156,7 +152,7 @@ sub parse_infdata
   {
     $contact->mobile(Net::DRI::Protocol::EPP::Core::Contact::parse_tel($c));
   }
- } continue { $c=$c->getNextSibling(); }
+ }
 
  $rinfo->{contact}->{$oname}->{self}=$contact;
 }
@@ -168,9 +164,9 @@ sub build_cdata
  my ($contact)=@_;
  my @d;
  push @d,['contact:name',$contact->name()] if (defined($contact->name()));
- push @d,Net::DRI::Protocol::EPP::Core::Contact::build_tel('contact:phone',$contact->voice()) if (defined($contact->voice()));
- push @d,Net::DRI::Protocol::EPP::Core::Contact::build_tel('contact:fax',$contact->fax()) if (defined($contact->fax()));
- push @d,Net::DRI::Protocol::EPP::Core::Contact::build_tel('contact:mobile',$contact->mobile()) if (defined($contact->mobile()));
+ push @d,Net::DRI::Protocol::EPP::Core::Contact::build_tel('contact:phone',$contact->voice()) if defined $contact->voice();
+ push @d,Net::DRI::Protocol::EPP::Core::Contact::build_tel('contact:fax',$contact->fax()) if defined $contact->fax();
+ push @d,Net::DRI::Protocol::EPP::Core::Contact::build_tel('contact:mobile',$contact->mobile()) if defined $contact->mobile();
  push @d,['contact:email',$contact->email()] if defined($contact->email());
  return @d;
 }

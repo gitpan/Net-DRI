@@ -1,23 +1,23 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 #
 #
 # A Net::DRI example for IRIS DCHK operations, currently only .DE
 
 use strict;
+use warnings;
 
 use Net::DRI;
 
-my $dri=Net::DRI->new(10);
-my $rc;
+my ($dri,$rc);
 
 eval {
-
+$dri=Net::DRI->new(10);
 $dri->add_registry('DENIC',{});
 $rc=$dri->target('DENIC')->add_current_profile('profile1','dchk');
 die($rc) unless $rc->is_success();
 display($dri,'denic.de');
 display($dri,'ecb.de');
-display($dri,'flmeplepvkepana.de'); ## this one does not exist
+display($dri,'netdri-test-doesnotexist.de');
 display($dri,'1.5.3.2.7.2.9.6.9.4.e164.arpa'); ## example with ENUM domain names
 
 $dri->end();

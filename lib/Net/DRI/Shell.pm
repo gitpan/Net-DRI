@@ -22,11 +22,12 @@ use warnings;
 
 use Net::DRI;
 use Net::DRI::Util;
+use Net::DRI::Protocol::ResultStatus;
 use Term::ReadLine; ## see also Term::Shell
 use Time::HiRes ();
 use IO::Handle ();
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 exit __PACKAGE__->run(@ARGV) if (!caller() || caller() eq 'PAR'); ## This is a modulino :-)
 
@@ -40,10 +41,13 @@ Net::DRI::Shell - Command Line Shell for Net::DRI, with batch features and autoc
 
  perl -I../../ ./Shell.pm
  or
- perl -MNet::DRI::Shell -e run
+ perl -MNet::DRI::Shell -e 'Net::DRI::Shell->run()'
+ or in your programs
+ use Net::DRI::Shell;
+ Net::DRI::Shell->run();
 
- Welcome to Net::DRI shell, version 1.06
- Net::DRI object created with TTL=10s
+ Welcome to Net::DRI shell, version 1.07
+ Net::DRI object created with a cache TTL of 10 seconds and logging into files in current directory
 
  NetDRI> add_registry registry=EURid clID=YOURLOGIN
  NetDRI(EURid)> add_current_profile name=profile1 type=epp defer=0 client_login=YOURLOGIN client_password=YOURPASSWORD
@@ -99,7 +103,7 @@ This is a shortcut, doing the equivalent of add_registry, and then add_current_p
 After each call to the registry, like domain_info or domain_check, this will list all available data
 retrieved from registry. Things are pretty-printed as much as possible. You should call get_info_all
 right after your domain_something call otherwise if you do another operation previous information
-is lost. This is done automatically for you on the relevant commands, but you can also use it 
+is lost. This is done automatically for you on the relevant commands, but you can also use it
 manually at any time.
 
 =head3 show profiles
@@ -119,11 +123,15 @@ Show the list of allowed periods (domain name durations) for the currently selec
 
 Show the list of managed objects types at the currently selected registry.
 
+=head3 show types
+
+Show the list of profile types at the currently selected registry
+
 =head3 show status
 
 Show the list of available status for the currently selected registry, to use
-as status name in some commands below (domain_update_status_* host_update_status_* 
-contact_update_status_*).
+as status name in some commands below (domain_update_status_* domain_update 
+host_update_status_* host_update contact_update_status_* contact_update).
 
 =head3 show config
 
@@ -147,7 +155,7 @@ profiles in registry REGISTRYNAME).
 
 =head3 run FILENAME
 
-Will open the local FILENAME and read in it commands and execute all of them ; you can also
+Will open the local FILENAME and read in it commands and execute all of them; you can also
 start your shell with a filename as argument and its commands will be run at beginning of
 session before giving the control back. They will be displayed (username and password will be
 masked) with their results.
@@ -173,6 +181,12 @@ Returns a succinct list of available commands.
 Leave the shell.
 
 =head2 DOMAIN COMMANDS
+
+=head3 domain_create DOMAIN [duration=X] [ns=HOSTNAMEA IPA1 IPA2 ... HOSTNAMEB IPB1 IPB2 ...] [admin=SRID1] [registrant=SRID2] [billing=SRID3] [tech=SRID4] [auth=X]
+
+Create the given domain name. See above for the duration format to use. Admin, registrant, billing and tech
+contact ids are mandatory or optional depending on the registry. They may be repeated (except registrant)
+for registries allowing multiple contacts per role.
 
 =head3 domain_info DOMAIN
 
@@ -234,11 +248,9 @@ The status names are those in the list given back by the show status command (se
 Set the current list of contacts associated to this DOMAIN, add to the current list or delete from the current list
 by providing the contact server ids.
 
-=head3 domain_create DOMAIN [duration=X] [ns=HOSTNAMEA IPA1 IPA2 ... HOSTNAMEB IPB1 IPB2 ...] [admin=SRID1] [registrant=SRID2] [billing=SRID3] [tech=SRID4] [auth=X]
+=head3 domain_update DOMAIN +status=S1 -status=S2 +admin=C1 -tech=C2 -billing=C3 registrant=C4 auth=A +ns=... -ns=...
 
-Create the given domain name. See above for the duration format to use. Admin, registrant, billing and tech
-contact ids are mandatory or optional depending on the registry. They may be repeated (except registrant)
-for registries allowing multiple contacts per role.
+Combination of the previous methods, plus ability to change authInfo and other parameters depending on registry.
 
 =head3 domain_renew DOMAIN [duration=X] [current_expiration=YYYY-MM-DD]
 
@@ -288,6 +300,10 @@ as needed.
 
 The status names are those in the list given back by the show status command (see above).
 
+=head3 host_update HOSTNAME +ip=IP1 +ip=IP2 -ip=IP3 +status=STATUS1 -status=STATUS2 name=NEWNAME
+
+Combines the previous operations.
+
 =head3 host_update_name_set HOSTNAME NEWNAME
 
 Change the current name of host objects from HOSTNAME to NEWNAME.
@@ -325,6 +341,10 @@ list or delete from the current list. First parameter is the contact server ID, 
 as needed.
 
 The status names are those in the list given back by the show status command (see above).
+
+=head3 contact_update SRID name=X org=Y ... +status=... -status=...
+
+Change some contacts attributes, as well as statuses.
 
 =head3 contact_transfer_start SRID
 
@@ -473,10 +493,10 @@ sub run
  $ctx->{term_attribs}->{completion_function}=sub { return complete($ctx,@_); };
  $ctx->{prompt}=$ctx->{dprompt};
 
- output($ctx,"Welcome to Net::DRI shell, version $VERSION\n");
+ output($ctx,"Welcome to Net::DRI shell, pid $$, version $VERSION\n");
 
- $ctx->{dri}=Net::DRI->new({cache_ttl => 10,logging=>'files'});
- output($ctx,"Net::DRI object created with a cache TTL of 10 seconds and logging into current directory files\n\n");
+ $ctx->{dri}=Net::DRI->new({cache_ttl => 10,logging=>['files',{level => 'info'}]});
+ output($ctx,"Net::DRI object created with a cache TTL of 10 seconds and logging into files in current directory\n\n");
 
  $ctx->{file_quit}=0;
  shift(@args) if ($args[0] eq 'Net::DRI::Shell');
@@ -539,10 +559,11 @@ sub handle_line
 {
  my ($ctx,$l)=@_;
  return 0 if ($l=~m/^\s*$/);
- return 1 if ($l eq 'quit' || $l eq 'q' || $l eq 'exit');
 
  $l=~s/^\s*//;
  $l=~s/\s*$//;
+
+ return 1 if ($l eq 'quit' || $l eq 'q' || $l eq 'exit');
 
  my ($rc,$msg);
  eval
@@ -553,7 +574,7 @@ sub handle_line
  $ctx->{last_line}=$l;
  if ($@)
  {
-  output($ctx,"An error happened:\n",ref($@)? sprintf('EXCEPTION %d@%s : %s',$@->code(),$@->area(),$@->msg()) : $@,"\n");
+  output($ctx,"An error happened:\n",ref($@)? $@->msg() : $@,"\n");
  } else
  {
   my @r;
@@ -565,7 +586,7 @@ sub handle_line
   if (defined($rc) && $rc->is_closing() && $ctx->{dri}->transport()->has_state())
   {
    $ctx->{dri}->transport()->current_state(0);
-   push @r,'Server connection closed, will try to reconnect at next command.';
+   push @r,'Server connection closed, will try to reconnect during next command.'; ## TODO : this is triggered also for type=das, but shouldn't !
   }
   output($ctx,@r,"\n");
  }
@@ -582,31 +603,33 @@ sub complete
  ## Command completion
  if ($start==0) ## command completion
  {
-  return sort { $a cmp $b } grep { /^$text/ } qw/quit exit help run record message_retrieve message_delete domain_create domain_renew domain_delete domain_check domain_info domain_transfer_start domain_transfer_stop domain_transfer_query domain_transfer_accept domain_transfer_refuse domain_update_ns_set domain_update_ns_add domain_update_ns_del domain_update_status_set domain_update_status_add domain_update_status_del domain_update_contact_set domain_update_contact_add domain_update_contact_del host_create host_delete host_info host_check host_update_ip_set host_update_ip_add host_update_ip_del host_update_status_set host_update_status_add host_update_status_del host_update_name_set contact_create contact_info contact_check contact_delete contact_update contact_update_status_set contact_update_status_add contact_update_status_del contact_transfer_start contact_transfer_stop contact_transfer_query contact_transfer_accept contact_transfer_refuse set add add_registry target add_current_profile add_profile show get_info get_info_all message_waiting message_count domain_exist/;
+  return sort { $a cmp $b } grep { /^$text/ } qw/quit exit help run record message_retrieve message_delete domain_create domain_renew domain_delete domain_check domain_info domain_transfer_start domain_transfer_stop domain_transfer_query domain_transfer_accept domain_transfer_refuse domain_update_ns_set domain_update_ns_add domain_update_ns_del domain_update_status_set domain_update_status_add domain_update_status_del domain_update_contact_set domain_update_contact_add domain_update_contact_del domain_update host_create host_delete host_info host_check host_update_ip_set host_update_ip_add host_update_ip_del host_update_status_set host_update_status_add host_update_status_del host_update_name_set host_update contact_create contact_info contact_check contact_delete contact_update contact_update_status_set contact_update_status_add contact_update_status_del contact_transfer_start contact_transfer_stop contact_transfer_query contact_transfer_accept contact_transfer_refuse set add add_registry target add_current_profile add_profile show get_info get_info_all message_waiting message_count domain_exist/;
  }
 
  ## Parameter completion
  my ($cmd)=($line=~m/^(\S+)\s/);
- if ($cmd eq 'show') { return sort { $a cmp $b } grep { /^$text/ } qw/profiles tlds periods objects status config/; }
+ if ($cmd eq 'show') { return sort { $a cmp $b } grep { /^$text/ } qw/profiles tlds periods objects types status config/; }
  if ($cmd eq 'set')  { return map { $_.'=' } sort { $a cmp $b } grep { /^$text/ } keys(%{$ctx->{config}}); }
  if ($cmd eq 'run' || $cmd eq 'record') { return sort { $ctx->{completion}->{files}->{$b} <=> $ctx->{completion}->{files}->{$a} || $a cmp $b } grep { /^$text/ } keys(%{$ctx->{completion}->{files}}); }
 
- if ($cmd eq 'add' || $cmd eq 'add_registry')
+ if ($cmd eq 'add' || $cmd eq 'add_registry' || $cmd eq 'add_current_profile' || $cmd eq 'add_profile')
  {
-  if (substr($line,$start-1-9+1,9) eq 'registry=')
+  if (substr($line,$start-9,9) eq 'registry=')
   {
    my ($reg)=($text=~m/registry=(\S*)/);
    $reg||='';
-   return sort { $a cmp $b } grep { /^$reg/ } qw/AERO AFNIC AG ARNES ASIA AT AU BE BIZ BookMyName BR BZ CAT CentralNic CoCCA COOP CZ DENIC EURid Gandi HN IENUMAT IM INFO LC LU ME MN MOBI NAME Nominet NO NU OpenSRS ORG OVH PL PRO PT SC SE SWITCH TRAVEL US VC VNDS WS/;
-  } elsif (substr($line,$start-1-5+1,5) eq 'type=')
+   return sort { $a cmp $b } grep { /^$reg/ } $ctx->{dri}->installed_registries();
+  } elsif (substr($line,$start-5,5) eq 'type=')
   {
    my ($type)=($text=~m/type=(\S*)/);
    $type||='';
-   return sort { $a cmp $b } grep { /^$type/ } qw/epp rrp rri dchk whois das ws email/;
+   return sort { $a cmp $b } grep { /^$type/ } (defined $ctx->{dri}->registry_name()? $ctx->{dri}->registry()->driver()->profile_types() : qw/epp rrp rri dchk whois das ws email/);
   } else
   {
-   my @p=qw/registry clID name/;
-   push @p,'type' if $cmd eq 'add';
+   my @p;
+   @p=qw/registry clID/ if $cmd eq 'add_registry';
+   @p=qw/type name/ if ($cmd=~m/^add_(?:current_)?profile$/);
+   @p=qw/registry clID type name/ if $cmd eq 'add';
    return map { $_.'=' } grep { /^$text/ } @p;
   }
  }
@@ -623,8 +646,9 @@ sub complete
   }
  }
 
- if (substr($line,$start-1-9+1,9) eq 'duration=' && defined $ctx->{dri}->registry_name())
+ if (substr($line,$start-9,9) eq 'duration=')
  {
+  return () unless defined $ctx->{dri}->registry_name();
   my ($p)=($text=~m/duration=(\S*)/);
   $p||='';
   my %p;
@@ -656,21 +680,56 @@ sub complete
   return sort { ( $ctx->{completion}->{domains}->{$b} || 0) <=> ( $ctx->{completion}->{domains}->{$a} || 0 ) || $a cmp $b } @p;
  }
 
+ my @ct=qw/registrant admin tech billing/; ## How to retrieve non core contact types ?
+ my $capa;
+ if ($ctx->{dri}->registry_name() && $ctx->{dri}->available_profile() && $ctx->{dri}->protocol())
+ {
+  @ct=('registrant',$ctx->{dri}->protocol()->core_contact_types()) if $ctx->{dri}->protocol()->can('core_contact_types');
+  $capa=$ctx->{dri}->protocol()->capabilities();
+ }
+ my $ctre=join('|',@ct);
+
  if ($cmd eq 'domain_create') ## If we are here, we are sure the domain name has been completed already, due to previous test block
  {
-  if (substr($line,$start-1-3+1,3) eq 'ns=')
+  if (substr($line,$start-3,3) eq 'ns=')
   {
    my ($ns)=($text=~m/ns=(\S*)/);
    $ns||='';
    return _complete_hosts($ctx,$ns);
-  } elsif (grep { substr($line,$start-1-(1+length($_))+1,1+length($_)) eq $_.'=' } qw/admin registrant billing tech/)
+  } elsif (grep { substr($line,$start-(1+length($_)),1+length($_)) eq $_.'=' } @ct)
   {
-   my ($c)=($text=~m/(?:admin|registrant|billing|tech)=(\S*)/);
+   my ($c)=($text=~m/(?:${ctre})=(\S*)/);
    $c||='';
    return _complete_contacts($ctx,$c);
   } else
   {
-   return map { $_.'=' } grep { /^$text/ } qw/duration ns admin registrant billing tech auth/;
+   return map { $_.'=' } grep { /^$text/ } (qw/duration ns auth/,@ct);
+  }
+ }
+
+ if ($cmd eq 'domain_update') ## see previous comment
+ {
+  if (substr($line,$start-4,4)=~m/^[-+]ns=$/)
+  {
+   my ($ns)=($text=~m/ns=(\S*)/);
+   $ns||='';
+   return _complete_hosts($ctx,$ns);
+  } elsif (grep { substr($line,$start-(1+length($_)),1+length($_)) eq $_.'=' } @ct) #####
+  {
+   my ($c)=($text=~m/(?:${ctre})=(\S*)/);
+   $c||='';
+   return _complete_contacts($ctx,$c);
+  } elsif (substr($line,$start-8,8)=~m/^[-+]status=$/)
+  {
+   my $o=$ctx->{dri}->local_object('status');
+   if (! defined $o) { return (); }
+   my ($s)=($text=~m/status=(\S*)/);
+   $s||='';
+   return sort { $a cmp $b } grep { /^$s/ } map { 'no'.$_ } $o->possible_no();
+  } else
+  {
+   $text=~s/\+/[+]/g;
+   return map { $_.'=' } sort { $a cmp $b } grep { /^$text/ } (map { if (/^([+-])contact$/) { map { $1.$_ } @ct } else { $_; } } _complete_capa2list($capa,'domain_update'));
   }
  }
 
@@ -692,21 +751,66 @@ sub complete
   return map { $_.'=' } sort { $a cmp $b } grep { /^$text/ } @p;
  }
 
- if ($cmd eq 'contact_create' && defined $ctx->{dri}->registry_name() && defined $ctx->{dri}->profile())
+ if ($cmd eq 'contact_create')
  {
+  return () unless (defined $ctx->{dri}->registry_name() && defined $ctx->{dri}->profile());
   my $c=$ctx->{dri}->local_object('contact');
   if (! defined $c) { return (); }
   return map { $_.'=' } sort { $a cmp $b } grep { /^$text/ } $c->attributes();
  }
 
  if ($line=~m/^contact_\S+\s+\S*$/) { return _complete_contacts($ctx,$text); }
- if ($line=~m/^host_\S+\s+\S*$/)    { return _complete_hosts($ctx,$text); }
+
+ if ($cmd eq 'contact_update')
+ {
+  return () unless (defined $ctx->{dri}->registry_name() && defined $ctx->{dri}->profile());
+  my $c=$ctx->{dri}->local_object('contact');
+  $text=~s/\+/[+]/g;
+  return map { $_.'=' } sort { $a cmp $b } grep { /^$text/ } (defined $c ? $c->attributes() : (),_complete_capa2list($capa,'contact_update'));
+ }
+
+ if ($line=~m/^host_\S+\s+\S*$/) { return _complete_hosts($ctx,$text); }
  if (my ($h)=($line=~m/^host_update_name_set\s+\S+\s+(\S*)$/)) { return _complete_hosts($ctx,$h); }
+ if ($cmd eq 'host_update')
+ {
+  if (substr($line,$start-5,5) eq 'name=')
+  {
+   my ($ns)=($text=~m/name=(\S*)/);
+   $ns||='';
+   return _complete_hosts($ctx,$ns);
+  } elsif ( substr($line,$start-8,8)=~m/^[-+]status=$/ )
+  {
+   my $o=$ctx->{dri}->local_object('status');
+   if (! defined $o) { return (); }
+   my ($s)=($text=~m/status=(\S*)/);
+   $s||='';
+   return sort { $a cmp $b } grep { /^$s/ } map { 'no'.$_ } $o->possible_no();
+  } else
+  {
+   $text=~s/\+/[+]/g;
+   return map { $_.'=' } sort { $a cmp $b } grep { /^$text/ } (_complete_capa2list($capa,'host_update'));
+  }
+ }
 
  return ();
 }
 
-sub _complete_hosts    { my ($ctx,$text)=@_; return sort { $ctx->{completion}->{hosts}->{$b}    <=> $ctx->{completion}->{hosts}->{$a}    || $a cmp $b } grep { /^$text/ } keys(%{$ctx->{completion}->{hosts}}); }
+sub _complete_capa2list
+{
+ my ($capa,$what)=@_;
+ return () unless (defined $capa && exists($capa->{$what}));
+ my @r;
+ while(my ($k,$ra)=each(%{$capa->{$what}}))
+ {
+  foreach my $t (@$ra)
+  {
+   if ($t eq 'add') { push @r,'+'.$k; } elsif ($t eq 'del') { push @r,'-'.$k; } elsif ($t eq 'set') { push @r,$k; }
+  }
+ }
+ return @r;
+}
+
+sub _complete_hosts    { my ($ctx,$text)=@_; return sort { $ctx->{completion}->{hosts}->{$b} <=> $ctx->{completion}->{hosts}->{$a} || $a cmp $b } grep { /^$text/ } keys(%{$ctx->{completion}->{hosts}}); }
 sub _complete_contacts
 {
  my ($ctx,$text)=@_;
@@ -755,6 +859,7 @@ sub process
  return do_dri($ctx,$cmd,\@p,\%p) if ($cmd=~m/^message_(?:retrieve|delete)$/);
  return do_domain($ctx,$cmd,\@p,\%p) if ($cmd=~m/^domain_(?:check)$/);
  return do_domain_transfer($ctx,$cmd,\@p,\%p) if ($cmd=~m/^domain_transfer_(?:start|stop|query|accept|refuse)$/);
+ return do_domain_update($ctx,$cmd,\@p,\%p) if ($cmd eq 'domain_update');
  return do_domain_update_ns($ctx,$cmd,\@p,\%p) if ($cmd=~m/^domain_update_ns_(?:add|del|set)$/);
  return do_domain_update_status($ctx,$cmd,\@p,\%p) if ($cmd=~m/^domain_update_status_(?:add|del|set)$/);
  return do_domain_update_contact($ctx,$cmd,\@p,\%p) if ($cmd=~m/^domain_update_contact_(?:add|del|set)$/);
@@ -780,7 +885,7 @@ sub process
   return @r;
  }
 
- if ($cmd=~m/^host_(?:create|delete|info|check|update_(?:ip|status|name)_(?:add|del|set))$/)
+ if ($cmd=~m/^host_(?:create|delete|info|check|update|update_(?:ip|status|name)_(?:add|del|set))$/)
  {
   return (undef,'Registry does not support host objects') unless $ctx->{dri}->has_object('ns');
   return do_host($ctx,$cmd,\@p,\%p);
@@ -804,6 +909,9 @@ sub process
   return $sub->($ctx,$cmd,\@p,\%p) if (exists(&$sub));
  }
 
+ ## Fallback for all domain extension commands
+ return do_domain_extension($ctx,$cmd,\@p,\%p) if ($cmd=~m/^domain_\S+/);
+
  return (undef,'Unknown command '.$cmd);
 }
 
@@ -820,7 +928,7 @@ sub help
 {
  my ($ctx,$cmd,$ra,$rh)=@_;
  my $m=<<EOF;
-Available commands:
+Available commands (parameters after the first one can be in any order):
 
 help
 add registry=REGISTRYNAME type=TYPE [cLID=YOURLOGIN]
@@ -838,6 +946,7 @@ target X Y
 run FILENAME
 record FILENAME
 quit
+domain_create DOMAIN [duration=X] [ns=HOSTNAMEA IPA1 IPA2 ... HOSTNAMEB IPB1 IPB2 ...] [admin=SRID1] [registrant=SRID2] [billing=SRID3] [tech=SRID4] [auth=X]
 domain_info DOMAIN
 domain_check DOMAIN
 domain_exist DOMAIN
@@ -855,6 +964,7 @@ domain_update_status_del DOMAIN STATUS1 STATUS2 ...
 domain_update_contact_set DOMAIN SRVID1 SRVID2 ...
 domain_update_contact_add DOMAIN SRVID2 SRVID2 ...
 domain_update_contact_del DOMAIN SRVID1 SRVID2 ...
+domain_update DOMAIN +status=S1 -status=S2 +admin=C1 -tech=C2 -billing=C3 registrant=C4 auth=A +ns=... -ns=...
 domain_renew DOMAIN [duration=X] [current_expiration=YYYY-MM-DD]
 domain_delete DOMAIN
 host_create HOSTNAME IP1 IP2 ...
@@ -868,6 +978,7 @@ host_update_status_set HOSTNAME STATUS1 STATUS2 ...
 host_update_status_add HOSTNAME STATUS1 STATUS2 ...
 host_update_status_del HOSTNAME STATUS1 STATUS2 ...
 host_update_name_set HOSTNAME NEWNAME
+host_update HOSTNAME +ip=IP1 +ip=IP2 -ip=IP3 +status=STATUS1 -status=STATUS2 name=NEWNAME ...
 contact_create name=X org=Y street=Z1 street=Z2 email=A voice=B ...
 contact_delete SRID
 contact_info SRID
@@ -875,6 +986,7 @@ contact_check SRID
 contact_update_status_set SRID STATUS1 STATUS2 ...
 contact_update_status_add SRID STATUS1 STATUS2 ...
 contact_update_status_del SRID STATUS1 STATUS2 ...
+contact_update SRID name=X org=Y ... +status=... -status=...
 contact_transfer_start SRID
 contact_transfer_stop SRID
 contact_transfer_query SRID
@@ -905,7 +1017,7 @@ sub record
  {
   $ctx->{completion}->{files}->{$n}=time();
   open(my $fh,'>',$n) or return (undef,$m.'Unable to write local file '.$n.' : '.$!);
-  $fh->autoflush(1);
+  $fh->autoflush(1); ## this is thanks to IO::Handle
   $ctx->{record_filehandle}=$fh;
   $ctx->{record_filename}=$n;
   $m.='Started recording session to '.$ctx->{record_filename};
@@ -928,7 +1040,7 @@ sub do_add
  my %r=(registry => $rh->{registry});
  $r{clID}=$rh->{clID} if exists($rh->{clID});
  my @r=do_add_registry($ctx,'add_registry',$ra,\%r);
- if (@r) { return @r; }
+ if (! defined $r[0] || ! $r[0]->is_success()) { return @r; }
  unless (exists($rh->{name}) && defined($rh->{name}))
  {
   my @p=$ctx->{dri}->available_profiles();
@@ -948,7 +1060,7 @@ sub do_add_registry
  if (! grep { $reg eq $_ } $ctx->{dri}->available_registries() ) { $ctx->{dri}->add_registry($reg,$rh); }
  $ctx->{dri}->target($reg);
  $ctx->{prompt}=$ctx->{dprompt}.'('.$reg.')';
- return;
+ return (Net::DRI::Protocol::ResultStatus->new_generic_success('Registry "'.$reg.'" added successfully'),undef);
 }
 
 sub do_target
@@ -962,12 +1074,12 @@ sub do_target
 sub do_add_current_profile
 {
  my ($ctx,$cmd,$ra,$rh)=@_;
- return (undef,'Usage: add_current_profile name=PROFILENAME type=PROTOCOL [defer=0] [client_login=YOURLOGIN] [client_password=YOURPASSWORD]') unless (Net::DRI::Util::has_key($rh,'name') && Net::DRI::Util::has_key($rh,'type'));
+ return (undef,'Usage: add_current_profile name=PROFILENAME type=SERVICENAME [defer=0] [client_login=YOURLOGIN] [client_password=YOURPASSWORD]') unless (Net::DRI::Util::has_key($rh,'name') && Net::DRI::Util::has_key($rh,'type'));
  my $name=$rh->{name};
  my $type=$rh->{type};
- my @p=split(/,/,$rh->{protocol} || ''); ## not needed most of the time, otherwise find better API ?
+ my $rp=defined $rh->{protocol}? $rh->{protocol} : {};
  delete(@{$rh}{qw/name type protocol/});
- my $rc=$ctx->{dri}->$cmd($name,$type,$rh,\@p);
+ my $rc=$ctx->{dri}->$cmd($name,$type,$rh,$rp);
  if ($rc->is_success() && $cmd eq 'add_current_profile')
  {
   my @t=$ctx->{dri}->registry();
@@ -981,7 +1093,7 @@ sub do_add_profile { return do_add_current_profile(@_); }
 sub do_show
 {
  my ($ctx,$cmd,$ra,$rh)=@_;
- my $m='Usage: show profiles|tlds|periods|objects|status|config';
+ my $m='Usage: show profiles|tlds|periods|objects|types|status|config';
  return (undef,$m) unless @$ra;
  if ($ra->[0] eq 'profiles')
  {
@@ -1000,6 +1112,9 @@ sub do_show
  } elsif ($ra->[0] eq 'objects')
  {
   $m=join("\n",$ctx->{dri}->registry()->driver()->object_types());
+ } elsif ($ra->[0] eq 'types')
+ {
+  $m=join("\n",$ctx->{dri}->registry()->driver()->profile_types());
  } elsif ($ra->[0] eq 'status')
  {
   my $o=$ctx->{dri}->local_object('status');
@@ -1056,6 +1171,18 @@ sub do_message_count
  return (undef,'Number of messages waiting at the registry: '.$e);
 }
 
+## Try to handle all domain commands defined in extensions, with some heuristics
+sub do_domain_extension
+{
+ my ($ctx,$cmd,$ra,$rh)=@_;
+ my $dom=shift(@$ra);
+ build_auth($rh);
+ build_duration($ctx,$rh);
+ $rh->{status}=build_status($ctx,ref $rh->{status}? $rh->{status} : [ $rh->{status} ] ) if exists($rh->{status});
+ $rh->{contact}=build_contactset($ctx,$rh->{contact}) if (exists $rh->{contact});
+ return wrap_command_domain($ctx,$cmd,$dom,$rh);
+}
+
 sub do_domain
 {
  my ($ctx,$cmd,$ra,$rh)=@_;
@@ -1078,7 +1205,20 @@ sub do_domain_transfer
  my ($ctx,$cmd,$ra,$rh)=@_;
  build_auth($rh);
  build_duration($ctx,$rh);
+ $rh->{contact}=build_contactset($ctx,$rh->{contact}) if exists $rh->{contact}; ## Some registries need contacts during transfer, this is not core EPP, but it does not create drawbacks, so we support it here
  return wrap_command_domain($ctx,$cmd,$ra->[0],$rh);
+}
+
+sub do_domain_update
+{
+ my ($ctx,$cmd,$ra,$rh)=@_;
+ my $dom=shift(@$ra);
+ my $toc=$ctx->{dri}->local_object('changes');
+ my ($radd,$rdel,$rset)=build_update($ctx,$rh);
+ if (keys %$radd) { foreach my $k (keys %$radd) { $toc->add($k,$radd->{$k}); } }
+ if (keys %$rdel) { foreach my $k (keys %$rdel) { $toc->del($k,$rdel->{$k}); } }
+ if (keys %$rset) { foreach my $k (keys %$rset) { $toc->set($k,$rset->{$k}); } }
+ return wrap_command_domain($ctx,$cmd,$dom,$toc);
 }
 
 sub do_domain_update_ns
@@ -1119,19 +1259,17 @@ sub do_domain_create
  my $dom=shift(@$ra);
  build_duration($ctx,$rh);
  build_auth($rh);
- $rh->{ns}=build_hosts($ctx,[split(/\s+/,$rh->{ns})]) if exists($rh->{ns});
- my $cs=$ctx->{dri}->local_object('contactset');
- foreach my $t (qw/admin registrant billing tech/)
+ $rh->{ns}=build_hosts($ctx,[split(/\s+/,ref $rh->{ns} ? join(' ',@{$rh->{ns}}) : $rh->{ns})]) if exists($rh->{ns});
+ my @ct=qw/registrant admin tech billing/; ## How to retrieve non core contact types ?
+ @ct=('registrant',$ctx->{dri}->protocol()->core_contact_types()) if ($ctx->{dri}->protocol() && $ctx->{dri}->protocol()->can('core_contact_types'));
+ my %c;
+ foreach my $t (@ct)
  {
-  next unless exists($rh->{$t});
-  foreach my $c (ref($rh->{$t})? @{$rh->{$t}} : ($rh->{$t}))
-  {
-   $cs->add($ctx->{dri}->local_object('contact')->srid($c),$t);
-   $ctx->{completion}->{contacts}->{$c}=[time(),$ctx->{dri}->registry_name()];
-  }
-  delete($rh->{$t});
+  next unless exists $rh->{$t};
+  $c{$t}=$rh->{$t};
+  delete $rh->{$t} ;
  }
- $rh->{contact}=$cs unless $cs->is_empty();
+ $rh->{contact}=build_contactset($ctx,\%c) if (%c);
  $rh->{pure_create}=1;
  return wrap_command_domain($ctx,$cmd,$dom,$rh);
 }
@@ -1172,12 +1310,22 @@ sub do_host
  {
   my $h=shift(@$ra);
   @p=($h,build_status($ctx,$ra));
+ } elsif ($cmd eq 'host_update')
+ {
+  my $h=shift(@$ra);
+  my $toc=$ctx->{dri}->local_object('changes');
+  my ($radd,$rdel,$rset)=build_update($ctx,$rh);
+  if (keys %$radd) { foreach my $k (keys %$radd) { if ($k eq 'ip') { $radd->{$k}=build_hosts($ctx,[$h,ref $radd->{$k} ? @{$radd->{$k}} : ($radd->{$k})]); } $toc->add($k,$radd->{$k}); } }
+  if (keys %$rdel) { foreach my $k (keys %$rdel) { if ($k eq 'ip') { $rdel->{$k}=build_hosts($ctx,[$h,ref $rdel->{$k} ? @{$rdel->{$k}} : ($rdel->{$k})]); } $toc->del($k,$rdel->{$k}); } }
+  if (keys %$rset) { foreach my $k (keys %$rset) { $toc->set($k,$rset->{$k}); } }
+  $ctx->{completion}->{hosts}->{$rset->{'name'}}=time() if exists $rset->{'name'};
+  @p=($h,$toc);
  } else
  {
   @p=@$ra;
  }
  $ctx->{completion}->{hosts}->{$p[0]}=time();
- $ctx->{completion}->{hosts}->{$p[1]}=time() if ($cmd eq 'host_update_name_set');
+ $ctx->{completion}->{hosts}->{$p[1]}=time() if $cmd eq 'host_update_name_set';
  return ($ctx->{dri}->$cmd(@p),undef);
 }
 
@@ -1186,9 +1334,12 @@ sub do_contact
  my ($ctx,$cmd,$ra,$rh)=@_;
  my @p;
  my $c=$ctx->{dri}->local_object('contact');
+ build_auth($rh);
  if ($cmd eq 'contact_create')
  {
   $rh->{street}=[$rh->{street}] if (exists($rh->{street}) && !ref($rh->{street}));
+  $rh->{srid}=$rh->{id} if (exists($rh->{id}) && ! exists($rh->{srid}));
+  $rh->{srid}=$ra->[0] if (@$ra && $ra->[0]!~m/=/ && ! exists $rh->{srid});
   build_contact($ctx,$c,$rh);
  } elsif ($cmd=~m/^contact_update_status_(?:add|del|set)$/)
  {
@@ -1201,10 +1352,16 @@ sub do_contact
   my $id=shift(@$ra);
   $c->srid($id);
   $ctx->{completion}->{contacts}->{$id}=[time(),$ctx->{dri}->registry_name()];
+  my ($radd,$rdel,$rset)=build_update($ctx,$rh);
   my $toc=$ctx->{dri}->local_object('changes');
-  my $c2=$ctx->{dri}->local_object('contact');
-  build_contact($ctx,$c2,$rh); 
-  $toc->set('info',$c2);
+  if (keys %$rset)
+  {
+   my $c2=$ctx->{dri}->local_object('contact');
+   build_contact($ctx,$c2,$rset);
+   $toc->set('info',$c2);
+  }
+  if (keys %$radd) { foreach my $k (keys %$radd) { $toc->add($k,$radd->{$k}); } }
+  if (keys %$rdel) { foreach my $k (keys %$rdel) { $toc->del($k,$rdel->{$k}); } }
   @p=($toc);
  } else
  {
@@ -1230,15 +1387,15 @@ sub wrap_command_domain
  if ($dom=~m!/!) ## Local file
  {
   return (undef,'Local file '.$dom.' does not exist or unreadable') unless (-e $dom && -r _);
-  $res=$dom.'.'.$$.'.'.time().'.results'; ## TODO choose a predictable filename ? if so, use an option
-  open(my $fin,'<',$dom)  or return (undef,'Unable to read local file '.$dom.' : '.$!);
-  open(my $fout,'>',$res) or return (undef,'Unable to write (for results) local file '.$res.' : '.$!);
- } elsif ($dom=~m/`.+`/) ## Local executable
+  $res=$dom.'.'.$$.'.'.time().'.results'; ## TODO choose a predictable filename ? if so, use an option
+  open($fin,'<',$dom)  or return (undef,'Unable to read local file '.$dom.' : '.$!);
+  open($fout,'>',$res) or return (undef,'Unable to write (for results) local file '.$res.' : '.$!);
+ } elsif ($dom=~m/`.+`/) ## Local executable
  {
   $dom=~s/`(.+)`/$1/;
   $res=$cmd.'.'.$$.'.'.time().'.results'; ## see above
-  open(my $fin,'-|',$dom) or return (undef,'Unable to execute local command '.$dom.' : '.$!);
-  open(my $fout,'>',$res) or return (undef,'Unable to write (for results) local file '.$res.' : '.$!);
+  open($fin,'-|',$dom) or return (undef,'Unable to execute local command '.$dom.' : '.$!);
+  open($fout,'>',$res) or return (undef,'Unable to write (for results) local file '.$res.' : '.$!);
  }
 
  unless (defined($fin) && defined($fout)) ## Pure unique domain name
@@ -1278,14 +1435,17 @@ sub wrap_command_domain
  {
   my $l=shift(@$rc);
   my $rcm=shift(@$rc);
+  $rcm=~s/\n/ /g;
   if ($cmd eq 'domain_check')
   {
    my $rh=shift(@$rc);
-   $rcm.=' exist='.$rh->{exist}.' exist_reason='.$rh->{exist_reason};
+   $rcm.=' | exist='.(defined $rh->{exist} ? $rh->{exist} : '?').' exist_reason='.(defined $rh->{exist_reason} ? $rh->{exist_reason} : ''); ## exist should always be defined !
   } elsif ($cmd eq 'domain_info')
   {
    my $rh=shift(@$rc);
-   $rcm.=' '.join(' ',map { $_.'=['.pretty_string($rh->{$_},0).']' } qw/clID crDate exDate contact ns status auth/);
+   $rcm.=' | '.join(' ',map { $_.'=['.pretty_string($rh->{$_},0).']' } qw/clID crDate exDate contact ns status auth/);
+   if (exists $rh->{ns})      { foreach my $nsname ($rh->{ns}->get_names()) { $ctx->{completion}->{hosts}->{$nsname}=time(); } }
+   if (exists $rh->{contact}) { foreach my $cid ($rh->{contact}->get_all()) { $ctx->{completion}->{contacts}->{$cid}=[time(),$ctx->{dri}->registry_name()]; } }
   }
   print { $fout } $l,' ',$rcm,"\n";
   $r{$rcm}++;
@@ -1294,12 +1454,27 @@ sub wrap_command_domain
  my $t=@rc;
 
  my $m=join("\n",map { sprintf('%d/%d (%.02f%%) : %s',$r{$_},$t,100*$r{$_}/$t,$_) } sort { $a cmp $b } keys(%r));
- $m.="\n".sprintf('%d operations in %d seconds, on average %.2f op/s = %.2f s/op',$t,$tstop-$tstart,$t/($tstop-$tstart),($tstop-$tstart)/$t); ## Warning, substring "on average" is used in handle_line(), do not change it
+ $m.="\n".sprintf('%d operations in %d seconds, on average %.2f op/s = %.3f s/op',$t,$tstop-$tstart,$t/($tstop-$tstart),($tstop-$tstart)/$t); ## Warning, substring "on average" is used in handle_line(), do not change it
  $m.="\nResults in local file: $res";
  return (undef,$m);
 }
 
 ####################################################################################################
+
+sub build_contactset
+{
+ my ($ctx,$rh)=@_;
+ my $cs=$ctx->{dri}->local_object('contactset');
+ while(my ($t,$ids)=each(%$rh))
+ {
+  foreach my $c (ref($ids)? @{$ids} : ($ids))
+  {
+   $cs->add($ctx->{dri}->local_object('contact')->srid($c),$t);
+   $ctx->{completion}->{contacts}->{$c}=[time(),$ctx->{dri}->registry_name()];
+  }
+ }
+ return $cs;
+}
 
 sub build_contact
 {
@@ -1318,41 +1493,33 @@ sub build_status
  my ($ctx,$ra)=@_;
  my $s=$ctx->{dri}->local_object('status');
  foreach (@$ra) { s/^no//; $s->no($_); }
- return $s; 
+ return $s;
 }
 
 sub build_hosts
 {
  my ($ctx,$ra)=@_;
  my $ns=$ctx->{dri}->local_object('hosts');
- my ($name,@ips);
+ my $i=-1;
+ my @r;
  foreach my $o (@$ra)
  {
-  if ($o=~m/[a-z]/i) ## hostname (safe since at least the TLD is not numeric)
-  {
-   if (defined($name))
-   {
-    $ns->add($name,\@ips);
-    $name=$o;
-    @ips=();
-   } else
-   {
-    $name=$o;
-   }
-  } else ## or IP address
-  {
-   push @ips,$o;
-  }
+  $r[++$i]=[] if ($o=~m/[a-z]/i); ## new hostname (safe since at least the TLD is not numeric)
+  push @{$r[$i]},$o if $i >= 0; ## the test here makes us skip IP addresses at beginning before first name (a situation that should not happen anyway)
  }
- $ns->add($name,\@ips);
- $ctx->{completion}->{hosts}->{$name}=time();
+ foreach my $rns (@r)
+ {
+  my $name=shift(@$rns);
+  $ns->add($name,$rns);
+  $ctx->{completion}->{hosts}->{$name}=time();
+ }
  return $ns;
 }
 
 sub build_auth
 {
  my $rd=shift;
- return unless exists($rd->{auth});
+ return unless (exists($rd->{auth}) && ! ref($rd->{auth}));
  $rd->{auth}={ pw => $rd->{auth} };
 }
 
@@ -1363,6 +1530,47 @@ sub build_duration
  my ($v,$u)=($rd->{duration}=~m/^(\d+)(\S+)$/);
  $rd->{duration}=$ctx->{dri}->local_object('duration','years'  => $v) if ($u=~m/^y(?:ears?)?$/i);
  $rd->{duration}=$ctx->{dri}->local_object('duration','months' => $v) if ($u=~m/^m(?:onths?)?$/i);
+}
+
+sub build_update
+{
+ my ($ctx,$rd)=@_;
+ my (%a,%r);
+
+ ## Some normalizations
+ foreach my $k (grep { /^[+-]?status$/ } keys(%$rd)) { $rd->{$k}=build_status($ctx,ref $rd->{$k} ? $rd->{$k} : [ $rd->{$k} ]); }
+ foreach my $k (grep { /^[+-]?ns$/ }     keys(%$rd)) { $rd->{$k}=build_hosts($ctx,[ map { split(/\s+/,$_) } ref $rd->{$k} ? @{$rd->{$k}} : ($rd->{$k})]); }
+ build_auth($rd);
+
+ my @ct=qw/admin tech billing/; ## How to retrieve non core contact types ?
+ @ct=$ctx->{dri}->protocol()->core_contact_types() if ($ctx->{dri}->protocol() && $ctx->{dri}->protocol()->can('core_contact_types'));
+ my $ctr=join('|',@ct);
+ foreach my $op (qw/+ -/)
+ {
+  my %c;
+  foreach my $k (grep { /^[${op}](?:${ctr})$/ } keys(%$rd) )
+  {
+   $c{substr($k,1)}=$rd->{$k};
+   delete($rd->{$k});
+  }
+  next unless %c;
+  $rd->{$op.'contact'}=build_contactset($ctx,\%c);
+ }
+ $rd->{registrant}=build_contact($ctx,$ctx->{dri}->local_object('contact'),{srid => $rd->{registrant}}) if exists $rd->{registrant};
+
+ ## Now split in two hashes
+ foreach my $k (grep { /^\+/ } keys(%$rd))
+ {
+  $a{substr($k,1)}=$rd->{$k};
+  delete($rd->{$k});
+ }
+ foreach my $k (grep { /^-/ } keys(%$rd))
+ {
+  $r{substr($k,1)}=$rd->{$k};
+  delete($rd->{$k});
+ }
+
+ return (\%a,\%r,$rd);
 }
 
 sub pretty_string
@@ -1406,12 +1614,12 @@ sub dump_info
  {
   foreach my $k2 (sort(keys(%{$rh->{$k1}})))
   {
-   push @r,$k1.','.$k2;
    next if ($k1 eq 'session' && $k2 eq 'exchange' && $ctx->{config}->{verbose}==0);
+   push @r,$k1.','.$k2;
    foreach my $k3 (sort(keys(%{$rh->{$k1}->{$k2}})))
    {
-    push @r,"\t${k3}: ".pretty_string($rh->{$k1}->{$k2}->{$k3},0);
-   } 
+    push @r,"\t".$k3.': '.pretty_string($rh->{$k1}->{$k2}->{$k3},0);
+   }
    push @r,'';
   }
  }

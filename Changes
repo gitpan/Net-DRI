@@ -1,4 +1,4 @@
-0.95 NOT RELEASED YET
+0.95 2009-08-15
 
 If you are upgrading your Net::DRI installation, from version 0.92 or older
 we advise you to first upgrade to 0.92_01, test everything, adapt your program to use
@@ -7,7 +7,103 @@ with prior versions. If you test first with version 0.92_01 you will be able to 
 sure your programs work the same way from old to new API, without changing versions
 and you will be warned if you are using deprecated features.
 
-0.92_01 2009-01-XX DEVELOPMENT RELEASE (not to be used in production without extensive testing if upgrading from some previous version)
++ DRD/IT & associated modules : only core EPP features, no extensions, no tests
++ DRD/IRegistry & associated modules : registry driver and extensions for .CO.CZ, contributed by Vitezslav Novy, not tested
++ Protocol/Whois/Domain/PT : see eg/whois.pl
++ Protocol/DAS/AU : see eg/das.pl
++ Protocol/DAS/AdamsNames : see eg/das.pl
++ Protocol/DAS/SIDN : see eg/das.pl
++ Protocol/AdamsNames/WS : only domain_info (see t/705adamsnames_ws_live.t)
++ Contact/OpenSRS : contributed by Richard Siddall
++ eg/das.pl : new file, testing various DAS server, superset of previous eurid_das.pl which is now removed
++ Protocol/EPP/Extensions/EURid/{Domain,Notifications,Registrar} : updates for release 5.6 (registry notifications, domain overwrite date delete, registrar info, domain transfer/trade reminders)
++ DRI::installed_registries() : new method to list all installed registries drivers
++ DRI::add_current_registry() : new method, same API as add_registry() which is called and a target is done after to switch to the newly added registry
++ Contact::clone() new method
++ Util : new functions xml_traverse() xml_list_children() xml_child_content() deepcopy() decode_latin1() normalize_name()
++ Protocol : new utility functions parse_iso8601() build_parser_strptime()
++ Protocol/ResultStatus::last() new method to go directly to the lowest object in case of chains
+= Started to put "use warnings" in some modules
+= Shell new commands (see module documentation) : show types, domain_update, host_update, contact_update
+= Shell : various additions in autocompletion, after a domain_info command, nameservers and contacts are also stored for future completions requests
+= Shell : tries to fallback on default domain commands for all extensions
+= Logging/Files : change in filenames used, the PID is always added, and only one dot
+= DRD/* : removed transport_protocol_compatible() + updates to transport_protocol_default() + add profile_types()
+= DRD,DRD/* : added enforce_{domain,host}_name_constraints() replacing err_invalid_domain_name()+verify_name_domain() and similar for hostnames (so that we have better error messages);
+   all DRD methods needed are updated to take into account this new framework
+= DRD : domain_create() domain_delete() do not return an array anymore, always a single object with a chain of siblings as needed through the next()/last() methods;
+        the object returned is always the top one not the last one, so ->last() may be used to retrieve the last one and test its success
+= DRD : removed the %PROTOCOL_DEFAULT_* hashes, defaults are now properly handled in each registry driver class, each protocol subclass and protocol subclass connection class, with the transport_default() method
+= DRD::verify_name_host() : by default does not check TLD against registry TLDs anymore
+= DRD/BookMyName : DAS service
+= DRD/AFNIC::tlds() : added asso.fr com.fr tm.fr gouv.fr
+= DRD/AFNIC : EPP in full production + bugfix in domain_create + added domain_trade_stop()
+= DRD/EURid : added profile types das-registrar and whois-registrar for the specific das and whois services restricted to current .EU registrars
+= DRD/EURid : new methods registrar_info() domain_remind()
+= DRD/ICANN : one and two characters .BIZ .PRO domain names are now allowed
+= DRD/Nominet : added domain_unrenew() account_list_domains()
+= Contact::validate() : better error messages, more specific
+= Contact,Contact/{SWITCH,NO,AT}::validate() : not testing roid anymore as useless, testing srid instead
+= Contact/AFNIC : not using pragma encoding anymore, as it is advised in Perl documentation to avoid it in modules, due to its global scope
+= Contact/AFNIC : new attribues vat and id_status + new method validate_registrant(), replacing validate_is_french() + new method init() to automatically set default srid
+= Contact/AFNIC::validate() : calls SUPER::validate + added test on srid() vat(), better validation of contact data and standardization of API after addition of EPP at registry (per discussion with Jim Driscoll)
+= ContactSet::get_all() new method
+= Registry : add_profile() now completely replaces add_current_test_profile(), new_current_profile() and new_profile(); see files in eg/ and t/ for examples
+= Registry : better logging in profile creation and process()/process_back() methods
+= Transport : change of defaults, retry=2 (this means 2 tries totally) and timeout=60 now, instead of 1 and 0 (no timeout) + better default try_again()
+= Transport subclasses : the new() input API is normalized with only a context and a ref hash in all cases
+= Transport,Transport/HTTP,Transport/Socket,Protocol connection classes read_data() : better information in error messages
+= Transport/Socket : you can use ssl_passwd_cb if you need to decrypt the SSL key before using it
+= Transport/Socket : the ssl_verify_callback called gets the transport object as first parameter, before IO::Socket::SSL parameters
+= Transport/Socket : more logging + better handling of connection closing/sensing EOF
+= Protocol : add many default factories + new methods parse_iso8601() build_parser_strptime() to simplify subclasses work + new method has_module()
+= Protocol connection classes : added transport_default() methods where needed
+= Protocol classes : new() API expects a ref hash
+= Protocol/ResultStatus : for get_data methods, the previous "command" attribute is now "raw_command", and "reply" is "raw_reply", "action" is "object_action", "type" is "object_type", and added "object_name" "registry" "profile" "protocol" "transport" "trid"
+= Protocol/ResultStatus : in get_data() get_data_collection() keys are normalized so that domain and host names can be used in lower or upper case (same as for DRD::get_info), see examples at bottom of t/601vnds_epp.t
+= Protocol/ResultStatus : new last() method
+= Protocol/OpenSRS/XCP/Domain : added operations check create delete renew transfer_request transfer_query transfer_cancel (contributed by Richard Siddall)
+= Protocol/BookMyName/WS : implemented domain_check
+= Protocol/Gandi/WS : implemented domain_check
+= Protocol/OVH/WS : implemented domain_check + using now Transport::HTTP::SOAPLite instead of SOAPWSDL (API change of SOAP::WSDL and/or of OVH ?) and related changes
+= Protocol/Whois/Connection::read_data() : we now suppose the data is in iso-latin-1 encoding instead of ascii
+= Protocol/Whois/Domain/* : use of $po->build_parser_strptime() instead of directly using DateTime::Format::Strptime
+= Protocol/Whois/Domain/SE : parse registrar name
+= Protocol/Whois/Domain/EU : adapt to new format
+= Protocol/DAS : better handling of registries with more than one TLDs (adhoc, no universal specifications of DAS protocol), and those wanting a domain without a TLD in query (what a great idea ... not !), like BE/EU
+= Protocol/DAS/Message : handle slightly different format for .EU
+= Protocol/AFNIC/Email/Domain : PM activated now only with legal_id defined, line 3a is always name() not org(), srids must be provided instead of roids hence without -FRNIC
+= Protocol/{EPP,RRI}/Connection : better handling & more debug information in error messages while attempting to read the first 4 bytes
+= Protocol/{EPP,Whois} : use of $drd->set_factories() if possible (factorization of contact factories)
+= Protocol/EPP : better handling of modules to load through 2 new methods, core_modules() and default_extensions() + add a setup() method for subclasses
+= Protocol/EPP/Message : various simplifications/rewrites and changes for performances and readability
+= Protocol/EPP/Extensions/* : huge simplification of instantiation with setup() + default_extensions() instead of new()
+= Protocol/EPP/Extensions/SecDNS::format_validation() : better error message
+= Protocol/EPP/Extensions/SE,Contact/SE,DRD/SE : various updates by Ulrich Wisser from NIC.SE
+= Protocol/EPP/Extensions/AFNIC/{Domain,Contact} : various updates to latest production specifications (trade cancel, PM activated now only with legal_id defined)
+= Protocol/EPP/Extensions/AFNIC/Notifications : added parsing of all messages related to contact identification
+= Protocol/EPP/Extensions/EURid/Domain::transferq_request() : use key duration instead of key period
+= Protocol/EPP/Extensions/Nominet/Domain : unrenew operation
+= Protocol/EPP/Extensions/Nominet/Account : list_domains operation
+= Protocol,Protocol/*/* : cleanup in the use of factories()/create_local_object()
+= Protocol/EPP/Core/*,some EPP/Extensions/*,Protocol/Whois/Domain/* : no more hardcoding of Data modules, using Protocol->create_local_object() instead
+= Protocol/EPP/Core/*,some EPP/Extensions/*,Protocol/Whois/Domain/* : use of Protocol->parse_iso8601 instead of calling directly DateTime::Format::ISO8601
+= Protocol/EPP/Core/*,some EPP/Extensions/* : use of textContent() instead of getFirstChild()->getData()
+= Protocol/EPP/Core/*,some EPP/Extensions/* : use of Util::xml_list_children() Util::xml_child_content()
+= Protocol/EPP/Core/RegistryMessage::parse_poll() : better handling of non recursion barrier
+= Protocol/EPP/Extensions/Nominet/Domain : unrenew operation
+- Protocol/EPP/Extensions/Nominet/Account : correctly handle empty account:contact nodes (bugreport by Jim Driscoll)
+- Protocol/Gandi/WS/Domain : correct parsing of contacts
+- DRD::domain_create() : various bugfixes in case of pure_delete=0
+- Transport/HTTP/XMLRPCLite : various bugfixes
+- Protocol/Whois/Domain : removed as not used
+- Shell : crash for some tab completion conditions (add_current_profile,contact_create)
+- Contact::loc2int() : make sure not to create an undef instead of an empty ref array in street structure, when empty street
+- Contact/AFNIC::validate() : correct test for name() legal_form_other() birth()
+- Protocol/EPP/Extensions/Nominet : we handle the namespaces versions mix and mess locally
+- Registry::get_info_all() : make a copy of the hash before starting to delete keys
+
+0.92_01 2009-01-31 DEVELOPMENT RELEASE (not to be used in production without extensive testing if upgrading from some previous version)
 
 UPGRADE instructions from previous versions:
 - use add_profile/add_current_profile instead of new_profile/new_current_profile (warning: you may hit different APIs, depending on how you used new_profile/new_current_profile !)
@@ -435,7 +531,7 @@ Detailed changes:
    (reference, code, crDate, application_status, contact, ns, docsReceivedDate, adr)
 + Protocol/Resultatus : extra information from registry (error messages) is available with info()
 + EPP/Extensions/EURid : we parse eurid:msg for extra information, especially useful if errors
-- EPP/Extensions/EURid/Sunrise : invalid call for nsgroup (bug found & fixed by Jørgen Thomsen)
+- EPP/Extensions/EURid/Sunrise : invalid call for nsgroup (bug found & fixed by J?rgen Thomsen)
 = Data/Hosts has 2 significative changes : you can use get_details with a name and
   you can add a nameserver already in the list, in which case the new IP addresses are added with existing
   ones (without duplicates)

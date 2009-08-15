@@ -26,7 +26,7 @@ __PACKAGE__->mk_accessors(qw/ttl/);
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -88,9 +88,6 @@ sub set
  my ($self,$regname,$type,$key,$data,$ttl)=@_;
  Net::DRI::Exception::err_insufficient_parameters() unless Net::DRI::Util::all_valid($regname,$type,$key);
 
- $type=lc($type);
-# $key=lc($key); ## ok in all cases ?
-
  my $now=Net::DRI::Util::microtime();
  $ttl=$self->{ttl} unless defined($ttl);
  my $until=($ttl==0)? 0 : $now+1000000*$ttl;
@@ -123,10 +120,7 @@ sub get
 
  return if ($self->{ttl} < 0);
  Net::DRI::Exception::err_insufficient_parameters() unless Net::DRI::Util::all_valid($type,$key);
-
- $type=lc($type);
-# $key=lc($key);
-
+ ($type,$key)=Net::DRI::Util::normalize_name($type,$key);
  return unless exists($self->{data}->{$type});
  return unless exists($self->{data}->{$type}->{$key});
 

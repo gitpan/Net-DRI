@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Handling of contact data
 ##
-## Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,6 +18,8 @@
 package Net::DRI::Data::Contact;
 
 use strict;
+use warnings;
+
 use base qw(Class::Accessor::Chained); ## provides a new() method
 
 our @ATTRS=qw(name org street city sp pc cc email voice fax loid roid srid auth disclose);
@@ -29,7 +31,7 @@ use Net::DRI::Util;
 use Email::Valid;
 use Encode (); ## we need here direct use of Encode, not through Net::DRI::Util::encode_* as we need the default substitution for unknown data
 
-our $VERSION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -69,11 +71,11 @@ local object ID for this contact, never sent to registry (can be used to track t
 
 server ID, ID of the object as known by the registry in which it was created
 
-=head2 id() 
+=head2 id()
 
 an alias (needed for Net::DRI::Data::ContactSet) of the previous method
 
-=head2 roid() 
+=head2 roid()
 
 registry/remote object id (internal to a registry)
 
@@ -101,7 +103,7 @@ state/province of the contact
 
 postal code of the contact
 
-=head2 cc() 
+=head2 cc()
 
 alpha2 country code of the contact (will be verified against list of valid country codes)
 
@@ -162,7 +164,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -193,7 +195,7 @@ sub attributes
  my $class=shift;
  $class=ref($class) || $class;
  no strict 'refs'; ## no critic (ProhibitNoStrict)
- return @{${$class.'::ATTRS'}}; 
+ return @{${$class.'::ATTRS'}};
 }
 
 ## Overrides method in Class::Accessor, needed for int/loc data
@@ -225,6 +227,7 @@ sub loc2int
  }
  my @c=$self->street();
  $c[1]=[ map { defined($_)? Encode::encode('ascii',$_,0) : undef } defined($c[0])? @{$c[0]} : () ];
+ $c[0]=[] unless defined $c[0];
  $self->street(@c);
  return $self;
 }
@@ -249,7 +252,7 @@ sub _has
  my @d=map { ($self->$_())[$pos] } qw/name org city sp pc cc/;
  my $s=($self->street())[$pos];
  push @d,@$s if (defined($s) && ref($s));
- return (grep { defined} @d)? 1 : 0;
+ return (grep { defined } @d)? 1 : 0;
 }
 
 sub validate ## See RFC4933,§4
@@ -260,12 +263,12 @@ sub validate ## See RFC4933,§4
 
  if (!$change)
  {
-  Net::DRI::Exception::usererr_insufficient_parameters('Invalid contact information: name/city/cc/email/auth/srid mandatory') unless (scalar($self->name()) && scalar($self->city()) && scalar($self->cc()) && $self->email() && $self->auth() && $self->srid());
+  my @missing=grep { my $r=scalar $self->$_(); (defined $r && length $r)? 0 : 1 } qw/name city cc email auth srid/;
+  Net::DRI::Exception::usererr_insufficient_parameters('Mandatory contact information missing: '.join('/',@missing)) if @missing;
   push @errs,'srid' unless Net::DRI::Util::xml_is_token($self->srid(),3,16);
  }
 
- push @errs,'roid' if ($self->roid() && $self->roid()!~m/^\w{1,80}-\w{1,8}$/); ## \w includes _ in Perl
- 
+ push @errs,'srid' if ($self->srid() && ! Net::DRI::Util::xml_is_token($self->srid(),3,16));
  push @errs,'name' if ($self->name() && grep { !Net::DRI::Util::xml_is_normalizedstring($_,1,255) }     ($self->name()));
  push @errs,'org'  if ($self->org()  && grep { !Net::DRI::Util::xml_is_normalizedstring($_,undef,255) } ($self->org()));
 
@@ -324,6 +327,13 @@ sub as_string
  my $c=ref($self);
  $c=~s/^Net::DRI::Data:://;
  return '('.$c.') '.join($sep,@v);
+}
+
+sub clone
+{
+ my ($self)=@_;
+ my $new=Net::DRI::Util::deepcopy($self);
+ return $new;
 }
 
 ####################################################################################################

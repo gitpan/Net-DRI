@@ -1,5 +1,5 @@
 ## Domain Registry Interface, .SE policy on reserved names
-## Contributed by Elias Sidenbladh from NIC SE
+## Contributed by Elias Sidenbladh and Ulrich Wisser from NIC SE
 ##
 ## Copyright (c) 2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
@@ -19,16 +19,18 @@
 package Net::DRI::DRD::SE;
 
 use strict;
+use warnings;
+
 use base qw/Net::DRI::DRD/;
 
-use Net::DRI::Util;
 use DateTime::Duration;
+use Net::DRI::Util;
+use Net::DRI::Data::Contact::SE;
 
-our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
-## The domain renew command are not implemented at the .se EPP server, domains are renewed automaticly when
-## they expires if not the "clientRenewProhibited" or "serverRenewProhibited" statuses are set.
-__PACKAGE__->make_exception_for_unavailable_operations(qw/domain_transfer_stop domain_transfer_accept domain_transfer_refuse domain_renew/);
+## Only transfer requests and queries are possible, the rest is handled "off line".
+__PACKAGE__->make_exception_for_unavailable_operations(qw/domain_transfer_stop domain_transfer_accept domain_transfer_refuse domain_delete/);
 
 =pod
 
@@ -82,28 +84,32 @@ sub new
  return $self;
 }
 
-sub periods  { return map { DateTime::Duration->new(years => $_) } (1); }
+sub periods {
+
+    # This doesn't work because renew can be done 3 month before expiration
+    # return map { DateTime::Duration->new( years => $_ ) } (1);
+
+    return ( DateTime::Duration->new( years => 1, ), DateTime::Duration->new( years => 1, months => 3, ), );
+}
+
 sub name     { return 'se'; }
 sub tlds     { return ('SE'); }
 sub object_types { return ('domain','contact','ns'); }
-
-sub transport_protocol_compatible
-{
- my ($self,$to,$po)=@_;
- my $pn=$po->name();
- my $tn=$to->name();
-
- return 1 if (($pn eq 'EPP') && ($tn eq 'socket_inet'));
- return 1 if (($pn eq 'Whois') && ($tn eq 'socket_inet'));
- return;
-}
+sub profile_types { return qw/epp whois/; }
 
 sub transport_protocol_default
 {
- my ($drd,$ndr,$type,$ta,$pa)=@_;
- $type='epp' if (!defined($type) || ref($type));
- return Net::DRI::DRD::_transport_protocol_default_epp('Net::DRI::Protocol::EPP::Extensions::SE',$ta,$pa) if ($type eq 'epp');
- return ('Net::DRI::Transport::Socket',[{%Net::DRI::DRD::PROTOCOL_DEFAULT_WHOIS,remote_host=>'whois.nic-se.se'}],'Net::DRI::Protocol::Whois',[]) if (lc($type) eq 'whois');
+ my ($self,$type)=@_;
+
+ return ('Net::DRI::Transport::Socket',{},'Net::DRI::Protocol::EPP::Extensions::SE',{})                 if $type eq 'epp';
+ return ('Net::DRI::Transport::Socket',{remote_host=>'whois.nic-se.se'},'Net::DRI::Protocol::Whois',{}) if $type eq 'whois';
+ return;
+}
+
+sub set_factories
+{
+ my ($self,$po)=@_;
+ $po->factories('contact',sub { return Net::DRI::Data::Contact::SE->new(@_); });
 }
 
 ####################################################################################################
@@ -113,9 +119,21 @@ sub verify_name_domain
  my ($self,$ndr,$domain,$op)=@_;
  return $self->_verify_name_rules($domain,$op,{check_name => 1,
                                                my_tld => 1,
-                                               min_length => 2,
-                                               no_country_code => 1,
                                               });
+}
+
+sub verify_duration_create
+{
+ my ($self,$ndr,$duration,$domain)=@_;
+ ($duration,$domain)=($ndr,$duration) unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
+ return 0;
+}
+
+sub verify_duration_renew
+{
+ my ($self,$ndr,$duration,$domain,$curexp)=@_;
+ ($duration,$domain,$curexp)=($ndr,$duration,$domain) unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
+ return 0;
 }
 
 ####################################################################################################

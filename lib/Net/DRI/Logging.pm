@@ -24,7 +24,7 @@ use base qw/Net::DRI::BaseClass/;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf '%d'.('.%02d' x $#r), @r; };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf '%d'.('.%02d' x $#r), @r; };
 
 __PACKAGE__->make_exception_if_not_implemented(qw/name setup_channel output/);
 
@@ -110,14 +110,14 @@ sub string_data
   }
  }
 
- $data->{all}=join q{ },map { $_.q{=}.$data->{$_} } sort { $a cmp $b } keys %{$data}; ## this should be handy during debugging
+ $data->{all}=join q{ },map { $_.q{=}.(defined $data->{$_} ? $data->{$_} : '') } sort { $a cmp $b } keys %{$data}; ## this should be handy during debugging
  if (exists $data->{direction}) { $data->{udirection}=uc $data->{direction}; $data->{adirection}=$data->{direction} eq 'in'? 'C<=S' : 'C=>S';}
  my @r;
  foreach my $l (split /\n/,$msg)
  {
   my $f=$hdr.q{ }.$self->{'format_'.$type};
   $data->{message}=$l;
-  $f=~s/%([A-Z]+)/$data->{lc $1}/eg;
+  $f=~s/%([A-Z]+)/$data->{lc $1} || ''/eg;
   push @r,$f;
  }
  return join qq{\n}, @r;

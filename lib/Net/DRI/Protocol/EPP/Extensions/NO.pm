@@ -1,6 +1,6 @@
 ## Domain Registry Interface, NORID (.NO) EPP extensions
 ##
-## Copyright (c) 2008 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
+## Copyright (c) 2008,2009 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
 ##                    Trond Haugen E<lt>info@norid.noE<gt>
 ##                    All rights reserved.
 ##
@@ -25,7 +25,7 @@ use base qw/Net::DRI::Protocol::EPP/;
 
 use Net::DRI::Data::Contact::NO;
 
-our $VERSION = do { my @r = ( q$Revision: 1.3 $ =~ /\d+/gmx ); sprintf( "%d" . ".%02d" x $#r, @r ); };
+our $VERSION = do { my @r = ( q$Revision: 1.4 $ =~ /\d+/gmx ); sprintf( "%d" . ".%02d" x $#r, @r ); };
 
 =pod
 
@@ -55,7 +55,7 @@ Trond Haugen, E<lt>info@norid.noE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
+Copyright (c) 2008,2009 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
 Trond Haugen E<lt>info@norid.noE<gt>
 All rights reserved.
 
@@ -69,18 +69,9 @@ See the LICENSE file that comes with this distribution for more details.
 =cut
 
 ####################################################################################################
-sub new {
-    my ( $c, $drd, $version, $extrah ) = @_;
-    my %e = map { $_ => 1 }
-        ( defined($extrah) ? ( ref($extrah) ? @$extrah : ($extrah) ) : () );
 
-    $e{'Net::DRI::Protocol::EPP::Extensions::NO::Domain'}  = 1;
-    $e{'Net::DRI::Protocol::EPP::Extensions::NO::Contact'} = 1;
-    $e{'Net::DRI::Protocol::EPP::Extensions::NO::Host'}    = 1;
-    $e{'Net::DRI::Protocol::EPP::Extensions::NO::Result'}  = 1;
-    $e{'Net::DRI::Protocol::EPP::Extensions::NO::Message'} = 1;
-
-    my $self = $c->SUPER::new( $drd, $version, [ keys(%e) ] );
+sub setup {
+    my ($self,$rp)=@_;
     $self->ns({ no_contact => [ 'http://www.norid.no/xsd/no-ext-contact-1.0','no-ext-contact-1.0.xsd' ],
                 no_domain  => [ 'http://www.norid.no/xsd/no-ext-domain-1.0','no-ext-domain-1.0.xsd' ],
                 no_host    => [ 'http://www.norid.no/xsd/no-ext-host-1.0','no-ext-host-1.0.xsd' ],
@@ -94,8 +85,10 @@ sub new {
     $self->capabilities('host_update','contact',['set']);
     $self->factories('contact',sub { return Net::DRI::Data::Contact::NO->new(); });
 
-    return $self;
+    return;
 }
+
+sub default_extensions { return qw/NO::Domain NO::Contact NO::Host NO::Result NO::Message/; }
 
 ####################################################################################################
 1;

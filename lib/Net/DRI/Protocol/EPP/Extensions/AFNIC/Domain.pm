@@ -1,6 +1,6 @@
 ## Domain Registry Interface, AFNIC EPP Domain extensions
 ##
-## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,12 +18,12 @@
 package Net::DRI::Protocol::EPP::Extensions::AFNIC::Domain;
 
 use strict;
+use warnings;
 
 use Net::DRI::Util;
 use Net::DRI::Exception;
-use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -53,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -73,11 +73,12 @@ sub register_commands
  my %tmp=(
            update => [ \&update, undef ],
            transfer_request => [ \&transfer_request, undef ],
-           trade_request     => [ \&trade_request, \&trade_parse ],
-           trade_query      => [ \&trade_query , \&trade_parse ],
-           recover_request => [ \&recover_request, \&recover_parse],
+           trade_request    => [ \&trade_request, \&trade_parse ],
+           trade_query      => [ \&trade_query,   \&trade_parse ],
+           trade_cancel     => [ \&trade_cancel,  undef ],
+           recover_request  => [ \&recover_request, \&recover_parse],
            check => [ undef, \&check_parse],
-           info => [ undef, \&info_parse],
+           info  => [ undef, \&info_parse],
          );
 
  $tmp{check_multi}=$tmp{check};
@@ -106,6 +107,7 @@ sub build_registrant
  Net::DRI::Exception::usererr_invalid_parameters('AFNIC needs contact for domain_trade') unless Net::DRI::Util::has_contact($rd);
  my @t=$rd->{contact}->get('registrant');
  Net::DRI::Exception::usererr_invalid_parameters('AFNIC needs one contact of type registrant') unless (@t==1 && Net::DRI::Util::isa_contact($t[0]));
+ $t[0]->validate_registrant();
  return ['frnic:registrant',$t[0]->srid()];
 }
 
@@ -120,7 +122,7 @@ sub verify_contacts
  my $rd=shift;
  Net::DRI::Exception::usererr_invalid_parameters('AFNIC needs contact for domain_transfer/domain_trade') unless Net::DRI::Util::has_contact($rd);
  my @t=$rd->{contact}->get('admin');
- Net::DRI::Exception::usererr_invalid_parameters('AFNIC needs only one contact of type admin') unless (@t==1 && Net::DRI::Util::isa_contact($t[0]));
+ Net::DRI::Exception::usererr_invalid_parameters('AFNIC needs one contact of type admin, and only one') unless (@t==1 && Net::DRI::Util::isa_contact($t[0]));
  @t=grep { Net::DRI::Util::isa_contact($_) } $rd->{contact}->get('tech');
  Net::DRI::Exception::usererr_invalid_parameters('AFNIC needs one to three contacts of type tech') unless (@t >= 1 && @t <= 3);
  }
@@ -163,39 +165,31 @@ sub parse_trade_recover
  my $mes=$po->message();
 
  my $infdata=$mes->get_extension('frnic','ext');
- return unless $infdata;
+ return unless defined $infdata;
+
  my $ns=$mes->ns('frnic');
- my $c=$infdata->getChildrenByTagNameNS($ns,'resData');
- return unless $c->size();
- $c=$c->shift()->getChildrenByTagNameNS($ns,$s);
- return unless $c->size();
- $c=$c->shift()->getChildrenByTagNameNS($ns,'domain');
- return unless $c->size();
+ $infdata=Net::DRI::Util::xml_traverse($infdata,$ns,'resData',$s,'domain');
+ return unless defined $infdata;
 
- my $pd=DateTime::Format::ISO8601->new();
- $c=$c->shift()->getFirstChild();
- while($c)
+ foreach my $el (Net::DRI::Util::xml_list_children($infdata))
  {
-  next unless ($c->nodeType() == 1); ## only for element nodes
-  my $name=$c->localname() || $c->nodeName();
-  next unless $name;
-
+  my ($name,$c)=@$el;
   if ($name eq 'name')
   {
-   $oname=lc($c->getFirstChild()->getData());
+   $oname=lc($c->textContent());
    $rinfo->{domain}->{$oname}->{action}=$oaction;
    $rinfo->{domain}->{$oname}->{exist}=1;
   } elsif ($name eq 'trStatus')
   {
-   $rinfo->{domain}->{$oname}->{$name}=$c->getFirstChild()->getData();
+   $rinfo->{domain}->{$oname}->{$name}=$c->textContent();
   } elsif ($name=~m/^(reID|reHldID|acID|acHldID)$/)
   {
-   $rinfo->{domain}->{$oname}->{$name}=$c->getFirstChild()->getData();
+   $rinfo->{domain}->{$oname}->{$name}=$c->textContent();
   } elsif ($name=~m/^(reDate|rhDate|ahDate)$/)
   {
-   $rinfo->{domain}->{$oname}->{$name}=$pd->parse_datetime($c->getFirstChild()->getData());
+   $rinfo->{domain}->{$oname}->{$name}=$po->parse_iso8601($c->textContent());
   }
- } continue { $c=$c->getNextSibling(); }
+ }
 }
 
 sub trade_request
@@ -205,6 +199,8 @@ sub trade_request
 
  my $eid=build_command_extension($mes,$epp,'frnic:ext');
  my @n=build_domain($domain);
+
+ verify_contacts($rd);
  push @n,build_registrant($rd);
  push @n,build_contacts($rd);
  $mes->command_extension($eid,['frnic:command',['frnic:trade',{op=>'request'},['frnic:domain',@n]],build_cltrid($mes)]);
@@ -214,14 +210,25 @@ sub trade_query
 {
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
+
  my $eid=build_command_extension($mes,$epp,'frnic:ext');
  my @n=build_domain($domain);
  $mes->command_extension($eid,['frnic:command',['frnic:trade',{op=>'query'},['frnic:domain',@n]],build_cltrid($mes)]);
 }
 
+sub trade_cancel
+{
+ my ($epp,$domain,$rd)=@_;
+ my $mes=$epp->message();
+
+ my $eid=build_command_extension($mes,$epp,'frnic:ext');
+ my @n=build_domain($domain);
+ $mes->command_extension($eid,['frnic:command',['frnic:trade',{op=>'cancel'},['frnic:domain',@n]],build_cltrid($mes)]);
+}
+
 sub trade_parse
 {
-  my ($po,$otype,$oaction,$oname,$rinfo)=@_;
+ my ($po,$otype,$oaction,$oname,$rinfo)=@_;
  my $mes=$po->message();
  return unless $mes->is_success();
 
@@ -236,7 +243,7 @@ sub recover_request
  my $eid=build_command_extension($mes,$epp,'frnic:ext');
  my @n=build_domain($domain);
  Net::DRI::Exception::usererr_invalid_parameters('authInfo is mandatory for a recover request') unless (Net::DRI::Util::has_auth($rd) && exists($rd->{auth}->{pw}) && $rd->{auth}->{pw});
- push @n,['frnic:authInfo',['frnic:pw',$rd->{auth}->{pw}]];
+ push @n,['frnic:authInfo',['domain:pw',{'xmlns:domain'=>($mes->nsattrs('domain'))[0]},$rd->{auth}->{pw}]];
  push @n,build_registrant($rd);
  push @n,build_contacts($rd);
  $mes->command_extension($eid,['frnic:command',['frnic:recover',{op=>'request'},['frnic:domain',@n]],build_cltrid($mes)]);
@@ -258,42 +265,37 @@ sub check_parse
  return unless $mes->is_success();
 
  my $chkdata=$mes->get_extension('frnic','ext');
- return unless $chkdata;
- my $ns=$mes->ns('frnic');
- my $c=$chkdata->getChildrenByTagNameNS($ns,'resData');
- return unless $c->size();
- $c=$c->shift()->getChildrenByTagNameNS($ns,'chkData');
- return unless $c->size();
- $c=$c->shift()->getChildrenByTagNameNS($ns,'domain');
- return unless $c->size();
+ return unless defined $chkdata;
 
- foreach my $cd ($c->shift()->getChildrenByTagNameNS($ns,'cd'))
+ my $ns=$mes->ns('frnic');
+ $chkdata=Net::DRI::Util::xml_traverse($chkdata,$ns,'resData','chkData','domain');
+ return unless defined $chkdata;
+
+ foreach my $cd ($chkdata->getChildrenByTagNameNS($ns,'cd'))
  {
-  my $c=$cd->getFirstChild();
   my (@r,@f,$domain);
-  while($c)
+  foreach my $el (Net::DRI::Util::xml_list_children($cd))
   {
-   next unless ($c->nodeType() == 1); ## only for element nodes
-   my $n=$c->localname() || $c->nodeName();
+   my ($n,$c)=@$el;
    if ($n eq 'name')
    {
-    $domain=lc($c->getFirstChild()->getData());
+    $domain=lc($c->textContent());
     $rinfo->{domain}->{$domain}->{action}='check';
     $rinfo->{domain}->{$domain}->{reserved}=Net::DRI::Util::xml_parse_boolean($c->getAttribute('reserved'));
     $rinfo->{domain}->{$domain}->{forbidden}=Net::DRI::Util::xml_parse_boolean($c->getAttribute('forbidden'));
    } elsif ($n eq 'rsvReason')
    {
-    push @r,$c->getFirstChild()->getData();
+    push @r,$c->textContent();
    } elsif ($n eq 'fbdReason')
    {
-    push @f,$c->getFirstChild()->getData();
+    push @f,$c->textContent();
    }
-  } continue { $c=$c->getNextSibling(); }
+  }
 
   ## There may be multiple of them !
-  $rinfo->{domain}->{$domain}->{reserved_reason}=join("\n",@r);
-  $rinfo->{domain}->{$domain}->{forbidden_reason}=join("\n",@f);
- } ## end of foreach
+  $rinfo->{domain}->{$domain}->{reserved_reason}=join("\n",@r) if @r;
+  $rinfo->{domain}->{$domain}->{forbidden_reason}=join("\n",@f) if @f;
+ }
 }
 
 sub info_parse
@@ -303,17 +305,14 @@ sub info_parse
  return unless $mes->is_success();
 
  my $infdata=$mes->get_extension('frnic','ext');
- return unless $infdata;
+ return unless defined $infdata;
+
  my $ns=$mes->ns('frnic');
- my $c=$infdata->getChildrenByTagNameNS($ns,'resData');
- return unless $c->size();
- $c=$c->shift()->getChildrenByTagNameNS($ns,'infData');
- return unless $c->size();
- $c=$c->shift()->getChildrenByTagNameNS($ns,'domain');
- return unless $c->size();
+ $infdata=Net::DRI::Util::xml_traverse($infdata,$ns,'resData','infData','domain');
+ return unless defined $infdata;
 
  my $cs=$rinfo->{domain}->{$oname}->{status}; ## a Net::DRI::Protocol::EPP::Extensions::AFNIC::Status object
- foreach my $el ($c->shift()->getChildrenByTagNameNS($mes->ns('frnic'),'status'))
+ foreach my $el ($infdata->getChildrenByTagNameNS($ns,'status'))
  {
   $cs->rem('ok');
   $cs->add($el->getAttribute('s'));

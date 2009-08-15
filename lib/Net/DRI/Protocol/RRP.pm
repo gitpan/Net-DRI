@@ -1,6 +1,6 @@
 ## Domain Registry Interface, RRP Protocol
 ##
-## Copyright (c) 2005,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -31,7 +31,7 @@ use DateTime;
 use DateTime::TimeZone;
 use DateTime::Format::Strptime;
 
-our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -61,7 +61,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -89,10 +89,10 @@ our %IDS=('registrar'  => 'clID',
 
 sub new
 {
- my ($c,$drd,$version,$extrah)=@_;
+ my ($c,$drd,$rp)=@_;
  my $self=$c->SUPER::new();
  $self->name('RRP');
- $version=Net::DRI::Util::check_equal($version,['1.1','2.0'],'2.0'); ## 1.1 (RFC #2832) or 2.0 (RFC #3632)
+ my $version=Net::DRI::Util::check_equal($rp->{version},['1.1','2.0'],'2.0'); ## 1.1 (RFC #2832) or 2.0 (RFC #3632)
  $self->version($version);
  $self->capabilities('host_update','ip',['add','del']);
  $self->capabilities('host_update','name',['set']);
@@ -111,15 +111,15 @@ sub new
  eval { $dtp=DateTime::Format::Strptime->new(time_zone=>$tz, pattern=>'%Y-%m-%d %H:%M:%S.0'); };
  Net::DRI::Exception::usererr_invalid_parameters("invalid registry timezone ($tzname)") unless (defined($dtp) && ref($dtp));
  $self->{dt_parse}=$dtp;
- 
- $self->_load($extrah);
+
+ $self->_load($rp);
  return $self;
 }
 
 sub _load
 {
- my ($self,$extrah)=@_;
-
+ my ($self,$rp)=@_;
+ my $extrah=$rp->{extensions};
  my @class=map { "Net::DRI::Protocol::RRP::Core::".$_ } ('Session','Domain','Host');
  if (defined($extrah) && $extrah)
  {
@@ -127,6 +127,12 @@ sub _load
  }
 
  $self->SUPER::_load(@class);
+}
+
+sub transport_default
+{
+ my ($self)=@_;
+ return (protocol_connection => 'Net::DRI::Protocol::RRP::Connection', protocol_version => 1);
 }
 
 ###############################################################################################

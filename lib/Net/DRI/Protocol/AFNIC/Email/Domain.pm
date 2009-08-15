@@ -18,9 +18,10 @@
 package Net::DRI::Protocol::AFNIC::Email::Domain;
 
 use strict;
+use warnings;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -78,7 +79,7 @@ sub register_commands
  return { 'domain' => \%tmp };
 }
 
-## AFNIC says international format is : +code_pays 10 20 30 40 50 
+## AFNIC says international format is : +code_pays 10 20 30 40 50
 ## yeah right !
 sub format_tel
 {
@@ -117,9 +118,9 @@ sub create
  my $co=$cs->get('registrant');
  Net::DRI::Exception::usererr_insufficient_parameters('registrant contact is mandatory') unless Net::DRI::Util::isa_contact($co,'Net::DRI::Data::Contact::AFNIC');
  $co->validate();
- $co->validate_is_french() unless ($co->roid()); ## registrant must be in France
+ $co->validate_registrant();
 
- if ($co->org() && $co->legal_form()) ## PM
+ if ($co->legal_form()) ## PM
  {
   $mes->line('3w','PM');
   add_company_info($mes,$co);
@@ -152,7 +153,7 @@ sub create
 sub add_company_info
 {
  my ($mes,$co)=@_;
- $mes->line('3a',$co->org());
+ $mes->line('3a',$co->name());
  Net::DRI::Exception::usererr_insufficient_parameters('one legal form must be provided') unless ($co->legal_form() || $co->legal_form_other());
  $mes->line('3h',$co->legal_form())       if $co->legal_form();
  $mes->line('3i',$co->legal_form_other()) if $co->legal_form_other();
@@ -186,8 +187,11 @@ sub add_installation
 sub add_owner_info
 {
  my ($mes,$co)=@_;
- 
- if ($co->org() || !$co->roid())
+
+ if ($co->srid())
+ {
+  $mes->line('3x',$co->srid().'-FRNIC');
+ } else
  {
   my $s=$co->street();
   Net::DRI::Exception::usererr_insufficient_parameters('1 line of address at least needed if no nichandle') unless ($s && (ref($s) eq 'ARRAY') && @$s && $s->[0]);
@@ -202,9 +206,6 @@ sub add_owner_info
   $mes->line('3t',format_tel($co->voice()));
   $mes->line('3u',format_tel($co->fax())) if $co->fax();
   $mes->line('3v',$co->email());
- } else
- {
-  $mes->line('3x',$co->roid());
  }
 }
 
@@ -221,17 +222,17 @@ sub add_admin_contact
 {
  my ($mes,$cs)=@_;
  my $co=$cs->get('admin');
- $mes->line('4a',$co->roid()) if (Net::DRI::Util::isa_contact($co) && $co->roid());
+ $mes->line('4a',$co->srid().'-FRNIC') if (Net::DRI::Util::isa_contact($co) && $co->srid());
 }
 
 sub add_tech_contacts
 {
  my ($mes,$cs)=@_;
- my @co=map { $_->roid() } grep { Net::DRI::Util::isa_contact($_) } $cs->get('tech');
+ my @co=map { $_->srid() } grep { Net::DRI::Util::isa_contact($_) && defined $_->srid() } $cs->get('tech');
  Net::DRI::Exception::usererr_insufficient_parameters('at least one technical contact is mandatory') unless @co;
- $mes->line('5a',$co[0]);
- $mes->line('5c',$co[1]) if $co[1];
- $mes->line('5e',$co[2]) if $co[2];
+ $mes->line('5a',$co[0].'-FRNIC');
+ $mes->line('5c',$co[1].'-FRNIC') if $co[1];
+ $mes->line('5e',$co[2].'-FRNIC') if $co[2];
 }
 
 sub add_all_ns
@@ -305,15 +306,15 @@ sub update
  {
   add_starting_block('A',$domain,$mes);
   my $co=$cs->get('registrant');
-  if (Net::DRI::Util::isa_contact($co) && $co->org() && $co->legal_form()) ## only for PM
+  if (Net::DRI::Util::isa_contact($co) && $co->legal_form()) ## only for PM
   {
    $co->validate();
-   $mes->line('3a',$co->org());
+   $mes->line('3a',$co->name());
    add_owner_info($mes,$co);
   } else
   {
    my $ca=$cs->get('admin');
-   Net::DRI::Exception::usererr_insufficient_parameters('contact admin is mandatory for PP admin change') unless (Net::DRI::Util::isa_contact($ca) && $ca->roid());
+   Net::DRI::Exception::usererr_insufficient_parameters('contact admin is mandatory for PP admin change') unless (Net::DRI::Util::isa_contact($ca) && $ca->srid());
   }
   add_admin_contact($mes,$cs);
   add_installation($mes,$rd);
@@ -354,12 +355,12 @@ sub transfer_request
  my $co=$cs->get('registrant');
  Net::DRI::Exception::usererr_insufficient_parameters('registrant contact is mandatory') unless Net::DRI::Util::isa_contact($co,'Net::DRI::Data::Contact::AFNIC');
  $co->validate();
- $co->validate_is_french() unless ($co->roid()); ## registrant must be in France
+ $co->validate_registrant();
 
  Net::DRI::Exception::usererr_insufficient_parameters('authInfo is mandatory') unless Net::DRI::Util::has_auth($rd);
  $mes->line('2z',$rd->{auth}->{pw});
 
- if ($co->org() && $co->legal_form()) ## PM
+ if ($co->legal_form()) ## PM
  {
   add_company_info($mes,$co);
  } else ## PP

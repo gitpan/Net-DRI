@@ -23,7 +23,7 @@ use Net::DRI::Util;
 use Net::DRI::Data::Raw;
 use Net::DRI::Protocol::ResultStatus;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -53,7 +53,7 @@ Tonnerre Lombard, E<lt>tonnerre.lombard@sygroup.chE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+Copyright (c) 2007,2008,2009 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -106,10 +106,10 @@ sub read_data
  my $version = $to->{transport}->{protocol_version};
  my $m='';
  my $c;
- $sock->sysread($c, 4); ## first 4 bytes are the packed length
+ my $rl=$sock->sysread($c, 4); ## first 4 bytes are the packed length
  die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED_CLOSING',
-	'Unable to read RRI 4 bytes length (connection closed by registry ?)',
-	'en')) unless $c;
+	'Unable to read RRI 4 bytes length (connection closed by registry ?): '.$!,
+	'en')) unless (defined $rl && $rl==4);
  my $length = unpack('N', $c);
  while ($length > 0)
  {
@@ -176,6 +176,12 @@ sub find_result
  ($code) = ($a =~ m!<tr:message.*code="(\d+)">!);
  ($msg) = ($a =~ m!<tr:text>([^>]+)</tr:text>!);
  return ($result, $code, $msg);
+}
+
+sub transport_default
+{
+ my ($self,$tname)=@_;
+ return ();
 }
 
 ####################################################################################################

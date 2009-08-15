@@ -25,10 +25,10 @@ sub myrecv
  return Net::DRI::Data::Raw->new_from_string($R2? $R2 : $E1.'<response>'.r().$TRID.'</response>'.$E2);
 }
 
-my $dri=Net::DRI->new(10);
+my $dri=Net::DRI::TrapExceptions->new(10);
 $dri->{trid_factory}=sub { return 'ABC-12345'; };
 $dri->add_registry('VNDS');
-$dri->target('VNDS')->add_current_test_profile('p1','Dummy',{f_send=>\&mysend,f_recv=>\&myrecv},'EPP',['1.0',['GracePeriod']]);
+$dri->target('VNDS')->add_current_profile('p1','test=EPP',{f_send=>\&mysend,f_recv=>\&myrecv},{extensions=>['GracePeriod']});
 
 my ($rc,$s,$toc);
 

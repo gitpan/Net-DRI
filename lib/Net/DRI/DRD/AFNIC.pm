@@ -18,21 +18,22 @@
 package Net::DRI::DRD::AFNIC;
 
 use strict;
+use warnings;
+
 use base qw/Net::DRI::DRD/;
 
-use Carp;
 use DateTime::Duration;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
-__PACKAGE__->make_exception_for_unavailable_operations(qw/host_update host_current_status host_check host_check_multi host_exist host_delete host_create host_info contact_delete/);
+__PACKAGE__->make_exception_for_unavailable_operations(qw/host_update host_current_status host_check host_check_multi host_exist host_delete host_create host_info contact_delete contact_check/);
 
 =pod
 
 =head1 NAME
 
-Net::DRI::DRD::AFNIC - AFNIC (.FR/.RE) Registry driver for Net::DRI
+Net::DRI::DRD::AFNIC - AFNIC (.FR/.RE) Registry Driver for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -88,39 +89,18 @@ sub new
 
 sub periods      { return map { DateTime::Duration->new(years => $_) } (1); }
 sub name         { return 'AFNIC'; }
-sub tlds         { return (qw/fr re tf wf pm yt/); } ## see http://www.afnic.fr/doc/autres-nic/dom-tom
+sub tlds         { return (qw/fr re tf wf pm yt asso.fr com.fr tm.fr gouv.fr/); } ## see http://www.afnic.fr/doc/autres-nic/dom-tom
 sub object_types { return ('domain','contact'); }
-
-sub transport_protocol_compatible 
-{
- my ($self,$to,$po)=@_;
- my $pn=$po->name();
- my $pv=$po->version();
- my $tn=$to->name();
-
- return 1 if (($pn eq 'afnic_ws')    && ($tn eq 'soap'));
- return 1 if (($pn eq 'afnic_email') && ($tn eq 'smtp'));
- return 1 if (($pn eq 'EPP') && ($tn eq 'socket_inet'));
- return;
-}
+sub profile_types { return qw/email ws epp/; }
 
 sub transport_protocol_default
 {
- my ($drd,$ndr,$type,$ta,$pa)=@_;
- my %ta=(ref($ta) eq 'ARRAY')? %{$ta->[0]} : %$ta;
- my @pa=(ref($pa) eq 'ARRAY' && @$pa)? @$pa : ();
- if ($type eq 'email')
- {
-  return ('Net::DRI::Transport::SMTP',[\%ta],'Net::DRI::Protocol::AFNIC::Email',\@pa);
- } elsif ($type eq 'ws')
- {
-  return ('Net::DRI::Transport::SOAP',[\%ta],'Net::DRI::Protocol::AFNIC::WS',\@pa);
- } elsif ($type eq 'epp')
- {
-  carp('AFNIC EPP support is currently being developed, use it only for tests');
-  $ta{remote_host}='epp.preprod.nic.fr';
-  return Net::DRI::DRD::_transport_protocol_default_epp('Net::DRI::Protocol::EPP::Extensions::AFNIC',[\%ta],\@pa);
- }
+ my ($self,$type)=@_;
+
+ return ('Net::DRI::Transport::SMTP',{},'Net::DRI::Protocol::AFNIC::Email',{})                                             if $type eq 'email';
+ return ('Net::DRI::Transport::SOAP',{},'Net::DRI::Protocol::AFNIC::WS',{})                                                if $type eq 'ws';
+ return ('Net::DRI::Transport::Socket',{remote_host => 'epp.test.nic.fr'},'Net::DRI::Protocol::EPP::Extensions::AFNIC',{}) if $type eq 'epp';
+ return;
 }
 
 ####################################################################################################
@@ -146,27 +126,34 @@ sub domain_create
  my $rc=$self->SUPER::domain_create($ndr,$domain,$rd); ## create the domain without any nameserver
  return $rc unless $rc->is_success();
  return $rc unless (defined($ns) && Net::DRI::Util::isa_hosts($ns));
- return $self->domain_update_ns_set($ndr,$domain,$ns); ## Finally update domain to add nameservers
+ return $self->domain_update_ns_add($ndr,$domain,$ns); ## Finally update domain to add nameservers
 }
 
 sub domain_trade_start
 {
  my ($self,$ndr,$domain,$rd)=@_;
- $self->err_invalid_domain_name($domain) if $self->verify_name_domain($ndr,$domain,'trade');
+ $self->enforce_domain_name_constraints($ndr,$domain,'trade');
  return $ndr->process('domain','trade_request',[$domain,$rd]);
 }
 
 sub domain_trade_query
 {
  my ($self,$ndr,$domain)=@_;
- $self->err_invalid_domain_name($domain) if $self->verify_name_domain($ndr,$domain,'trade');
+ $self->enforce_domain_name_constraints($ndr,$domain,'trade');
  return $ndr->process('domain','trade_query',[$domain]);
+}
+
+sub domain_trade_stop
+{
+ my ($self,$ndr,$domain)=@_;
+ $self->enforce_domain_name_constraints($ndr,$domain,'trade');
+ return $ndr->process('domain','trade_cancel',[$domain]);
 }
 
 sub domain_recover_start
 {
  my ($self,$ndr,$domain,$rd)=@_;
- $self->err_invalid_domain_name($domain) if $self->verify_name_domain($ndr,$domain,'recover');
+ $self->enforce_domain_name_constraints($ndr,$domain,'recover');
  return $ndr->process('domain','recover_request',[$domain,$rd]);
 }
 

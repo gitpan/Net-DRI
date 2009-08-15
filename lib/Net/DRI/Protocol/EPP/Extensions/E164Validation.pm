@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP E.164 Validation (RFC5076)
 ##
-## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,11 +18,12 @@
 package Net::DRI::Protocol::EPP::Extensions::E164Validation;
 
 use strict;
+use warnings;
 
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 our $NS='urn:ietf:params:xml:ns:e164val-1.0';
 our @VALIDATION_MODULES=qw/RFC5076/; ## modules to handle validation information, override this variable to use other validation modules
 
@@ -54,7 +55,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -104,8 +105,8 @@ sub format_validation
 {
  my ($e,$what,$top)=@_;
 
- Net::DRI::Exception::usererr_insufficient_parameters('Each validation information must be a reference to an array with 3 elements : 2 strings (id & uri) and a reference of an hash') unless ((ref($e) eq 'ARRAY') && @$e==3 && !ref($e->[0]) && !ref($e->[1]) && (ref($e->[2]) eq 'HASH') && keys(%{$e->[2]}));
- Net::DRI::Exception::usererr_invalid_parameters() unless Net::DRI::Util::xml_is_ncname($e->[0]);
+ Net::DRI::Exception::usererr_insufficient_parameters('Each validation information must be a reference to an array with 3 elements : 2 strings (id & uri) and a reference of an hash') unless (ref($e) eq 'ARRAY' && @$e==3 && !ref($e->[0]) && length $e->[0] && !ref($e->[1]) && length $e->[1] && (ref($e->[2]) eq 'HASH') && keys(%{$e->[2]}));
+ Net::DRI::Exception::usererr_invalid_parameters('Id is syntaxically invalid: '.$e->[0]) unless Net::DRI::Util::xml_is_ncname($e->[0]);
  Net::DRI::Exception::usererr_insufficient_parameters('No validation information module found for URI='.$e->[1]) unless exists($VAL{$e->[1]});
  Net::DRI::Exception::usererr_invalid_parameters(sprintf('Validation module %s for URI %s must a have a %s method',$VAL{$e->[1]},$e->[1],$what)) unless $VAL{$e->[1]}->can($what);
  my @c=$VAL{$e->[1]}->$what($e->[2]);
@@ -145,7 +146,7 @@ sub info_parse ## §5.1.2
  return unless $mes->is_success();
 
  my $infdata=$mes->get_extension($NS,'infData');
- return unless $infdata;
+ return unless defined $infdata;
 
  my @val;
  foreach my $el ($infdata->getChildrenByTagNameNS($NS,'inf'))

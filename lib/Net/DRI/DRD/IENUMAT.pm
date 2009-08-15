@@ -19,12 +19,14 @@
 package Net::DRI::DRD::IENUMAT;
 
 use strict;
+use warnings;
+
 use base qw/Net::DRI::DRD/;
 
 use Net::DRI::Util;
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 ## The domain renew command are not implemented at the ienum43 EPP server, domains are renewed automatically
 __PACKAGE__->make_exception_for_unavailable_operations(qw/domain_renew/);
@@ -85,22 +87,14 @@ sub periods  { return map { DateTime::Duration->new(years => $_) } (1); }
 sub name     { return 'IENUMAT'; }
 sub tlds     { return ('i.3.4.e164.arpa'); }
 sub object_types { return ('domain'); }
-
-sub transport_protocol_compatible
-{
- my ($self,$to,$po)=@_;
- my $pn=$po->name();
- my $tn=$to->name();
-
- return 1 if (($pn eq 'EPP') && ($tn eq 'socket_inet'));
- return;
-}
+sub profile_types { return qw/epp/; }
 
 sub transport_protocol_default
 {
- my ($drd,$ndr,$type,$ta,$pa)=@_;
- $type='epp' if (!defined($type) || ref($type));
- return Net::DRI::DRD::_transport_protocol_default_epp('Net::DRI::Protocol::EPP::Extensions::IENUMAT',$ta,$pa) if ($type eq 'epp');
+ my ($self,$type)=@_;
+
+ return ('Net::DRI::Transport::Socket',{},'Net::DRI::Protocol::EPP::Extensions::IENUMAT',{}) if $type eq 'epp';
+ return;
 }
 
 ####################################################################################################

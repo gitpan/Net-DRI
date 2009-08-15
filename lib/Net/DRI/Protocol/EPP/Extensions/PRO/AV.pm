@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .PRO A/V extensions
 ##
-## Copyright (c) 2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+## Copyright (c) 2008,2009 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 ##                    All rights reserved.
 ##
 ## This file is part of Net::DRI
@@ -24,7 +24,7 @@ use Net::DRI::Util;
 use Net::DRI::Exception;
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r = (q$Revision: 1.1 $ =~ /\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r = (q$Revision: 1.2 $ =~ /\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -57,7 +57,7 @@ E<lt>http://www.hexonet.net/E<gt>.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+Copyright (c) 2008,2009 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -221,7 +221,7 @@ sub info_parse
 		}
 		elsif (lc($cdn) eq 'contactid')
 		{
-			my $c = $po->factories()->{contact}->();
+			my $c = $po->create_local_object('contact');
 			$c->srid($cd->getFirstChild()->getData());
 			$rinfo->{av}->{$avid}->{contact} = $c;
 		}

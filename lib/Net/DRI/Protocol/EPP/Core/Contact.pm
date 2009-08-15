@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Contact commands (RFC4933)
 ##
-## Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,14 +18,12 @@
 package Net::DRI::Protocol::EPP::Core::Contact;
 
 use strict;
+use warnings;
 
 use Net::DRI::Util;
 use Net::DRI::Exception;
-use Net::DRI::Protocol::EPP;
 
-use DateTime::Format::ISO8601;
-
-our $VERSION=do { my @r=(q$Revision: 1.16 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.17 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -55,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -109,13 +107,9 @@ sub build_command
 
  if (($tcommand=~m/^(?:info|transfer)$/) && ref($contact[0]) && Net::DRI::Util::isa_contact($contact[0]))
  {
-  my $az=$contact[0]->auth();
-  if ($az && ref($az) && exists($az->{pw}))
-  {
-   push @d,['contact:authInfo',['contact:pw',$az->{pw}]];
-  }
+  push @d,build_authinfo($contact[0]);
  }
- 
+
  return @d;
 }
 
@@ -137,26 +131,24 @@ sub check_parse
  return unless $mes->is_success();
 
  my $chkdata=$mes->get_response('contact','chkData');
- return unless $chkdata;
+ return unless defined $chkdata;
  foreach my $cd ($chkdata->getChildrenByTagNameNS($mes->ns('contact'),'cd'))
  {
-  my $c=$cd->getFirstChild();
   my $contact;
-  while($c)
+  foreach my $el (Net::DRI::Util::xml_list_children($cd))
   {
-   next unless ($c->nodeType() == 1); ## only for element nodes
-   my $n=$c->localname() || $c->nodeName();
+   my ($n,$c)=@$el;
    if ($n eq 'id')
    {
-    $contact=$c->getFirstChild()->getData();
+    $contact=$c->textContent();
     $rinfo->{contact}->{$contact}->{action}='check';
     $rinfo->{contact}->{$contact}->{exist}=1-Net::DRI::Util::xml_parse_boolean($c->getAttribute('avail'));
    }
    if ($n eq 'reason')
    {
-    $rinfo->{contact}->{$contact}->{exist_reason}=$c->getFirstChild()->getData();
+    $rinfo->{contact}->{$contact}->{exist_reason}=$c->textContent();
    }
-  } continue { $c=$c->getNextSibling(); }
+  }
  }
 }
 
@@ -175,41 +167,38 @@ sub info_parse
  return unless $mes->is_success();
 
  my $infdata=$mes->get_response('contact','infData');
- return unless $infdata;
+ return unless defined $infdata;
 
  my %cd=map { $_ => [] } qw/name org street city sp pc cc/;
- my $contact=$po->factories()->{contact}->();
+ my $contact=$po->create_local_object('contact');
  my @s;
- my $pd=DateTime::Format::ISO8601->new();
- my $c=$infdata->getFirstChild();
- while ($c)
+
+ foreach my $el (Net::DRI::Util::xml_list_children($infdata))
  {
-  next unless ($c->nodeType() == 1);
-  my $name=$c->localname() || $c->nodeName();
-  next unless $name;
+  my ($name,$c)=@$el;
   if ($name eq 'id')
   {
-   $oname=$c->getFirstChild()->getData();
+   $oname=$c->textContent();
    $rinfo->{contact}->{$oname}->{action}='info';
    $rinfo->{contact}->{$oname}->{exist}=1;
    $rinfo->{contact}->{$oname}->{id}=$oname;
    $contact->srid($oname);
   } elsif ($name eq 'roid')
   {
-   $contact->roid($c->getFirstChild()->getData());
+   $contact->roid($c->textContent());
    $rinfo->{contact}->{$oname}->{roid}=$contact->roid();
   } elsif ($name eq 'status')
   {
-   push @s,Net::DRI::Protocol::EPP::parse_status($c);
+   push @s,$po->parse_status($c);
   } elsif ($name=~m/^(clID|crID|upID)$/)
   {
-   $rinfo->{contact}->{$oname}->{$1}=get_data($c);
+   $rinfo->{contact}->{$oname}->{$1}=$c->textContent();
   } elsif ($name=~m/^(crDate|upDate|trDate)$/)
   {
-   $rinfo->{contact}->{$oname}->{$1}=$pd->parse_datetime($c->getFirstChild()->getData());
+   $rinfo->{contact}->{$oname}->{$1}=$po->parse_iso8601($c->textContent());
   } elsif ($name eq 'email')
   {
-   $contact->email($c->getFirstChild()->getData());
+   $contact->email($c->textContent());
   } elsif ($name eq 'voice')
   {
    $contact->voice(parse_tel($c));
@@ -221,13 +210,12 @@ sub info_parse
    parse_postalinfo($po,$c,\%cd);
   } elsif ($name eq 'authInfo') ## we only try to parse the authInfo version defined in the RFC, other cases are to be handled by extensions
   {
-   my $n=$c->getChildrenByTagNameNS($mes->ns('contact'),'pw');
-   $contact->auth({pw => $n->size()? $n->shift()->getFirstChild()->getData() : undef});
+   $contact->auth({pw => scalar Net::DRI::Util::xml_child_content($c,$mes->ns('contact'),'pw')});
   } elsif ($name eq 'disclose')
   {
    $contact->disclose(parse_disclose($c));
   }
- } continue { $c=$c->getNextSibling(); }
+ }
 
  $contact->name(@{$cd{name}});
  $contact->org(@{$cd{org}});
@@ -245,15 +233,9 @@ sub parse_tel
 {
  my $node=shift;
  my $ext=$node->getAttribute('x') || '';
- my $num=get_data($node);
+ my $num=$node->textContent();
  $num.='x'.$ext if $ext;
  return $num;
-}
-
-sub get_data
-{
- my $n=shift;
- return ($n->getFirstChild())? $n->getFirstChild()->getData() : '';
 }
 
 sub parse_postalinfo
@@ -263,47 +245,41 @@ sub parse_postalinfo
  $type=$epp->{defaulti18ntype} if (!defined($type) && defined($epp->{defaulti18ntype}));
  my $ti={loc=>0,int=>1}->{$type};
 
- my $n=$c->getFirstChild();
- while($n)
+ foreach my $el (Net::DRI::Util::xml_list_children($c))
  {
-  next unless ($n->nodeType() == 1);
-  my $name=$n->localname() || $n->nodeName();
-  next unless $name;
+  my ($name,$n)=@$el;
   if ($name eq 'name')
   {
-   $rcd->{name}->[$ti]=get_data($n);
+   $rcd->{name}->[$ti]=$n->textContent();
   } elsif ($name eq 'org')
   {
-   $rcd->{org}->[$ti]=get_data($n);
+   $rcd->{org}->[$ti]=$n->textContent();
   } elsif ($name eq 'addr')
   {
-   my $nn=$n->getFirstChild();
    my @street;
-   while($nn)
+   foreach my $sel (Net::DRI::Util::xml_list_children($n))
    {
-    next unless ($nn->nodeType() == 1);
-    my $name2=$nn->localname() || $nn->nodeName();
-    next unless $name2;
+    my ($name2,$nn)=@$sel;
     if ($name2 eq 'street')
     {
-     push @street,get_data($nn);
+     push @street,$nn->textContent();
     } elsif ($name2 eq 'city')
     {
-     $rcd->{city}->[$ti]=get_data($nn);
+     $rcd->{city}->[$ti]=$nn->textContent();
     } elsif ($name2 eq 'sp')
     {
-     $rcd->{sp}->[$ti]=get_data($nn);
+     $rcd->{sp}->[$ti]=$nn->textContent();
     } elsif ($name2 eq 'pc')
     {
-     $rcd->{pc}->[$ti]=get_data($nn);
+     $rcd->{pc}->[$ti]=$nn->textContent();
     } elsif ($name2 eq 'cc')
     {
-     $rcd->{cc}->[$ti]=get_data($nn);
+     $rcd->{cc}->[$ti]=$nn->textContent();
     }
-   } continue { $nn=$nn->getNextSibling(); }
+   }
    $rcd->{street}->[$ti]=\@street;
   }
- } continue { $n=$n->getNextSibling(); }
+ }
 }
 
 sub parse_disclose ## RFC 4933 §2.9
@@ -311,12 +287,9 @@ sub parse_disclose ## RFC 4933 §2.9
  my $c=shift;
  my $flag=Net::DRI::Util::xml_parse_boolean($c->getAttribute('flag'));
  my %tmp;
- my $n=$c->getFirstChild();
- while($n)
+ foreach my $el (Net::DRI::Util::xml_list_children($c))
  {
-  next unless ($n->nodeType() == 1);
-  my $name=$n->localname() || $n->nodeName();
-  next unless $name;
+  my ($name,$n)=@$el;
   if ($name=~m/^(name|org|addr)$/)
   {
    my $t=$n->getAttribute('type');
@@ -325,7 +298,7 @@ sub parse_disclose ## RFC 4933 §2.9
   {
    $tmp{$1}=$flag;
   }
- } continue { $n=$n->getNextSibling(); }
+ }
  return \%tmp;
 }
 
@@ -344,30 +317,25 @@ sub transfer_parse
  return unless $mes->is_success();
 
  my $trndata=$mes->get_response('contact','trnData');
- return unless $trndata;
+ return unless defined $trndata;
 
- my $pd=DateTime::Format::ISO8601->new();
- my $c=$trndata->getFirstChild();
- while ($c)
+ foreach my $el (Net::DRI::Util::xml_list_children($trndata))
  {
-  next unless ($c->nodeType() == 1); ## only for element nodes
-  my $name=$c->localname() || $c->nodeName();
-  next unless $name;
-
+  my ($name,$c)=@$el;
   if ($name eq 'id')
   {
-   $oname=$c->getFirstChild()->getData();
+   $oname=$c->textContent();
    $rinfo->{contact}->{$oname}->{id}=$oname;
    $rinfo->{contact}->{$oname}->{action}='transfer';
    $rinfo->{contact}->{$oname}->{exist}=1;
   } elsif ($name=~m/^(trStatus|reID|acID)$/)
   {
-   $rinfo->{contact}->{$oname}->{$1}=$c->getFirstChild()->getData();
+   $rinfo->{contact}->{$oname}->{$1}=$c->textContent();
   } elsif ($name=~m/^(reDate|acDate)$/)
   {
-   $rinfo->{contact}->{$oname}->{$1}=$pd->parse_datetime($c->getFirstChild()->getData());
+   $rinfo->{contact}->{$oname}->{$1}=$po->parse_iso8601($c->textContent());
   }
- } continue { $c=$c->getNextSibling(); }
+ }
 }
 
 ############ Transform commands
@@ -489,26 +457,24 @@ sub create_parse
  return unless $mes->is_success();
 
  my $credata=$mes->get_response('contact','creData');
- return unless $credata;
+ return unless defined $credata;
 
- my $c=$credata->getFirstChild();
- while ($c)
+ foreach my $el (Net::DRI::Util::xml_list_children($credata))
  {
-  next unless ($c->nodeType() == 1); ## only for element nodes
-  my $name=$c->localname() || $c->nodeName();
+  my ($name,$c)=@$el;
   if ($name eq 'id')
   {
-   my $new=$c->getFirstChild()->getData();
-   $rinfo->{contact}->{$oname}->{id}=$new if (defined($oname) && ($oname ne $new)); ## registry may give another id than the one we requested or not take ours into account at all !
+   my $new=$c->textContent();
+   $rinfo->{contact}->{$oname}->{id}=$new if (defined $oname && ($oname ne $new)); ## registry may give another id than the one we requested or not take ours into account at all !
    $oname=$new;
    $rinfo->{contact}->{$oname}->{id}=$oname;
    $rinfo->{contact}->{$oname}->{action}='create';
    $rinfo->{contact}->{$oname}->{exist}=1;
   } elsif ($name=~m/^(crDate)$/)
   {
-   $rinfo->{contact}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
+   $rinfo->{contact}->{$oname}->{$1}=$po->parse_iso8601($c->textContent());
   }
- } continue { $c=$c->getNextSibling(); }
+ }
 }
 
 sub delete
@@ -549,22 +515,16 @@ sub update
  my $mes=$epp->message();
 
  Net::DRI::Exception::usererr_invalid_parameters($todo.' must be a Net::DRI::Data::Changes object') unless Net::DRI::Util::isa_changes($todo);
- if ((grep { ! /^(?:add|del)$/ } $todo->types('status')) ||
-     (grep { ! /^(?:set)$/ } $todo->types('info'))
-    )
- {
-  Net::DRI::Exception->die(0,'protocol/EPP',11,'Only status add/del or info set available for contact');
- }
-
- my @d=build_command($mes,'update',$contact);
 
  my $sadd=$todo->add('status');
  my $sdel=$todo->del('status');
- push @d,['contact:add',$sadd->build_xml('contact:status')] if ($sadd);
- push @d,['contact:rem',$sdel->build_xml('contact:status')] if ($sdel);
+
+ my @d=build_command($mes,'update',$contact);
+ push @d,['contact:add',$sadd->build_xml('contact:status')] if Net::DRI::Util::isa_statuslist($sadd);
+ push @d,['contact:rem',$sdel->build_xml('contact:status')] if Net::DRI::Util::isa_statuslist($sdel);
 
  my $newc=$todo->set('info');
- if ($newc)
+ if (defined $newc)
  {
   Net::DRI::Exception->die(1,'protocol/EPP',10,'Invalid contact '.$newc) unless Net::DRI::Util::isa_contact($newc);
   $newc->validate(1); ## will trigger an Exception if needed
@@ -584,30 +544,27 @@ sub pandata_parse
  return unless $mes->is_success();
 
  my $pandata=$mes->get_response('contact','panData');
- return unless $pandata;
+ return unless defined $pandata;
 
- my $c=$pandata->firstChild();
- while ($c)
+ foreach my $el (Net::DRI::Util::xml_list_children($pandata))
  {
-  next unless ($c->nodeType() == 1); ## only for element nodes
-  my $name=$c->localname() || $c->nodeName();
-  next unless $name;
-
+  my ($name,$c)=@$el;
   if ($name eq 'id')
   {
-   $oname=$c->getFirstChild()->getData();
+   $oname=$c->textContent();
    $rinfo->{contact}->{$oname}->{action}='review';
    $rinfo->{contact}->{$oname}->{result}=Net::DRI::Util::xml_parse_boolean($c->getAttribute('paResult'));
   } elsif ($name eq 'paTRID')
   {
-   my @tmp=$c->getChildrenByTagNameNS($mes->ns('_main'),'clTRID');
-   $rinfo->{contact}->{$oname}->{trid}=$tmp[0]->getFirstChild()->getData() if (@tmp && $tmp[0]);
-   $rinfo->{contact}->{$oname}->{svtrid}=($c->getChildrenByTagNameNS($mes->ns('_main'),'svTRID'))[0]->getFirstChild()->getData();
+   my $ns=$mes->ns('_main');
+   my $tmp=Net::DRI::Util::xml_child_content($c,$ns,'clTRID');
+   $rinfo->{contact}->{$oname}->{trid}=$tmp if defined $tmp;
+   $rinfo->{contact}->{$oname}->{svtrid}=Net::DRI::Util::xml_child_content($c,$ns,'svTRID');
   } elsif ($name eq 'paDate')
   {
-   $rinfo->{contact}->{$oname}->{date}=DateTime::Format::ISO8601->new()->parse_datetime($c->firstChild->getData());
+   $rinfo->{contact}->{$oname}->{date}=$po->parse_iso8601($c->textContent());
   }
- } continue { $c=$c->getNextSibling(); }
+ }
 }
 
 ####################################################################################################

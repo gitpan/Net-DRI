@@ -1,6 +1,6 @@
 ## Domain Registry Interface, AFNIC Email Protocol
 ##
-## Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -27,7 +27,7 @@ use Net::DRI::Exception;
 use Net::DRI::Protocol::AFNIC::Email::Message;
 use Net::DRI::Data::Contact::AFNIC;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -57,7 +57,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -73,7 +73,10 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my ($c,$drd,$clientid,$clientpw,$emailfrom)=@_;
+ my ($c,$drd,$rp)=@_;
+ my $clientid=$rp->{username};
+ my $clientpw=$rp->{password};
+ my $emailfrom=$rp->{email_from};
 
  Net::DRI::Exception::usererr_insufficient_parameters('client id must be defined') unless $clientid;
  Net::DRI::Exception::usererr_insufficient_parameters('client password must be defined') unless $clientpw;

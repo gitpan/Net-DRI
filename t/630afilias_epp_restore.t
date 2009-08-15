@@ -37,12 +37,12 @@ print $@->as_string() if $@;
 $dri->{trid_factory} = sub { return 'ABC-12345'; };
 $dri->add_registry('HN');
 eval {
-	$dri->target('HN')->add_current_test_profile('p1',
-		'Dummy',
+	$dri->target('HN')->add_current_profile('p1',
+		'test=EPP',
 		{
 			f_send=> \&mysend,
 			f_recv=> \&myrecv
-		}, 'EPP', ['1.0',['Net::DRI::Protocol::EPP::Extensions::Afilias::Restore']]);
+		}, {extensions=>['Net::DRI::Protocol::EPP::Extensions::Afilias::Restore']});
 };
 print $@->as_string() if $@;
 

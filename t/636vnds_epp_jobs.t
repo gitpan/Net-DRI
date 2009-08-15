@@ -37,13 +37,13 @@ print $@->as_string() if $@;
 $dri->{trid_factory} = sub { return 'ABC-12345'; };
 $dri->add_registry('VNDS');
 eval {
-	$dri->target('VNDS')->add_current_test_profile('p1',
-		'Dummy',
+	$dri->target('VNDS')->add_current_profile('p1',
+		'test=Net::DRI::Protocol::EPP::Extensions::VeriSign',
 		{
 			f_send=> \&mysend,
 			f_recv=> \&myrecv
 		},
-		'Net::DRI::Protocol::EPP::Extensions::VeriSign',['1.0',['Net::DRI::Protocol::EPP::Extensions::VeriSign::JobsContact'], 'dotJOBS']);
+		{default_product=>'dotJOBS'});
 };
 print $@->as_string() if $@;
 

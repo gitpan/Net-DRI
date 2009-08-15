@@ -18,19 +18,21 @@
 package Net::DRI;
 
 use strict;
+use warnings;
 
 require UNIVERSAL::require;
 
 use Net::DRI::Cache;
 use Net::DRI::Registry;
 use Net::DRI::Util;
+use Net::DRI::Exception;
 
 use base qw(Class::Accessor::Chained::Fast Net::DRI::BaseClass);
 __PACKAGE__->mk_ro_accessors(qw/trid_factory logging cache/);
 
 our $AUTOLOAD;
-our $VERSION='0.92_01';
-our $CVS_REVISION=do { my @r=(q$Revision: 1.34 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION='0.95';
+our $CVS_REVISION=do { my @r=(q$Revision: 1.35 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 our $RUNNING_POE=(exists($INC{'POE.pm'}))? $POE::Kernel::poe_kernel : undef;
 
 =pod
@@ -41,7 +43,7 @@ Net::DRI - Interface to Domain Name Registries/Registrars/Resellers
 
 =head1 VERSION
 
-This documentation refers to Net::DRI version 0.92_01 (DEVELOPMENT RELEASE)
+This documentation refers to Net::DRI version 0.95
 
 =head1 SYNOPSIS
 
@@ -61,7 +63,7 @@ It is an object-oriented framework implementing RRP (RFC 2832/3632),
 EPP (core EPP in RFC 4930/4931/4932/4933/4934, extensions in
 RFC 3915/4114/4310/5076 and various extensions of ccTLDs/gTLDs
 - currently more than 30 TLDs are directly supported with extensions),
-RRI (.DE registration protocol), Whois, DAS (Domain Availability Service used by .BE, .EU),
+RRI (.DE registration protocol), Whois, DAS (Domain Availability Service used by .BE, .EU, .AU, .NL),
 IRIS (RFC3981) DCHK (RFC5144) over LWZ (RFC4993) for .DE currently and XCP (RFC4992),
 .FR/.RE email and webservices interface, and resellers interface of some registrars
 (Gandi, OpenSRS, etc.).
@@ -109,6 +111,9 @@ This is an accessor to the underlying Logging object. During the C<new()> call y
 provide the object, or just a string ("null", "stderr", or "files"), or a reference to an array
 with the first parameter a string (same as previously) and the second parameter a reference to
 an hash with data needed by the logging class used (see for example L<Net::DRI::Logging::Files>).
+
+If you want to log the application data (what is exchanged with remote server, such as EPP XML streams),
+you need to use logging level of 'notice', or higher.
 
 =head2 cache()
 
@@ -181,12 +186,22 @@ sub new
   $logname='null';
  }
  if ($logname !~ m/::/) { $logname='Net::DRI::Logging::'.ucfirst($logname); }
- $logname->require or Net::DRI::Exception::err_failed_load_module('DRI',$logname,$@);
+ $logname->require() or Net::DRI::Exception::err_failed_load_module('DRI',$logname,$@);
  $self->{logging}=$logname->new(@logdata);
 
  bless($self,$class);
  $self->logging()->setup_channel(__PACKAGE__,'core');
+ $self->log_output('notice','core','Successfully created Net::DRI object with logging='.$logname);
+ return $self;
+}
 
+sub add_current_registry
+{
+ my ($self,@p)=@_;
+ $self->add_registry(@p);
+ my $reg=$p[0];
+ $reg='Net::DRI::DRD::'.$reg unless ($reg=~m/::/);
+ $self->target($reg->name());
  return $self;
 }
 
@@ -195,7 +210,7 @@ sub add_registry
  my ($self,$reg,@data)=@_;
  Net::DRI::Exception::usererr_insufficient_parameters('add_registry needs a registry name') unless Net::DRI::Util::all_valid($reg);
  $reg='Net::DRI::DRD::'.$reg unless ($reg=~m/::/);
- $reg->require or Net::DRI::Exception::err_failed_load_module('DRI',$reg,$@);
+ $reg->require() or Net::DRI::Exception::err_failed_load_module('DRI',$reg,$@);
 
  my $drd=$reg->new(@data);
  Net::DRI::Exception->die(1,'DRI',9,'Failed to initialize registry '.$reg) unless ($drd && ref($drd));
@@ -213,9 +228,10 @@ sub add_registry
  {
   $tld=lc($tld);
   $self->{tlds}->{$tld}=[] unless exists($self->{tlds}->{$tld});
-  push @{$self->{tlds}->{$tld}},$regname
+  push @{$self->{tlds}->{$tld}},$regname;
  }
 
+ $self->log_output('notice','core','Successfully added registry "'.$regname.'"');
  return $self;
 }
 
@@ -233,6 +249,7 @@ sub del_registry
  $self->{registries}->{$name}->end();
  delete($self->{registries}->{$name});
  $self->{current_registry}=undef if ($self->{current_registry} eq $name);
+ $self->log_output('notice','core','Successfully deleted registry "'.$name.'"');
  return $self;
 }
 
@@ -264,7 +281,7 @@ sub registry
  err_no_current_registry()                  unless (defined($regname) && $regname);
  err_registry_name_does_not_exist($regname) unless (exists($self->{registries}->{$regname}));
  my $ndr=$self->{registries}->{$regname};
- return wantarray()? ($regname,$ndr) : $ndr;
+ return wantarray? ($regname,$ndr) : $ndr;
 }
 
 sub tld2reg
@@ -276,6 +293,11 @@ sub tld2reg
  return unless exists($self->{tlds}->{$tld});
  my @t=@{$self->{tlds}->{$tld}};
  return @t;
+}
+
+sub installed_registries
+{
+ return qw/AdamsNames AERO AFNIC AG ARNES ASIA AT AU BE BIZ BookMyName BR BZ CAT CentralNic CoCCA COOP CZ DENIC EURid Gandi HN IENUMAT IM INFO IRegistry IT LC LU ME MN MOBI NAME Nominet NO NU OpenSRS ORG OVH PL PRO PT SC SE SIDN SWITCH TRAVEL US VC VNDS WS/;
 }
 
 ####################################################################################################
@@ -313,7 +335,7 @@ sub AUTOLOAD
  $attr=~s/.*:://;
  return unless $attr=~m/[^A-Z]/; ## skip DESTROY and all-cap methods
 
- my $ndr=$self->registry(); ## This is a Net::DRI::Registry object
+ my ($name,$ndr)=$self->registry();
  Net::DRI::Exception::err_method_not_implemented($attr.' in '.$ndr) unless (ref($ndr) && $ndr->can($attr));
  $self->log_output('debug','core','Calling '.$attr.' from Net::DRI');
  return $ndr->$attr(@_); ## is goto beter here ?
@@ -322,18 +344,20 @@ sub AUTOLOAD
 sub end
 {
  my $self=shift;
-
- foreach my $v (values(%{$self->{registries}}))
+ while(my ($name,$v)=each(%{$self->{registries}}))
  {
   $v->end() if (ref($v) && $v->can('end'));
+  $self->log_output('notice','core','Successfully ended registry "'.$name.'"');
   $v={};
  }
  $self->{tlds}={};
  $self->{registries}={};
  $self->{current_registry}=undef;
+ $self->log_output('notice','core','Successfully ended Net::DRI object');
+ $self->{logging}=undef;
 }
 
-sub DESTROY { shift->end(); }
+sub DESTROY { my $self=shift; $self->end() if %{$self->{registries}}; }
 
 ####################################################################################################
 
@@ -346,18 +370,18 @@ our $AUTOLOAD;
 ## Some methods may die in Net::DRI, we specifically trap them
 sub add_registry { my $r; eval { $r=shift->SUPER::add_registry(@_); }; return $r unless $@; die(ref($@)? $@->as_string() : $@); }
 sub del_registry { my $r; eval { $r=shift->SUPER::del_registry(@_); }; return $r unless $@; die(ref($@)? $@->as_string() : $@); }
-sub registry { my $r; eval { $r=shift->SUPER::registry(@_); }; return $r unless $@; die(ref($@)? $@->as_string() : $@); }
+sub registry { my @r; eval { @r=shift->SUPER::registry(@_); }; if (! $@) { return wantarray? @r : $r[0]; } die(ref($@)? $@->as_string() : $@); }
 sub target { my $r; eval { $r=shift->SUPER::target(@_); }; return $r unless $@; die(ref($@)? $@->as_string() : $@); }
 sub end { my $r; eval { $r=shift->SUPER::end(@_); }; return $r unless $@; die(ref($@)? $@->as_string() : $@); }
 
 sub AUTOLOAD
 {
  my $self=shift;
- my $r;
+ my @r;
  $Net::DRI::AUTOLOAD=$AUTOLOAD;
- eval { $r=$self->SUPER::AUTOLOAD(@_); };
- return $r unless $@;
- die(ref($@)? $@->as_string() : $@);
+ eval { @r=$self->SUPER::AUTOLOAD(@_); };
+ die(ref($@)? $@->as_string() : $@) if $@;
+ return wantarray? @r : $r[0];
 }
 
 ####################################################################################################

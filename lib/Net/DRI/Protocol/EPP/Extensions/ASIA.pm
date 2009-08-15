@@ -1,6 +1,6 @@
 ## Domain Registry Interface, ASIA EPP extensions
 ##
-## Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
+## Copyright (c) 2007,2008,2009 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -22,7 +22,7 @@ use strict;
 use Net::DRI::Data::Contact::ASIA;
 use base qw/Net::DRI::Protocol::EPP/;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -53,7 +53,7 @@ Tonnerre Lombard E<lt>tonnerre.lombard@sygroup.chE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+Copyright (c) 2007,2008,2009 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -66,28 +66,20 @@ See the LICENSE file that comes with this distribution for more details.
 =cut
 
 ####################################################################################################
-sub new
+
+sub setup
 {
- my ($c,$drd,$version,$extrah,$defproduct)=@_;
- my %e=map { $_ => 1 } (defined($extrah)? (ref($extrah)? @$extrah : ($extrah)) : ());
-
- if (exists($e{':full'})) ## useful shortcut, modeled after Perl itself
- {
-  delete($e{':full'});
-  $e{'Net::DRI::Protocol::EPP::Extensions::GracePeriod'}=1;
-  $e{'Net::DRI::Protocol::EPP::Extensions::ASIA::IPR'}=1;
-  $e{'Net::DRI::Protocol::EPP::Extensions::ASIA::CED'}=1;
- }
-
- my $self=$c->SUPER::new($drd,$version,[keys(%e)]);
+ my ($self,$rp)=@_;
  $self->ns({ asia => ['urn:afilias:params:xml:ns:asia-1.0','asia-1.0.xsd'],
              ipr  => ['urn:afilias:params:xml:ns:ipr-1.0','ipr-1.0.xsd'],  
            });
- $self->factories('contact',sub { return Net::DRI::Data::Contact::ASIA->new(@_); }) if (exists($e{'Net::DRI::Protocol::EPP::Extensions::ASIA::CED'}));
+ $self->factories('contact',sub { return Net::DRI::Data::Contact::ASIA->new(@_); });
  $self->capabilities('domain_update','url',['set']);
  $self->capabilities('domain_update','contact',['add','set','del']);
- return $self;
+ return;
 }
+
+sub default_extensions { return qw/GracePeriod ASIA::IPR ASIA::CED/; }
 
 ####################################################################################################
 1;

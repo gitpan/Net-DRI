@@ -26,10 +26,10 @@ sub myrecv
  return Net::DRI::Data::Raw->new_from_string($R2? $R2 : $E1.'<response>'.r().$TRID.'</response>'.$E2);
 }
 
-my $dri=Net::DRI->new(10);
+my $dri=Net::DRI::TrapExceptions->new(10);
 $dri->{trid_factory}=sub { return 'ABC-12345'; };
 $dri->add_registry('CentralNic');
-$dri->target('CentralNic')->add_current_test_profile('p1','Dummy',{f_send=>\&mysend,f_recv=>\&myrecv},'epp');
+$dri->target('CentralNic')->add_current_profile('p1','test=epp',{f_send=>\&mysend,f_recv=>\&myrecv});
 
 my $rc;
 my $s;

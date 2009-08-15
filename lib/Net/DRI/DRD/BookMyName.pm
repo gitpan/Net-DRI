@@ -18,9 +18,11 @@
 package Net::DRI::DRD::BookMyName;
 
 use strict;
+use warnings;
+
 use base qw/Net::DRI::DRD/;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -71,37 +73,16 @@ See the LICENSE file that comes with this distribution for more details.
 sub name { return 'BookMyName'; }
 sub tlds { return qw/com net org biz info name eu be us/; } ## As seen on http://api.doc.free.org/revendeur-de-nom-de-domaine
 sub object_types { return ('domain'); }
-
-sub transport_protocol_compatible 
-{
- my ($self,$to,$po)=@_;
- my $pn=$po->name();
- my $pv=$po->version();
- my $tn=$to->name();
-
- return 1 if (($pn eq 'bookmyname_ws')&& ($tn eq 'soaplite'));
- return;
-}
+sub profile_types { return qw/ws das/; }
 
 sub transport_protocol_default
 {
- my ($drd,$ndr,$type,$ta,$pa)=@_;
- $type='ws' if (!defined($type) || ref($type));
- if ($type eq 'ws')
- {
-  return ('Net::DRI::Transport::HTTP::SOAPLite','Net::DRI::Protocol::BookMyName::WS') unless (defined($ta) && defined($pa));
-  my %ta=( 	has_login => 0,
-		has_logout => 0,
-		protocol_connection => 'Net::DRI::Protocol::BookMyName::WS::Connection',
-		protocol_version => 1,
-		uri => 'https://api.free.org/apis.cgi',
-		proxy_uri => 'https://api.free.org/apis.cgi',
-		defer => 1,
-		(ref($ta) eq 'ARRAY')? %{$ta->[0]} : %$ta,
-         );
-  my @pa=(ref($pa) eq 'ARRAY' && @$pa)? @$pa : ('1.0');
-  return ('Net::DRI::Transport::HTTP::SOAPLite',[\%ta],'Net::DRI::Protocol::BookMyName::WS',\@pa);
- }
+ my ($self,$type)=@_;
+
+ return ('Net::DRI::Transport::HTTP::SOAPLite',{uri=>'https://api.free.org/apis.cgi',proxy_uri=>'https://api.free.org/apis.cgi'},'Net::DRI::Protocol::BookMyName::WS',{}) if $type eq 'ws';
+ return ('Net::DRI::Transport::Socket',{remote_host=>'das.bookmyname.com'},'Net::DRI::Protocol::DAS',{})                                                                  if $type eq 'das';
+
+ return;
 }
 
 ####################################################################################################

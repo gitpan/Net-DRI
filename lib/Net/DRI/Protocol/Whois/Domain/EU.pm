@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Whois commands for .EU (RFC3912)
 ##
-## Copyright (c) 2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2007,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,15 +18,14 @@
 package Net::DRI::Protocol::Whois::Domain::EU;
 
 use strict;
+use warnings;
 
 use Net::DRI::Exception;
 use Net::DRI::Util;
-use Net::DRI::Data::Hosts;
+
 use Net::DRI::Protocol::EPP::Core::Status;
 
-use DateTime::Format::Strptime;
-
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -56,7 +55,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2007,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -81,7 +80,7 @@ sub info
  my ($po,$domain,$rd)=@_;
  my $mes=$po->message();
  Net::DRI::Exception->die(1,'protocol/whois',10,'Invalid domain name: '.$domain) unless Net::DRI::Util::is_hostname($domain);
- $mes->command('domain '.lc($domain));
+ $mes->command(lc($domain));
 }
 
 sub info_parse
@@ -92,57 +91,60 @@ sub info_parse
 
  my $rr=$mes->response();
  my $rd=$mes->response_raw();
- my ($domain,$exist)=parse_domain($rr,$rd,$rinfo);
+ my ($domain,$exist)=parse_domain($po,$rr,$rd,$rinfo);
  $rinfo->{domain}->{$domain}->{exist}=$exist;
  $rinfo->{domain}->{$domain}->{action}='info';
 
  return unless $exist;
 
- parse_registrars($domain,$rr,$rinfo);
- parse_dates($domain,$rr,$rinfo);
- parse_status($domain,$rr,$rinfo);
- parse_ns($domain,$rr,$rd,$rinfo);
+ parse_registrars($po,$domain,$rr,$rinfo);
+ parse_dates($po,$domain,$rr,$rinfo);
+ parse_status($po,$domain,$rr,$rinfo);
+ parse_ns($po,$domain,$rr,$rd,$rinfo);
 }
 
 sub parse_domain
 {
- my ($rr,$rd,$rinfo)=@_;
- my ($dom,$e);
- $dom=lc($rr->{'Domain'}->[0]).'.eu';
- $e=($rr->{'Status'}->[0] eq 'FREE')? 0 : 1;
- return (lc($dom),$e);
+ my ($po,$rr,$rd,$rinfo)=@_;
+ my $dom=lc($rr->{'Domain'}->[0]).'.eu';
+ my $e=(exists($rr->{'Status'}) && ($rr->{'Status'}->[0] eq 'AVAILABLE'))? 0 : 1;
+ return ($dom,$e);
 }
 
 sub parse_registrars
 {
- my ($domain,$rr,$rinfo)=@_;
- $rinfo->{domain}->{$domain}->{clName}=$rr->{'Name'}->[0];
- $rinfo->{domain}->{$domain}->{clWebsite}=$rr->{'Website'}->[0];
+ my ($po,$domain,$rr,$rinfo)=@_;
+ $rinfo->{domain}->{$domain}->{clName}=$rr->{'Name'}->[-1];
+ $rinfo->{domain}->{$domain}->{clWebsite}=$rr->{'Website'}->[-1] if exists $rr->{'Website'};
 }
 
 sub parse_dates
 {
- my ($domain,$rr,$rinfo)=@_;
- my $strp=DateTime::Format::Strptime->new(pattern => '%a %b%n%d %Y', locale => 'en_US', time_zone => 'Europe/Brussels');
+ my ($po,$domain,$rr,$rinfo)=@_;
+ return unless exists $rr->{'Registered'};
+ my $strp=$po->build_strptime_parser(pattern => '%a %b%n%d %Y', locale => 'en_US', time_zone => 'Europe/Brussels');
  $rinfo->{domain}->{$domain}->{crDate}=$strp->parse_datetime($rr->{'Registered'}->[0]);
 }
 
 sub parse_status
 {
- my ($domain,$rr,$rinfo)=@_;
+ my ($po,$domain,$rr,$rinfo)=@_;
  $rinfo->{domain}->{$domain}->{status}=Net::DRI::Protocol::EPP::Core::Status->new(['ok']);
 }
 
 sub parse_ns
 {
- my ($domain,$rr,$rd,$rinfo)=@_;
- my @ns;
+ my ($po,$domain,$rr,$rd,$rinfo)=@_;
+ my $ns=$po->create_local_object('hosts');
  foreach my $l (@$rd)
  {
   next unless (($l=~m/^Nameservers:/)..($l=~m/^\s*$/));
-  push @ns,$1 if ($l=~m/^\s*(\S+)/);
+  $l=~s/^\s+//;
+  $l=~s/[)\s]+$//;
+  next unless length($l);
+  $ns->add(split(/ \(?/,$l));
  }
- $rinfo->{domain}->{$domain}->{ns}=Net::DRI::Data::Hosts->new_set(@ns) if @ns;
+ $rinfo->{domain}->{$domain}->{ns}=$ns;
 }
 
 ####################################################################################################

@@ -13,14 +13,16 @@
 #
 # 
 #
-#########################################################################################
+####################################################################################################
 
 package Net::DRI::DRD::Gandi;
 
 use strict;
+use warnings;
+
 use base qw/Net::DRI::DRD/;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -71,36 +73,14 @@ See the LICENSE file that comes with this distribution for more details.
 sub name         { return 'Gandi'; }
 sub tlds         { return ('com','net','org','biz','info','name','be'); }
 sub object_types { return ('domain','contact'); }
-
-sub transport_protocol_compatible 
-{
- my ($self,$to,$po)=@_;
- my $pn=$po->name();
- my $pv=$po->version();
- my $tn=$to->name();
-
- return 1 if (($pn eq 'gandi_ws') && ($tn eq 'xmlrpclite'));
- return;
-}
+sub profile_types { return qw/ws/; }
 
 sub transport_protocol_default
 {
- my ($drd,$ndr,$type,$ta,$pa)=@_;
- $type='ws' if (!defined($type) || ref($type));
- if ($type eq 'ws')
- {
-  return ('Net::DRI::Transport::HTTP::XMLRPCLite','Net::DRI::Protocol::Gandi::WS') unless (defined($ta) && defined($pa));
-  my %ta=( has_login => 1,
-           has_logout => 0,
-           protocol_connection => 'Net::DRI::Protocol::Gandi::WS::Connection',
-           protocol_version => 1.0,
-           proxy_uri => 'https://api.gandi.net/xmlrpc/',
-           defer => 1,
-           (ref($ta) eq 'ARRAY')? %{$ta->[0]} : %$ta,
-        );
-  my @pa=(ref($pa) eq 'ARRAY' && @$pa)? @$pa : ('1.0');
-  return ('Net::DRI::Transport::HTTP::XMLRPCLite',[\%ta],'Net::DRI::Protocol::Gandi::WS',\@pa);
- }
+ my ($self,$type)=@_;
+
+ return ('Net::DRI::Transport::HTTP::XMLRPCLite',{proxy_uri=>'https://api.gandi.net/xmlrpc/'},'Net::DRI::Protocol::Gandi::WS',{}) if $type eq 'ws';
+ return;
 }
 
 ####################################################################################################

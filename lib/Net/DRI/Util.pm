@@ -18,12 +18,13 @@
 package Net::DRI::Util;
 
 use strict;
+use warnings;
 
 use Time::HiRes ();
 use Encode ();
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.19 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.20 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -91,6 +92,33 @@ sub hash_merge
    my @t=@$vv;
    push @{$rmaster->{$k}->{$kk}},\@t;
   }
+ }
+}
+
+sub deepcopy
+{
+ my $in=shift;
+ return $in unless defined $in;
+ my $ref=ref $in;
+ return $in unless $ref;
+ my $cname;
+ ($cname,$ref)=($1,$2) if ("$in"=~m/^(\S+)=([A-Z]+)\(0x/);
+
+ if ($ref eq 'SCALAR')
+ {
+  my $tmp=$$in;
+  return \$tmp;
+ } elsif ($ref eq 'HASH')
+ {
+  my $r={ map { $_ => (defined $in->{$_} && ref $in->{$_}) ? deepcopy($in->{$_}) : $in->{$_} } keys(%$in) };
+  bless($r,$cname) if defined $cname;
+  return $r;
+ } elsif ($ref eq 'ARRAY')
+ {
+  return [ map { (defined $_ && ref $_)? deepcopy($_) : $_ } @$in ];
+ } else
+ {
+  Net::DRI::Exception::usererr_invalid_parameters('Do not know how to deepcopy '.$in);
  }
 }
 
@@ -470,6 +498,32 @@ sub xml_indent
  return $r;
 }
 
+sub xml_list_children
+{
+ my $node=shift;
+ ## '*' catch all element nodes being direct children of given node
+ return map { [ $_->localname() || $_->nodeName(),$_ ] } grep { $_->nodeType() == 1 } $node->getChildrenByTagName('*');
+}
+
+sub xml_traverse
+{
+ my ($node,$ns,@nodes)=@_;
+ my $p=sprintf('*[namespace-uri()="%s" and local-name()="%s"]',$ns,shift(@nodes));
+ $p.='/'.join('/',map { '*[local-name()="'.$_.'"]' } @nodes) if @nodes;
+ my $r=$node->findnodes($p);
+ return unless $r->size();
+ return ($r->size()==1)? $r->get_node(1) : $r->get_nodelist();
+}
+
+sub xml_child_content
+{
+ my ($node,$ns,$what)=@_;
+ my $list=$node->getChildrenByTagNameNS($ns,$what);
+ return unless $list->size()==1;
+ my $n=$list->get_node(1);
+ return defined $n ? $n->textContent() : undef;
+}
+
 ####################################################################################################
 
 sub remcam
@@ -486,6 +540,18 @@ sub encode_ascii { return encode('ascii',$_[0]); }
 sub decode       { my ($cs,$data)=@_; return Encode::decode($cs,$data,1); } ## Will croak on malformed data (a case that should not happen)
 sub decode_utf8  { return decode('UTF-8',$_[0]); }
 sub decode_ascii { return decode('ascii',$_[0]); }
+sub decode_latin1{ return decode('iso-8859-1',$_[0]); }
+
+sub normalize_name
+{
+ my ($type,$key)=@_;
+ $type=lc($type);
+ ## contact IDs may be case sensitive...
+ ## Will need to be redone differently with IDNs
+ $key=lc($key) if ($type eq 'domain' || $type eq 'nsgroup');
+ $key=lc($key) if ($type eq 'host' && $key=~m/\./); ## last test part is done only to handle the pure mess created by Nominet .UK "EPP" implementation...
+ return ($type,$key);
+}
 
 ####################################################################################################
 

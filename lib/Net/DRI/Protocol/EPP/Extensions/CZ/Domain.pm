@@ -1,6 +1,6 @@
 ## Domain Registry Interface, CZ domain transactions extension
 ##
-## Copyright (c) 2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+## Copyright (c) 2008,2009 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 ##                    All rights reserved.
 ##
 ## This file is part of Net::DRI
@@ -27,7 +27,7 @@ use Net::DRI::Data::Hosts;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION = do { my @r = ( q$Revision: 1.2 $ =~ /\d+/g ); sprintf( "%d" . ".%02d" x $#r, @r ); };
+our $VERSION = do { my @r = ( q$Revision: 1.3 $ =~ /\d+/g ); sprintf( "%d" . ".%02d" x $#r, @r ); };
 
 =pod
 
@@ -57,7 +57,7 @@ Tonnerre Lombard, E<lt>tonnerre.lombard@sygroup.chE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+Copyright (c) 2008,2009 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -162,7 +162,6 @@ sub info_parse
 	return unless $infdata;
 	my (@s, @host, $ns);
 	my $cs = Net::DRI::Data::ContactSet->new();
-	my $cf = $po->factories()->{contact};
 	my $c = $infdata->getFirstChild();
 
 	while ($c)
@@ -182,11 +181,11 @@ sub info_parse
 		}
 		elsif ($name eq 'status')
 		{
-			push(@s, Net::DRI::Protocol::EPP::parse_status($c));
+			push(@s, $po->parse_status($c));
 		}
 		elsif ($name =~ /^(registrant|admin)$/)
 		{
-			$cs->set($cf->()->srid($c->getFirstChild()->getData()),
+			$cs->set($po->create_local_object('contact')->srid($c->getFirstChild()->getData()),
 				$1);
 		}
 		elsif ($name eq 'ns')

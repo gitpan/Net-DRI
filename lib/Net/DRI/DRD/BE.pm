@@ -18,11 +18,13 @@
 package Net::DRI::DRD::BE;
 
 use strict;
+use warnings;
+
 use base qw/Net::DRI::DRD/;
 
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 __PACKAGE__->make_exception_for_unavailable_operations(qw/domain_transfer_stop domain_transfer_query domain_transfer_accept domain_transfer_refuse domain_renew contact_check contact_check_multi contact_transfer message_retrieve message_delete message_waiting message_count/);
 
@@ -82,24 +84,15 @@ sub periods  { return map { DateTime::Duration->new(years => $_) } (1); }
 sub name     { return 'DNSBE'; }
 sub tlds     { return ('be'); }
 sub object_types { return ('domain','contact','nsgroup'); }
-
-sub transport_protocol_compatible
-{
- my ($self,$to,$po)=@_;
- my $pn=$po->name();
- my $tn=$to->name();
-
- return 1 if (($pn eq 'EPP') && ($tn eq 'socket_inet'));
- return 1 if (($pn eq 'DAS') && ($tn eq 'socket_inet'));
- return;
-}
+sub profile_types { return qw/epp das/; }
 
 sub transport_protocol_default
 {
- my ($drd,$ndr,$type,$ta,$pa)=@_;
- $type='epp' if (!defined($type) || ref($type));
- return Net::DRI::DRD::_transport_protocol_default_epp('Net::DRI::Protocol::EPP::Extensions::DNSBE',$ta,$pa) if ($type eq 'epp');
- return ('Net::DRI::Transport::Socket',[{%Net::DRI::DRD::PROTOCOL_DEFAULT_DAS,remote_host=>'whois.dns.be'}],'Net::DRI::Protocol::DAS',[]) if (lc($type) eq 'das');
+ my ($self,$type)=@_;
+
+ return ('Net::DRI::Transport::Socket',{},'Net::DRI::Protocol::EPP::Extensions::DNSBE',{})                  if $type eq 'epp';
+ return ('Net::DRI::Transport::Socket',{remote_host=>'whois.dns.be'},'Net::DRI::Protocol::DAS',{no_tld=>1}) if $type eq 'das';
+ return;
 }
 
 ######################################################################################

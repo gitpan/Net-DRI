@@ -18,14 +18,15 @@
 package Net::DRI::Protocol::DAS::Message;
 
 use strict;
+use warnings;
 
 use Net::DRI::Protocol::ResultStatus;
 use Net::DRI::Exception;
 
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
-__PACKAGE__->mk_accessors(qw(version errcode errmsg errlang command command_param command_tld cltrid response));
+__PACKAGE__->mk_accessors(qw(version errcode errmsg errlang command command_param cltrid response));
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -71,10 +72,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $proto=shift;
- my $class=ref($proto) || $proto;
- my $trid=shift;
-
+ my ($class,$trid)=@_;
  my $self={
            errcode => -1000,
 	   response => {},
@@ -106,7 +104,7 @@ sub result_status
 
 sub as_string
 {
- my ($self,$to)=@_;
+ my ($self)=@_;
  my $s=sprintf("%s %s %s\x0d\x0a",$self->command(),$self->version(),$self->command_param());
  return $s;
 }
@@ -115,16 +113,20 @@ sub parse
 {
  my ($self,$dc,$rinfo)=@_;
  my @d=$dc->as_array();
- my @tmp=grep { /^%% RC = \S+/ } @d;
- Net::DRI::Exception->die(0,'protocol/DAS',1,'Unsuccessfull parse, no RC in server reply') unless (@tmp==1);
- my ($rc)=($tmp[0]=~m/^%% RC = (\S+)\s*$/);
- $self->errcode($rc);
-
- if ($rc==0) ## success
+ my $rc;
+ my @tmp=grep { /^%% RC\s*=\s*\S+/ } @d;
+ if (@tmp)
  {
+  ($rc)=($tmp[0]=~m/^%% RC\s*=\s*(\S+)\s*$/);
+  $self->errcode($rc);
+ }
+
+ if ((defined $rc && $rc==0) || grep { /^Status: /} @d) ## success
+ {
+  $self->errcode(0);
   my %info=map { m/^(\S+):\s+(.*\S)\s*$/; $1 => $2 } grep { /^\S+: / } @d;
-  Net::DRI::Exception->die(0,'protocol/DAS',1,'Unsuccessfull parse, missing key Domain') unless (exists($info{Domain}));
-  Net::DRI::Exception->die(0,'protocol/DAS',1,'Unsuccessfull parse, missing key Status') unless (exists($info{Status}));
+  Net::DRI::Exception->die(0,'protocol/DAS',1,'Unsuccessfull parse, missing key Domain') unless exists $info{Domain};
+  Net::DRI::Exception->die(0,'protocol/DAS',1,'Unsuccessfull parse, missing key Status') unless exists $info{Status};
   $self->response(\%info);
  } else
  {

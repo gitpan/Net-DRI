@@ -18,12 +18,14 @@
 package Net::DRI::DRD::PL;
 
 use strict;
+use warnings;
+
 use base qw/Net::DRI::DRD/;
 
 use Net::DRI::Exception;
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 __PACKAGE__->make_exception_for_unavailable_operations(qw/domain_transfer_stop domain_transfer_query domain_transfer_accept domain_transfer_refuse contact_transfer_stop contact_transfer_query contact_transfer_accept contact_transfer_refuse/);
 
@@ -85,28 +87,14 @@ sub name     { return 'NASK'; }
 ## See http://www.dns.pl/english/dns-funk.html
 sub tlds     { return ('pl',map { $_.'.pl'} qw/aid agro atm auto biz com edu gmina gsm info mail miasta media mil net nieruchomosci nom org pc powiat priv realestate rel sex shop sklep sos szkola targi tm tourism travel turystyka/ ); }
 sub object_types { return ('domain','contact','ns'); }
-
-sub transport_protocol_compatible
-{
- my ($self,$to,$po)=@_;
- my $pn=$po->name();
- my $tn=$to->name();
-
- return 1 if (($pn eq 'EPP') && ($tn eq 'http'));
- return;
-}
+sub profile_types { return qw/epp/; }
 
 sub transport_protocol_default
 {
- my ($drd,$ndr,$type,$ta,$pa)=@_;
- $type='epp' if (!defined($type) || ref($type));
- if ($type eq 'epp') ## EPP is over HTTPS
- {
-  my @a=Net::DRI::DRD::_transport_protocol_default_epp('Net::DRI::Protocol::EPP::Extensions::PL',$ta,$pa);
-  $a[0]='Net::DRI::Transport::HTTP';
-  $a[1]->[0]->{protocol_connection}='Net::DRI::Protocol::EPP::Extensions::PL::Connection';
-  return @a;
- }
+ my ($self,$type)=@_;
+
+ return ('Net::DRI::Transport::HTTP',{protocol_connection=>'Net::DRI::Protocol::EPP::Extensions::PL::Connection'},'Net::DRI::Protocol::EPP::Extensions::PL',{}) if $type eq 'epp'; ## EPP is over HTTPS here
+ return;
 }
 
 ####################################################################################################

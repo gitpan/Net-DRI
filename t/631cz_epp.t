@@ -34,7 +34,7 @@ eval {
 	$dri = Net::DRI->new(10);
 	$dri->{trid_factory} = sub { return 'ABC-12345'; };
 	$dri->add_registry('CZ');
-	$dri->target('CZ')->add_current_test_profile('p1', 'Dummy', {f_send => \&mysend, f_recv => \&myrecv},'Net::DRI::Protocol::EPP::Extensions::CZ');
+	$dri->target('CZ')->add_current_profile('p1', 'test=Net::DRI::Protocol::EPP::Extensions::CZ', {f_send => \&mysend, f_recv => \&myrecv});
 };
 if ($@)
 {

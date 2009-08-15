@@ -27,7 +27,7 @@ use Net::DRI::Data::Raw;
 use Net::DRI::Protocol::ResultStatus;
 use Net::DRI::Protocol::IRIS::Core;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -102,12 +102,6 @@ See the LICENSE file that comes with this distribution for more details.
 
 ####################################################################################################
 
-
-sub transport_default
-{
- return (has_state => 1, type => 'tcp'); ## TODO: etc + propagate in other Connection class + fix Transport+DRD to use that data
-}
-
 sub parse_greeting ## §4.2
 {
  my $dr=shift;
@@ -125,7 +119,7 @@ sub read_data # §4
 
  my $keepopen=parse_block_header($hdr);
  $to->send_logout() unless ($keepopen); ## will not truly send anything, as there is no logout, but will properly close the socket and prepare everything as needed for next connection
- 
+
  ## We do not handle blocks splitted over multiple chunks, except for application data
  my $m='';
  my ($lastchunk,$datacomplete,$chunktype);
@@ -158,7 +152,7 @@ sub read_data # §4
  }
  die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED','Last chunk has not DC=1','en')) unless $datacomplete==1; ## TODO: does that happen IRL ?
  $m=Net::DRI::Util::decode_utf8($m); ## do it only once at end, when all chunks of application data were joined together again
- 
+
  die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_SYNTAX_ERROR',$m? 'Got unexpected reply message: '.$m : '<empty message from server>','en')) unless ($m=~m!</(?:\S+:)?response>\s*$!s); ## we do not handle other things than plain responses (see Message)
  return Net::DRI::Data::Raw->new_from_xmlstring($m);
 }
@@ -249,6 +243,12 @@ sub write_chunk
   $data.=pack('n',length($sasldata)).$sasldata;
  }
  return pack('B8',$hdr).pack('n',length($data)).$data;
+}
+
+sub transport_default
+{
+ my ($self,$tname)=@_;
+ return (has_state => 1, type => 'tcp');
 }
 
 ####################################################################################################

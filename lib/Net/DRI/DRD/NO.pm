@@ -20,13 +20,15 @@
 package Net::DRI::DRD::NO;
 
 use strict;
+use warnings;
+
 use base qw/Net::DRI::DRD/;
 
 use DateTime::Duration;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION = do { my @r = ( q$Revision: 1.3 $ =~ /\d+/gxm ); sprintf( "%d" . ".%02d" x $#r, @r ); };
+our $VERSION = do { my @r = ( q$Revision: 1.4 $ =~ /\d+/gxm ); sprintf( "%d" . ".%02d" x $#r, @r ); };
 
 # let contact check support be decided by the server policy
 __PACKAGE__->make_exception_for_unavailable_operations(qw/domain_transfer_accept domain_transfer_refuse contact_transfer_stop contact_transfer_query contact_transfer_accept contact_transfer_refuse/);
@@ -90,26 +92,14 @@ sub periods {
 sub name         { return 'NORID'; }
 sub tlds         { return ('NO'); }
 sub object_types { return ( 'domain', 'contact', 'ns' ); }
-
-sub transport_protocol_compatible {
-    my ( $self, $to, $po ) = @_;
-    my $pn = $po->name();
-    my $tn = $to->name();
-
-    return 1 if ( ( $pn eq 'EPP' ) && ( $tn eq 'socket_inet' ) );
-    return;
-}
+sub profile_types { return qw/epp/; }
 
 sub transport_protocol_default {
-    my ( $drd, $ndr, $type, $ta, $pa ) = @_;
-    $type = 'epp' if ( !defined($type) || ref($type) );
-    return Net::DRI::DRD::_transport_protocol_default_epp(
-        'Net::DRI::Protocol::EPP::Extensions::NO',
-        $ta, $pa )
-        if ( $type eq 'epp' );
-
+    my ($self,$type)=@_;
+    
+    return ('Net::DRI::Transport::Socket',{},'Net::DRI::Protocol::EPP::Extensions::NO',{}) if $type eq 'epp';
 # suppress until whois is supported
-#return ('Net::DRI::Transport::Socket',[{%Net::DRI::DRD::PROTOCOL_DEFAULT_WHOIS,remote_host=>'whois.norid.no'}],'Net::DRI::Protocol::Whois',[]) if (lc($type) eq 'whois');
+#return ('Net::DRI::Transport::Socket',{remote_host=>'whois.norid.no'},'Net::DRI::Protocol::Whois',{}) if $type eq 'whois';
 
     return;
 }
@@ -190,7 +180,7 @@ sub domain_operation_needs_is_mine {
 
 sub domain_withdraw {
     my ( $self, $ndr, $domain, $rd ) = @_;
-    $self->err_invalid_domain_name($domain) if $self->verify_name_domain($ndr,$domain,'withdraw');
+    $self->enforce_domain_name_constraints($ndr,$domain,'withdraw');
 
     $rd = {} unless ( defined($rd) && ( ref($rd) eq 'HASH' ) );
     $rd->{transactionname} = 'withdraw';
@@ -202,7 +192,7 @@ sub domain_withdraw {
 sub domain_transfer_execute
 {
  my ($self,$ndr,$domain,$rd)=@_;
- $self->err_invalid_domain_name($domain) if $self->verify_name_domain($ndr,$domain,'transfer_execute');
+ $self->enforce_domain_name_constraints($ndr,$domain,'transfer_execute');
 
  $rd={} unless (defined($rd) && (ref($rd) eq 'HASH'));
  $rd->{transactionname} = 'transfer_execute';
@@ -221,7 +211,7 @@ sub host_update {
         = ( UNIVERSAL::isa( $dh, 'Net::DRI::Data::Hosts' ) )
         ? $dh->get_details(1)
         : $dh;
-    $self->err_invalid_host_name($name) if $self->verify_name_host($name);
+    $self->enforce_host_name_constraints($ndr,$name);
     Net::DRI::Util::check_isa( $tochange, 'Net::DRI::Data::Changes' );
 
     foreach my $t ( $tochange->types() ) {
@@ -245,7 +235,7 @@ sub host_update {
         Net::DRI::Util::check_isa( $_, 'Net::DRI::Data::StatusList' );
     }
     foreach ( @{ $what{name} } ) {
-        $self->err_invalid_host_name($_) if $self->verify_name_host($_);
+	$self->enforce_host_name_constraints($ndr,$_);
     }
 
     foreach my $w ( keys(%what) ) {

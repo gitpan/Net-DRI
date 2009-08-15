@@ -28,7 +28,7 @@ my $dri=Net::DRI->new(10);
 $dri->{trid_factory}=sub { return 'ABC-12345'; };
 
 $dri->add_registry('VNDS');
-$dri->target('VNDS')->add_current_test_profile('p1','Dummy',{f_send=>\&mysend,f_recv=>\&myrecv},'EPP',['1.0',['SecDNS']]);
+$dri->target('VNDS')->add_current_profile('p1','test=EPP',{f_send=>\&mysend,f_recv=>\&myrecv},{extensions=>['SecDNS']});
 
 my ($rc,$e,$toc);
 

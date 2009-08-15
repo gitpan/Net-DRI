@@ -30,7 +30,7 @@ use Net::DRI::Exception;
 use Net::DRI::Util;
 use Net::DRI::Data::Raw;
 
-our $VERSION=do { my @r=(q$Revision: 1.29 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.30 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -46,25 +46,23 @@ This module implements a socket (tcp or tls) for establishing connections in Net
 
 At creation (see Net::DRI C<new_profile>) you pass a reference to an hash, with the following available keys:
 
-=head2 defer
-
-do we open the connection right now (0) or later (1)
-
-=head2 timeout
-
-time to wait (in seconds) for server reply
-
 =head2 socktype
 
 ssl, tcp or udp
 
-=head2 ssl_key_file ssl_cert_file ssl_ca_file ssl_ca_path ssl_cipher_list ssl_version
+=head2 ssl_key_file ssl_cert_file ssl_ca_file ssl_ca_path ssl_cipher_list ssl_version ssl_passwd_cb
 
-if C<socktype> is 'ssl', all key materials
+if C<socktype> is 'ssl', all key materials, see IO::Socket::SSL documentation for corresponding options
 
-=head2 ssl_verify ssl_verify_callback
+=head2 ssl_verify
 
-see IO::Socket::SSL documentation about verify_mode (by default 0x00 here) and verify_callback (used only if provided)
+see IO::Socket::SSL documentation about verify_mode (by default 0x00 here)
+
+=head2 ssl_verify_callback
+
+see IO::Socket::SSL documentation about verify_callback, it gets here as first parameter the transport object
+then all parameter given by IO::Socket::SSL; it is explicitely verified that the subroutine returns a true value,
+and if not the connection is aborted.
 
 =head2 remote_host remote_port
 
@@ -130,18 +128,25 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $class=shift;
- my $ctx=shift;
+ my ($class,$ctx,$rp)=@_;
+ my %opts=%$rp;
  my $po=$ctx->{protocol};
 
- my %opts=(@_==1 && ref($_[0]))? %{$_[0]} : @_;
+ my %t=(message_factory => $po->factories()->{message});
+ Net::DRI::Exception::usererr_insufficient_parameters('protocol_connection') unless (exists($opts{protocol_connection}) && $opts{protocol_connection});
+ $t{pc}=$opts{protocol_connection};
+ $t{pc}->require or Net::DRI::Exception::err_failed_load_module('transport/socket',$t{pc},$@);
+ if ($t{pc}->can('transport_default'))
+ {
+  %opts=($t{pc}->transport_default('socket_inet'),%opts);
+ }
+
  my $self=$class->SUPER::new($ctx,\%opts); ## We are now officially a Net::DRI::Transport instance
- $self->has_state(1);
+ $self->has_state(exists $opts{has_state}? $opts{has_state} : 1);
  $self->is_sync(1);
  $self->name('socket_inet');
- $self->version('0.2');
+ $self->version('0.3');
 
- my %t=(message_factory => $po->factories()->{message});
  Net::DRI::Exception::usererr_insufficient_parameters('socktype must be defined') unless (exists($opts{socktype}));
  Net::DRI::Exception::usererr_invalid_parameters('socktype must be ssl, tcp or udp') unless ($opts{socktype}=~m/^(ssl|tcp|udp)$/);
  $t{socktype}=$opts{socktype};
@@ -149,17 +154,14 @@ sub new
  $t{client_password}=$opts{client_password};
  $t{client_newpassword}=$opts{client_newpassword} if (exists($opts{client_newpassword}) && $opts{client_newpassword});
 
- Net::DRI::Exception::usererr_insufficient_parameters('protocol_connection') unless (exists($opts{protocol_connection}) && $opts{protocol_connection});
- $t{pc}=$opts{protocol_connection};
  $t{protocol_data}=$opts{protocol_data} if (exists($opts{protocol_data}) && $opts{protocol_data});
-
- $t{pc}->require or Net::DRI::Exception::err_failed_load_module('transport/socket',$t{pc},$@);
  my @need=qw/read_data write_message/;
  Net::DRI::Exception::usererr_invalid_parameters('protocol_connection class ('.$t{pc}.') must have: '.join(' ',@need)) if (grep { ! $t{pc}->can($_) } @need);
 
  if (exists($opts{find_remote_server}) && defined($opts{find_remote_server}) && $t{pc}->can('find_remote_server'))
  {
   ($opts{remote_host},$opts{remote_port})=$t{pc}->find_remote_server($self,$opts{find_remote_server});
+  $self->log_output('notice','transport',{ctx=>$ctx,trid=>$ctx->{trid},phase=>'opening',driver=>$self->name().'/'.$self->version(),message=>'Found the following remote_host:remote_port = '.$opts{remote_host}.':'.$opts{remote_port}});
  }
  foreach my $p ('remote_host','remote_port','protocol_version')
  {
@@ -176,8 +178,8 @@ sub new
 
   my %s=(SSL_use_cert => 0);
   $s{SSL_verify_mode}=(exists($opts{ssl_verify}))? $opts{ssl_verify} : 0x00; ## by default, no authentication whatsoever
-  $s{SSL_verify_callback}=$opts{ssl_verify_callback} if (exists($opts{ssl_verify_callback}) && defined($opts{ssl_verify_callback}));
-  foreach my $s ('key_file','cert_file','ca_file','ca_path','version')
+  $s{SSL_verify_callback}=sub { my $r=$opts{ssl_verify_callback}->($self,@_); Net::DRI::Exception->die(1,'transport/socket',6,'SSL certificate user verification failed, aborting connection') unless $r; 1; } if (exists $opts{ssl_verify_callback} && defined $opts{ssl_verify_callback});
+  foreach my $s (qw/key_file cert_file ca_file ca_path version passwd_cb/)
   {
    next unless exists($opts{'ssl_'.$s});
    $s{'SSL_'.$s}=$opts{'ssl_'.$s};
@@ -191,7 +193,7 @@ sub new
  }
 
  $t{local_host}=$opts{local_host} if (exists($opts{local_host}) && $opts{local_host});
-
+ $t{remote_uri}=sprintf('%s://%s:%d',$t{socktype},$t{remote_host},$t{remote_port}); ## handy shortcust only used for error messages
  $self->{transport}=\%t;
  bless($self,$class); ## rebless in my class
 
@@ -215,7 +217,7 @@ sub sock { my ($self,$v)=@_; $self->transport_data()->{sock}=$v if defined($v); 
 ## Or specify a callback to call when doing socket open to find the correct host+ports to use at that time
 sub open_socket
 {
- my $self=shift;
+ my ($self,$ctx)=@_;
  my $t=$self->transport_data();
  my $type=$t->{socktype};
  my $sock;
@@ -239,9 +241,11 @@ sub open_socket
   $sock=IO::Socket::INET->new(%n);
  }
 
- Net::DRI::Exception->die(1,'transport/socket',6,'Unable to setup the '.$type.' socket'.($type eq 'ssl'? ' with SSL error: '.IO::Socket::SSL::errstr() : '')) unless defined($sock);
+ Net::DRI::Exception->die(1,'transport/socket',6,'Unable to setup the socket for '.$t->{remote_uri}.' with error: '.$@.($type eq 'ssl'? ' and SSL error: '.IO::Socket::SSL::errstr() : '')) unless defined($sock);
  $sock->autoflush(1);
  $self->sock($sock);
+ $self->log_output('notice','transport',{ctx=>$ctx,trid=>$ctx->{trid},phase=>'opening',driver=>$self->name().'/'.$self->version(),message=>'Successfully opened socket to '.$t->{remote_uri}});
+ return;
 }
 
 sub send_login
@@ -271,7 +275,7 @@ sub send_login
  $cltrid=$self->generate_trid();
  my $login=$pc->login($t->{message_factory},$t->{client_login},$t->{client_password},$cltrid,$dr,$t->{client_newpassword},$t->{protocol_data});
  $self->log_output('notice','transport',{ctx=>$ctx,trid=>$cltrid,phase=>'opening',direction=>'out',driver=>$self->name().'/'.$self->version(),message=>$login});
- Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send login message') unless ($sock->print($pc->write_message($self,$login)));
+ Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send login message to '.$t->{remote_uri}) unless ($sock->print($pc->write_message($self,$login)));
 
  ## Verify login successful
  $dr=$pc->read_data($self,$sock);
@@ -292,7 +296,7 @@ sub send_logout
  my $cltrid=$self->generate_trid();
  my $logout=$pc->logout($t->{message_factory},$cltrid);
  $self->log_output('notice','transport',{ctx=>$ctx,trid=>$cltrid,phase=>'closing',direction=>'out',driver=>$self->name().'/'.$self->version(),message=>$logout});
- Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send logout message') unless ($sock->print($pc->write_message($self,$logout)));
+ Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send logout message to '.$t->{remote_uri}) unless ($sock->print($pc->write_message($self,$logout)));
  my $dr=$pc->read_data($self,$sock); ## We expect this to throw an exception, since the server will probably cut the connection
  $self->log_output('notice','transport',{ctx=>$ctx,trid=>$cltrid,phase=>'closing',direction=>'in',driver=>$self->name().'/'.$self->version(),message=>$dr});
  my $rc1=$pc->parse_logout($dr);
@@ -302,7 +306,7 @@ sub send_logout
 sub open_connection
 {
  my ($self,$ctx)=@_;
- $self->open_socket();
+ $self->open_socket($ctx);
  $self->send_login($ctx);
  $self->current_state(1);
  $self->time_open(time());
@@ -326,7 +330,7 @@ sub ping
   alarm(10);
   my $noop=$pc->keepalive($t->{message_factory},$cltrid);
   $self->log_output('notice','transport',{ctx=>$ctx,trid=>$cltrid,phase=>'keepalive',direction=>'out',driver=>$self->name().'/'.$self->version(),message=>$noop});
-  Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send ping message') unless ($sock->print($pc->write_message($self,$noop)));
+  Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send ping message to '.$t->{remote_uri}) unless ($sock->print($pc->write_message($self,$noop)));
   $self->time_used(time());
   $t->{exchanges_done}++;
   my $dr=$pc->read_data($self,$sock);
@@ -339,7 +343,7 @@ sub ping
  if ($@)
  {
   $self->current_state(0);
-  $self->open_connection() if $autorecon;
+  $self->open_connection($ctx) if $autorecon;
  } else
  {
   $self->current_state(1);
@@ -349,8 +353,10 @@ sub ping
 
 sub close_socket
 {
- my ($self)=@_;
+ my ($self,$ctx)=@_;
+ my $t=$self->transport_data();
  $self->sock()->close();
+ $self->log_output('notice','transport',{ctx=>$ctx,trid=>$ctx->{trid},phase=>'closing',driver=>$self->name().'/'.$self->version(),message=>'Successfully closed socket for '.$t->{remote_uri}});
  $self->sock(undef);
 }
 
@@ -358,7 +364,7 @@ sub close_connection
 {
  my ($self,$ctx)=@_;
  $self->send_logout($ctx);
- $self->close_socket();
+ $self->close_socket($ctx);
  $self->current_state(0);
 }
 
@@ -390,12 +396,10 @@ sub send
 sub _print ## here we are sure open_connection() was called before
 {
  my ($self,$count,$tosend)=@_;
- my $t=$self->transport_data();
- my $pc=$t->{pc};
+ my $pc=$self->transport_data('pc');
  my $sock=$self->sock();
-
- my $m=($t->{socktype} eq 'udp')? 'send' : 'print';
- Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send message: '.$!) unless ($sock->$m($pc->write_message($self,$tosend)));
+ my $m=($self->transport_data('socktype') eq 'udp')? 'send' : 'print';
+ Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send message to '.$self->transport_data('remote_uri').' because of error: '.$!) unless ($sock->$m($pc->write_message($self,$tosend)));
  return 1; ## very important
 }
 
@@ -407,27 +411,31 @@ sub receive
 
 sub _get
 {
- my ($self,$count)=@_;
+ my ($self,$count,$ctx)=@_;
  my $t=$self->transport_data();
  my $sock=$self->sock();
  my $pc=$t->{pc};
 
  ## Answer
  my $dr=$pc->read_data($self,$sock);
-
- ## Do we allow other messages ?
  $t->{exchanges_done}++;
- if ($t->{exchanges_done}==$t->{close_after} && $self->current_state())
- {
-  $self->close_connection();
- }
 
+ ## EOF signaling is not available for udp & ssl
+ if (($self->transport_data('socktype') eq 'tcp') && $sock->eof() && $self->has_state())
+ {
+  $self->log_output('notice','transport',{ctx=>$ctx,trid=>$ctx->{trid},phase=>'closing',driver=>$self->name().'/'.$self->version(),message=>'Received EOF notification on '.$t->{remote_uri}});
+  $self->current_state(0);
+ } elsif ($t->{exchanges_done}==$t->{close_after} && $self->has_state() && $self->current_state())
+ {
+  $self->log_output('notice','transport',{ctx=>$ctx,trid=>$ctx->{trid},phase=>'closing',driver=>$self->name().'/'.$self->version(),message=>'Due to maximum number of exchanges reached, closing connection to '.$t->{remote_uri}});
+  $self->close_connection($ctx);
+ }
  return $dr;
 }
 
 sub try_again
 {
- my ($self,$po,$err,$count,$istimeout,$step,$rpause,$rtimeout)=@_;
+ my ($self,$ctx,$po,$err,$count,$istimeout,$step,$rpause,$rtimeout)=@_;
  if ($step==0) ## sending not already done, hence error during send
  {
   $self->current_state(0);
@@ -438,10 +446,10 @@ sub try_again
  ## See RFC4993 section 4
  if ($step==1 && $istimeout==1 && $self->transport_data()->{socktype} eq 'udp')
  {
-  $self->log_output('debug','transport',sprintf('In try_again, currently: pause=%f timeout=%f',$$rpause,$$rtimeout));
+  $self->log_output('debug','transport',{ctx=>$ctx,trid=>$ctx->{trid},phase=>'active',driver=>$self->name().'/'.$self->version(),message=>sprintf('In try_again, currently: pause=%f timeout=%f',$$rpause,$$rtimeout)});
   $$rtimeout=2*$$rtimeout;
   $$rpause+=rand(1+int($$rpause/2));
-  $self->log_output('debug','transport',sprintf('In try_again, new values: pause=%f timeout=%f',$$rpause,$$rtimeout));
+  $self->log_output('debug','transport',{ctx=>$ctx,trid=>$ctx->{trid},phase=>'active',driver=>$self->name().'/'.$self->version(),message=>sprintf('In try_again, new values: pause=%f timeout=%f',$$rpause,$$rtimeout)});
   return 1; ## we will retry
  }
 

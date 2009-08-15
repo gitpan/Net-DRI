@@ -19,11 +19,13 @@
 package Net::DRI::DRD::ME;
 
 use strict;
+use warnings;
+
 use base qw/Net::DRI::DRD/;
 
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -81,23 +83,14 @@ sub periods  { return map { DateTime::Duration->new(years => $_) } (1..10); }
 sub name     { return 'ME'; }
 sub tlds     { return ('me'); }
 sub object_types { return ('domain','contact','ns'); }
-
-sub transport_protocol_compatible
-{
- my ($self,$to,$po)=@_;
- my $pn=$po->name();
- my $pv=$po->version();
- my $tn=$to->name();
-
- return 1 if (($pn eq 'EPP') && ($tn eq 'socket_inet'));
- return;
-}
+sub profile_types { return qw/epp/; }
 
 sub transport_protocol_default
 {
- my ($drd,$ndr,$type,$ta,$pa)=@_;
- $type='epp' if (!defined($type) || ref($type));
- return Net::DRI::DRD::_transport_protocol_default_epp('Net::DRI::Protocol::EPP::Extensions::Afilias',$ta,$pa) if ($type eq 'epp');
+ my ($self,$type)=@_;
+ 
+ return ('Net::DRI::Transport::Socket',{},'Net::DRI::Protocol::EPP::Extensions::Afilias',{}) if $type eq 'epp';
+ return;
 }
 
 ####################################################################################################

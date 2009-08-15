@@ -25,7 +25,7 @@ __PACKAGE__->mk_accessors(qw/name version retry pause trace timeout defer curren
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.18 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.19 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -43,6 +43,18 @@ This is a superclass that should never be used directly, but only through its su
 
 During the new() call, subclasses will call this new() method, which expects a ref hash with some
 keys (other are handled by the subclasses), among which:
+
+=head2 defer
+
+do we open the connection right now (0) or later (1)
+
+=head2 timeout
+
+time to wait (in seconds) for server reply (default 60)
+
+=head2 retry
+
+number of times we try to send the message to the registry (default 2)
 
 =head2 trid
 
@@ -88,10 +100,10 @@ sub new
 
  my $self={
  	   is_sync   => exists($ropts->{is_sync})? $ropts->{is_sync} : 1, ## do we need to wait for reply as soon as command sent ?
-           retry     => exists($ropts->{retry})?   $ropts->{retry}   : 1,  ## by default, we will try once only
+           retry     => exists($ropts->{retry})?   $ropts->{retry}   : 2,  ## by default, we will try once only
            pause     => exists($ropts->{pause})?   $ropts->{pause}   : 10, ## time in seconds to wait between two retries
 #           trace     => exists($ropts->{trace})?   $ropts->{trace}   : 0, ## NOT IMPL
-           timeout   => exists($ropts->{timeout})? $ropts->{timeout} : 0,
+           timeout   => exists($ropts->{timeout})? $ropts->{timeout} : 60,
            defer     => exists($ropts->{defer})?   $ropts->{defer}   : 0, ## defer opening connection as long as possible (irrelevant if stateless) ## XX maybe not here, too low
            logging   => exists($ropts->{logging})? $ropts->{logging} : $ndr->logging(),
            trid_factory => (exists($ropts->{trid}) && (ref($ropts->{trid}) eq 'CODE'))? $ropts->{trid} : $ndr->trid_factory(),
@@ -112,7 +124,7 @@ sub new
  return $self;
 }
 
-sub transport_data { return shift->{transport}; }
+sub transport_data { my ($self,$data)=@_; return defined $data ? $self->{transport}->{$data} : $self->{transport}; }
 
 sub send
 {
@@ -121,7 +133,7 @@ sub send
  my $ok=0;
 
  ## Try to reconnect if needed
- $self->open_connection() if ($self->has_state() && !$self->current_state());
+ $self->open_connection($ctx) if ($self->has_state() && !$self->current_state());
  ## Here $tosend is a Net::DRI::Protocol::Message object (in fact, a subclass of that), in perl internal encoding, no transport related data (such as EPP 4 bytes header)
  $self->log_output('notice','transport',{ctx=>$ctx,trid=>$ctx->{trid},phase=>'active',direction=>'out',driver=>$self->name().'/'.$self->version(),message=>$tosend});
  $ok=$self->$cb1($count,$tosend);
@@ -136,7 +148,7 @@ sub receive
  Net::DRI::Exception::err_insufficient_parameters() unless ($cb1 && (ref($cb1) eq 'CODE'));
 
  my $ans;
- $ans=$self->$cb1($count); ## a Net::DRI::Data::Raw object
+ $ans=$self->$cb1($count,$ctx); ## a Net::DRI::Data::Raw object
  Net::DRI::Exception->die(0,'transport',5,'Unable to receive message from registry') unless defined($ans);
  ## $ans should have been properly decoded into a native Perl string
  $self->log_output('notice','transport',{ctx=>$ctx,trid=>$ctx->{trid},phase=>'active',direction=>'in',driver=>$self->name().'/'.$self->version(),message=>$ans});
@@ -145,8 +157,9 @@ sub receive
 
 sub try_again ## TO BE SUBCLASSED
 {
- my ($self,$po,$err,$count,$istimeout,$step,$rpause,$rtimeout)=@_; ## $step is 0 before send, 1 after, and 2 after receive successful
- return 0; ## should return 1 if we try again, or 0 if we should stop processing now
+ my ($self,$ctx,$po,$err,$count,$istimeout,$step,$rpause,$rtimeout)=@_; ## $step is 0 before send, 1 after, and 2 after receive successful
+ ## Should return 1 if we try again, or 0 if we should stop processing now
+ return ($istimeout && ($count <= $self->{retry}))? 1 : 0;
 }
 
 ####################################################################################################
@@ -154,21 +167,21 @@ sub try_again ## TO BE SUBCLASSED
 ## Pass a true value if you want the connection to be automatically redone if the ping failed
 sub ping
 {
- my $self=shift;
+ my ($self,$autorecon,$ctx)=@_;
  return unless $self->has_state();
  Net::DRI::Exception::err_method_not_implemented();
 }
 
 sub open_connection
 {
- my $self=shift;
+ my ($self,$ctx)=@_;
  return unless $self->has_state();
  Net::DRI::Exception::err_method_not_implemented();
 }
 
 sub end
 {
- my $self=shift;
+ my ($self,$ctx)=@_;
  return unless $self->has_state();
  Net::DRI::Exception::err_method_not_implemented();
 }

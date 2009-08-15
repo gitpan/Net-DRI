@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP RGP Poll (EPP-RGP-Poll-Mapping.pdf)
 ##
-## Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,12 +18,11 @@
 package Net::DRI::Protocol::EPP::Extensions::VeriSign::PollRGP;
 
 use strict;
+use warnings;
 
-use DateTime::Format::ISO8601;
-use Net::DRI::Protocol::EPP;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -53,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -86,28 +85,23 @@ sub parse
  return unless $mes->is_success();
 
  my $infdata=$mes->get_response('http://www.verisign.com/epp/rgp-poll-1.0','pollData');
- return unless $infdata;
+ return unless defined $infdata;
 
- my $pd=DateTime::Format::ISO8601->new();
  my %w=(action => 'rgp_notification');
- my $c=$infdata->getFirstChild();
- while ($c)
+ foreach my $el (Net::DRI::Util::xml_list_children($infdata))
  {
-  next unless ($c->nodeType() == 1); ## only for element nodes
-  my $name=$c->localname() || $c->nodeName();
-  next unless $name;
-
+  my ($name,$c)=@$el;
   if ($name eq 'name')
   {
-   $oname=lc($c->getFirstChild()->getData());
+   $oname=lc($c->textContent());
   } elsif ($name eq 'rgpStatus')
   {
-   $w{status}=$po->create_local_object('status')->add(Net::DRI::Protocol::EPP::parse_status($c));
+   $w{status}=$po->create_local_object('status')->add($po->parse_status($c));
   } elsif ($name=~m/^(reqDate|reportDueDate)$/)
   {
-   $w{Net::DRI::Util::remcam($name)}=$pd->parse_datetime($c->getFirstChild()->getData());
+   $w{Net::DRI::Util::remcam($name)}=$po->parse_iso8601($c->textContent());
   }
- } continue { $c=$c->getNextSibling(); }
+ }
 
  $rinfo->{domain}->{$oname}=\%w;
 }

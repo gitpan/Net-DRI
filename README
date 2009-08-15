@@ -13,7 +13,7 @@ what Perl DBI is for databases.
 Net::DRI offers a uniform API to access services.
 It can be used by registrars to access registries.
 It can be used by clients to access registrars and/or resellers.
-It can be used by anonyone to do whois or DAS queries.
+It can be used by anonyone to do whois, DAS or IRIS DCHK queries.
 
 It is an OO framework that can be easily extended to
 handle various protocols (RRP, EPP, custom protocols) and
@@ -48,10 +48,10 @@ Currently Net::DRI ships with:
     .EU .COM .NET .MOBI .AERO .CAT .US .PL .SE .BE .AT .COOP .LU .ASIA .AU .NAME .ORG .UK
     .DE .CH .LI .HN .SC .VC .AG .BZ .LC .MN .ME .CZ .TRAVEL .NO .BR .JOBS .PRO .FR .PT
     .CX .GS .TL .KI .MS .MU .NF .HT .IM .SI .NG .NA
-- a full DAS (Domain Availability Service) implementation for .BE & .EU
+- a full DAS (Domain Availability Service) implementation for .BE .EU .NL .AU
 - a full Whois implementation (RFC 3912) for thin and thick registries :
      support included for domain names in .COM .NET .ORG .BIZ .INFO .AERO
-     .EU .MOBI .NAME .LU .WS .SE .CAT .AT .TRAVEL .US
+     .EU .MOBI .NAME .LU .WS .SE .CAT .AT .TRAVEL .US .PT
 - an IRIS (RFC3981) implementation with LWZ transport (RFC4993) for DCHK (5144):
   currently only DENIC registry (.DE) provide this service
   XCP transport (RFC4992) is also available
@@ -62,12 +62,12 @@ Currently Net::DRI ships with:
 - Net::DRI::DRD::* modules for : .EU .COM .NET .TV .CC .WS .SE .PL .US .CAT .FR
 		.BE .MOBI .INFO .ORG .AT .LU .BIZ .NAME .NU .UK .AU .AERO .ASIA .COOP
 		IENUMAT .DE .CH .LI .HN .SC .VC .AG .BZ .LC .MN .ME .CZ .TRAVEL .PT
-                .NO .BR .PRO CoCCA CentralNic IM SI
+                .NO .BR .PRO CoCCA CentralNic .IM .SI .CO.CZ .IT AdamsNames .AU .NL
 - a Net::DRI::DRD::AFNIC covering AFNIC registry for .FR
-     (only domain_check through web services and all operations by email)
+     (only domain_check through web services and all operations by email or EPP)
 - Net::DRI::DRD::* modules to use registrars API for Gandi, OVH, BookMyName, OpenSRS
 - a shell (Net::DRI::Shell) providing autocompletion, logging and batch operations to be able
-  to leverage all Net::DRI power without writing any line of code 
+  to leverage all Net::DRI power without writing any line of code
   (see Net::DRI::Shell module documentation for all details)
 
 If you are a registry/registrar/reseller, we would welcome
@@ -131,7 +131,6 @@ How to use
 
 You can find examples in the eg subdirectory:
 
-vnds_rrp.pl : as registrar, to connect to Verisign systems using RRP
 afnic_ws.pl : as AFNIC member, to use AFNIC web services
 afnic_email.pl : as AFNIC member, to use the email robot
 ws_rrp.pl    : as registrar, to connect to .WS using RRP
@@ -139,7 +138,7 @@ eurid_epp.pl : as registrar, connect to EURid test systems
 cat_epp.pl   : as registrar, connect to .CAT test systems
 coop_epp.pl  : as registrar, connect to .COOP test systems
 epp_client_no.pl (+ xmlfilter.pl) : as registrar, do operations with the .NO registry
-eurid_das.pl : for anyone, to check domain availability in .EU
+das.pl       : for anyone, to check domain availability in various TLDs
 whois.pl     : for anyone, to do whois queries for some TLDs.
 iris_dchk.pl : for anyone, to do IRIS DCHK queries for some .DE domain names
 
@@ -158,7 +157,10 @@ It is recommended not to completely disable the cache, and to have a ttl of at
 least of few seconds: it will cut down the use of checks and related verifications
 done at registry, especially for complex operations.
 
-Typical use of this library would be like the following:
+Typical use of this library would be like the following
+(but please not that parts of this documentation may be outdated,
+and you should double check inside the Changes file as well as the examples
+described above and the test files):
 
 - $dri=Net::DRI->new(...) to create the global object. Save the result,
   everything will be done with methods applied on this object.
@@ -173,7 +175,7 @@ Typical use of this library would be like the following:
   a clid key whose value is the client identifier at this registry for the client connecting
   (this is needed for the various _is_mine() methods - see below)
 
-  You can attach as many registry drivers as you need to a single dri object
+  You can attach as many registry drivers as you need to a single Net::DRI object
   this would enable you to easily operate on multiple registries at the same time
   Use $dri->target('registry name') to set the current registry, the one which
   will receive all future calls.
@@ -182,7 +184,7 @@ Typical use of this library would be like the following:
   will try to find the correct registry. This will work only if you have no overlap between
   your TLDs among various registries
 
-- $dri->add_profile('profilename','profiletype',{transport params},[protocol params])
+- $dri->add_profile('profilename','profiletype',{transport params},{protocol params})
  (or add_current_profile with same parameters as in add_profile and it will also
    set the default profile to the one being created)
   to use registry driver default for profiletype (see transport_protocol_default in each DRD modules)
@@ -225,7 +227,7 @@ Typical use of this library would be like the following:
  It is an instance of Net::DRI::Protocol::ResultStatus, please see its documentation.
  Through it you can access all details about the operation that has been done, including
  raw data, using the get_data() and get_data_collection() methods (see module documentation).
- As long as you keep the object, the data is there, and will not be deleted, when data
+ As long as you keep the object, the data is there, and will not be deleted, while data
  in cache (and accessed through $dri->get_info()) will be deleted after its time to live
  has elapsed.
 
@@ -302,8 +304,7 @@ examples of use and full API coverage.
  6) we update domain to add nameservers created at step 5.
  7) if a status key exists in hash ref given, we try to change status of newly created domain name
 
- In scalar context we get back the last status (which can be the one at any step, if it does not succeed)
- of the list of all status for each step in array context.
+ You get back a ResultStatus that may contain all results chained, see this module documentation.
 
  You may use get_info with the following keys to get more information:
  - exDate : for the current expiration date (a DateTime object)
@@ -323,7 +324,7 @@ examples of use and full API coverage.
  (which can fail if some nameservers use the domain name in their FQDN,
  we should try to rename them first, it is planned for later)
 
- See domain_create() for information on what we get back.
+ See domain_create() for information on what you get back.
 
 * domain_info()
 
@@ -564,14 +565,3 @@ See corresponding domain_* methods.
 See above methods.
 
 * message_retrieve() message_delete() message_waiting() message_count() : to handle registry messages (see t/601vnds_epp.t)
-
-* all other operations
-
-For objects other than domain/contact/hosts or for other actions on domain/contact/hosts another API may be
-used.
-For example, to do action foobar on an object of type zorglub, here is what to do:
-my $ro=$dri->remote_object('zorglub');
-my $rc=$ro->foobar(...specific parameters...);
-
-Please see the test files for more examples.
-

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, DAS Protocol (.BE & .EU)
 ##
-## Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,14 +18,14 @@
 package Net::DRI::Protocol::DAS;
 
 use strict;
+use warnings;
 
 use base qw(Net::DRI::Protocol);
 
 use Net::DRI::Util;
-use Net::DRI::Exception;
 use Net::DRI::Protocol::DAS::Message;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -55,7 +55,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -71,27 +71,30 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my ($c,$drd,$version,$extrah)=@_;
+ my ($c,$drd,$rp)=@_;
  my $self=$c->SUPER::new();
  $self->name('DAS');
- $version=Net::DRI::Util::check_equal($version,['1.0'],'1.0');
+ my $version=Net::DRI::Util::check_equal($rp->{version},['1.0'],'1.0');
  $self->version($version);
-
- my @tlds=$drd->tlds();
- Net::DRI::Exception::usererr_invalid_parameters('DAS can not be used for registry handling multiple TLDs: '.join(',',@tlds)) unless @tlds==1;
- $self->default_parameters({ tld => $tlds[0] });
+ $self->default_parameters({ tld => (exists $rp->{no_tld} && $rp->{no_tld})? ($drd->tlds())[0] : undef });
  $self->factories('message',sub { return Net::DRI::Protocol::DAS::Message->new(@_)->version($version); });
- $self->_load($extrah);
+ $self->_load($rp);
  return $self;
 }
 
 sub _load
 {
- my ($self,$extrah)=@_;
+ my ($self,$rp)=@_;
  $self->SUPER::_load('Net::DRI::Protocol::DAS::Domain');
 }
 
 sub tld { return shift->{default_parameters}->{tld}; }
 
-############################################################################################
+sub transport_default
+{
+ my ($self)=@_;
+ return (protocol_connection => 'Net::DRI::Protocol::DAS::Connection', protocol_version => 1);
+}
+
+####################################################################################################
 1;

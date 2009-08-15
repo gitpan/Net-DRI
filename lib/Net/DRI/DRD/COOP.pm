@@ -18,13 +18,14 @@
 package Net::DRI::DRD::COOP;
 
 use strict;
+use warnings;
+
 use base qw/Net::DRI::DRD/;
 
-use Net::DRI::DRD::ICANN;
 use Net::DRI::Exception;
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -82,36 +83,28 @@ sub periods  { return map { DateTime::Duration->new(years => $_) } (1..10); }
 sub name     { return 'COOP'; }
 sub tlds     { return ('coop'); }
 sub object_types { return ('domain','contact','ns'); }
-
-sub transport_protocol_compatible
-{
- my ($self,$to,$po)=@_;
- my $pn=$po->name();
- my $tn=$to->name();
-
- return 1 if (($pn eq 'EPP') && ($tn eq 'socket_inet'));
- return;
-}
+sub profile_types { return qw/epp/; }
 
 sub transport_protocol_default
 {
- my ($drd,$ndr,$type,$ta,$pa)=@_;
- $type='epp' if (!defined($type) || ref($type));
- if ($type eq 'epp')
+ my ($self,$type)=@_;
+
+ return ('Net::DRI::Transport::Socket',{remote_host=>'217.10.159.121'},'Net::DRI::Protocol::EPP::Extensions::COOP',{}) if $type eq 'epp'; ## .COOP test server
+ return;
+}
+
+## TODO: these SSL checks should probably be done in other DRD classes too !
+sub transport_protocol_init
+{
+ my ($self,$type,$tc,$tp,$pc,$pp,$test)=@_;
+
+ if ($type eq 'epp' && !$test)
  {
-  return ('Net::DRI::Transport::Socket','Net::DRI::Protocol::EPP::Extensions::COOP')  unless (defined($ta) && defined($pa));
-  my %ta=( %Net::DRI::DRD::PROTOCOL_DEFAULT_EPP,
-           remote_host => '217.10.159.121', ## .COOP tests server
-          (ref($ta) eq 'ARRAY')? %{$ta->[0]} : %$ta,
-         );
-  my @pa=(ref($pa) eq 'ARRAY' && @$pa)? @$pa : ('1.0');
-  if (ref($ta) ne 'ARRAY' || keys(%{$ta->[0]})) ## temporary fix, see comments in Registry::add_current_profile
-  {
-   my @n=grep { ! exists($ta{$_}) || ! defined($ta{$_}) || ! $ta{$_}} qw/ssl_key_file ssl_cert_file ssl_ca_file/;
-   Net::DRI::Exception::usererr_insufficient_parameters('these parameters must be defined: '.join(' ',@n)) if @n;
-  }
-  return ('Net::DRI::Transport::Socket',[\%ta],'Net::DRI::Protocol::EPP::Extensions::COOP',\@pa);
+  my @n=grep { ! exists($tp->{$_}) || ! defined($tp->{$_}) || ! $tp->{$_}} qw/ssl_key_file ssl_cert_file ssl_ca_file/;
+  Net::DRI::Exception::usererr_insufficient_parameters('These transport parameters must be defined: '.join(' ',@n)) if @n;
  }
+
+ return;
 }
 
 ####################################################################################################

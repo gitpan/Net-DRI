@@ -17,12 +17,14 @@
 
 package Net::DRI::Transport::Dummy;
 
-use base qw(Net::DRI::Transport);
 use strict;
+use warnings;
+
+use base qw(Net::DRI::Transport);
 
 use Net::DRI::Data::Raw;
 
-our $VERSION=do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -65,12 +67,10 @@ See the LICENSE file that comes with this distribution for more details.
 =cut
 
 ####################################################################################################
+
 sub new
 {
- my $class=shift;
- my $ctx=shift;
- my $rh=shift;
-
+ my ($class,$ctx,$rh)=@_;
  my $self=$class->SUPER::new($ctx,$rh); ## We are now officially a Net::DRI::Transport instance
  $self->has_state(0);
  $self->is_sync(1);
@@ -83,8 +83,6 @@ sub new
  bless($self,$class); ## rebless in my class
  return $self;
 }
-
-sub is_compatible_with_protocol { return 1; }
 
 sub send
 {
@@ -116,13 +114,10 @@ sub receive
 sub _got_ok
 {
  my ($self,$count)=@_;
-
  my $m="200 OK\r\n.\r\n";
- 
  print STDOUT "<<<<<<<<<<<<<<<<<< (Net::DRI::Transport::Dummy) (count=$count)\n";
  print STDOUT $m;
  print STDOUT "<<<<<<<<<<<<<<<<<<\n\n";
-
  return Net::DRI::Data::Raw->new_from_string($m);
 }
 

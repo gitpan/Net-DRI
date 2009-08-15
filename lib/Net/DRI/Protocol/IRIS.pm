@@ -1,6 +1,6 @@
 ## Domain Registry Interface, IRIS Protocols (RFC 3981,3982,3983,4414,4698,4991,4992,4993,5144)
 ##
-## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,6 +18,7 @@
 package Net::DRI::Protocol::IRIS;
 
 use strict;
+use warnings;
 
 use base qw(Net::DRI::Protocol);
 
@@ -25,7 +26,7 @@ use Net::DRI::Util;
 use Net::DRI::Protocol::IRIS::Message;
 use Net::DRI::Protocol::IRIS::DCHK::Status;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -57,7 +58,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -73,9 +74,9 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $c=shift;
- my ($drd,$version,$authority)=@_;
-
+ my ($c,$drd,$rp)=@_;
+ my $version=$rp->{version};
+ my $authority=$rp->{authority};
  my $self=$c->SUPER::new();
  $self->name('IRIS');
  $version=Net::DRI::Util::check_equal($version,['1.0'],'1.0');
@@ -86,15 +87,21 @@ sub new
  $self->factories('message',sub { my $m=Net::DRI::Protocol::IRIS::Message->new(@_); $m->ns($self->ns()); $m->version($version); $m->authority($authority); return $m; });
  $self->factories('status',sub { return Net::DRI::Protocol::IRIS::DCHK::Status->new(); });
  $self->_load('Net::DRI::Protocol::IRIS::DCHK::Domain');
-
  return $self;
 }
 
 sub ns
 {
  my ($self,$add)=@_;
- $self->{ns}={ ref($self->{ns})? %{$self->{ns}} : (), %$add } if (defined($add) && ref($add) eq 'HASH');
+ $self->{ns}={ ref $self->{ns} ? %{$self->{ns}} : (), %$add } if (defined $add && ref $add eq 'HASH');
  return $self->{ns};
+}
+
+## This will need to be slightly re-engineered once we do other things than DCHK in IRIS
+sub transport_default
+{
+ my ($self)=@_;
+ return (protocol_connection => 'Net::DRI::Protocol::IRIS::LWZ', protocol_version => '1.0');
 }
 
 ####################################################################################################

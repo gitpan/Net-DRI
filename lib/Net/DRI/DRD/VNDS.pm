@@ -1,4 +1,4 @@
-## Domain Registry Interface, ``Verisign Naming and Directory Services'' Registry Driver for .COM & .NET
+## Domain Registry Interface, "Verisign Naming and Directory Services" Registry Driver for .COM .NET .CC .TV .BZ .JOBS
 ##
 ## Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
@@ -18,19 +18,20 @@
 package Net::DRI::DRD::VNDS;
 
 use strict;
+use warnings;
+
 use base qw/Net::DRI::DRD/;
 
-use Net::DRI::DRD::ICANN;
 use DateTime::Duration;
 use DateTime;
 
-our $VERSION=do { my @r=(q$Revision: 1.18 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.19 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::DRD::VNDS - Verisign .COM/.NET Registry driver for Net::DRI
+Net::DRI::DRD::VNDS - Verisign .COM/.NET/.CC/.TV/.BZ/.JOBS Registry driver for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -72,25 +73,15 @@ sub periods      { return map { DateTime::Duration->new(years => $_) } (1..10); 
 sub name         { return 'VNDS'; }
 sub tlds         { return ('com','net','cc','tv','bz','jobs'); } ## If this changes, VeriSign/NameStore will need to be updated also
 sub object_types { return ('domain','ns'); }
-
-sub transport_protocol_compatible 
-{
- my ($self,$to,$po)=@_;
- my $pn=$po->name();
- my $pv=$po->version();
- my $tn=$to->name();
-
- return 1 if (($pn eq 'EPP') && ($tn eq 'socket_inet'));
- return 1 if (($pn eq 'Whois') && ($tn eq 'socket_inet'));
- return;
-}
+sub profile_types { return qw/epp whois/; }
 
 sub transport_protocol_default
 {
- my ($drd,$ndr,$type,$ta,$pa)=@_;
- $type='epp' if (!defined($type) || ref($type));
- return Net::DRI::DRD::_transport_protocol_default_epp('Net::DRI::Protocol::EPP::Extensions::VeriSign',$ta,$pa) if ($type eq 'epp');
- return ('Net::DRI::Transport::Socket',[{%Net::DRI::DRD::PROTOCOL_DEFAULT_WHOIS,remote_host=>'whois.verisign-grs.com'}],'Net::DRI::Protocol::Whois',[]) if (lc($type) eq 'whois');
+ my ($self,$type)=@_;
+
+ return ('Net::DRI::Transport::Socket',{},'Net::DRI::Protocol::EPP::Extensions::VeriSign',{})                  if $type eq 'epp';
+ return ('Net::DRI::Transport::Socket',{remote_host=>'whois.verisign-grs.com'},'Net::DRI::Protocol::Whois',{}) if $type eq 'whois';
+ return;
 }
 
 ####################################################################################################

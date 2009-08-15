@@ -1,7 +1,7 @@
 ## Domain Registry Interface, .UK EPP extensions
 ## As seen on http://www.nominet.org.uk/registrars/systems/epp/ and http://www.nominet.org.uk/digitalAssets/16844_EPP_Mapping.pdf
 ##
-## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -19,12 +19,13 @@
 package Net::DRI::Protocol::EPP::Extensions::Nominet;
 
 use strict;
+use warnings;
 
 use base qw/Net::DRI::Protocol::EPP/;
 
 use Net::DRI::Data::Contact::Nominet;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -54,7 +55,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -68,18 +69,14 @@ See the LICENSE file that comes with this distribution for more details.
 
 ####################################################################################################
 
-sub new
-{
- my ($c,$drd,$version,$extrah)=@_;
- my %e=map { $_ => 1 } (defined($extrah)? (ref($extrah)? @$extrah : ($extrah)) : ());
+our @NS=qw/account-1.1 domain-1.2 contact-1.1 ns-1.1 notifications-1.2/;
 
- my @c=map { 'Net::DRI::Protocol::EPP::Extensions::Nominet::'.$_ } qw/Domain Contact Host Account Notifications/;
- push @c,'Session';
- push @c,'RegistryMessage';
- my $self=$c->SUPER::new($drd,$version,[keys(%e)],\@c);
- foreach my $w (qw/domain contact ns account notifications/)
+sub setup
+{
+ my ($self,$rp)=@_;
+ foreach my $ns (@NS)
  {
-  $self->ns({$w => ['http://www.nominet.org.uk/epp/xml/nom-'.$w.'-1.1','nom-'.$w.'-1.1.xsd'] });
+  $self->ns({ (split(/-/,$ns))[0] => ['http://www.nominet.org.uk/epp/xml/nom-'.$ns,'nom-'.$ns.'.xsd'] });
  }
 
  foreach my $o (qw/ns contact first-bill recur-bill auto-bill next-bill notes/) { $self->capabilities('domain_update',$o,['set']); }
@@ -89,10 +86,34 @@ sub new
  $self->capabilities('account_update','contact',['set']);
  $self->factories('contact',sub { return Net::DRI::Data::Contact::Nominet->new(); });
  $self->default_parameters({domain_create => { auth => { pw => '' } } }); ## domain:authInfo is not used by Nominet
- return $self;
+ return;
 }
 
 sub core_contact_types { return ('admin','billing'); } ## not really used
+sub core_modules
+{
+ my ($self,$rp)=@_;
+ my @c=map { 'Net::DRI::Protocol::EPP::Extensions::Nominet::'.$_ } qw/Domain Contact Host Account Notifications/;
+ push @c,'Net::DRI::Protocol::EPP::Core::Session';
+ push @c,'Net::DRI::Protocol::EPP::Core::RegistryMessage';
+ return @c;
+}
+
+sub transport_default
+{
+ my ($self)=@_;
+ my @p=$self->SUPER::transport_default();
+ push @p,(protocol_data => { login_service_filter => \&set_objuri });
+ return @p;
+}
+
+## The registry gives back a mix of 1.0 1.1 1.2 and 1.3 versions of its namespaces and what not, see http://www.nominet.org.uk/registrars/systems/nominetepp/Namespace+URIs/
+## We previously kept only the highest seen, which does not seem a good idea
+## Now we explicitely set them from what we support; this may break compatibility with registry as soon as they introduce a new version
+sub set_objuri
+{
+ return map { ['objURI','http://www.nominet.org.uk/epp/xml/nom-'.$_] } @NS;
+}
 
 ####################################################################################################
 1;

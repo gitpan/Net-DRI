@@ -18,6 +18,8 @@
 package Net::DRI::DRD::Nominet;
 
 use strict;
+use warnings;
+
 use base qw/Net::DRI::DRD/;
 
 use Net::DRI::Util;
@@ -25,7 +27,7 @@ use Net::DRI::Exception;
 
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 ## No status at all with Nominet
 ## Only domain:check is available
@@ -90,49 +92,24 @@ sub periods  { return map { DateTime::Duration->new(years => $_) } (2); }
 sub name     { return 'Nominet'; }
 sub tlds     { return qw/co.uk ltd.uk me.uk net.uk org.uk plc.uk sch.uk/; } ## See http://www.nominet.org.uk/registrants/aboutdomainnames/rules/
 sub object_types { return ('domain','contact','ns','account'); }
-
-sub transport_protocol_compatible
-{
- my ($self,$to,$po)=@_;
- my $pn=$po->name();
- my $tn=$to->name();
-
- return 1 if (($pn eq 'EPP') && ($tn eq 'socket_inet'));
-## return 1 if (($pn eq 'DAS') && ($tn eq 'socket_inet'));
- return;
-}
+sub profile_types { return qw/epp/; }
 
 sub transport_protocol_default
 {
- my ($drd,$ndr,$type,$ta,$pa)=@_;
- $type='epp' if (!defined($type) || ref($type));
- if ($type eq 'epp')
- {
-  return ('Net::DRI::Transport::Socket','Net::DRI::Protocol::EPP::Extensions::Nominet') unless (defined($ta) && defined($pa));
-  my %ta=(	%Net::DRI::DRD::PROTOCOL_DEFAULT_EPP,
-		remote_host => 'epp.nominet.org.uk',
-                protocol_data => { login_service_filter => \&_filter_objuri },
-		(ref($ta) eq 'ARRAY')? %{$ta->[0]} : %$ta,
-	);
-  my @pa=(ref($pa) eq 'ARRAY' && @$pa)? @$pa : ('1.0');
-  $ta{client_login}='#'.$ta{client_login} if (defined($ta{client_login}) && length($ta{client_login})==2); # as seen on http://www.nominet.org.uk/registrars/systems/epp/login/
-  return ('Net::DRI::Transport::Socket',[\%ta],'Net::DRI::Protocol::EPP::Extensions::Nominet',\@pa);
- }
-## return ('Net::DRI::Transport::Socket',[{%Net::DRI::DRD::PROTOCOL_DEFAULT_DAS,remote_host=>'dac.nic.uk',remote_port=>2043,close_after=>0}],'Net::DRI::Protocol::DAS::Nominet',[]) if (lc($type) eq 'das');
+ my ($self,$type)=@_;
+
+ return ('Net::DRI::Transport::Socket',{remote_host => 'epp.nominet.org.uk'},'Net::DRI::Protocol::EPP::Extensions::Nominet',{}) if ($type eq 'epp' || $type eq 'epp_nominet');
+ return ('Net::DRI::Transport::Socket',{remote_host => 'epp.nominet.org.uk'},'Net::DRI::Protocol::EPP',{}) if ($type eq 'epp_standard');
+ return;
 }
 
-## The registry gives back both -1.0 and -1.1 version of its namespaces, we keep only the latest
-## See http://www.nominet.org.uk/registrars/systems/epp/Namespace+URIs/
-sub _filter_objuri
+sub transport_protocol_init
 {
- my @a;
- foreach my $a (@_)
- {
-  my ($t,$v)=@$a;
-  next if ($t eq 'objURI' && $v=~m/nom-\S+-1\.0$/);
-  push @a,$a;
- }
- return @a;
+ my ($self,$type,$tc,$tp,$pc,$pp,$test)=@_;
+
+ ## As seen on http://www.nominet.org.uk/registrars/systems/nominetepp/login/
+ $tp->{client_login}='#'.$tp->{client_login} if ($type eq 'epp' && defined $tp->{client_login} && length $tp->{client_login}==2);
+ return;
 }
 
 ####################################################################################################
@@ -173,7 +150,7 @@ sub host_update
  my $fp=$ndr->protocol->nameversion();
 
  my $name=Net::DRI::Util::isa_hosts($dh)? $dh->get_details(1) : $dh;
- $self->err_invalid_host_name($name) if $self->verify_name_host($name);
+ $self->enforce_host_name_constraints($ndr,$name);
  Net::DRI::Util::check_isa($tochange,'Net::DRI::Data::Changes');
 
  foreach my $t ($tochange->types())
@@ -187,7 +164,7 @@ sub host_update
            'name'   => [ $tochange->all_defined('name') ],
           );
  foreach (@{$what{ip}})     { Net::DRI::Util::check_isa($_,'Net::DRI::Data::Hosts'); }
- foreach (@{$what{name}})   { $self->err_invalid_host_name($_) if $self->verify_name_host($_); }
+ foreach (@{$what{name}})   { $self->enforce_host_name_constraints($ndr,$_); }
 
  foreach my $w (keys(%what))
  {
@@ -233,6 +210,21 @@ sub account_merge
 {
  my ($self,$ndr,$c,$cs)=@_;
  return $ndr->process('account','merge',[$c,$cs]);
+}
+
+sub domain_unrenew
+{
+ my ($self,$ndr,$domain,$rd)=@_;
+ $self->enforce_domain_name_constraints($ndr,$domain,'unrenew');
+ return $ndr->process('domain','unrenew',[$domain,$rd]);
+}
+
+sub account_list_domains
+{
+ my ($self,$ndr,$rd,$rh)=@_;
+ my $rc=$ndr->try_restore_from_cache('account','domains','list');
+ if (! defined $rc) { $rc=$ndr->process('account','list_domains',[$rd,$rh]); }
+ return $rc;
 }
 
 ####################################################################################################

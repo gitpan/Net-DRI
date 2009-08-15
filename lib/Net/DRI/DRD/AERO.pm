@@ -18,10 +18,14 @@
 package Net::DRI::DRD::AERO;
 
 use strict;
-use base qw/Net::DRI::DRD/;
-use DateTime::Duration;
+use warnings;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+use base qw/Net::DRI::DRD/;
+
+use DateTime::Duration;
+use Net::DRI::Data::Contact::AERO;
+
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -79,25 +83,21 @@ sub periods  { return map { DateTime::Duration->new(years => $_) } (1..10); }
 sub name     { return 'AERO'; }
 sub tlds     { return ('aero'); }
 sub object_types { return ('domain','contact','ns'); }
-
-sub transport_protocol_compatible
-{
- my ($self,$to,$po)=@_;
- my $pn=$po->name();
- my $tn=$to->name();
-
- return 1 if (($pn eq 'EPP') && ($tn eq 'socket_inet'));
- return 1 if (($pn eq 'Whois') && ($tn eq 'socket_inet'));
- return;
-}
+sub profile_types { return qw/epp whois/; }
 
 sub transport_protocol_default
 {
- my ($drd,$ndr,$type,$ta,$pa)=@_;
- $type='epp' if (!defined($type) || ref($type));
- return Net::DRI::DRD::_transport_protocol_default_epp('Net::DRI::Protocol::EPP::Extensions::AERO',$ta,$pa) if ($type eq 'epp');
- return ('Net::DRI::Transport::Socket',[{%Net::DRI::DRD::PROTOCOL_DEFAULT_WHOIS,remote_host=>'whois.aero'}],'Net::DRI::Protocol::Whois',[]) if (lc($type) eq 'whois');
+ my ($self,$type)=@_;
 
+ return ('Net::DRI::Transport::Socket',{},'Net::DRI::Protocol::EPP::Extensions::AERO',{})          if $type eq 'epp';
+ return ('Net::DRI::Transport::Socket',{remote_host=>'whois.aero'},'Net::DRI::Protocol::Whois',{}) if $type eq 'whois';
+ return;
+}
+
+sub set_factories
+{
+ my ($self,$po)=@_;
+ $po->factories('contact',sub { return Net::DRI::Data::Contact::AERO->new(@_); });
 }
 
 ####################################################################################################

@@ -24,13 +24,13 @@ use Net::DRI::Util;
 use Net::DRI::Data::Raw;
 use Net::DRI::Protocol::ResultStatus;
 
-our $VERSION=do { my @r=(q$Revision: 1.16 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.17 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Protocol::EPP::Connection - EPP over TCP (and TLS) Connection Handling (RFC4934) for Net::DRI
+Net::DRI::Protocol::EPP::Connection - EPP over TCP/TLS Connection Handling (RFC4934) for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -119,8 +119,8 @@ sub read_data
  my ($class,$to,$sock)=@_;
 
  my $c;
- $sock->sysread($c,4); ## first 4 bytes are the packed length
- die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED_CLOSING','Unable to read EPP 4 bytes length (connection closed by registry ?)','en')) unless $c;
+ my $rl=$sock->sysread($c,4); ## first 4 bytes are the packed length
+ die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED_CLOSING','Unable to read EPP 4 bytes length (connection closed by registry '.$to->transport_data('remote_uri').' ?): '.($! || 'no error given'),'en')) unless (defined $rl && $rl==4);
  my $length=unpack('N',$c)-4;
  my $m='';
  while ($length > 0)
@@ -202,6 +202,13 @@ sub find_code
  return () unless (($code)=($a=~m!<response><result code=["'](\d+)["']>!));
  return () unless (($lang,$msg)=($a=~m!<msg(?: lang=["'](\S+)["'])?>(.+)</msg>!));
  return (0+$code,$msg,$lang || 'en');
+}
+
+## TODO: implement defaults from 4934bis
+sub transport_default
+{
+ my ($self,$tname)=@_;
+ return (defer => 0, socktype => 'ssl', ssl_cipher_list => 'TLSv1', remote_port => 700);
 }
 
 ####################################################################################################

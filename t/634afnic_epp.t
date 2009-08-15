@@ -3,7 +3,7 @@
 use Net::DRI;
 use Net::DRI::Data::Raw;
 use DateTime::Duration;
-use Test::More tests => 80;
+use Test::More tests => 101;
 
 eval { no warnings; require Test::LongString; Test::LongString->import(max => 100); $Test::LongString::Context=50; };
 *{'main::is_string'}=\&main::is if $@;
@@ -20,7 +20,7 @@ sub r { my ($c,$m)=@_;  return '<result code="'.($c || 1000).'"><msg>'.($m || 'C
 my $dri=Net::DRI::TrapExceptions->new(10);
 $dri->{trid_factory}=sub { return 'ABC-12345'; };
 $dri->add_registry('AFNIC');
-$dri->target('AFNIC')->add_current_test_profile('p1','Dummy',{f_send=>\&mysend,f_recv=>\&myrecv},'Net::DRI::Protocol::EPP::Extensions::AFNIC');
+$dri->target('AFNIC')->add_current_profile('p1','test=Net::DRI::Protocol::EPP::Extensions::AFNIC',{f_send=>\&mysend,f_recv=>\&myrecv});
 
 my ($rc,$cs,$s,$toc);
 
@@ -109,7 +109,7 @@ $cs->set($dri->local_object('contact')->srid('AI1'),'tech');
 $cs->add($dri->local_object('contact')->srid('PR1249'),'tech');
 $R2=$E1.'<response>'.r().'<extension><frnic:ext xmlns:frnic="http://www.afnic.fr/xml/epp/frnic-1.0"><frnic:resData><frnic:recData><frnic:domain><frnic:name>ndd-de-test-0001.fr</frnic:name><frnic:reID>BEdemandeurID</frnic:reID><frnic:reDate>2009-01-01T00:00:00.0Z</frnic:reDate><frnic:reHldID>PR1249</frnic:reHldID><frnic:acID>BEactuelID</frnic:acID><frnic:acHldID>MM4567</frnic:acHldID></frnic:domain></frnic:recData></frnic:resData></frnic:ext></extension>'.$TRID.'</response>'.$E2;
 $rc=$dri->domain_recover_start('ndd-de-test-0001.fr',{contact=>$cs,auth=>{pw=>'NDCR20080229T173000.123456789'}});
-is_string($R1,$E1.'<extension><frnic:ext xmlns:frnic="http://www.afnic.fr/xml/epp/frnic-1.0" xsi:schemaLocation="http://www.afnic.fr/xml/epp/frnic-1.0 frnic-1.0.xsd"><frnic:command><frnic:recover op="request"><frnic:domain><frnic:name>ndd-de-test-0001.fr</frnic:name><frnic:authInfo><frnic:pw>NDCR20080229T173000.123456789</frnic:pw></frnic:authInfo><frnic:registrant>PR1249</frnic:registrant><frnic:contact type="admin">VL</frnic:contact><frnic:contact type="tech">AI1</frnic:contact><frnic:contact type="tech">PR1249</frnic:contact></frnic:domain></frnic:recover><frnic:clTRID>ABC-12345</frnic:clTRID></frnic:command></frnic:ext></extension>'.$E2,'domain_recover_start build');
+is_string($R1,$E1.'<extension><frnic:ext xmlns:frnic="http://www.afnic.fr/xml/epp/frnic-1.0" xsi:schemaLocation="http://www.afnic.fr/xml/epp/frnic-1.0 frnic-1.0.xsd"><frnic:command><frnic:recover op="request"><frnic:domain><frnic:name>ndd-de-test-0001.fr</frnic:name><frnic:authInfo><domain:pw xmlns:domain="urn:ietf:params:xml:ns:domain-1.0">NDCR20080229T173000.123456789</domain:pw></frnic:authInfo><frnic:registrant>PR1249</frnic:registrant><frnic:contact type="admin">VL</frnic:contact><frnic:contact type="tech">AI1</frnic:contact><frnic:contact type="tech">PR1249</frnic:contact></frnic:domain></frnic:recover><frnic:clTRID>ABC-12345</frnic:clTRID></frnic:command></frnic:ext></extension>'.$E2,'domain_recover_start build');
 is($dri->get_info('reID'),'BEdemandeurID','domain_recover_start get_info(reID)');
 is(''.$dri->get_info('reDate'),'2009-01-01T00:00:00','domain_recover_start get_info(reDate)');
 is($dri->get_info('reHldID'),'PR1249','domain_recover_start get_info(reHldID)');
@@ -155,7 +155,7 @@ is_deeply([$s->list_status()],[qw/serverRecoverProhibited serverTradeProhibited/
 ## corrected misplacement of contact:id
 
 $R2=$E1.'<response>'.r().'<resData><contact:creData xmlns:contact="urn:ietf:params:xml:ns:contact-1.0"><contact:id>VL99999</contact:id><contact:crDate>2008-11-20T00:00:00.0Z</contact:crDate></contact:creData></resData><extension><frnic:ext xmlns:frnic="http://www.afnic.fr/xml/epp/frnic-1.0"><frnic:resData><frnic:creData><frnic:nhStatus new="1"/><frnic:idStatus>no</frnic:idStatus></frnic:creData></frnic:resData></frnic:ext></extension>'.$TRID.'</response>'.$E2;
-$co=$dri->local_object('contact')->srid('XXXX0000');
+$co=$dri->local_object('contact');
 $co->name('Levigneron');
 $co->firstname('Vincent');
 $co->org('AFNIC');
@@ -170,7 +170,7 @@ $co->auth({pw=>'UnusedPassword'});
 $co->disclose('N');
 $co->birth({date=>'1968-07-20',place=>'76000, Rouen'});
 $rc=$dri->contact_create($co);
-is_string($R1,$E1.'<command><create><contact:create xmlns:contact="urn:ietf:params:xml:ns:contact-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:contact-1.0 contact-1.0.xsd"><contact:id>XXXX0000</contact:id><contact:postalInfo type="loc"><contact:name>Levigneron</contact:name><contact:org>AFNIC</contact:org><contact:addr><contact:street>immeuble international</contact:street><contact:street>2, rue Stephenson</contact:street><contact:street>Montigny le Bretonneux</contact:street><contact:city>Saint Quentin en Yvelines Cedex</contact:city><contact:pc>78181</contact:pc><contact:cc>FR</contact:cc></contact:addr></contact:postalInfo><contact:voice>+33.0139308333</contact:voice><contact:fax>+33.0139308301</contact:fax><contact:email>vincent.levigneron@nic.fr</contact:email><contact:authInfo><contact:pw>UnusedPassword</contact:pw></contact:authInfo></contact:create></create><extension><frnic:ext xmlns:frnic="http://www.afnic.fr/xml/epp/frnic-1.0" xsi:schemaLocation="http://www.afnic.fr/xml/epp/frnic-1.0 frnic-1.0.xsd"><frnic:create><frnic:contact><frnic:list>restrictedPublication</frnic:list><frnic:individualInfos><frnic:birthDate>1968-07-20</frnic:birthDate><frnic:birthCity>Rouen</frnic:birthCity><frnic:birthPc>76000</frnic:birthPc><frnic:birthCc>FR</frnic:birthCc></frnic:individualInfos><frnic:firstName>Vincent</frnic:firstName></frnic:contact></frnic:create></frnic:ext></extension><clTRID>ABC-12345</clTRID></command>'.$E2,'contact_create PP build');
+is_string($R1,$E1.'<command><create><contact:create xmlns:contact="urn:ietf:params:xml:ns:contact-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:contact-1.0 contact-1.0.xsd"><contact:id>AUTO</contact:id><contact:postalInfo type="loc"><contact:name>Levigneron</contact:name><contact:org>AFNIC</contact:org><contact:addr><contact:street>immeuble international</contact:street><contact:street>2, rue Stephenson</contact:street><contact:street>Montigny le Bretonneux</contact:street><contact:city>Saint Quentin en Yvelines Cedex</contact:city><contact:pc>78181</contact:pc><contact:cc>FR</contact:cc></contact:addr></contact:postalInfo><contact:voice>+33.0139308333</contact:voice><contact:fax>+33.0139308301</contact:fax><contact:email>vincent.levigneron@nic.fr</contact:email><contact:authInfo><contact:pw>UnusedPassword</contact:pw></contact:authInfo></contact:create></create><extension><frnic:ext xmlns:frnic="http://www.afnic.fr/xml/epp/frnic-1.0" xsi:schemaLocation="http://www.afnic.fr/xml/epp/frnic-1.0 frnic-1.0.xsd"><frnic:create><frnic:contact><frnic:list>restrictedPublication</frnic:list><frnic:individualInfos><frnic:birthDate>1968-07-20</frnic:birthDate><frnic:birthCity>Rouen</frnic:birthCity><frnic:birthPc>76000</frnic:birthPc><frnic:birthCc>FR</frnic:birthCc></frnic:individualInfos><frnic:firstName>Vincent</frnic:firstName></frnic:contact></frnic:create></frnic:ext></extension><clTRID>ABC-12345</clTRID></command>'.$E2,'contact_create PP build');
 is($rc->is_success(),1,'contact_create is_success');
 is($dri->get_info('id'),'VL99999','contact_create get_info(id)');
 is($dri->get_info('action','contact','VL99999'),'create','contact_create get_info(action)');
@@ -179,7 +179,7 @@ is($dri->get_info('new_handle','contact','VL99999'),1,'contact_create get_info(n
 is($dri->get_info('identification','contact','VL99999'),'no','contact_create get_info(identification)');
 
 $R2='';
-$co=$dri->local_object('contact')->srid('XXXX0000');
+$co=$dri->local_object('contact');
 $co->name('Service des Réclamations');
 $co->org('AFNIC Corp');
 $co->street(['immeuble international','2, rue Stephenson','Montigny le Bretonneux']);
@@ -195,7 +195,7 @@ $co->legal_id(123456789);
 $co->trademark('27YOUPLA2345678');
 $co->jo({date_declaration=>'1999-05-19',number=>5, page=>2, date_publication=>'1999-06-01'});
 $rc=$dri->contact_create($co);
-is_string($R1,$E1.'<command><create><contact:create xmlns:contact="urn:ietf:params:xml:ns:contact-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:contact-1.0 contact-1.0.xsd"><contact:id>XXXX0000</contact:id><contact:postalInfo type="loc"><contact:name>Service des Réclamations</contact:name><contact:org>AFNIC Corp</contact:org><contact:addr><contact:street>immeuble international</contact:street><contact:street>2, rue Stephenson</contact:street><contact:street>Montigny le Bretonneux</contact:street><contact:city>Saint Quentin en Yvelines Cedex</contact:city><contact:pc>78181</contact:pc><contact:cc>FR</contact:cc></contact:addr></contact:postalInfo><contact:voice>+33.0139308333</contact:voice><contact:fax>+33.0139308301</contact:fax><contact:email>vincent.levigneron@nic.fr</contact:email><contact:authInfo><contact:pw>UnusedPassword</contact:pw></contact:authInfo></contact:create></create><extension><frnic:ext xmlns:frnic="http://www.afnic.fr/xml/epp/frnic-1.0" xsi:schemaLocation="http://www.afnic.fr/xml/epp/frnic-1.0 frnic-1.0.xsd"><frnic:create><frnic:contact><frnic:legalEntityInfos><frnic:legalStatus type="company"/><frnic:siren>123456789</frnic:siren><frnic:trademark>27YOUPLA2345678</frnic:trademark><frnic:asso><frnic:decl>1999-05-19</frnic:decl><frnic:publ announce="5" page="2">1999-06-01</frnic:publ></frnic:asso></frnic:legalEntityInfos></frnic:contact></frnic:create></frnic:ext></extension><clTRID>ABC-12345</clTRID></command>'.$E2,'contact_create PM build');
+is_string($R1,$E1.'<command><create><contact:create xmlns:contact="urn:ietf:params:xml:ns:contact-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:contact-1.0 contact-1.0.xsd"><contact:id>AUTO</contact:id><contact:postalInfo type="loc"><contact:name>Service des Réclamations</contact:name><contact:org>AFNIC Corp</contact:org><contact:addr><contact:street>immeuble international</contact:street><contact:street>2, rue Stephenson</contact:street><contact:street>Montigny le Bretonneux</contact:street><contact:city>Saint Quentin en Yvelines Cedex</contact:city><contact:pc>78181</contact:pc><contact:cc>FR</contact:cc></contact:addr></contact:postalInfo><contact:voice>+33.0139308333</contact:voice><contact:fax>+33.0139308301</contact:fax><contact:email>vincent.levigneron@nic.fr</contact:email><contact:authInfo><contact:pw>UnusedPassword</contact:pw></contact:authInfo></contact:create></create><extension><frnic:ext xmlns:frnic="http://www.afnic.fr/xml/epp/frnic-1.0" xsi:schemaLocation="http://www.afnic.fr/xml/epp/frnic-1.0 frnic-1.0.xsd"><frnic:create><frnic:contact><frnic:legalEntityInfos><frnic:legalStatus s="company"/><frnic:siren>123456789</frnic:siren><frnic:trademark>27YOUPLA2345678</frnic:trademark><frnic:asso><frnic:decl>1999-05-19</frnic:decl><frnic:publ announce="5" page="2">1999-06-01</frnic:publ></frnic:asso></frnic:legalEntityInfos></frnic:contact></frnic:create></frnic:ext></extension><clTRID>ABC-12345</clTRID></command>'.$E2,'contact_create PM build');
 
 ####################################################################################################
 ## §3.2
@@ -223,5 +223,56 @@ is($co->disclose(),'N','contact_info get_info(self) disclose'); ## means <frnic:
 my $b=$co->birth();
 is($b->{date},'1968-07-20','contact_info get_info(self) birth date');
 is($b->{place},'76000, Rouen','contact_info get_info(self) birth place');
+
+####################################################################################################
+## Identification
+
+$R2=$E1.'<response>'.r(1301,'Command completed successfully; ack to dequeue').'<msgQ count="1" id="2846"><qDate>2009-05-05T07:52:47.0Z</qDate><msg>Identification process begins.</msg></msgQ><extension><frnic:ext xmlns:frnic="http://www.afnic.fr/xml/epp/frnic-1.0"><frnic:resData><frnic:idtData><frnic:contact><frnic:id>ET1323</frnic:id><frnic:identificationProcess s="start"/><frnic:legalEntityInfos><frnic:idStatus>deprecated</frnic:idStatus><frnic:legalStatus s="company"/><frnic:siren>123456789</frnic:siren><frnic:VAT>FR1234567890</frnic:VAT><frnic:trademark>27YOUPLA2345678</frnic:trademark></frnic:legalEntityInfos></frnic:contact></frnic:idtData></frnic:resData></frnic:ext></extension>'.$TRID.'</response>'.$E2;
+$rc=$dri->message_retrieve();
+my $msgid=$rc->get_data('message','session','last_id');
+my $oid=$rc->get_data('message',$msgid,'object_id');
+is($rc->get_data('message',$msgid,'object_type'),'contact','message object_type');
+is($rc->get_data('contact',$oid,'process'),'start','contact process');
+my $c=$rc->get_data('contact',$oid,'self');
+isa_ok($c,'Net::DRI::Data::Contact::AFNIC','contact self');
+is($c->srid(),'ET1323','contact srid()');
+is($c->id_status(),'deprecated','contact id_status()');
+is($c->legal_form(),'company','contact legal_form()');
+is($c->legal_id(),'123456789','contact legal_id()');
+is($c->vat(),'FR1234567890','contact vat()');
+is($c->trademark(),'27YOUPLA2345678','contact trademark()');
+
+
+$R2=$E1.'<response>'.r(1301,'Command completed successfully; ack to dequeue').'<msgQ count="1" id="2848"><qDate>2009-05-05T07:52:49.0Z</qDate><msg>Identification process finished.</msg></msgQ><extension><frnic:ext xmlns:frnic="http://www.afnic.fr/xml/epp/frnic-1.0"><frnic:resData><frnic:idtData><frnic:contact><frnic:id>ET1323</frnic:id><frnic:identificationProcess s="finished"/><frnic:legalEntityInfos><frnic:idStatus>ok</frnic:idStatus><frnic:legalStatus s="company"/><frnic:trademark>NEW-TRADEMARK-ID</frnic:trademark></frnic:legalEntityInfos></frnic:contact></frnic:idtData></frnic:resData></frnic:ext></extension>'.$TRID.'</response>'.$E2;
+$rc=$dri->message_retrieve();
+$msgid=$rc->get_data('message','session','last_id');
+$oid=$rc->get_data('message',$msgid,'object_id');
+is($rc->get_data('contact',$oid,'process'),'finished','contact process');
+
+$R2=$E1.'<response>'.r(1301,'Command completed successfully; ack to dequeue').'<msgQ count="1" id="2847"><qDate>2009-05-05T07:52:48.0Z</qDate><msg>Identification process in progress.</msg></msgQ><extension><frnic:ext xmlns:frnic="http://www.afnic.fr/xml/epp/frnic-1.0"><frnic:resData><frnic:idtData><frnic:contact><frnic:id>ET1323</frnic:id><frnic:identificationProcess s="pending"/><frnic:legalEntityInfos><frnic:idStatus>problem</frnic:idStatus><frnic:legalStatus s="company"/><frnic:siren>123456789</frnic:siren><frnic:VAT>FR1234567890</frnic:VAT><frnic:trademark>27YOUPLA2345678</frnic:trademark></frnic:legalEntityInfos><frnic:idtReason>VAT number not found in public bases</frnic:idtReason><frnic:idtReason>siren number not found in public bases</frnic:idtReason><frnic:idtReason>trademark ID not found in public bases</frnic:idtReason></frnic:contact></frnic:idtData></frnic:resData></frnic:ext></extension>'.$TRID.'</response>'.$E2;
+$rc=$dri->message_retrieve();
+$msgid=$rc->get_data('message','session','last_id');
+$oid=$rc->get_data('message',$msgid,'object_id');
+is($rc->get_data('contact',$oid,'process'),'pending','contact process');
+$c=$rc->get_data('contact',$oid,'self');
+is($c->id_status(),'problem','contact id_status()');
+is_deeply($rc->get_data('contact',$oid,'reasons'),['VAT number not found in public bases','siren number not found in public bases','trademark ID not found in public bases'],'contact reasons');
+
+
+$R2=$E1.'<response>'.r(1301,'Command completed successfully; ack to dequeue').'<msgQ count="1" id="2849"><qDate>2009-05-05T07:52:50.0Z</qDate><msg>Holder identification prevents DNS announcement.</msg></msgQ><extension><frnic:ext xmlns:frnic="http://www.afnic.fr/xml/epp/frnic-1.0"><frnic:resData><frnic:idtData><frnic:domain><frnic:name>nic.fr</frnic:name><frnic:status s="serverHold"/><frnic:registrant>XXX1234</frnic:registrant></frnic:domain></frnic:idtData></frnic:resData></frnic:ext></extension>'.$TRID.'</response>'.$E2;
+$rc=$dri->message_retrieve();
+$msgid=$rc->get_data('message','session','last_id');
+is($rc->get_data('message',$msgid,'object_type'),'domain','message object_type');
+$oid=$rc->get_data('message',$msgid,'object_id');
+is($oid,'nic.fr','domain name');
+$s=$rc->get_data('domain',$oid,'status');
+isa_ok($s,'Net::DRI::Protocol::EPP::Core::Status','domain status');
+is_deeply([$s->list_status()],['serverHold'],'domain status list_status()');
+$cs=$rc->get_data('domain',$oid,'contact');
+isa_ok($cs,'Net::DRI::Data::ContactSet','domain contact');
+is_deeply([$cs->types()],['registrant'],'domain contact types');
+$c=$cs->get('registrant');
+isa_ok($c,'Net::DRI::Data::Contact::AFNIC','domain contact registrant');
+is($c->srid(),'XXX1234','domain contact srid()');
 
 exit 0;

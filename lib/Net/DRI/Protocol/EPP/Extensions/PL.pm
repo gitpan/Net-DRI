@@ -1,6 +1,6 @@
 ## Domain Registry Interface, NASK (.PL) EPP extensions (draft-zygmuntowicz-epp-pltld-03)
 ##
-## Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -23,7 +23,7 @@ use base qw/Net::DRI::Protocol::EPP/;
 
 use Net::DRI::Data::Contact::PL;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -53,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -66,25 +66,20 @@ See the LICENSE file that comes with this distribution for more details.
 =cut
 
 ####################################################################################################
-sub new
+
+sub setup
 {
- my ($c,$drd,$version,$extrah)=@_;
- my %e=map { $_ => 1 } (defined($extrah)? (ref($extrah)? @$extrah : ($extrah)) : ());
-
- $e{'Net::DRI::Protocol::EPP::Extensions::PL::Domain'}=1;
- $e{'Net::DRI::Protocol::EPP::Extensions::PL::Contact'}=1;
- $e{'Net::DRI::Protocol::EPP::Extensions::PL::Message'}=1;
-## $e{'Net::DRI::Protocol::EPP::Extensions::PL::Future'}=1; ## TODO
-
- my $self=$c->SUPER::new($drd,$version,[keys(%e)]);
+ my ($self,$rp)=@_;
  $self->ns({ pl_domain  => ['http://www.dns.pl/NASK-EPP/extdom-1.0','extdom-1.0.xsd'],
              pl_contact => ['http://www.dns.pl/NASK-EPP/extcon-1.0','extcon-1.0.xsd'],
             # future     => ['http://www.dns.pl/NASK-EPP/future-1.0','future-1.0.xsd'], ## TODO
           });
  $self->capabilities('host_update','name',undef); ## No change of hostnames
  $self->factories('contact',sub { return Net::DRI::Data::Contact::PL->new(); });
- return $self;
+ return;
 }
+
+sub default_extensions { return qw/PL::Domain PL::Contact PL::Message/; } ## TODO: PL::Future
 
 ####################################################################################################
 1;

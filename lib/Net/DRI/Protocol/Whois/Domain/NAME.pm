@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Whois commands for .NAME (RFC3912)
 ##
-## Copyright (c) 2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2007,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,11 +18,13 @@
 package Net::DRI::Protocol::Whois::Domain::NAME;
 
 use strict;
+use warnings;
 
 use Net::DRI::Exception;
 use Net::DRI::Util;
+use Net::DRI::Protocol::Whois::Domain::common;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -52,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2007,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -88,19 +90,19 @@ sub info_parse
 
  my $rr=$mes->response();
  my $rd=$mes->response_raw();
- my ($domain,$exist)=parse_domain($rr,$rd,$rinfo);
+ my ($domain,$exist)=parse_domain($po,$rr,$rd,$rinfo);
  $domain=lc($oname) unless defined($domain);
  $rinfo->{domain}->{$domain}->{exist}=$exist;
  $rinfo->{domain}->{$domain}->{action}='info';
 
  return unless $exist;
 
- Net::DRI::Protocol::Whois::Domain::common::epp_parse_status($domain,$rr,$rinfo);
+ Net::DRI::Protocol::Whois::Domain::common::epp_parse_status($po,$domain,$rr,$rinfo);
 }
 
 sub parse_domain
 {
- my ($rr,$rd,$rinfo)=@_;
+ my ($po,$rr,$rd,$rinfo)=@_;
  my ($dom,$e);
  if (exists($rr->{'Domain Name ID'}))
  {

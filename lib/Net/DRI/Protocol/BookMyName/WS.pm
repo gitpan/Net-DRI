@@ -1,7 +1,7 @@
 ## Domain Registry Interface, BookMyName Web Services Protocol
 ## As seen on http://api.doc.free.org/revendeur-de-nom-de-domaine
 ##
-## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -23,7 +23,7 @@ use strict;
 use base qw(Net::DRI::Protocol);
 use Net::DRI::Protocol::BookMyName::WS::Message;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -53,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -69,20 +69,26 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my ($c,$drd,$version,$extrah)=@_;
+ my ($c,$drd,$rp)=@_;
  my $self=$c->SUPER::new();
  $self->name('bookmyname_ws');
  $self->version($VERSION);
  $self->factories('message',sub { my $m=Net::DRI::Protocol::BookMyName::WS::Message->new(); $m->version($VERSION); return $m; });
- $self->_load($extrah);
+ $self->_load($rp);
  return $self;
 }
 
 sub _load
 {
- my ($self,$extrah)=@_;
+ my ($self,$rp)=@_;
  my @class=map { 'Net::DRI::Protocol::BookMyName::WS::'.$_ } (qw/Account Domain/);
  $self->SUPER::_load(@class);
+}
+
+sub transport_default
+{
+ my ($self)=@_;
+ return (has_login=>0,has_logout=>0,defer=>1);
 }
 
 ####################################################################################################

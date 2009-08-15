@@ -18,13 +18,14 @@
 package Net::DRI::Protocol::BookMyName::WS::Message;
 
 use strict;
+use warnings;
 
 use Net::DRI::Protocol::ResultStatus;
 
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version method params operation result retcode retval));
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -113,6 +114,12 @@ our %CODES=(	domain_info => {	'-1,-1' => 2200,
 					'-1,-2' => 2201,
 					'-1,-3' => 2003,
 					'0,0' => 2303,
+				},
+		domain_check => {	'-1,-1' => 2200,
+					'-1,-2' => 2303,
+					'-1,-3' => 2103,
+					'-1,-4' => 2303,
+					'-1,-5' => 2003,
 				},
 		account_list_domains =>	{
 					'-1,-1' => 2200,

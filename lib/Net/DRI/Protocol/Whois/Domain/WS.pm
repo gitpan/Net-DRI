@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Whois commands for .WS (RFC3912)
 ##
-## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,14 +18,12 @@
 package Net::DRI::Protocol::Whois::Domain::WS;
 
 use strict;
+use warnings;
 
-use DateTime::Format::Strptime;
 use Net::DRI::Exception;
 use Net::DRI::Util;
-use Net::DRI::Data::Contact;
-use Net::DRI::Data::ContactSet;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -55,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -91,22 +89,22 @@ sub info_parse
 
  my $rr=$mes->response();
  my $rd=$mes->response_raw();
- my ($domain,$exist)=parse_domain($rr,$rd,$rinfo);
+ my ($domain,$exist)=parse_domain($po,$rr,$rd,$rinfo);
  $domain=lc($oname) unless defined($domain);
  $rinfo->{domain}->{$domain}->{exist}=$exist;
  $rinfo->{domain}->{$domain}->{action}='info';
 
  return unless $exist;
 
- parse_registrar($domain,$rr,$rinfo);
- parse_contacts($domain,$rr,$rinfo);
- parse_dates($domain,$rd,$rinfo);
- parse_ns($domain,$rd,$rinfo);
+ parse_registrar($po,$domain,$rr,$rinfo);
+ parse_contacts($po,$domain,$rr,$rinfo);
+ parse_dates($po,$domain,$rd,$rinfo);
+ parse_ns($po,$domain,$rd,$rinfo);
 }
 
 sub parse_domain
 {
- my ($rr,$rd,$rinfo)=@_;
+ my ($po,$rr,$rd,$rinfo)=@_;
  my ($dom,$e);
  if (exists($rr->{'Domain Name'}))
  {
@@ -122,7 +120,7 @@ sub parse_domain
 ## Does not seem to be always there ! (present for whatever.ws, not present for website.ws)
 sub parse_registrar
 {
- my ($domain,$rr,$rinfo)=@_;
+ my ($po,$domain,$rr,$rinfo)=@_;
  $rinfo->{domain}->{$domain}->{clName}=$rr->{'Registrar Name'}->[0] if (exists($rr->{'Registrar Name'}) && $rr->{'Registrar Name'}->[0]) ;
  $rinfo->{domain}->{$domain}->{clEmail}=$rr->{'Registrar Email'}->[0] if (exists($rr->{'Registrar Email'}) && $rr->{'Registrar Email'}->[0]);
  $rinfo->{domain}->{$domain}->{clVoice}=$rr->{'Registrar Telephone'}->[0] if (exists($rr->{'Registrar Telephone'}) && $rr->{'Registrar Telephone'}->[0]);
@@ -132,19 +130,19 @@ sub parse_registrar
 ## Does not seem to be always there (see previous example, opposite case)
 sub parse_contacts
 {
- my ($domain,$rr,$rinfo)=@_;
- my $cs=Net::DRI::Data::ContactSet->new();
+ my ($po,$domain,$rr,$rinfo)=@_;
+ my $cs=$po->create_local_object('contactset');
 
  if (exists($rr->{'Registrant Name'}) && $rr->{'Registrant Name'}->[0])
  {
-  my $c=Net::DRI::Data::Contact->new();
+  my $c=$po->create_local_object('contact');
   $c->name($rr->{'Registrant Name'}->[0]);
   $c->email($rr->{'Registrant Email'}->[0]);
   $cs->add($c,'registrant');
  }
   if (exists($rr->{'Administrative Contact Email'}) && $rr->{'Administrative Contact Email'}->[0])
  {
-  my $c=Net::DRI::Data::Contact->new();
+  my $c=$po->create_local_object('contact');
   $c->email($rr->{'Administrative Contact Email'}->[0]);
   $c->voice($rr->{'Administrative Contact Telephone'}->[0]);
   $cs->add($c,'admin');
@@ -154,25 +152,25 @@ sub parse_contacts
 
 sub parse_dates
 {
- my ($domain,$rd,$rinfo)=@_;
- my $strp=DateTime::Format::Strptime->new(pattern => '%Y-%m-%d %T', time_zone => 'America/Los_Angeles');
+ my ($po,$domain,$rd,$rinfo)=@_;
+ my $strp=$po->build_strptime_parser(pattern => '%Y-%m-%d %T', time_zone => 'America/Los_Angeles');
  my @tmp;
  @tmp=grep { m/Domain created on/ } @$rd;
-  $rinfo->{domain}->{$domain}->{crDate}=$strp->parse_datetime(($tmp[0]=~m/^\s+Domain created on (\S+ \S+)\s*$/)[0]) if @tmp;
+ $rinfo->{domain}->{$domain}->{crDate}=$strp->parse_datetime(($tmp[0]=~m/^\s+Domain created on (\S+ \S+)\s*$/)[0]) if @tmp;
  @tmp=grep { m/Domain last updated on/ } @$rd;
  $rinfo->{domain}->{$domain}->{upDate}=$strp->parse_datetime(($tmp[0]=~m/^\s+Domain last updated on (\S+ \S+)\s*$/)[0]) if @tmp;
 }
 
 sub parse_ns
 {
- my ($domain,$rd,$rinfo)=@_;
+ my ($po,$domain,$rd,$rinfo)=@_;
  my @ns;
  foreach my $l (@$rd)
  {
   next unless (($l=~m/^\s+ Current Nameservers:/)..1);
   push @ns,$1 if ($l=~m/^\s*(\S+[^\.])\.?\s*$/);
  }
- $rinfo->{domain}->{$domain}->{ns}=Net::DRI::Data::Hosts->new_set(@ns) if @ns;
+ $rinfo->{domain}->{$domain}->{ns}=$po->create_local_object('hosts')->set(@ns) if @ns;
 }
 
 ####################################################################################################

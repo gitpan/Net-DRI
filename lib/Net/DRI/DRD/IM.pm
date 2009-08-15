@@ -18,11 +18,13 @@
 package Net::DRI::DRD::IM;
 
 use strict;
+use warnings;
+
 use base qw/Net::DRI::DRD/;
 
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 __PACKAGE__->make_exception_for_unavailable_operations(qw/domain_transfer_stop domain_transfer_query domain_transfer_accept domain_transfer_refuse/);
 
@@ -82,30 +84,14 @@ sub periods  { return map { DateTime::Duration->new(years => $_) } (1..10); }
 sub name     { return 'IM'; }
 sub tlds     { return (qw/im co.im org.im net.im/); }
 sub object_types { return ('domain','contact'); }
-
-sub transport_protocol_compatible
-{
- my ($self,$to,$po)=@_;
- my $pn=$po->name();
- my $tn=$to->name();
-
- return 1 if (($pn eq 'EPP') && ($tn eq 'socket_inet'));
- return;
-}
+sub profile_types { return qw/epp/; }
 
 sub transport_protocol_default
 {
- my ($drd,$ndr,$type,$ta,$pa)=@_;
- $type='epp' if (!defined($type) || ref($type));
- if ($type eq 'epp')
- {
-  my %ta=( %Net::DRI::DRD::PROTOCOL_DEFAULT_EPP,
-           remote_host => 'epp.nic.im', ## .IM tests server
-          (ref($ta) eq 'ARRAY')? %{$ta->[0]} : %$ta,
-         );
-  my @pa=(ref($pa) eq 'ARRAY' && @$pa)? @$pa : ('1.0');
-  return ('Net::DRI::Transport::Socket',[\%ta],'Net::DRI::Protocol::EPP',\@pa);
- }
+ my ($self,$type)=@_;
+
+ return ('Net::DRI::Transport::Socket',{remote_host=>'epp.nic.im'},'Net::DRI::Protocol::EPP',{}) if $type eq 'epp';
+ return;
 }
 
 ####################################################################################################

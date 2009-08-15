@@ -17,14 +17,16 @@
 
 package Net::DRI::Transport::SOAP;
 
-use base qw(Net::DRI::Transport);
 use strict;
+use warnings;
+
+use base qw(Net::DRI::Transport);
 
 use Net::DRI::Exception;
 
 use SOAP::Lite;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -106,9 +108,8 @@ See the LICENSE file that comes with this distribution for more details.
 #######################################################################################
 sub new
 {
- my $class=shift;
- my $ctx=shift;
-
+ my ($class,$ctx,$rp)=@_;
+ my %opts=%$rp;
  my %opts=(@_==1 && ref($_[0]))? %{$_[0]} : @_;
  my $self=$class->SUPER::new($ctx,\%opts); ## We are now officially a Net::DRI::Transport instance
  $self->has_state(0);

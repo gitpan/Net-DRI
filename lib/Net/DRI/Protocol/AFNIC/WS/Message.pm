@@ -24,7 +24,7 @@ use Net::DRI::Protocol::ResultStatus;
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version service method params result errcode));
 
-our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -85,7 +85,7 @@ sub new
  return $self;
 }
 
-sub as_string 
+sub as_string
 {
  my ($self)=@_;
  my @p=@{$self->params()};
@@ -112,7 +112,7 @@ sub parse
 }
 
 ## We handle all non free cases as errors, even if we should not
-sub is_success 
+sub is_success
 {
  my $self=shift;
  my $r=$self->result();
@@ -128,7 +128,7 @@ sub result_status
  my $r=$self->result();
 
  return Net::DRI::Protocol::ResultStatus->new_success('COMMAND_SUCCESSFUL',$r->{message}) if ($r->{free});
- 
+
  my %codes=( 0   => 2400, # problème de connexion à la base de données => Command failed
              1   => 2302, # le nom de domaine est déjà enregistré => Object exists
              2   => 2308, # un nom de domaine est déjà enregistré à l'identique dans l'une des extensions du domaine public => Data management policy violation

@@ -18,6 +18,7 @@
 package Net::DRI::Protocol::OVH::WS::Message;
 
 use strict;
+use warnings;
 
 use Carp;
 use Net::DRI::Protocol::ResultStatus;
@@ -25,7 +26,7 @@ use Net::DRI::Protocol::ResultStatus;
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version method params result errcode errmsg));
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -76,22 +77,27 @@ sub new
  bless($self,$class);
  my ($trid,$otype,$oaction)=@_;
 
- $self->params({}); ## default
+ $self->params([]); ## default
  return $self;
 }
 
 sub as_string
 {
  my ($self)=@_;
- my %p=%{$self->params()};
- return sprintf "METHOD=%s\n%s\n",$self->method(),join("\n",map { $_.'='.$p{$_} } keys(%p));
+ my @p=@{$self->params()};
+ my @pr;
+ foreach my $i (0..$#p)
+ {
+  push @pr,sprintf 'PARAM%d=%s',$i+1,$p[$i];
+ }
+ return sprintf "METHOD=%s\n%s\n",$self->method(),join("\n",@pr);
 }
 
 sub add_session
 {
  my ($self,$sd)=@_;
  my $rp=$self->params();
- $rp->{session}=$sd->{id};
+ unshift @$rp,$sd->{id};
 }
 
 sub parse

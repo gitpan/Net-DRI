@@ -1,7 +1,7 @@
 ## Domain Registry Interface, EURid Sunrise EPP extension for Net::DRI
 ## (from registration_guidelines_v1_0F-appendix2-sunrise.pdf )
 ##
-## Copyright (c) 2005,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -29,7 +29,7 @@ use Net::DRI::Protocol::EPP::Core::Domain;
 use Net::DRI::Protocol::EPP::Extensions::EURid::Domain;
 use Net::DRI::DRD::EURid;
 
-our $VERSION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -59,7 +59,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -111,8 +111,6 @@ sub info_parse
  return unless $infdata;
 
  my $cs=Net::DRI::Data::ContactSet->new();
- my $cf=$po->factories()->{contact};
-
  my $pd=DateTime::Format::ISO8601->new();
  my $c=$infdata->firstChild();
  while ($c)
@@ -132,13 +130,13 @@ sub info_parse
    $rinfo->{domain}->{$oname}->{$1}=$pd->parse_datetime($c->firstChild->getData());
   } elsif ($name eq 'domain:registrant')
   {
-   $cs->set($cf->()->srid($c->firstChild->getData()),'registrant');
+   $cs->set($po->create_local_object('contact')->srid($c->firstChild->getData()),'registrant');
   } elsif ($name eq 'domain:contact')
   {
-   $cs->add($cf->()->srid($c->firstChild->getData()),$c->getAttribute('type'));
+   $cs->add($po->create_local_object('contact')->srid($c->firstChild->getData()),$c->getAttribute('type'));
   } elsif ($name eq 'domain:ns')
   {
-   $rinfo->{domain}->{$oname}->{ns}=Net::DRI::Protocol::EPP::Core::Domain::parse_ns($c);
+   $rinfo->{domain}->{$oname}->{ns}=Net::DRI::Protocol::EPP::Core::Domain::parse_ns($po,$c);
   } elsif ($name eq 'domain:adr')
   {
    $rinfo->{domain}->{$oname}->{adr}=Net::DRI::Util::xml_parse_boolean($c->firstChild->getData());

@@ -26,18 +26,10 @@ sub myrecv
  return Net::DRI::Data::Raw->new_from_string($R2? $R2 : $E1.'<registry-response>'.r().$TRID.'</registry-response>'.$E2);
 }
 
-my $dri;
-eval {
-	$dri = Net::DRI->new(10);
-};
-print $@->as_string() if $@;
+my $dri=Net::DRI::TrapExceptions->new(10);
 $dri->{trid_factory}=sub { return 'ABC-12345'; };
 $dri->add_registry('DENIC');
-eval {
-$dri->target('DENIC')->add_current_test_profile('p1','Dummy',{f_send=>\&mysend,f_recv=>\&myrecv},'RRI');
-};
-print $@->as_string() if $@;
-
+$dri->target('DENIC')->add_current_profile('p1','test=RRI',{f_send=>\&mysend,f_recv=>\&myrecv});
 
 my $rc;
 my $s;
@@ -49,10 +41,7 @@ my ($dh,@c);
 $R2 = $E1 . '<tr:transaction><tr:stid>' . $TRID .
 	'</tr:stid><tr:result>success</tr:result></tr:transaction>' . $E2;
 
-eval {
-	$rc = $dri->process('session', 'login', ['user','password']);
-};
-print($@->as_string()) if ($@);
+$rc = $dri->process('session', 'login', ['user','password']);
 isa_ok($rc, 'Net::DRI::Protocol::ResultStatus');
 is($rc->is_success(), 1, 'Login successful');
 is($R1, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><registry-request xmlns="http://registry.denic.de/global/1.0"><login><user>user</user><password>password</password></login><ctid>ABC-12345</ctid></registry-request>', 'Login XML correct');
@@ -65,10 +54,7 @@ $R2 = $E1 . '<tr:transaction><tr:stid>' . $TRID .
 	'</contact:status></contact:checkData></tr:data></tr:transaction>' .
 	$E2;
 
-eval {
-	$rc = $dri->contact_check($dri->local_object('contact')->srid('DENIC-12345-BSP'));
-};
-print($@->as_string()) if ($@);
+$rc = $dri->contact_check($dri->local_object('contact')->srid('DENIC-12345-BSP'));
 isa_ok($rc, 'Net::DRI::Protocol::ResultStatus');
 is(defined($rc) && $rc->is_success(), 1, 'Contact successfully checked');
 is($R1, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><registry-request xmlns="http://registry.denic.de/global/1.0" xmlns:contact="http://registry.denic.de/contact/1.0"><contact:check><contact:handle>DENIC-12345-BSP</contact:handle></contact:check></registry-request>', 'Check Contact XML correct');
@@ -91,10 +77,7 @@ $c->fax('+49.123457');
 $c->email('email@denic.de');
 $c->sip('sip:benutzer@denic.de');
 
-eval {
-	$rc = $dri->contact_create($c);
-};
-print($@->as_string()) if ($@);
+$rc = $dri->contact_create($c);
 isa_ok($rc, 'Net::DRI::Protocol::ResultStatus');
 is($rc->is_success(), 1, 'Contact successfully created');
 is($R1, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><registry-request xmlns="http://registry.denic.de/global/1.0" xmlns:contact="http://registry.denic.de/contact/1.0"><contact:create><contact:handle>DENIC-99990-10240-BSP</contact:handle><contact:type>PERSON</contact:type><contact:name>Theobald Tester</contact:name><contact:organisation>Test-Org</contact:organisation><contact:postal><contact:address>Kleiner Dienstweg 17</contact:address><contact:postalCode>09538</contact:postalCode><contact:city>Gipsnich</contact:city><contact:countryCode>DE</contact:countryCode></contact:postal><contact:phone>+49.123456</contact:phone><contact:fax>+49.123457</contact:fax><contact:email>email@denic.de</contact:email><contact:sip>sip:benutzer@denic.de</contact:sip></contact:create><ctid>ABC-12345</ctid></registry-request>', 'Create Contact XML correct');
@@ -102,10 +85,7 @@ is($R1, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><registry-reques
 my $todo = $dri->local_object('changes');
 $todo->set('info', $c);
 
-eval {
-	$rc = $dri->contact_update($c, $todo);
-};
-print($@->as_string()) if ($@);
+$rc = $dri->contact_update($c, $todo);
 isa_ok($rc, 'Net::DRI::Protocol::ResultStatus');
 is($rc->is_success(), 1, 'Contact successfully updated');
 is($R1, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><registry-request xmlns="http://registry.denic.de/global/1.0" xmlns:contact="http://registry.denic.de/contact/1.0"><contact:update><contact:handle>DENIC-99990-10240-BSP</contact:handle><contact:type>PERSON</contact:type><contact:name>Theobald Tester</contact:name><contact:organisation>Test-Org</contact:organisation><contact:postal><contact:address>Kleiner Dienstweg 17</contact:address><contact:postalCode>09538</contact:postalCode><contact:city>Gipsnich</contact:city><contact:countryCode>DE</contact:countryCode></contact:postal><contact:phone>+49.123456</contact:phone><contact:fax>+49.123457</contact:fax><contact:email>email@denic.de</contact:email><contact:sip>sip:benutzer@denic.de</contact:sip></contact:update><ctid>ABC-12345</ctid></registry-request>', 'Update Contact XML correct');
@@ -113,10 +93,7 @@ is($R1, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><registry-reques
 $R2 = $E1 . '<tr:transaction><tr:stid>' . $TRID .
 	'</tr:stid><tr:result>success</tr:result><tr:data><contact:checkData><contact:handle>DENIC-99990-10240-BSP</contact:handle><contact:status>failed</contact:status></contact:checkData></tr:data></tr:transaction>' . $E2;
 
-eval {
-	$rc = $dri->contact_check($c);
-};
-print($@->as_string()) if ($@);
+$rc = $dri->contact_check($c);
 isa_ok($rc, 'Net::DRI::Protocol::ResultStatus');
 is(defined($rc) && $rc->is_success(), 1, 'Contact successfully checked');
 is($R1, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><registry-request xmlns="http://registry.denic.de/global/1.0" xmlns:contact="http://registry.denic.de/contact/1.0"><contact:check><contact:handle>DENIC-99990-10240-BSP</contact:handle></contact:check></registry-request>', 'Check Contact XML correct');
@@ -142,10 +119,7 @@ $R2 = $E1 . '<tr:transaction><tr:stid>' . $TRID .
 	'<contact:changed>2007-05-23T22:55:33+02:00</contact:changed>' .
 	'</contact:infoData></tr:data></tr:transaction>' . $E2;
 
-eval {
-	$rc = $dri->contact_info($dri->local_object('contact')->srid('DENIC-99989-BSP'));
-};
-print(STDERR $@->as_string()) if ($@);
+$rc = $dri->contact_info($dri->local_object('contact')->srid('DENIC-99989-BSP'));
 isa_ok($rc, 'Net::DRI::Protocol::ResultStatus');
 is($rc->is_success(), 1, 'Contact successfully queried');
 is($R1, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><registry-request xmlns="http://registry.denic.de/global/1.0" xmlns:contact="http://registry.denic.de/contact/1.0"><contact:info><contact:handle>DENIC-99989-BSP</contact:handle></contact:info></registry-request>', 'Query Contact XML correct');
@@ -169,10 +143,7 @@ $R2 = $E1 . '<tr:transaction><tr:stid>' . $TRID .
 
 ####################################################################################################
 
-eval {
-	$rc = $dri->domain_check('rritestdomain.de');
-};
-print(STDERR $@->as_string()) if ($@);
+$rc = $dri->domain_check('rritestdomain.de');
 isa_ok($rc, 'Net::DRI::Protocol::ResultStatus');
 
 is($R1, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><registry-request xmlns="http://registry.denic.de/global/1.0" xmlns:domain="http://registry.denic.de/domain/1.0"><domain:check><domain:handle>rritestdomain.de</domain:handle><domain:ace>rritestdomain.de</domain:ace></domain:check></registry-request>', 'Check Domain XML correct');
@@ -189,15 +160,12 @@ $cs->add($dri->local_object('contact')->srid('DENIC-99990-10240-BSP'), 'registra
 $cs->add($dri->local_object('contact')->srid('DENIC-99990-10240-BSP1'), 'admin');
 $cs->add($dri->local_object('contact')->srid('DENIC-99990-10240-BSP2'), 'tech');
 
-eval {
-	$rc = $dri->domain_create('rritestdomain.de', {
-                pure_create =>  1,
-		contact =>	$cs,
-		ns =>		$dri->local_object('hosts')->
-			add('dns1.syhosting.ch',['193.219.115.46'])
+$rc = $dri->domain_create('rritestdomain.de', {
+	pure_create =>  1,
+	contact =>	$cs,
+	ns =>		$dri->local_object('hosts')->
+	add('dns1.syhosting.ch',['193.219.115.46'])
 	});
-};
-print(STDERR $@->as_string()) if ($@);
 isa_ok($rc, 'Net::DRI::Protocol::ResultStatus');
 is($rc->is_success(), 1, 'Domain successfully created');
 
@@ -206,10 +174,7 @@ is($R1, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><registry-reques
 $R2 = $E1 . '<tr:transaction><tr:stid>' . $TRID .
 	'</tr:stid><tr:result>success</tr:result><tr:data><domain:checkData><domain:handle>denic.de</domain:handle><domain:ace>denic.de</domain:ace><domain:status>connect</domain:status></domain:checkData></tr:data></tr:transaction>' . $E2;
 
-eval {
-	$rc = $dri->domain_check('denic.de');
-};
-print(STDERR $@->as_string()) if ($@);
+$rc = $dri->domain_check('denic.de');
 isa_ok($rc, 'Net::DRI::Protocol::ResultStatus');
 is($rc->is_success(), 1, 'Domain successfully checked');
 
@@ -244,10 +209,7 @@ $R2 = $E1 . '<tr:transaction><tr:stid>' . $TRID .
 	'<domain:changed>2001-09-11T11:45:23-07:00</domain:changed>' .
 	'</domain:infoData></tr:data></tr:transaction>' . $E2;
 
-eval {
-	$rc = $dri->domain_info('rritestdomain.de');
-};
-print(STDERR $@->as_string()) if ($@);
+$rc = $dri->domain_info('rritestdomain.de');
 isa_ok($rc, 'Net::DRI::Protocol::ResultStatus');
 is($rc->is_success(), 1, 'Domain successfully queried');
 is($R1, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><registry-request xmlns="http://registry.denic.de/global/1.0" xmlns:domain="http://registry.denic.de/domain/1.0"><domain:info recursive="false" withProvider="true"><domain:handle>rritestdomain.de</domain:handle><domain:ace>rritestdomain.de</domain:ace></domain:info></registry-request>', 'Query Domain XML correct');
@@ -298,10 +260,7 @@ $R2 = $E1 . '<tr:transaction><tr:stid>' . $TRID .
 	'<domain:changed>2001-09-11T11:45:23-07:00</domain:changed>' .
 	'</domain:infoData></tr:data></tr:transaction>' . $E2;
 
-eval {
-	$rc = $dri->domain_transfer_query('rritestdomain2.de');
-};
-print(STDERR $@->as_string()) if ($@);
+$rc = $dri->domain_transfer_query('rritestdomain2.de');
 isa_ok($rc, 'Net::DRI::Protocol::ResultStatus');
 is($rc->is_success(), 1, 'Domain successfully transferred');
 is($dri->get_info('trStatus', 'domain', 'rritestdomain2.de'), 'pending',
@@ -314,43 +273,31 @@ is($R1, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><registry-reques
 $R2 = $E1 . '<tr:transaction><tr:stid>' . $TRID .
 	'</tr:stid><tr:result>success</tr:result></tr:transaction>' . $E2;
 
-eval {
-	$rc = $dri->domain_transfer_start('sygroup.de', {
-		contact =>	$cs,
-		ns =>		$dri->local_object('hosts')->
-			add('dns1.syhosting.ch',['193.219.115.46'])
-	});
-};
-print(STDERR $@->as_string()) if ($@);
+$rc = $dri->domain_transfer_start('sygroup.de', {
+	contact =>	$cs,
+	ns =>		$dri->local_object('hosts')->
+		add('dns1.syhosting.ch',['193.219.115.46'])
+});
 isa_ok($rc, 'Net::DRI::Protocol::ResultStatus');
 is($rc->is_success(), 1, 'Domain successfully transferred');
 
 is($R1, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><registry-request xmlns="http://registry.denic.de/global/1.0" xmlns:domain="http://registry.denic.de/domain/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dnsentry="http://registry.denic.de/dnsentry/1.0"><domain:chprov><domain:handle>sygroup.de</domain:handle><domain:ace>sygroup.de</domain:ace><domain:contact role="admin-c">DENIC-99990-10240-BSP1</domain:contact><domain:contact role="holder">DENIC-99990-10240-BSP</domain:contact><domain:contact role="tech-c">DENIC-99990-10240-BSP2</domain:contact><dnsentry:dnsentry xsi:type="dnsentry:NS"><dnsentry:owner>sygroup.de.</dnsentry:owner><dnsentry:rdata><dnsentry:nameserver>dns1.syhosting.ch.</dnsentry:nameserver><dnsentry:address>193.219.115.46</dnsentry:address></dnsentry:rdata></dnsentry:dnsentry></domain:chprov><ctid>ABC-12345</ctid></registry-request>', 'Transfer Domain XML correct');
 
-eval {
-	$rc = $dri->domain_transfer_refuse('rritestdomain.de');
-};
-print(STDERR $@->as_string()) if ($@);
+$rc = $dri->domain_transfer_refuse('rritestdomain.de');
 isa_ok($rc, 'Net::DRI::Protocol::ResultStatus');
 is($rc->is_success(), 1, 'Domain transfer successfully refused');
 
 is($R1, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><registry-request xmlns="http://registry.denic.de/global/1.0" xmlns:domain="http://registry.denic.de/domain/1.0"><domain:chprovNack><domain:handle>rritestdomain.de</domain:handle><domain:ace>rritestdomain.de</domain:ace></domain:chprovNack><ctid>ABC-12345</ctid></registry-request>', 'Refuse Transfer XML correct');
 
-eval {
-	$rc = $dri->domain_transfer_accept('rritestdomain2.de');
-};
-print(STDERR $@->as_string()) if ($@);
+$rc = $dri->domain_transfer_accept('rritestdomain2.de');
 isa_ok($rc, 'Net::DRI::Protocol::ResultStatus');
 is($rc->is_success(), 1, 'Domain transfer successfully approved');
 
 is($R1, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><registry-request xmlns="http://registry.denic.de/global/1.0" xmlns:domain="http://registry.denic.de/domain/1.0"><domain:chprovAck><domain:handle>rritestdomain2.de</domain:handle><domain:ace>rritestdomain2.de</domain:ace></domain:chprovAck><ctid>ABC-12345</ctid></registry-request>', 'Accept Transfer XML correct');
 
-eval {
-	$rc = $dri->domain_delete('rritestdomain3.de', {
-		contact =>	$cs
-	});
-};
-print(STDERR $@->as_string()) if ($@);
+$rc = $dri->domain_delete('rritestdomain3.de', {
+	contact =>	$cs
+});
 isa_ok($rc, 'Net::DRI::Protocol::ResultStatus');
 is($rc->is_success(), 1, 'Domain successfully deleted');
 
@@ -359,12 +306,9 @@ is($R1, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><registry-reques
 $cs = $dri->local_object('contactset');
 $cs->add($dri->local_object('contact')->srid('DENIC-99990-10240-BSP5'), 'registrant');
 
-eval {
-	$rc = $dri->domain_trade('rritestdomain2.de', {
-		contact =>	$cs
-	});
-};
-print(STDERR $@->as_string()) if ($@);
+$rc = $dri->domain_trade('rritestdomain2.de', {
+	contact =>	$cs
+});
 isa_ok($rc, 'Net::DRI::Protocol::ResultStatus');
 is($rc->is_success(), 1, 'Domain successfully traded');
 
@@ -397,11 +341,7 @@ $R2 = $E1 . '<tr:transaction><tr:stid>' . $TRID .
 	'<domain:changed>2001-09-11T11:45:23-07:00</domain:changed>' .
 	'</domain:infoData></tr:data></tr:transaction>' . $E2;
 
-eval {
-	$rc = $dri->domain_info('rritestdomain.de');
-};
-print(STDERR $@->as_string()) if ($@);
-
+$rc = $dri->domain_info('rritestdomain.de');
 $R2 = $E1 . '<tr:transaction><tr:stid>' . $TRID .
 	'</tr:stid><tr:result>success</tr:result></tr:transaction>' . $E2;
 
@@ -416,10 +356,7 @@ $changes->add('ns', $dri->local_object('hosts')->add('dns1.syhosting.ch',
 	['193.219.115.46']));
 $changes->del('ns', $dri->local_object('hosts')->add('dns1.rritestdomain.de'));
 
-eval {
-	$rc = $dri->domain_update('rritestdomain.de', $changes);
-};
-print(STDERR $@->as_string()) if ($@);
+$rc = $dri->domain_update('rritestdomain.de', $changes);
 isa_ok($rc, 'Net::DRI::Protocol::ResultStatus');
 is($rc->is_success(), 1, 'Domain successfully updated');
 is($R1, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><registry-request xmlns="http://registry.denic.de/global/1.0" xmlns:domain="http://registry.denic.de/domain/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dnsentry="http://registry.denic.de/dnsentry/1.0"><domain:update><domain:handle>rritestdomain.de</domain:handle><domain:ace>rritestdomain.de</domain:ace><domain:contact role="admin-c">DENIC-1000006-SD</domain:contact><domain:contact role="holder">DENIC-1000006-1</domain:contact><domain:contact role="holder">DENIC-1000006-2</domain:contact><domain:contact role="tech-c">ALFRED-RIPE</domain:contact><domain:contact role="zone-c">DENIC-1000006-OPS</domain:contact><dnsentry:dnsentry xsi:type="dnsentry:NS"><dnsentry:owner>rritestdomain.de.</dnsentry:owner><dnsentry:rdata><dnsentry:nameserver>dns1.syhosting.ch.</dnsentry:nameserver><dnsentry:address>193.219.115.46</dnsentry:address></dnsentry:rdata></dnsentry:dnsentry></domain:update><ctid>ABC-12345</ctid></registry-request>', 'Update Domain XML correct');
@@ -429,10 +366,7 @@ is($R1, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><registry-reques
 $R2 = $E1 . '<tr:transaction><tr:stid>' . $TRID .
 	'</tr:stid><tr:result>success</tr:result><tr:data><msg:message xmlns:msg="http://registry.denic.de/msg/1.0" msgid="423" msgcnt="42" msgtime="2007-12-27T14:52:13+02:00"><msg:chprovStart><msg:domain><msg:handle>blafasel.de</msg:handle><msg:ace>blafasel.de</msg:ace></msg:domain><msg:new>DENIC eG</msg:new><msg:old>RoedelDoedelCorp</msg:old><msg:start>2007-12-27T14:52:13+02:00</msg:start><msg:reminder>2007-12-31T14:52:13+02:00</msg:reminder><msg:end>2008-01-02T14:52:13+02:00</msg:end></msg:chprovStart></msg:message></tr:data></tr:transaction>' . $E2;
 
-eval {
-	$rc = $dri->message_retrieve();
-};
-print(STDERR $@->as_string()) if ($@);
+$rc = $dri->message_retrieve();
 isa_ok($rc, 'Net::DRI::Protocol::ResultStatus');
 is($rc->is_success(), 1, 'Message successfully deleted');
 my $msgid = $dri->get_info('last_id', 'message', 'session');
@@ -448,10 +382,7 @@ is($R1, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><registry-reques
 $R2 = $E1 . '<tr:transaction><tr:stid>' . $TRID .
 	'</tr:stid><tr:result>success</tr:result></tr:transaction>' . $E2;
 
-eval {
-	$rc = $dri->message_delete($msgid);
-};
-print(STDERR $@->as_string()) if ($@);
+$rc = $dri->message_delete($msgid);
 isa_ok($rc, 'Net::DRI::Protocol::ResultStatus');
 is($rc->is_success(), 1, 'Message successfully deleted');
 is($R1, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><registry-request xmlns="http://registry.denic.de/global/1.0" xmlns:msg="http://registry.denic.de/msg/1.0"><msg:delete msgid="423"/><ctid>ABC-12345</ctid></registry-request>', 'Delete Message XML correct');

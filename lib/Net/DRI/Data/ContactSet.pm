@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Stores ordered list of contacts + type (registrant, admin, tech, bill, etc...)
 ##
-## Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -15,12 +15,12 @@
 #
 #########################################################################################
 
-
 package Net::DRI::Data::ContactSet;
 
 use strict;
+use warnings;
 
-our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -54,7 +54,7 @@ with the first argument being a contact, and the second (optional) a type, adds 
 to the list of contacts for this type or all types (if no second argument). If the contact already exists
 (same id()), it will be replaced when found. Returns the object itself.
 
-=head2 del() 
+=head2 del()
 
 the opposite of add()
 
@@ -62,7 +62,7 @@ the opposite of add()
 
 alias for del()
 
-=head2 clear() 
+=head2 clear()
 
 removes all contact currently associated to all types
 
@@ -71,9 +71,13 @@ removes all contact currently associated to all types
 with an array ref as first argument, and a type (optional) as second, set the current list
 of the given type (or all types) to be the list of contacts in first argument. Returns the object itself.
 
-=head2 get() 
+=head2 get()
 
 returns list (in list context) or first element of list (in scalar context) for the type given as argument
+
+=head2 get_all()
+
+returns list of contacts, without duplicates, for all types
 
 =head1 SUPPORT
 
@@ -106,11 +110,10 @@ See the LICENSE file that comes with this distribution for more details.
 =cut
 
 ################################################################################################################
+
 sub new
 {
- my $proto=shift;
- my $class=ref($proto) || $proto;
-
+ my $class=shift;
  my $self={ c => {} };
  bless($self,$class);
  return $self;
@@ -217,6 +220,13 @@ sub get
  my $c=$self->{c};
  return unless exists($c->{$ctype});
  return wantarray()? @{$c->{$ctype}} : $c->{$ctype}->[0];
+}
+
+sub get_all
+{
+ my ($self)=@_;
+ my %r=map { $_ => 1 } map { @{$_} } values(%{$self->{c}});
+ return keys %r;
 }
 
 sub match ## compare two contact lists

@@ -17,15 +17,17 @@
 
 package Net::DRI::Transport::HTTP::SOAPWSDL;
 
-use base qw(Net::DRI::Transport);
 use strict;
+use warnings;
+
+use base qw(Net::DRI::Transport);
 
 use Net::DRI::Exception;
 use Net::DRI::Data::Raw;
 use Net::DRI::Util;
 use SOAP::WSDL;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -71,17 +73,26 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $class=shift;
- my $ctx=shift;
+ my ($class,$ctx,$rp)=@_;
+ my %opts=%$rp;
  my $po=$ctx->{protocol};
+ 
+ my %t=(message_factory => $po->factories()->{message});
+ if (exists($opts{protocol_connection}) && $opts{protocol_connection})
+ {
+  $t{protocol_connection}=$opts{protocol_connection};
+  $t{protocol_connection}->require or Net::DRI::Exception::err_failed_load_module('transport/socket',$t{protocol_connection},$@);
+  if ($t{protocol_connection}->can('transport_default'))
+  {
+   %opts=($t{protocol_connection}->transport_default('soapwsdl'),%opts);
+  }
+ }
 
- my %opts=(@_==1 && ref($_[0]))? %{$_[0]} : @_;
  my $self=$class->SUPER::new($ctx,\%opts); ## We are now officially a Net::DRI::Transport instance
  $self->is_sync(1);
  $self->name('soapwsdl');
  $self->version($VERSION);
 
- my %t=(message_factory => $po->factories()->{message});
  $t{has_login}=(exists($opts{has_login}) && defined($opts{has_login}))? $opts{has_login} : 0;
  $t{has_logout}=(exists($opts{has_logout}) && defined($opts{has_logout}))? $opts{has_logout} : 0;
  $self->has_state($t{has_login});
@@ -103,7 +114,6 @@ sub new
  Net::DRI::Exception::usererr_invalid_parameters('proxy_uri must be http:// or https://') unless ($t{proxy_uri}=~m!^https?://!);
 
  my $pc=$t{protocol_connection};
- $pc->require or Net::DRI::Exception::err_failed_load_module('transport/socket',$pc,$@);
  if ($t{has_login})
  {
   foreach my $m (qw/login parse_login extract_session/)

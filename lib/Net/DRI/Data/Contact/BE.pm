@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Handling of contact data for .BE
 ##
-## Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,10 +18,13 @@
 package Net::DRI::Data::Contact::BE;
 
 use strict;
+use warnings;
+
 use base qw/Net::DRI::Data::Contact/;
+
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 __PACKAGE__->register_attributes(qw(vat lang));
 
@@ -73,7 +76,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -118,19 +121,19 @@ sub validate
 
 sub init
 {
- my ($self,$what)=@_;
-
+ my ($self,$what,$ndr)=@_;
  if ($what eq 'create')
  {
   my $a=$self->auth();
   $self->auth({pw=>''}) unless ($a && (ref($a) eq 'HASH') && exists($a->{pw}));
+  $self->srid('ABCD') unless defined $self->srid(); ## we can not choose the ID
  }
 }
 
 sub type
 {
  my ($self,$what)=@_;
- if (defined($what) && $what)
+ if (defined $what && $what)
  {
   $what='registrant' if $what eq 'licensee';
   $self->{type}=$what;

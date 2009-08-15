@@ -17,13 +17,14 @@
 
 package Net::DRI::Transport::Defer;
 
-use base qw(Net::DRI::Transport);
-
 use strict;
+use warnings;
+
+use base qw(Net::DRI::Transport);
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -88,10 +89,18 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $class=shift;
- my $ctx=shift;
+ my ($class,$ctx,$rp)=@_;
+ my %opts=%$rp;
 
- my %opts=(@_==1 && ref($_[0]))? %{$_[0]} : @_;
+ my %t=();
+ Net::DRI::Exception::usererr_insufficient_parameters('protocol_connection') unless (exists($opts{protocol_connection}) && $opts{protocol_connection});
+ $t{pc}=$opts{protocol_connection};
+ $t{pc}->require or Net::DRI::Exception::err_failed_load_module('transport/socket',$t{pc},$@);
+ if ($t{pc}->can('transport_default'))
+ {
+  %opts=($t{pc}->transport_default('defer'),%opts);
+ }
+
  my $self=$class->SUPER::new($ctx,\%opts);
  $self->name('defer');
  $self->version('0.1');
@@ -102,12 +111,9 @@ sub new
  $self->time_open(time());
  $self->time_used(time());
 
- my %t=(exchanges_done => 0);
+ $t{exchanges_done}=0;
  $t{dump_fh}=(exists($opts{dump_fh}))? $opts{dump_fh} : \*STDERR;
 
- Net::DRI::Exception::usererr_insufficient_parameters('protocol_connection') unless (exists($opts{protocol_connection}) && $opts{protocol_connection});
- $t{pc}=$opts{protocol_connection};
- $t{pc}->require or Net::DRI::Exception::err_failed_load_module('transport/socket',$t{pc},$@);
  my @need=qw/read_data write_message/;
  Net::DRI::Exception::usererr_invalid_parameters('protocol_connection class ('.$t{pc}.') must have: '.join(' ',@need)) if (grep { ! $t{pc}->can($_) } @need);
 
@@ -115,7 +121,6 @@ sub new
  return $self;
 }
 
-sub is_compatible_with_protocol { my ($self,$po)=@_; return 1; }
 sub ping {  return 1; }
 
 sub send

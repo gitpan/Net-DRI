@@ -1,6 +1,6 @@
 ## Domain Registry Interface, BookMyName Web Services Domain commands
 ##
-## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,17 +18,12 @@
 package Net::DRI::Protocol::BookMyName::WS::Domain;
 
 use strict;
-
-use DateTime::Format::ISO8601;
+use warnings;
 
 use Net::DRI::Exception;
 use Net::DRI::Util;
-use Net::DRI::Data::ContactSet;
-use Net::DRI::Data::Contact;
-use Net::DRI::Data::Hosts;
-use Net::DRI::Data::StatusList;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -58,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -76,7 +71,8 @@ sub register_commands
 {
  my ($class,$version)=@_;
  my %tmp=(
-		info => [\&info, \&info_parse ],
+		info  => [\&info, \&info_parse ],
+		check => [\&check, \&check_parse ],
 	  );
 
  return { 'domain' => \%tmp };
@@ -124,7 +120,7 @@ sub info
 
 sub info_parse
 {
-  my ($po,$otype,$oaction,$oname,$rinfo)=@_;
+ my ($po,$otype,$oaction,$oname,$rinfo)=@_;
  my $mes=$po->message();
  return unless $mes->is_success();
 
@@ -136,20 +132,19 @@ sub info_parse
  $rinfo->{domain}->{$oname}->{action}='info';
  $rinfo->{domain}->{$oname}->{exist}=1;
  $rinfo->{domain}->{$oname}->{roid}=$r{id};
- my $pd=DateTime::Format::ISO8601->new();
  my %d=(registrar_creation => 'crDate', lastupdate => 'upDate', registrar_expiration => 'exDate');
  while (my ($k,$v)=each(%d))
  {
   next unless exists($r{$k});
-  $rinfo->{domain}->{$oname}->{$v}=$pd->parse_datetime($r{$k});
+  $rinfo->{domain}->{$oname}->{$v}=$po->parse_iso8601($r{$k});
  }
  $rinfo->{domain}->{$oname}->{upIP}=$r{lastupdate_ip};
  my %c=(owner_id => 'registrant', admin_id => 'admin', tech_id => 'tech', bill_id => 'billing');
- my $cs=Net::DRI::Data::ContactSet->new();
+ my $cs=$po->create_local_object('contactset');
  while (my ($k,$v)=each(%d))
  {
   next unless exists($r{$k});
-  my $c=Net::DRI::Data::Contact->new()->srid($r{$k});
+  my $c=$po->create_local_object('contact')->srid($r{$k});
   $cs->add($c,$v);
  }
  $rinfo->{domain}->{$oname}->{contact}=$cs;
@@ -159,14 +154,37 @@ sub info_parse
  {
   $rinfo->{domain}->{$oname}->{$k}=$r{$k} if (exists($r{$k}) && defined($r{$k}));
  }
- my $sl=Net::DRI::Data::StatusList->new();
+ my $sl=$po->create_local_object('status');
  foreach my $s (parse_status($r{registry_status})) { $sl->add($s); }
  $rinfo->{domain}->{$oname}->{status}=$sl;
  ## $r{status} is not used, what is it ?
 
- my $ns=Net::DRI::Data::Hosts->new();
+ my $ns=$po->create_local_object('hosts');
  foreach my $nsk (sort { ($a=~m/^ns(\d+)/)[0] <=> ($b=~m/^ns(\d+)/)[0] }  grep { /^ns\d+$/ } keys(%r)) { $ns->add($r{$nsk}); }
  $rinfo->{domain}->{$oname}->{ns}=$ns;
+}
+
+sub check
+{
+ my ($po,$domain)=@_;
+ my $msg=$po->message();
+ build_msg($msg,'domain_check',$domain);
+ $msg->params([ $domain ]);
+}
+
+sub check_parse
+{
+ my ($po,$otype,$oaction,$oname,$rinfo)=@_;
+ my $mes=$po->message();
+
+ if ($mes->retcode()==-1 && ($mes->retval()==-2 || $mes->retval()==-4)) ## domain does not exist
+ {
+  $mes->retcode(1); ## fake a success
+ }
+ return unless $mes->is_success();
+
+ $rinfo->{domain}->{$oname}->{action}='check';
+ $rinfo->{domain}->{$oname}->{exist}=($mes->retcode()==1 && $mes->retval()==1)? 1 : 0;
 }
 
 ####################################################################################################

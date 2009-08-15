@@ -19,17 +19,13 @@
 package Net::DRI::Protocol::EPP::Extensions::EURid::Domain;
 
 use strict;
+use warnings;
 
 use Net::DRI::Util;
 use Net::DRI::Exception;
 use Net::DRI::Protocol::EPP::Core::Domain;
-use Net::DRI::Data::Hosts;
-use Net::DRI::Data::ContactSet;
 
-use DateTime::Format::ISO8601;
-use Carp;
-
-our $VERSION=do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.14 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -91,6 +87,7 @@ sub register_commands
           trade_cancel      => [ \&trade_cancel, undef ],
           reactivate        => [ \&reactivate, undef ],
           check_contact_for_transfer => [ \&checkcontact, \&checkcontact_parse ],
+          remind            => [ \&remind, undef ],
          );
 
  return { 'domain' => \%tmp };
@@ -153,19 +150,16 @@ sub info_parse
  return unless $mes->is_success();
 
  my $infdata=$mes->get_extension('eurid','ext');
- return unless $infdata;
+ return unless defined $infdata;
+
  my $ns=$mes->ns('eurid');
- $infdata=$infdata->getChildrenByTagNameNS($ns,'infData');
- return unless $infdata->size();
- $infdata=$infdata->shift();
- $infdata=$infdata->getChildrenByTagNameNS($ns,'domain');
- return unless $infdata->size();
- $infdata=$infdata->shift();
+ $infdata=Net::DRI::Util::xml_traverse($infdata,$ns,'infData','domain');
+ return unless defined $infdata;
 
  my @c;
  foreach my $el ($infdata->getChildrenByTagNameNS($ns,'nsgroup'))
  {
-  push @c,Net::DRI::Data::Hosts->new()->name($el->getFirstChild()->getData());
+  push @c,$po->create_local_object('hosts')->name($el->textContent());
  }
 
  $rinfo->{domain}->{$oname}->{nsgroup}=\@c;
@@ -175,14 +169,13 @@ sub info_parse
  {
   my @s=$infdata->getChildrenByTagNameNS($ns,$s);
   next unless @s;
-  $cs->add($s) if Net::DRI::Util::xml_parse_boolean($s[0]->getFirstChild()->getData()); ## should we also remove 'ok' status then ?
+  $cs->add($s) if Net::DRI::Util::xml_parse_boolean($s[0]->textContent()); ## should we also remove 'ok' status then ?
  }
- my $pd=DateTime::Format::ISO8601->new();
  foreach my $d (qw/availableDate deletionDate/)
  {
   my @d=$infdata->getChildrenByTagNameNS($ns,$d);
   next unless @d;
-  $rinfo->{domain}->{$oname}->{$d}=$pd->parse_datetime($d[0]->getFirstChild()->getData());
+  $rinfo->{domain}->{$oname}->{$d}=$po->parse_iso8601($d[0]->textContent());
  }
 
  my $pt=$infdata->getChildrenByTagNameNS($ns,'pendingTransaction');
@@ -197,39 +190,32 @@ sub info_parse
    $p{type}=$t;
    $cs->add(($t eq 'trade')? 'pendingUpdate' : 'pendingTransfer');
 
-   my $c=$r->shift()->getFirstChild();
-   while ($c)
+   foreach my $el (Net::DRI::Util::xml_list_children($r->get_node(1)))
    {
-    next unless ($c->nodeType() == 1); ## only for element nodes
-    my $name=$c->localname() || $c->nodeName();
-    next unless $name;
+    my ($name,$c)=@$el;
     if ($name eq 'domain')
     {
-     my $cs2=Net::DRI::Data::ContactSet->new();
-     my $cf=$po->factories()->{contact};
-     my $cc=$c->getFirstChild();
-     while($cc)
+     my $cs2=$po->create_local_object('contactset');
+     foreach my $sel (Net::DRI::Util::xml_list_children($c))
      {
-      next unless ($cc->nodeType() == 1); ## only for element nodes
-      my $name2=$cc->localname() || $cc->nodeName();
-      next unless $name2;
+      my ($name2,$cc)=@$sel;
       if ($name2=~m/^(registrant|tech|billing)$/)
       {
-       $cs2->set($cf->()->srid($cc->getFirstChild()->getData()),$name2);       
+       $cs2->set($po->create_local_object('contact')->srid($cc->textContent()),$name2);
       } elsif ($name2=~m/^(trDate)$/)
       {
-       $p{$1}=$pd->parse_datetime($cc->getFirstChild()->getData());
+       $p{$1}=$po->parse_iso8601($cc->textContent());
       }
-     } continue { $cc=$cc->getNextSibling(); }
+     }
      $p{contact}=$cs2;
     } elsif ($name=~m/^(initiationDate|unscreenedFax)$/)
     {
-     $p{$1}=$pd->parse_datetime($c->getFirstChild()->getData());
+     $p{$1}=$po->parse_iso8601($c->textContent());
     } elsif ($name=~m/^(status|replySeller|replyBuyer|replyOwner)$/)
     {
-     $p{$1}=$c->getFirstChild()->getData();
+     $p{$1}=$c->textContent();
     }
-   } continue { $c=$c->getNextSibling(); }
+   }
    last;
   }
   $rinfo->{domain}->{$oname}->{pending_transaction}=\%p;
@@ -251,26 +237,20 @@ sub check_parse
  return unless $mes->is_success();
 
  my $chkdata=$mes->get_extension('eurid','ext');
- return unless $chkdata;
+ return unless defined $chkdata;
  my $ns=$mes->ns('eurid');
- $chkdata=$chkdata->getChildrenByTagNameNS($ns,'chkData');
- return unless $chkdata->size();
- $chkdata=$chkdata->shift();
- $chkdata=$chkdata->getChildrenByTagNameNS($ns,'domain');
- return unless $chkdata->size();
- $chkdata=$chkdata->shift();
+ $chkdata=Net::DRI::Util::xml_traverse($chkdata,$ns,'chkData','domain');
+ return unless defined $chkdata;
 
  foreach my $cd ($chkdata->getChildrenByTagNameNS($ns,'cd'))
  {
-  my $c=$cd->getFirstChild();
   my $domain;
-  while($c)
+  foreach my $el (Net::DRI::Util::xml_list_children($cd))
   {
-   next unless ($c->nodeType() == 1); ## only for element nodes
-   my $n=$c->localname() || $c->nodeName();
+   my ($n,$c)=@$el;
    if ($n eq 'name')
    {
-    $domain=lc($c->getFirstChild()->getData());
+    $domain=lc($c->textContent());
     $rinfo->{domain}->{$domain}->{action}='check';
     foreach my $ef (qw/accepted expired initial rejected/) ## only for domain applications
     {
@@ -279,9 +259,9 @@ sub check_parse
     }
    } elsif ($n eq 'availableDate')
    {
-    $rinfo->{domain}->{$domain}->{availableDate}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
+    $rinfo->{domain}->{$domain}->{availableDate}=$po->parse_iso8601($c->textContent());
    }
-  } continue { $c=$c->getNextSibling(); }
+  }
  }
 }
 
@@ -290,13 +270,14 @@ sub delete
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
 
- return unless (exists($rd->{deleteDate}) && $rd->{deleteDate});
+ return unless (exists $rd->{deleteDate} && $rd->{deleteDate});
 
  Net::DRI::Util::check_isa($rd->{deleteDate},'DateTime');
 
  my $eid=build_command_extension($mes,$epp,'eurid:ext');
- my @n=('eurid:delete',['eurid:domain',['eurid:deleteDate',$rd->{deleteDate}->set_time_zone('UTC')->strftime('%Y-%m-%dT%T.%NZ')]]);
- $mes->command_extension($eid,\@n);
+ my @n=(['eurid:deleteDate',$rd->{deleteDate}->set_time_zone('UTC')->strftime('%Y-%m-%dT%T.%NZ')]);
+ push @n,['eurid:overwriteDeleteDate','true'] if Net::DRI::Util::has_key($rd,'overwrite') && $rd->{overwrite};
+ $mes->command_extension($eid,['eurid:delete',['eurid:domain',@n]]);
 }
 
 sub transfer_request
@@ -304,7 +285,7 @@ sub transfer_request
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
  my @n=(['eurid:domain',add_transfer($epp,$mes,$domain,$rd)]);
- push @n,['eurid:ownerAuthCode',$rd->{owner_auth_code}] if (exists($rd->{owner_auth_code}) && defined($rd->{owner_auth_code}) && $rd->{owner_auth_code}=~m/^\d{15}$/);
+ push @n,['eurid:ownerAuthCode',$rd->{owner_auth_code}] if (Net::DRI::Util::has_key($rd,'owner_auth_code') && $rd->{owner_auth_code}=~m/^\d{15}$/);
  my $eid=build_command_extension($mes,$epp,'eurid:ext');
  $mes->command_extension($eid,['eurid:transfer',@n]);
 }
@@ -387,9 +368,7 @@ sub transferq_request
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
  my @d=Net::DRI::Protocol::EPP::Core::Domain::build_command($mes,['transferq',{'op'=>'request'}],$domain);
-
- Carp::croak('Key "period" should be key "duration"') if Net::DRI::Util::has_key($rd,'period');
- push @d,Net::DRI::Protocol::EPP::Core::Domain::build_period($rd->{period}) if Net::DRI::Util::has_duration($rd);
+ push @d,Net::DRI::Protocol::EPP::Core::Domain::build_period($rd->{duration}) if Net::DRI::Util::has_duration($rd);
  $mes->command_body(\@d);
 
  my @n=add_transfer($epp,$mes,$domain,$rd);
@@ -467,18 +446,28 @@ sub checkcontact_parse
  return unless $mes->is_success();
 
  my $chkdata=$mes->get_extension('eurid','ext');
- return unless $chkdata;
+ return unless defined $chkdata;
  my $ns=$mes->ns('eurid');
- $chkdata=$chkdata->getChildrenByTagNameNS($ns,'response');
- return unless $chkdata->size();
- $chkdata=$chkdata->shift();
- $chkdata=$chkdata->getChildrenByTagNameNS($ns,'checkContactForTransfer');
- return unless $chkdata->size();
- $chkdata=$chkdata->shift();
+ $chkdata=Net::DRI::Util::xml_traverse($chkdata,$ns,'response','checkContactForTransfer');
+ return unless defined $chkdata;
 
- my @d=$chkdata->getChildrenByTagNameNS($ns,'percentage');
- return unless @d;
- $rinfo->{domain}->{$oname}->{'percentage'}=$d[0]->getFirstChild()->getData();
+ my $p=Net::DRI::Util::xml_child_content($chkdata,$ns,'percentage');
+ $rinfo->{domain}->{$oname}->{'percentage'}=$p if defined $p;
+}
+
+sub remind
+{
+ my ($epp,$domain,$rd)=@_;
+ my $mes=$epp->message();
+
+ Net::DRI::Exception->die(1,'protocol/EPP',2,'Domain name needed') unless defined($domain) && $domain;
+ Net::DRI::Exception->die(1,'protocol/EPP',10,'Invalid domain name: '.$domain) unless Net::DRI::Util::is_hostname($domain);
+
+ Net::DRI::Exception::usererr_insufficient_parameters('destination is mandatory for trade_cancel') unless (Net::DRI::Util::has_key($rd,'destination') && length $rd->{destination});
+ Net::DRI::Exception::usererr_invalid_parameters('destination must be either owner or buyer') unless ($rd->{destination} eq 'owner' || $rd->{destination} eq 'buyer');
+
+ my $eid=build_command_extension($mes,$epp,'eurid:ext');
+ $mes->command_extension($eid,['eurid:command',['eurid:transferRemind',['eurid:domainname',$domain],['eurid:destination',$rd->{destination}]],['eurid:clTRID',$mes->cltrid()]]);
 }
 
 ####################################################################################################

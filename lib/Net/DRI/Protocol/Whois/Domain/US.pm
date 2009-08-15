@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Whois commands for .US (RFC3912)
 ##
-## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,13 +18,13 @@
 package Net::DRI::Protocol::Whois::Domain::US;
 
 use strict;
+use warnings;
 
 use Net::DRI::Exception;
 use Net::DRI::Util;
 use Net::DRI::Protocol::Whois::Domain::common;
-use DateTime::Format::Strptime;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -54,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -90,22 +90,22 @@ sub info_parse
 
  my $rr=$mes->response();
  my $rd=$mes->response_raw();
- my ($domain,$exist)=parse_domain($rr,$rd,$rinfo);
+ my ($domain,$exist)=parse_domain($po,$rr,$rd,$rinfo);
  $rinfo->{domain}->{$domain}->{exist}=$exist;
  $rinfo->{domain}->{$domain}->{action}='info';
 
  return unless $exist;
 
- parse_registrars($domain,$rr,$rinfo);
- parse_dates($domain,$rr,$rinfo);
- Net::DRI::Protocol::Whois::Domain::common::epp_parse_status($domain,$rr,$rinfo);
- Net::DRI::Protocol::Whois::Domain::common::epp_parse_contacts($domain,$rr,$rinfo,{registrant => 'Registrant',admin => 'Administrative Contact', billing => 'Billing Contact', tech => 'Technical Contact'},undef);
- Net::DRI::Protocol::Whois::Domain::common::epp_parse_ns($domain,$rr,$rinfo);
+ parse_registrars($po,$domain,$rr,$rinfo);
+ parse_dates($po,$domain,$rr,$rinfo);
+ Net::DRI::Protocol::Whois::Domain::common::epp_parse_status($po,$domain,$rr,$rinfo);
+ Net::DRI::Protocol::Whois::Domain::common::epp_parse_contacts($po,$domain,$rr,$rinfo,{registrant => 'Registrant',admin => 'Administrative Contact', billing => 'Billing Contact', tech => 'Technical Contact'});
+ Net::DRI::Protocol::Whois::Domain::common::epp_parse_ns($po,$domain,$rr,$rinfo);
 }
 
 sub parse_domain
 {
- my ($rr,$rd,$rinfo)=@_;
+ my ($po,$rr,$rd,$rinfo)=@_;
  my ($dom,$e);
  if (exists($rr->{'Domain Name'}))
  {
@@ -124,7 +124,7 @@ sub parse_domain
 
 sub parse_registrars
 {
- my ($domain,$rr,$rinfo)=@_;
+ my ($po,$domain,$rr,$rinfo)=@_;
 
  $rinfo->{domain}->{$domain}->{clName}=$rr->{'Sponsoring Registrar'}->[0];
  $rinfo->{domain}->{$domain}->{crName}=$rr->{'Created by Registrar'}->[0];
@@ -133,8 +133,8 @@ sub parse_registrars
 
 sub parse_dates
 {
- my ($domain,$rr,$rinfo)=@_;
- my $strp=DateTime::Format::Strptime->new(pattern => '%a %b %d %T GMT %Y', locale => 'en_US', time_zone => 'UTC');
+ my ($po,$domain,$rr,$rinfo)=@_;
+ my $strp=$po->build_strptime_parser(pattern => '%a %b %d %T GMT %Y', locale => 'en_US', time_zone => 'UTC');
  $rinfo->{domain}->{$domain}->{crDate}=$strp->parse_datetime($rr->{'Domain Registration Date'}->[0]);
  $rinfo->{domain}->{$domain}->{exDate}=$strp->parse_datetime($rr->{'Domain Expiration Date'}->[0]);
  $rinfo->{domain}->{$domain}->{upDate}=$strp->parse_datetime($rr->{'Domain Last Updated Date'}->[0]);

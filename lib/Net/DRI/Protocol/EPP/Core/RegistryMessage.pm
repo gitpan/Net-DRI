@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Registry messages commands (RFC4930)
 ##
-## Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,11 +18,12 @@
 package Net::DRI::Protocol::EPP::Core::RegistryMessage;
 
 use strict;
+use warnings;
 
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -52,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -70,7 +71,7 @@ See the LICENSE file that comes with this distribution for more details.
 sub register_commands
 {
  my ($class,$version)=@_;
- my %tmp=( 
+ my %tmp=(
            retrieve => [ \&pollreq, \&parse_poll ],
            delete   => [ \&pollack ],
          );
@@ -98,6 +99,7 @@ sub pollreq
 sub parse_poll
 {
  my ($po,$otype,$oaction,$oname,$rinfo)=@_;
+ return if exists $rinfo->{_processing_parse_poll}; ## calling myself here would be a very bad idea !
  my $mes=$po->message();
  return unless $mes->is_success();
 
@@ -117,23 +119,28 @@ sub parse_poll
  {
   while (my ($haction,$hv2)=each(%$hv))
   {
-   next if (($htype eq 'message') && ($haction eq 'retrieve')); ## calling myself here would be a very bad idea !
    foreach my $t (@$hv2)
    {
     my $pf=$t->[1];
     next unless (defined($pf) && (ref($pf) eq 'CODE'));
+    $info{_processing_parse_poll}=1;
     $pf->($po,$totype,$toaction,$toname,\%info);
+    delete $info{_processing_parse_poll};
     next unless keys(%info);
-    next if defined($toname);
-    Net::DRI::Exception::err_assert('EPP::parse_poll can not handle multiple types !') unless (keys(%info)==1);
-    $totype=(keys(%info))[0];
-    Net::DRI::Exception::err_assert('EPP::parse_poll can not handle multiple names !') unless (keys(%{$info{$totype}})==1); ## this may happen for check_multi !
-    $toname=(keys(%{$info{$totype}}))[0];
+    next if defined($toname); ## this must be there and not optimised as a last call further below as there can be multiple information to parse for a given $toname
+    my @tmp=keys %info;
+    Net::DRI::Exception::err_assert('EPP::parse_poll can not handle multiple types !') unless @tmp==1;
+    $totype=$tmp[0];
+    @tmp=keys %{$info{$totype}};
+    Net::DRI::Exception::err_assert('EPP::parse_poll can not handle multiple names !') unless @tmp==1; ## this may happen for check_multi !
+    $toname=$tmp[0];
     $info{$totype}->{$toname}->{name}=$toname;
    }
   }
  }
- return unless $toname; ## this may happen, for messages completely in the <msg> head node
+
+ ## If message not completely in the <msg> node, we have to parse something !
+ Net::DRI::Exception::err_assert('EPP::parse_poll was not able to parse anything, please report !') if ((defined($mes->node_resdata()) || defined($mes->node_extension())) && ! defined $toname);
 
  ## Copy local %info into $rd (which is in fact global info as set above) someway (we're working with references)
  ## Here, $rd=$rinfo->{message}->{$msgid}

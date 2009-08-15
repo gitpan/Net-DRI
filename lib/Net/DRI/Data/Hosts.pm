@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Implements a list of host (names+ip) with order preserved
 ##
-## Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,12 +18,15 @@
 package Net::DRI::Data::Hosts;
 
 use strict;
+use warnings;
+
 use base qw(Class::Accessor::Chained::Fast);
+
 __PACKAGE__->mk_accessors(qw(name loid));
 
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.16 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.18 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -133,7 +136,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -151,7 +154,7 @@ sub new
 {
  my $class=shift;
  my $self={ list => [] }; ## list=>[['',[ipv4],[ipv6],{}]+],options=>{}
- bless($self,$class);
+ bless $self,$class;
  $self->add(@_) if (@_);
  return $self;
 }
@@ -182,19 +185,19 @@ sub add
  my ($self,$in,$e1,$e2,$ipall,$rextra)=@_;
  ($ipall,$rextra)=(undef,$ipall)  if (defined($ipall) && ref($ipall));
  return unless (defined($in) && $in);
- 
- if (ref($in) eq 'ARRAY')
+
+ if (ref $in eq 'ARRAY')
  {
   return $self->add(@$in);
  }
 
- if (defined($e2) && $e2)
+ if (defined $e2 && $e2)
  {
   $self->_push($in,$e1,$e2,$ipall,$rextra);
   return $self;
  }
 
- if (defined($e1) && $e1)
+ if (defined $e1 && $e1)
  {
   $self->_push($in,_separate_ips($e1,$ipall),$ipall,$rextra);
   return $self;
@@ -221,16 +224,16 @@ sub _separate_ips
 sub _push
 {
  my ($self,$name,$ipv4,$ipv6,$ipall,$rextra)=@_;
- $ipall=0 unless defined($ipall);
- chop($name) if (defined($name) && $name && $name=~m/\.$/);
+ $ipall=0 unless defined $ipall;
+ chop($name) if (defined $name && $name && $name=~m/\.$/);
  return unless Net::DRI::Util::is_hostname($name);
  $name=lc($name); ## by default, hostnames are case insensitive
 
  ## We keep only the public ips
- my @ipv4=grep { Net::DRI::Util::is_ipv4($_,1-$ipall) } ref($ipv4)? @$ipv4 : ($ipv4);
- my @ipv6=grep { Net::DRI::Util::is_ipv6($_,1-$ipall) } ref($ipv6)? @$ipv6 : ($ipv6);
+ my @ipv4=grep { Net::DRI::Util::is_ipv4($_,1-$ipall) } ref $ipv4 ? @$ipv4 : ($ipv4);
+ my @ipv6=grep { Net::DRI::Util::is_ipv6($_,1-$ipall) } ref $ipv6 ? @$ipv6 : ($ipv6);
 
- if ($self->count() && defined($self->get_details($name))) ## name already here, we append IP
+ if ($self->count() && defined $self->get_details($name)) ## name already here, we append IP
  {
   foreach my $el (@{$self->{list}})
   {
@@ -239,9 +242,9 @@ sub _push
    unshift @ipv6,@{$el->[2]};
    $el->[1]=_remove_dups_ip(\@ipv4);
    $el->[2]=_remove_dups_ip(\@ipv6);
-   if (defined($el->[3]) || defined($rextra))
+   if (defined $el->[3] || defined $rextra)
    {
-    $el->[3]={ defined($el->[3])? %{$el->[3]} : (), (defined($rextra) && (ref($rextra) eq 'HASH'))? %$rextra : () };
+    $el->[3]={ defined $el->[3] ? %{$el->[3]} : (), (defined $rextra && ref $rextra eq 'HASH')? %$rextra : () };
    }
    last;
   }
@@ -256,7 +259,7 @@ sub _remove_dups_ip
  my $ip=shift;
  my @a;
  my %tmp;
- @a=ref($ip)? grep { ! $tmp{$_}++ } @$ip : ($ip) if defined($ip);
+ @a=ref($ip)? grep { ! $tmp{$_}++ } @$ip : ($ip) if defined $ip;
  return \@a;
 }
 
@@ -264,7 +267,7 @@ sub _remove_dups_ip
 sub get_names
 {
  my ($self,$limit)=@_;
- return unless (defined($self) && ref($self));
+ return unless (defined $self && ref $self);
  my $c=$self->count();
  $c=$limit if ($limit && ($limit <= $c));
  my @r;
@@ -278,7 +281,7 @@ sub get_names
 sub count
 {
  my $self=shift;
- return unless (defined($self) && ref($self));
+ return unless (defined $self && ref $self);
  return scalar(@{$self->{list}});
 }
 
@@ -286,14 +289,13 @@ sub is_empty
 {
  my $self=shift;
  my $c=$self->count();
- return (defined($c) && ($c > 0))? 0 : 1;
+ return (defined $c && ($c > 0))? 0 : 1;
 }
 
 sub get_details
 {
  my ($self,$pos)=@_;
- return unless (defined($self) && ref($self));
- return unless (defined($pos) && $pos);
+ return unless (defined $self && ref $self && defined $pos && $pos);
  my $c=$self->count();
 
  if ($pos=~m/^\d+$/)
@@ -323,7 +325,7 @@ sub as_string
   my $s=$el->[0];
   my $ips=join(',',@{$el->[1]},@{$el->[2]});
   $s.=' ['.$ips.']' if $ips;
-  $s.=' {'.join(' ',map { $_.'='.$el->[3]->{$_} } keys(%{$el->[3]})).'}' if (defined($el->[3]) && %{$el->[3]});
+  $s.=' {'.join(' ',map { $_.'='.$el->[3]->{$_} } keys(%{$el->[3]})).'}' if (defined $el->[3] && %{$el->[3]});
   push @s,$s;
  }
  return join(' ',@s);

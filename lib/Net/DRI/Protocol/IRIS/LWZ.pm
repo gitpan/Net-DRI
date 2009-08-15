@@ -18,6 +18,7 @@
 package Net::DRI::Protocol::IRIS::LWZ;
 
 use strict;
+use warnings;
 
 use Net::DRI::Util;
 use Net::DRI::Exception;
@@ -30,7 +31,7 @@ use Net::DNS ();
 use IO::Uncompress::Inflate (); ## RFC1950
 use IO::Uncompress::RawInflate (); ## RFC1951
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -81,10 +82,8 @@ sub read_data # §3.1.2
  my $data;
  $sock->recv($data,4000) or die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED_CLOSING','Unable to read registry reply: '.$!,'en'));
  my $hdr=substr($data,0,1);
-
  die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED_CLOSING','Unable to read 1 byte header','en')) unless $hdr;
  # §3.1.3
- ##my @bits=split(//,unpack('B8',$hdr));
  $hdr=unpack('C',$hdr);
  my $ver=($hdr & (128+64)) >> 6;
  die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_SYNTAX_ERROR','Version unknown in header: '.$ver,'en')) unless $ver==0;
@@ -96,7 +95,6 @@ sub read_data # §3.1.2
 
  my $tid=substr($data,1,2);
  $tid=unpack('n',$tid);
-
  my $load=substr($data,3);
  if ($deflate)
  {
@@ -163,6 +161,14 @@ sub find_remote_server
  @r=Net::DRI::Util::dns_srv_order(@r) if @r > 1;
  Net::DRI::Exception->die(1,'transport/socket',8,'No remote endpoint given, and unable to find valid SRV record for '.$srv) if ($r[0]->target() eq '.');
  return ($r[0]->target(),$r[0]->port());
+}
+
+sub transport_default
+{
+ my ($self,$tname)=@_;
+ ## RFC4993 Section 4 gives recommandation for timeouts and retry algorithm
+ ## retry=5 is computed so that the whole sequence stops after 60 seconds: t,p+2t,3/2(p+2)-2+4t,3/2*3/2*(p+2)-2+8t,...
+ return (defer => 1, close_after => 1, socktype=>'udp', timeout => 1, pause => 2, retry => 5);
 }
 
 ####################################################################################################

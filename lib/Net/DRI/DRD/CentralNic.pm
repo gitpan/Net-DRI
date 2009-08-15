@@ -18,12 +18,14 @@
 package Net::DRI::DRD::CentralNic;
 
 use strict;
+use warnings;
+
 use base qw/Net::DRI::DRD/;
 
 use DateTime::Duration;
 use DateTime;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -81,23 +83,14 @@ sub periods      { return map { DateTime::Duration->new(years => $_) } (2..10); 
 sub name         { return 'CentralNic'; }
 sub tlds         { return (qw/la uk.net se.net gb.net/,map { $_.'.com' } qw/eu uk us cn de jpn kr no za br ar ru sa se hu gb qc uy ae/); } ## see https://www.centralnic.com/names/domains
 sub object_types { return ('domain','ns','contact'); }
-
-sub transport_protocol_compatible 
-{
- my ($self,$to,$po)=@_;
- my $pn=$po->name();
- my $pv=$po->version();
- my $tn=$to->name();
-
- return 1 if (($pn eq 'EPP') && ($tn eq 'socket_inet'));
- return;
-}
+sub profile_types { return qw/epp/; }
 
 sub transport_protocol_default
 {
- my ($drd,$ndr,$type,$ta,$pa)=@_;
- $type='epp' if (!defined($type) || ref($type));
- return Net::DRI::DRD::_transport_protocol_default_epp('Net::DRI::Protocol::EPP::Extensions::CentralNic',$ta,$pa) if ($type eq 'epp');
+ my ($self,$type)=@_;
+
+ return ('Net::DRI::Transport::Socket',{},'Net::DRI::Protocol::EPP::Extensions::CentralNic',{}) if $type eq 'epp';
+ return;
 }
 
 ####################################################################################################
@@ -146,7 +139,7 @@ sub verify_duration_renew
 sub domain_release
 {
  my ($self,$ndr,$domain,$rd)=@_;
- $self->err_invalid_domain_name($domain) if $self->verify_name_domain($ndr,$domain,'release');
+ $self->enforce_domain_name_constraints($ndr,$domain,'release');
 
  return $ndr->process('domain','release',[$domain,$rd]);
 }

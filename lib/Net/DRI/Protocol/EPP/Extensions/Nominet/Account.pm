@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .UK EPP Account commands
 ##
-## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,16 +18,14 @@
 package Net::DRI::Protocol::EPP::Extensions::Nominet::Account;
 
 use strict;
+use warnings;
 
 use Net::DRI::Protocol::EPP::Core::Contact;
 use Net::DRI::Protocol::EPP::Extensions::Nominet::Contact;
-use Net::DRI::Data::ContactSet;
 use Net::DRI::Util;
 use Net::DRI::Exception;;
 
-use DateTime::Format::ISO8601;
-
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -57,7 +55,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -75,10 +73,11 @@ sub register_commands
 {
  my ($class,$version)=@_;
  my %tmp=( 
-	 	info   => [ \&info, \&info_parse ],
+ 		info   => [ \&info, \&info_parse ],
 		update => [ \&update ],
                 fork   => [ \&fork, \&fork_parse ],
 		merge  => [ \&merge ],
+		list_domains => [\&list_domains, \&list_domains_parse ],
 	);
 
  return { 'account' => \%tmp };
@@ -136,7 +135,7 @@ sub info_parse
  return unless $mes->is_success();
 
  my $infdata=$mes->get_response('account','infData');
- return unless $infdata;
+ return unless defined $infdata;
 
  parse_infdata($po,$mes,$infdata,$oname,$rinfo);
 }
@@ -146,19 +145,15 @@ sub parse_infdata
  my ($po,$mes,$infdata,$oname,$rinfo)=@_;
  my %c;
  my $addr=0;
- my $cs=Net::DRI::Data::ContactSet->new();
- my $cf=$po->factories()->{contact};
- my $ca=$cf->();
- my $pd=DateTime::Format::ISO8601->new();
- my $c=$infdata->getFirstChild();
- while ($c)
+ my $cs=$po->create_local_object('contactset');
+ my $ca=$po->create_local_object('contact');
+
+ foreach my $el (Net::DRI::Util::xml_list_children($infdata))
  {
-  next unless ($c->nodeType() == 1);
-  my $name=$c->localname() || $c->nodeName();
-  next unless $name;
+  my ($name,$c)=@$el;
   if ($name eq 'roid')
   {
-   $oname=$c->getFirstChild()->getData();
+   $oname=$c->textContent();
    $ca->roid($oname);
    $cs->set($ca,'registrant');
    $rinfo->{account}->{$oname}->{roid}=$rinfo->{contact}->{$oname}->{roid}=$oname;
@@ -168,13 +163,13 @@ sub parse_infdata
   {
    $w=~s/-/_/;
    $w='org' if $w eq 'trad_name';
-   $ca->$w($c->getFirstChild()->getData());
+   $ca->$w($c->textContent());
   } elsif ($name eq 'addr')
   {
    if ($addr)
    {
     ## Creating a second registrant contact to hold optional billing address
-    my $ca2=$cf->();
+    my $ca2=$po->create_local_object('contact');
     parse_addr($c,$ca2);
     $cs->add($ca2,'registrant');
    } else
@@ -186,17 +181,20 @@ sub parse_infdata
   {
    my $type=$c->getAttribute('type'); ## admin or billing
    my $order=$c->getAttribute('order'); ## 1 or 2 or 3
-   my $co=$cf->();
-   Net::DRI::Protocol::EPP::Extensions::Nominet::Contact::parse_infdata($c->getChildrenByTagNameNS($mes->ns('contact'),'infData')->shift(),$co,undef,$rinfo);
+   my $co=$po->create_local_object('contact');
+   if ($c->getChildrenByTagNameNS($mes->ns('contact'),'infData'))
+   {
+    Net::DRI::Protocol::EPP::Extensions::Nominet::Contact::parse_infdata($po,$c->getChildrenByTagNameNS($mes->ns('contact'),'infData')->get_node(1),$co,undef,$rinfo);
+   }
    $c{$type}->{$order}=$co;
   } elsif ($name=~m/^(clID|crID|upID)$/)
   {
-   $rinfo->{account}->{$oname}->{$1}=get_data($c);
+   $rinfo->{account}->{$oname}->{$1}=$c->textContent();
   } elsif ($name=~m/^(crDate|upDate)$/)
   {
-   $rinfo->{account}->{$oname}->{$1}=$pd->parse_datetime($c->getFirstChild()->getData());
+   $rinfo->{account}->{$oname}->{$1}=$po->parse_iso8601($c->textContent());
   }
- } continue { $c=$c->getNextSibling(); }
+ }
 
  $cs->set([ map { $c{'admin'}->{$_} } sort { $a <=> $b } keys(%{$c{'admin'}}) ],'admin') if (exists($c{'admin'}));
  $cs->set([ map { $c{'billing'}->{$_} } sort { $a <=> $b } keys(%{$c{'billing'}}) ],'billing') if (exists($c{'billing'}));
@@ -204,43 +202,34 @@ sub parse_infdata
  return $cs;
 }
 
-sub get_data
-{
- my $n=shift;
- return ($n->getFirstChild())? $n->getFirstChild()->getData() : '';
-}
-
 sub parse_addr
 {
  my ($n,$c)=@_;
  my @street;
 
- $n=$n->getFirstChild();
- while($n)
+ foreach my $el (Net::DRI::Util::xml_list_children($n))
  {
-  next unless ($n->nodeType() == 1);
-  my $name=$n->localname() || $n->nodeName();
-  next unless $name;
+  my ($name,$n)=@$el;
   if ($name eq 'street')
   {
-   push @street,get_data($n);
+   push @street,$n->textContent();
   } elsif ($name eq 'locality')
   {
-   push @street,get_data($n);
+   push @street,$n->textContent();
   } elsif ($name eq 'city')
   {
-   $c->city(get_data($n));
+   $c->city($n->textContent());
   } elsif ($name eq 'county')
   {
-   $c->sp(get_data($n));
+   $c->sp($n->textContent());
   } elsif ($name eq 'postcode')
   {
-   $c->pc(get_data($n));
+   $c->pc($n->textContent());
   } elsif ($name eq 'country')
   {
-   $c->cc(get_data($n));
+   $c->cc($n->textContent());
   }
- } continue { $n=$n->getNextSibling(); }
+ }
 
  $c->street(\@street);
 }
@@ -342,12 +331,12 @@ sub fork
 
 sub parse_credata
 {
- my ($mes,$node,$cf,$cs,$rinfo)=@_;
+ my ($mes,$node,$po,$cs,$rinfo)=@_;
  my %c;
  my $nsa=$mes->ns('account');
- my $roid=$node->getChildrenByTagNameNS($nsa,'roid')->shift()->getFirstChild()->getData();
- my $name=$node->getChildrenByTagNameNS($nsa,'name')->shift()->getFirstChild()->getData();
- my $co=$cf->()->srid($roid)->name($name);
+ my $roid=$node->getChildrenByTagNameNS($nsa,'roid')->get_node(1)->textContent();
+ my $name=$node->getChildrenByTagNameNS($nsa,'name')->get_node(1)->textContent();
+ my $co=$po->create_local_object('contact')->srid($roid)->name($name);
  $cs->set($co,'registrant');
  $rinfo->{contact}->{$roid}->{exist}=1;
  $rinfo->{contact}->{$roid}->{roid}=$roid;
@@ -357,10 +346,10 @@ sub parse_credata
  {
   my $type=$ac->getAttribute('type');
   my $order=$ac->getAttribute('order');
-  my $credata=$ac->getChildrenByTagNameNS($nsc,'creData')->shift();
-  my $roid2=$credata->getChildrenByTagNameNS($nsc,'roid')->shift()->getFirstChild()->getData();
-  my $name2=$credata->getChildrenByTagNameNS($nsc,'name')->shift()->getFirstChild()->getData();
-  $co=$cf->()->srid($roid2)->name($name2);
+  my $credata=$ac->getChildrenByTagNameNS($nsc,'creData')->get_node(1);
+  my $roid2=$credata->getChildrenByTagNameNS($nsc,'roid')->get_node(1)->textContent();
+  my $name2=$credata->getChildrenByTagNameNS($nsc,'name')->get_node(1)->textContent();
+  $co=$po->create_local_object('contact')->srid($roid2)->name($name2);
   $c{$type}->{$order}=$co;
   $rinfo->{contact}->{$roid2}->{exist}=1;
   $rinfo->{contact}->{$roid2}->{roid}=$roid2;
@@ -382,9 +371,8 @@ sub fork_parse
  my $credata=$mes->get_response('account','creData');
  return unless $credata;
 
- my $cs=Net::DRI::Data::ContactSet->new();
- my $cf=$po->factories()->{contact};
- my $roid=parse_credata($mes,$credata,$cf,$cs,$rinfo);
+ my $cs=$po->create_local_object('contactset');
+ my $roid=parse_credata($mes,$credata,$po,$cs,$rinfo);
  $rinfo->{account}->{$roid}->{action}='fork';
  $rinfo->{account}->{$oname}->{fork_to}=$roid if defined($oname); ## roid not mandatory during fork call
 }
@@ -417,6 +405,44 @@ sub merge
  }
 
  $mes->command_body(\@d);
+}
+
+####################################################################################################
+## In Nominet documentation this is listed as an operation acting on *one* domain
+## See http://www.nominet.org.uk/registrars/systems/nominetepp/list/
+
+sub list_domains
+{
+ my ($epp,$rd,$rh)=@_;
+ my $mes=$epp->message();
+
+ Net::DRI::Exception::usererr_insufficient_parameters('list_domains needs a ref hash with a registration or expiration key') unless Net::DRI::Util::has_key($rd,'registration') || Net::DRI::Util::has_key($rd,'expiration');
+
+ $mes->command(['info','domain:list',sprintf('xmlns:domain="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('domain'))]);
+ my @d;
+ if (Net::DRI::Util::has_key($rd,'registration'))
+ {
+  Net::DRI::Util::check_isa($rd->{registration},'DateTime');
+  push @d,['domain:month',$rd->{registration}->set_time_zone('UTC')->strftime('%Y-%m')];
+ } else
+ {
+  Net::DRI::Util::check_isa($rd->{expiration},'DateTime');
+  push @d,['domain:expiry',$rd->{registration}->set_time_zone('UTC')->strftime('%Y-%m')];
+ }
+ push @d,['domain:fields','none']; ## with that we get only domain names back, if 'all' instead we get full infData for each domain, as in domain_info reply
+ $mes->command_body(\@d);
+}
+
+sub list_domains_parse
+{
+ my ($po,$otype,$oaction,$oname,$rinfo)=@_;
+ my $mes=$po->message();
+ return unless $mes->is_success();
+
+ ## This should be the same as poll messages: registrar change, domains released, poor quality. TODO: some factorization
+ my $list=$mes->get_response('domain','listData');
+ $rinfo->{account}->{domains}->{action}='list';
+ $rinfo->{account}->{domains}->{list}=defined $list ? [ map { $_->textContent() } $list->getChildrenByTagNameNS($mes->ns('domain'),'name') ] : [];
 }
 
 ####################################################################################################

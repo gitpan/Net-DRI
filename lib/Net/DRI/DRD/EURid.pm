@@ -18,15 +18,17 @@
 package Net::DRI::DRD::EURid;
 
 use strict;
+use warnings;
+
 use base qw/Net::DRI::DRD/;
 
 use Net::DRI::Util;
 use Net::DRI::Exception;
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
-__PACKAGE__->make_exception_for_unavailable_operations(qw/domain_transfer_query domain_transfer_accept domain_transfer_refuse domain_renew contact_check contact_check_multi contact_transfer contact_transfer_start contact_transfer_stop contact_transfer_query contact_transfer_accept contact_transfer_refuse message_retrieve message_delete message_waiting message_count/);
+__PACKAGE__->make_exception_for_unavailable_operations(qw/domain_transfer_query domain_transfer_accept domain_transfer_refuse domain_renew contact_check contact_check_multi contact_transfer contact_transfer_start contact_transfer_stop contact_transfer_query contact_transfer_accept contact_transfer_refuse/);
 
 =pod
 
@@ -87,38 +89,18 @@ sub periods  { return map { DateTime::Duration->new(years => $_) } (1); }
 sub name     { return 'EURid'; }
 sub tlds     { return ('eu'); }
 sub object_types { return ('domain','contact','nsgroup'); }
-
-sub transport_protocol_compatible
-{
- my ($self,$to,$po)=@_;
- my $pn=$po->name();
- my $tn=$to->name();
-
- return 1 if (($pn eq 'EPP') && ($tn eq 'socket_inet'));
- return 1 if (($pn eq 'DAS') && ($tn eq 'socket_inet'));
- return 1 if (($pn eq 'Whois') && ($tn eq 'socket_inet'));
- return;
-}
+sub profile_types { return qw/epp das whois das-registrar whois-registrar/; }
 
 sub transport_protocol_default
 {
- my ($drd,$ndr,$type,$ta,$pa)=@_;
- $type='epp' if (!defined($type) || ref($type));
- if ($type eq 'epp')
- {
-  return ('Net::DRI::Transport::Socket','Net::DRI::Protocol::EPP::Extensions::EURid') unless (defined($ta) && defined($pa));
-  my %ta=( %Net::DRI::DRD::PROTOCOL_DEFAULT_EPP,
-                     remote_host => 'epp.registry.tryout.eu', ## OTE by default, since production parameters can not be publicly released
-                     remote_port => 33128,
-                     (ref($ta) eq 'ARRAY')? %{$ta->[0]} : %$ta,
-                   );
-  my @pa=(ref($pa) eq 'ARRAY' && @$pa)? @$pa : ('1.0');
-  return ('Net::DRI::Transport::Socket',[\%ta],'Net::DRI::Protocol::EPP::Extensions::EURid',\@pa);
- }
- return ('Net::DRI::Transport::Socket',[{%Net::DRI::DRD::PROTOCOL_DEFAULT_DAS,remote_host=>'das.eu'}],'Net::DRI::Protocol::DAS',[]) if (lc($type) eq 'das');
- return ('Net::DRI::Transport::Socket',[{%Net::DRI::DRD::PROTOCOL_DEFAULT_WHOIS,remote_host=>'whois.eu'}],'Net::DRI::Protocol::Whois',[]) if (lc($type) eq 'whois');
- return ('Net::DRI::Transport::Socket',[{%Net::DRI::DRD::PROTOCOL_DEFAULT_DAS,remote_host=>'das.registry.eu'}],'Net::DRI::Protocol::DAS',[]) if (lc($type) eq 'das-registrar');
- return ('Net::DRI::Transport::Socket',[{%Net::DRI::DRD::PROTOCOL_DEFAULT_WHOIS,remote_host=>'whois.registry.eu'}],'Net::DRI::Protocol::Whois',[]) if (lc($type) eq 'whois-registrar');
+ my ($self,$type)=@_;
+
+ return ('Net::DRI::Transport::Socket',{remote_host=>'epp.registry.tryout.eu',remote_port=>33128},'Net::DRI::Protocol::EPP::Extensions::EURid',{}) if $type eq 'epp';
+ return ('Net::DRI::Transport::Socket',{remote_host=>'das.eu'},'Net::DRI::Protocol::DAS',{no_tld=>1})                                              if $type eq 'das';
+ return ('Net::DRI::Transport::Socket',{remote_host=>'whois.eu'},'Net::DRI::Protocol::Whois',{})                                                   if $type eq 'whois';
+ return ('Net::DRI::Transport::Socket',{remote_host=>'das.registry.eu'},'Net::DRI::Protocol::DAS',{no_tld=>1})                                     if $type eq 'das-registrar';
+ return ('Net::DRI::Transport::Socket',{remote_host=>'whois.registry.eu'},'Net::DRI::Protocol::Whois',{})                                          if $type eq 'whois-registrar';
+ return;
 }
 
 ######################################################################################
@@ -138,7 +120,7 @@ sub verify_name_domain
 sub domain_undelete
 {
  my ($self,$ndr,$domain,$rd)=@_;
- $self->err_invalid_domain_name($domain) if $self->verify_name_domain($ndr,$domain,'undelete');
+ $self->enforce_domain_name_constraints($ndr,$domain,'undelete');
 
  my $rc=$ndr->process('domain','undelete',[$domain,$rd]);
  return $rc;
@@ -147,7 +129,7 @@ sub domain_undelete
 sub domain_transfer_quarantine
 {
  my ($self,$ndr,$domain,$op,$rd)=@_;
- $self->err_invalid_domain_name($domain) if $self->verify_name_domain($ndr,$domain,'transfer_quarantine');
+ $self->enforce_domain_name_constraints($ndr,$domain,'transfer_quarantine');
  Net::DRI::Exception::usererr_invalid_parameters('Transfer from quarantine operation must be start or stop') unless ($op=~m/^(?:start|stop)$/);
 
  my $rc;
@@ -168,7 +150,7 @@ sub domain_transfer_quarantine_stop  { my ($self,$ndr,$domain,$rd)=@_; return $s
 sub domain_trade_start
 {
  my ($self,$ndr,$domain,$rd)=@_;
- $self->err_invalid_domain_name($domain) if $self->verify_name_domain($ndr,$domain,'trade');
+ $self->enforce_domain_name_constraints($ndr,$domain,'trade');
 
  my $rc=$ndr->process('domain','trade_request',[$domain,$rd]);
  return $rc;
@@ -177,7 +159,7 @@ sub domain_trade_start
 sub domain_trade_stop
 {
  my ($self,$ndr,$domain,$rd)=@_;
- $self->err_invalid_domain_name($domain) if $self->verify_name_domain($ndr,$domain,'trade');
+ $self->enforce_domain_name_constraints($ndr,$domain,'trade');
 
  my $rc=$ndr->process('domain','trade_cancel',[$domain,$rd]);
  return $rc;
@@ -186,7 +168,7 @@ sub domain_trade_stop
 sub domain_reactivate
 {
  my ($self,$ndr,$domain,$rd)=@_;
- $self->err_invalid_domain_name($domain) if $self->verify_name_domain($ndr,$domain,'reactivate');
+ $self->enforce_domain_name_constraints($ndr,$domain,'reactivate');
 
  my $rc=$ndr->process('domain','reactivate',[$domain,$rd]);
  return $rc;
@@ -195,12 +177,27 @@ sub domain_reactivate
 sub domain_check_contact_for_transfer
 {
  my ($self,$ndr,$domain,$rd)=@_;
- $self->err_invalid_domain_name($domain) if $self->verify_name_domain($ndr,$domain,'check_contact_for_transfer');
+ $self->enforce_domain_name_constraints($ndr,$domain,'check_contact_for_transfer');
 
  my $rc=$ndr->process('domain','check_contact_for_transfer',[$domain,$rd]);
  return $rc;
 }
 
+sub registrar_info
+{
+ my ($self,$ndr)=@_;
+ my $rc=$ndr->process('registrar','info');
+ return $rc;
+}
+
+sub domain_remind
+{
+ my ($self,$ndr,$domain,$rd)=@_;
+ $self->enforce_domain_name_constraints($ndr,$domain,'remind');
+
+ my $rc=$ndr->process('domain','remind',[$domain,$rd]);
+ return $rc;
+}
 
 #################################################################################################################
 1;

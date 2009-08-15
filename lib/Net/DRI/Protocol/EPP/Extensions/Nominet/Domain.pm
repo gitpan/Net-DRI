@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .UK EPP Domain commands
 ##
-## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,19 +18,15 @@
 package Net::DRI::Protocol::EPP::Extensions::Nominet::Domain;
 
 use strict;
-
+use warnings;
 
 use Net::DRI::Util;
 use Net::DRI::Exception;
-use Net::DRI::Data::Hosts;
-use Net::DRI::Data::ContactSet;
 use Net::DRI::Protocol::EPP::Core::Domain;
 use Net::DRI::Protocol::EPP::Extensions::Nominet::Account;
 use Net::DRI::Protocol::EPP::Extensions::Nominet::Host;
 
-use DateTime::Format::ISO8601;
-
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -60,7 +56,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -86,6 +82,7 @@ sub register_commands
 		transfer_answer  => [ \&transfer_answer ],
 		create => [\&create, \&create_parse ],
 		update => [\&update],
+                unrenew => [\&unrenew],
          );
 
  $tmp{check_multi}=$tmp{check};
@@ -109,32 +106,29 @@ sub info_parse
  my $mes=$po->message();
  return unless $mes->is_success();
  my $infdata=$mes->get_response('domain','infData');
- return unless $infdata;
+ return unless defined $infdata;
 
- my $pd=DateTime::Format::ISO8601->new();
- my $ns=Net::DRI::Data::Hosts->new();
+ my $ns=$po->create_local_object('hosts');
  my @n;
- my $c=$infdata->getFirstChild();
- while ($c)
+
+ foreach my $el (Net::DRI::Util::xml_list_children($infdata))
  {
-  next unless ($c->nodeType() == 1); ## only for element nodes
-  my $name=$c->localname() || $c->nodeName();
-  next unless $name;
+  my ($name,$c)=@$el;
   if ($name eq 'name')
   {
-   $oname=lc($c->getFirstChild()->getData());
+   $oname=lc($c->textContent());
    $rinfo->{domain}->{$oname}->{action}='info';
    $rinfo->{domain}->{$oname}->{exist}=1;
   } elsif ($name=~m/^(reg-status|first-bill|recur-bill|auto-bill|next-bill)$/)
   {
    ## See http://www.nominet.org.uk/registrars/systems/data/fields/
-   $rinfo->{domain}->{$oname}->{$1}=$c->getFirstChild()->getData();
+   $rinfo->{domain}->{$oname}->{$1}=$c->textContent();
   } elsif ($name eq 'notes') ## There may be more than one instance of this element. (http://www.nominet.org.uk/registrars/systems/epp/domainnamelistelements/)
   {
-   push @n,$c->getFirstChild()->getData();
+   push @n,$c->textContent();
   } elsif ($name eq 'account')
   {
-   my $cs=Net::DRI::Protocol::EPP::Extensions::Nominet::Account::parse_infdata($po,$mes,$c->getChildrenByTagNameNS($mes->ns('account'),'infData')->shift(),undef,$rinfo);
+   my $cs=Net::DRI::Protocol::EPP::Extensions::Nominet::Account::parse_infdata($po,$mes,$c->getChildrenByTagNameNS($mes->ns('account'),'infData')->get_node(1),undef,$rinfo);
    $rinfo->{domain}->{$oname}->{contact}=$cs;
   } elsif ($name eq 'ns')
   {
@@ -149,12 +143,12 @@ sub info_parse
    ## If really needed, they could be added to Hosts (extra parameters)
   } elsif ($name=~m/^(clID|crID|upID)$/)
   {
-   $rinfo->{domain}->{$oname}->{$1}=$c->getFirstChild()->getData();
+   $rinfo->{domain}->{$oname}->{$1}=$c->textContent();
   } elsif ($name=~m/^(crDate|upDate|exDate)$/)
   {
-   $rinfo->{domain}->{$oname}->{$1}=$pd->parse_datetime($c->getFirstChild()->getData());
+   $rinfo->{domain}->{$oname}->{$1}=$po->parse_iso8601($c->textContent());
   }
- } continue { $c=$c->getNextSibling(); }
+ }
 
  $rinfo->{domain}->{$oname}->{ns}=$ns;
  $rinfo->{domain}->{$oname}->{notes}=\@n;
@@ -177,11 +171,11 @@ sub transfer_request
  my $mes=$epp->message();
  my @d=Net::DRI::Protocol::EPP::Core::Domain::build_command($mes,['transfer',{'op'=>'request'}],$domain);
 
- Net::DRI::Exception::usererr_insufficient_parameters('Extra parameters must be provided for domain transfer request, at least a registrar_tag') unless (defined($rd) && (ref($rd) eq 'HASH') && exists($rd->{registrar_tag}));
+ Net::DRI::Exception::usererr_insufficient_parameters('Extra parameters must be provided for domain transfer request, at least a registrar_tag') unless Net::DRI::Util::has_key($rd,'registrar_tag');
  Net::DRI::Exception::usererr_invalid_parameters('Registrar tag must be an XML token from 2 to 16 characters') unless Net::DRI::Util::xml_is_token($rd->{registrar_tag},2,16);
  push @d,['domain:registrar-tag',$rd->{registrar_tag}];
 
- if (exists($rd->{account_id}) && defined($rd->{account_id}))
+ if (Net::DRI::Util::has_key($rd,'account_id'))
  {
   my $id=Net::DRI::Util::isa_contactset($rd->{account_id})? $rd->{account_id}->get('registrant')->srid() : $rd->{account_id};
   Net::DRI::Exception::usererr_invalid_parameters('Account id must be an XML token with pattern [0-9]*(-UK)?') unless (Net::DRI::Util::xml_is_token($id) && $id=~m/^\d+(?:-UK)?$/);
@@ -196,7 +190,7 @@ sub transfer_answer
  my $mes=$epp->message();
  $mes->command([['transfer',{'op'=>(Net::DRI::Util::has_key($rd,'approve') && $rd->{approve})? 'approve' : 'reject'}]]);
 
- Net::DRI::Exception::usererr_insufficient_parameters('Extra parameters must be provided for domain transfer request, at least a case_id') unless (defined($rd) && (ref($rd) eq 'HASH') && exists($rd->{case_id}));
+ Net::DRI::Exception::usererr_insufficient_parameters('Extra parameters must be provided for domain transfer request, at least a case_id') unless Net::DRI::Util::has_key($rd,'case_id');
  Net::DRI::Exception::usererr_invalid_parameters('Case id must be an XML token up to 12 characters') unless Net::DRI::Util::xml_is_token($rd->{case_id},undef,12);
 
  my @ns=@{$mes->ns()->{notifications}};
@@ -268,38 +262,32 @@ sub create_parse
  my $mes=$po->message();
  return unless $mes->is_success();
  my $credata=$mes->get_response('domain','creData');
- return unless $credata;
+ return unless defined $credata;
 
- my $pd=DateTime::Format::ISO8601->new();
- my $cs=Net::DRI::Data::ContactSet->new();
- my $cf=$po->factories()->{contact};
- my $c=$credata->getFirstChild();
- while ($c)
+ my $cs=$po->create_local_object('contactset');
+ foreach my $el (Net::DRI::Util::xml_list_children($credata))
  {
-  next unless ($c->nodeType() == 1); ## only for element nodes
-  my $name=$c->localname() || $c->nodeName();
-  next unless $name;
-
+  my ($name,$c)=@$el;
   if ($name eq 'name')
   {
-   $oname=lc($c->getFirstChild()->getData());
+   $oname=lc($c->textContent());
    $rinfo->{domain}->{$oname}->{action}='create';
    $rinfo->{domain}->{$oname}->{exist}=1;
   } elsif ($name eq 'account')
   {
-   my $node=$c->getChildrenByTagNameNS($mes->ns('account'),'creData')->shift();
-   my $roid=Net::DRI::Protocol::EPP::Extensions::Nominet::Account::parse_credata($mes,$node,$cf,$cs,$rinfo);
+   my $node=$c->getChildrenByTagNameNS($mes->ns('account'),'creData')->get_node(1);
+   my $roid=Net::DRI::Protocol::EPP::Extensions::Nominet::Account::parse_credata($mes,$node,$po,$cs,$rinfo);
    $rinfo->{account}->{$roid}->{action}='create';
    $rinfo->{domain}->{$oname}->{contact}=$cs;
   } elsif ($name eq 'ns')
   {
-    my $ns=Net::DRI::Data::Hosts->new();
+    my $ns=$po->create_local_object('hosts');
     my $nsns=$mes->ns('ns');
     foreach my $node ($c->getChildrenByTagNameNS($nsns,'creData'))
     {
-     my $roid=$node->getChildrenByTagNameNS($nsns,'roid')->shift()->getFirstChild()->getData();
-     my $name=$node->getChildrenByTagNameNS($nsns,'name')->shift()->getFirstChild()->getData();
-     my $date=$pd->parse_datetime($node->getChildrenByTagNameNS($nsns,'crDate')->shift()->getFirstChild()->getData());
+     my $roid=$node->getChildrenByTagNameNS($nsns,'roid')->get_node(1)->textContent();
+     my $name=$node->getChildrenByTagNameNS($nsns,'name')->get_node(1)->textContent();
+     my $date=$po->parse_iso8601($node->getChildrenByTagNameNS($nsns,'crDate')->get_node(1)->textContent());
      $ns->add($name,[],[],undef,{roid => $roid});
      ## See Host::parse_infdata
      $rinfo->{host}->{$name}->{exist}=$rinfo->{host}->{$roid}->{exist}=1;
@@ -311,9 +299,9 @@ sub create_parse
    $rinfo->{domain}->{$oname}->{ns}=$ns
   } elsif ($name=~m/^(crDate|exDate)$/)
   {
-   $rinfo->{domain}->{$oname}->{$1}=$pd->parse_datetime($c->getFirstChild()->getData());
+   $rinfo->{domain}->{$oname}->{$1}=$po->parse_iso8601($c->textContent());
   }
- } continue { $c=$c->getNextSibling(); }
+ }
 }
 
 sub update
@@ -357,6 +345,23 @@ sub update
  $tmp=$todo->set('notes');
  push @d,['domain:notes',$tmp] if defined($tmp);
 
+ $mes->command_body(\@d);
+}
+
+## Warning: this can also be used for multiple domain names at once,
+## see http://www.nominet.org.uk/registrars/systems/nominetepp/Unrenew/
+## However, if we accept that, we will probably have to tweak Core::Domain::renew_parse
+## to handle multiple renData nodes in the response.
+sub unrenew
+{
+ my ($epp,$domain,$rd)=@_;
+ my $mes=$epp->message();
+
+ Net::DRI::Exception->die(1,'protocol/EPP',2,'Domain name needed') unless defined($domain) && $domain;
+ Net::DRI::Exception->die(1,'protocol/EPP',10,'Invalid domain name: '.$domain) unless Net::DRI::Util::is_hostname($domain);
+
+ $mes->command(['update','domain:unrenew',sprintf('xmlns:domain="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('domain'))]);
+ my @d=(['domain:name',$domain]);
  $mes->command_body(\@d);
 }
 

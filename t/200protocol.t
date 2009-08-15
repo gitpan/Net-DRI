@@ -18,7 +18,7 @@ is($p->version(),'1.5','version()');
 is($p->nameversion(),'myname/1.5','nameversion()');
 
 TODO: {
-	local $TODO="tests on create_status() & others (factories, commands)";
+	local $TODO='other tests (factories, commands)';
 	ok(0);
 }
 

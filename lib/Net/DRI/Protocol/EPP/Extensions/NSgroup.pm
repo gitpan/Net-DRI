@@ -1,7 +1,7 @@
 ## Domain Registry Interface, EPP NSgroup extension commands
 ## (based on .BE Registration_guidelines_v4_7_1)
 ##
-## Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -19,12 +19,12 @@
 package Net::DRI::Protocol::EPP::Extensions::NSgroup;
 
 use strict;
+use warnings;
 
 use Net::DRI::Util;
 use Net::DRI::Exception;
-use Net::DRI::Data::Hosts;
 
-our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -54,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -97,10 +97,10 @@ sub build_command
  my ($epp,$msg,$command,$hosts)=@_;
 
  my @gn;
- foreach my $h ( grep { defined } (ref($hosts) eq 'ARRAY')? @$hosts : ($hosts))
+ foreach my $h ( grep { defined } (ref $hosts eq 'ARRAY')? @$hosts : ($hosts))
  {
   my $gn=Net::DRI::Util::isa_nsgroup($h)? $h->name() : $h;
-  Net::DRI::Exception->die(1,'protocol/EPP',10,'Invalid NSgroup name: '.$gn) unless (defined($gn) && $gn && !ref($gn) && Net::DRI::Util::xml_is_normalizedstring($gn,1,100));
+  Net::DRI::Exception->die(1,'protocol/EPP',10,'Invalid NSgroup name: '.$gn) unless (defined $gn && $gn && ! ref $gn && Net::DRI::Util::xml_is_normalizedstring($gn,1,100));
   push @gn,$gn;
  }
 
@@ -158,22 +158,21 @@ sub check_parse
 
  my $ns=ns($mes);
  my $chkdata=$mes->get_response($ns,'chkData');
- return unless $chkdata;
+ return unless defined $chkdata;
+
  foreach my $cd ($chkdata->getChildrenByTagNameNS($ns,'cd'))
  {
-  my $c=$cd->getFirstChild();
   my $nsgroup;
-  while($c)
+  foreach my $el (Net::DRI::Util::xml_list_children($cd))
   {
-   next unless ($c->nodeType() == 1); ## only for element nodes
-   my $n=$c->localname() || $c->nodeName();
+   my ($n,$c)=@$el;
    if ($n eq 'name')
    {
-    $nsgroup=$c->getFirstChild()->getData();
+    $nsgroup=$c->textContent();
     $rinfo->{nsgroup}->{$nsgroup}->{exist}=1-Net::DRI::Util::xml_parse_boolean($c->getAttribute('avail'));
     $rinfo->{nsgroup}->{$nsgroup}->{action}='check';
    }
-  } continue { $c=$c->getNextSibling(); }
+  }
  }
 }
 
@@ -192,27 +191,23 @@ sub info_parse
  return unless $mes->is_success();
 
  my $infdata=$mes->get_response(ns($mes),'infData');
- return unless $infdata;
+ return unless defined $infdata;
 
- my $ns=Net::DRI::Data::Hosts->new();
-
- my $c=$infdata->getFirstChild();
- while ($c)
+ my $ns=$po->create_local_object('hosts');
+ foreach my $el (Net::DRI::Util::xml_list_children($infdata))
  {
-  next unless ($c->nodeType() == 1); ## only for element nodes
-  my $name=$c->localname() || $c->nodeName();
-  next unless $name;
+  my ($name,$c)=@$el;
   if ($name eq 'name')
   {
-   $oname=$c->getFirstChild()->getData();
+   $oname=$c->textContent();
    $ns->name($oname);
    $rinfo->{nsgroup}->{$oname}->{exist}=1;
    $rinfo->{nsgroup}->{$oname}->{action}='info';
   } elsif ($name eq 'ns')
   {
-   $ns->add($c->getFirstChild()->getData());
+   $ns->add($c->textContent());
   }
- } continue { $c=$c->getNextSibling(); }
+ }
 
  $rinfo->{nsgroup}->{$oname}->{self}=$ns;
 }

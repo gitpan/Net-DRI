@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP E.164 Validation Information Example from RFC5076
 ##
-## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,11 +18,12 @@
 package Net::DRI::Protocol::EPP::Extensions::E164Validation::RFC5076;
 
 use strict;
+use warnings;
+
 use Net::DRI::Exception;
 use Net::DRI::Util;
-use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 our $NS='urn:ietf:params:xml:ns:e164valex-1.1';
 
 =pod
@@ -53,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -77,22 +78,18 @@ sub info_parse
  my ($class,$po,$top)=@_;
  Net::DRI::Exception::usererr_insufficient_parameters('Root element for information validation of URI='.$NS.' must be simpleVal') unless (($top->localname() || $top->nodeName()) eq 'simpleVal');
 
- my $pd=DateTime::Format::ISO8601->new();
- my $c=$top->getFirstChild();
  my %n;
- while ($c)
+ foreach my $el (Net::DRI::Util::xml_list_children($top))
  {
-  next unless ($c->nodeType() == 1); ## only for element nodes
-  my $name=$c->localname() || $c->nodeName();
-  next unless $name;
+  my ($name,$c)=@$el;
   if ($name=~m/^(methodID|validationEntityID|registrarID)$/)
   {
-   $n{Net::DRI::Util::remcam($1)}=$c->getFirstChild()->getData();
+   $n{Net::DRI::Util::remcam($1)}=$c->textContent();
   } elsif ($name=~m/^(executionDate|expirationDate)$/)
   {
-   $n{Net::DRI::Util::remcam($1)}=$pd->parse_datetime($c->getFirstChild()->getData());
+   $n{Net::DRI::Util::remcam($1)}=$po->parse_iso8601($c->textContent());
   }
- } continue { $c=$c->getNextSibling(); }
+ }
  return \%n;
 }
 
@@ -115,16 +112,16 @@ sub create
  my ($class,$rd)=@_;
 
  my @c;
- Net::DRI::Exception::usererr_insufficient_parameters('method_id and execution_date are mandatory in validation information') unless (exists($rd->{method_id}) && exists($rd->{execution_date}));
+ Net::DRI::Exception::usererr_insufficient_parameters('method_id and execution_date are mandatory in validation information') unless (exists $rd->{method_id} && exists $rd->{execution_date});
  Net::DRI::Exception::usererr_invalid_parameters('method_id must be an xml token from 1 to 63 characters') unless Net::DRI::Util::xml_is_token($rd->{method_id},1,63);
  push @c,['valex:methodID',$rd->{method_id}];
 
- if (exists($rd->{validation_entity_id}))
+ if (exists $rd->{validation_entity_id})
  {
   Net::DRI::Exception::usererr_invalid_parameters('validation_entity_id must be an xml token from 3 to 16 characters') unless Net::DRI::Util::xml_is_token($rd->{validation_entity_id},3,16);
   push @c,['valex:validationEntityID',$rd->{validation_entity_id}];
  }
- if (exists($rd->{registrar_id}))
+ if (exists $rd->{registrar_id})
  {
   Net::DRI::Exception::usererr_invalid_parameters('registrar_id must be an xml token from 3 to 16 characters') unless Net::DRI::Util::xml_is_token($rd->{registrar_id},3,16);
   push @c,['valex:registrarID',$rd->{registrar_id}];
@@ -134,7 +131,7 @@ sub create
  Net::DRI::Exception::usererr_invalid_parameters('execution_date must be a DateTime object or a string like YYYY-MM-DD') unless defined($d);
  push @c,['valex:executionDate',$d];
 
- if (exists($rd->{expiration_date}))
+ if (exists $rd->{expiration_date})
  {
   $d=output_date($rd->{expiration_date});
   Net::DRI::Exception::usererr_invalid_parameters('expiration_date must be a DateTime object or a string like YYYY-MM-DD') unless defined($d);

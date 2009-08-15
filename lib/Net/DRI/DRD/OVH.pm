@@ -18,9 +18,11 @@
 package Net::DRI::DRD::OVH;
 
 use strict;
+use warnings;
+
 use base qw/Net::DRI::DRD/;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -71,39 +73,15 @@ See the LICENSE file that comes with this distribution for more details.
 sub name { return 'OVH'; }
 sub tlds { return qw/fr com net org info biz eu me.uk co.uk org.uk de be re es/; } ## As seen on http://www.ovh.com/fr/particulier/produits/domaines.xml
 sub object_types { return ('domain'); }
-
-sub transport_protocol_compatible 
-{
- my ($self,$to,$po)=@_;
- my $pn=$po->name();
- my $pv=$po->version();
- my $tn=$to->name();
-
- return 1 if (($pn eq 'ovh_ws') && ($tn eq 'soapwsdl'));
- return;
-}
+sub profile_types { return qw/ws/; }
 
 sub transport_protocol_default
 {
- my ($drd,$ndr,$type,$ta,$pa)=@_;
- $type='ws' if (!defined($type) || ref($type));
- if ($type eq 'ws')
- {
-  return ('Net::DRI::Transport::HTTP::SOAPWSDL','Net::DRI::Protocol::OVH::WS') unless (defined($ta) && defined($pa));
-  my %ta=(	has_login => 1,
-		has_logout => 1,
-		protocol_connection => 'Net::DRI::Protocol::OVH::WS::Connection', 
-		protocol_version => 0.92,
-		wsdl_uri => 'https://www.ovh.com/soapi/ovh.wsdl',
-		proxy_uri => 'http://www.ovh.com:1664',
-		servicename => 'managerService',
-		portname => 'managerPort',
-		defer => 1,
-		(ref($ta) eq 'ARRAY')? %{$ta->[0]} : %$ta,
-          );
-  my @pa=(ref($pa) eq 'ARRAY' && @$pa)? @$pa : ('1.0');
-  return ('Net::DRI::Transport::HTTP::SOAPWSDL',[\%ta],'Net::DRI::Protocol::OVH::WS',\@pa);
- }
+ my ($self,$type)=@_;
+
+ #return ('Net::DRI::Transport::HTTP::SOAPWSDL',{wsdl_uri => 'https://www.ovh.com/soapi/ovh.wsdl',proxy_uri => 'http://www.ovh.com:1664',servicename => 'managerService',portname => 'managerPort'},'Net::DRI::Protocol::OVH::WS',{}) if $type eq 'ws';
+ return ('Net::DRI::Transport::HTTP::SOAPLite',{uri => 'https://soapi.ovh.com/manager',proxy_uri => 'https://www.ovh.com:1664'},'Net::DRI::Protocol::OVH::WS',{}) if $type eq 'ws';
+ return;
 }
 
 ####################################################################################################

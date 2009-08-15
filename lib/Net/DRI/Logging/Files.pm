@@ -26,7 +26,7 @@ use Net::DRI::Exception;
 
 use IO::Handle; ## needed for the autoflush method on any lexical $fh
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf('%d'.'.%02d' x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf('%d'.'.%02d' x $#r, @r); };
 
 ####################################################################################################
 
@@ -73,9 +73,9 @@ sub generate_filename
  if (defined $ctx && ref $ctx eq 'HASH')
  {
   if (exists $ctx->{ctx}) { $ctx=$ctx->{ctx}; }
-  $name=sprintf '%s.%s',$ctx->{registry}->name(),$ctx->{profile};
+  $name=sprintf '%s-%s',$ctx->{registry}->name(),$ctx->{profile};
  }
- return sprintf '%s/%s.log',$self->{output_directory},$name;
+ return sprintf '%s/%d-%s.log',$self->{output_directory},$$,$name;
 }
 
 sub DESTROY

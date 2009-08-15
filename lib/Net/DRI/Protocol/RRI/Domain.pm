@@ -27,7 +27,7 @@ use Net::DRI::Exception;
 use Net::DRI::Data::Hosts;
 use Net::DRI::Data::ContactSet;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -168,7 +168,6 @@ sub info_parse
  return unless $infdata;
  my $cs = Net::DRI::Data::ContactSet->new();
  my $ns = Net::DRI::Data::Hosts->new();
- my $cf = $po->factories()->{contact};
  my $c = $infdata->getFirstChild();
 
  while ($c)
@@ -196,7 +195,7 @@ sub info_parse
    my @hndl_tags = $c->getElementsByTagNameNS($mes->ns('contact'),'handle');
    my $hndl_tag = $hndl_tags[0];
    $role = $rmap{$role} if (defined($rmap{$role}));
-   $cs->add($cf->()->srid($hndl_tag->getFirstChild()->getData()), $role)
+   $cs->add($po->create_local_object('contact')->srid($hndl_tag->getFirstChild()->getData()), $role)
 	if (defined($hndl_tag));
   }
   elsif ($name eq 'dnsentry')

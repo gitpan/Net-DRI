@@ -23,8 +23,6 @@ use warnings;
 use base qw(Class::Accessor::Chained::Fast Net::DRI::BaseClass);
 __PACKAGE__->mk_ro_accessors(qw(name driver profile trid_factory logging)); ## READ-ONLY !!
 
-use DateTime;
-use DateTime::Duration;
 use Time::HiRes ();
 
 use Net::DRI::Exception;
@@ -32,13 +30,9 @@ use Net::DRI::Util;
 use Net::DRI::Protocol::ResultStatus;
 use Net::DRI::Data::RegistryObject;
 
-use Net::DRI::Data::Changes;
-use Net::DRI::Data::ContactSet;
-use Net::DRI::Data::Hosts;
-
 our $AUTOLOAD;
 
-our $VERSION=do { my @r=(q$Revision: 1.30 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.31 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -89,7 +83,7 @@ sub new
  my $self={name   => $name,
            driver => $drd,
            cache  => $cache,
-           profiles => {}, ## { profile name => { protocol  => X 
+           profiles => {}, ## { profile name => { protocol  => X
                            ##                     transport => X
                            ##                     status    => Net::DRI::Protocol::ResultStatus
                            ##                     %extra
@@ -105,6 +99,12 @@ sub new
 
  bless($self,$class);
  return $self;
+}
+
+sub available_profile
+{
+ my $self=shift;
+ return (defined($self->{profile}))? 1 : 0;
 }
 
 sub available_profiles
@@ -147,20 +147,13 @@ sub _current
 sub transport { return shift->_current('transport'); }
 sub protocol  { return shift->_current('protocol');  }
 sub status    { return shift->_current('status',@_); }
-
 sub protocol_transport { my $self=shift; return ($self->protocol(),$self->transport()); }
-sub create_status { return shift->_current('protocol')->create_local_object('status',@_); }
 
 sub local_object
 {
  my $self=shift;
  my $f=shift;
  return unless $self && $f;
- return DateTime->new(@_)                   if $f eq 'datetime';
- return DateTime::Duration->new(@_)         if $f eq 'duration';
- return Net::DRI::Data::Changes->new(@_)    if $f eq 'changes';
- return Net::DRI::Data::ContactSet->new(@_) if $f eq 'contactset';
- return Net::DRI::Data::Hosts->new(@_)      if $f eq 'hosts';
  return $self->_current('protocol')->create_local_object($f,@_);
 }
 
@@ -210,13 +203,13 @@ sub try_restore_from_cache
 
  my $a=$self->get_info('action',$type,$key);
  ## not in cache or in cache but for some other action
- if (! defined $a || ($a ne $action)) { $self->log_output('debug','core',sprintf('Cache MISS for type=%s key=%s',$type,$key)); return; }
+ if (! defined $a || ($a ne $action)) { $self->log_output('debug','core',sprintf('Cache MISS (empty cache or other action) for type=%s key=%s',$type,$key)); return; }
 
  ## retrieve from cache, copy, and do some cleanup
  $self->{last_data}=$self->get_info_all($type,$key);
  ## since we passed the above test on get_info('action'), we know here we received something defined by get_info_all,
  ## but we test explicitely again (get_info_all returns an empty ref hash on problem, not undef), to avoid race conditions and such
- if (! keys(%{$self->{last_data}})) { $self->log_output('debug','core',sprintf('Cache MISS for type=%s key=%s',$type,$key)); return; }
+ if (! keys(%{$self->{last_data}})) { $self->log_output('debug','core',sprintf('Cache MISS (no last_data content) for type=%s key=%s',$type,$key)); return; }
 
  ## get_info_all makes a copy, but only at first level ! so this high level change is ok (no pollution), but be warned for below !
  $self->{last_data}->{result_from_cache}=1;
@@ -272,14 +265,10 @@ sub get_info_all
   $rh=$self->{last_data};
  }
 
- if (defined($rh) && ref($rh) && keys(%$rh))
- {
-  foreach my $k (grep { /^_/ } keys(%$rh)) { delete($rh->{$k}); }
- } else
- {
-  $rh={};
- }
- my %h=%$rh;
+ return {} unless (defined($rh) && ref($rh) && keys(%$rh));
+
+ my %h=%{ $rh }; ## create a copy, as we will delete content... ## BUGFIX !!
+ foreach my $k (grep { /^_/ } keys(%h)) { delete($h{$k}); }
  return \%h;
 }
 
@@ -341,117 +330,60 @@ sub add_current_profile
  return $rc;
 }
 
-## API: profile name, profile type, transport params {}, protocol params []
+## Transport and Protocol parameters are merged (semantically but not chronologically, parameters coming later erase previous ones) in this order;
+## - TransportConnectionClass->transport_default() [only for transport parameters]
+## - Protocol->transport_default() [only for transport parameters]
+## - DRD->transport_protocol_default()
+## - user specified parameters to add_profile (they always have precedence over defaults stored in the 3 previous cases)
+
+## API: profile name, profile type (types starting with "test=" are only for internal tests, and should not be used in production), transport params {}, protocol params {}
 sub add_profile
 {
  my ($self,$name,$type,$trans_p,$prot_p)=@_;
- if (! Net::DRI::Util::all_valid($name,$type)) { Net::DRI::Exception::usererr_insufficient_parameters('add_profile needs at least 2 parameters: new profile name and type'); }
- if ($self->exist_profile($name)) { Net::DRI::Exception->die(0,'DRI',12,'New profile name '.$name.' already in use'); }
 
- if (! defined $trans_p) { $trans_p={}; }
- if (! defined $prot_p)  { $prot_p=[]; }
+ if (! Net::DRI::Util::all_valid($name,$type))   { Net::DRI::Exception::usererr_insufficient_parameters('add_profile needs at least 2 parameters: new profile name and type'); }
+ if (defined $trans_p && ref $trans_p ne 'HASH') { Net::DRI::Exception::usererr_invalid_parameters('If provided, 3rd parameter of add_profile (transport data) must be a ref hash'); }
+ if (defined $prot_p  && ref $prot_p ne 'HASH')  { Net::DRI::Exception::usererr_invalid_parameters('If provided, 4th parameter of add_profile (protocol data) must be a ref hash'); }
+ if ($self->exist_profile($name))                { Net::DRI::Exception::usererr_invalid_parameters('New profile name "'.$name.'" already in use'); }
 
- ## When new_profile/new_current_profile are finally removed, rewrite the following and all transport_protocol_default :
- ## - we do not need $ndr in transport_protocol_default, so do $self->driver->transport_protocol_default(...)
- ## - remove case of t_p_d output API with only 2 elements in list
- ## - remove $ta/$pa and do the merge here (see below about hash ref) ?
- ## - better output API => change test @d==4 + 2 dereferences
- ## + rewrite all Transport::new to use only one ref hash (already ok for superclass)
- ## + rewrite all Protocol::new to use only one ref hash ?
- ## + merge back _create_profile here (or not, depending on where it is used)
- my ($tc,$tp,$pc,$pp)=$self->transport_protocol_default($type,[$trans_p],$prot_p); ## Output: Transport Class, Transport Params, Protocol Class, Protocol Params
- if (! Net::DRI::Util::all_valid($tc,$tp,$pc,$pp)) { Net::DRI::Exception::usererr_invalid_parameters(sprintf('Registry "%s" does not know anything about profile type "%s"',$self->name(),$type)); }
-
- ## when updates mentioned above are done, here we will need to merge $trans_p + $tp + $pc->transport_default() [too early for that last one] and $prot_p + $pp
- ## (so no need anymore to use _transport_protocol_default_epp/PROTOCOL_DEFAULT_* inside t_p_d)
-
- return $self->_create_profile($name,$tc,$tp,$pc,$pp);
-}
-
-## This is to be used only for tests !
-sub add_current_test_profile
-{
- my ($self,$name,$trans_c,$trans_p,$prot_c,$prot_p)=@_;
- if (! Net::DRI::Util::all_valid($name,$trans_c,$prot_c)) { Net::DRI::Exception::usererr_insufficient_parameters('add_current_test_profile needs at least 3 valid parameters: new profile name, transport class, protocol class'); }
- if ($self->exist_profile($name)) { Net::DRI::Exception->die(0,'DRI',12,'New profile name '.$name.' already in use'); }
-
- if (! defined $trans_p) { $trans_p={}; }
- if (! defined $prot_p)  { $prot_p=[]; }
-
- if ($prot_c=~m/^[a-z]+$/) ## if no uppercase letter, protocol class is taken as a profile type
+ my $drd=$self->driver();
+ my ($test)=($type=~s/^test=//)? 1 : 0;
+ my ($tc,$tp,$pc,$pp); ## Transport Class, Transport Params, Protocol Class, Protocol Params
+ ($tc,$tp,$pc,$pp)=$drd->transport_protocol_default($type) if (!$test || $type!~m/[A-Z]/);
+ if ($test)
  {
-  my $kpc=$prot_c;
-  (undef,undef,$prot_c,$prot_p)=$self->transport_protocol_default($prot_c,[{}],$prot_p); ## TODO add something so that t_p_d knows we are in test_profile mode ? or just test if second param is empty ? (specifically needed for t/619* but this SSL check should be ported in many other DRDs)
-  ## some kind of merging needed here also ?
- }
-
- my $rc=$self->_create_profile($name,$trans_c,[$trans_p],$prot_c,$prot_p);
- if ($rc->is_success()) { $self->target($name); }
- return $rc;
-}
-
-sub new_current_profile
-{
- my $self=shift(@_);
- my $rc=$self->new_profile(@_);
- $self->target($_[0]) if ($rc->is_success());
- return $rc;
-}
-
-sub new_profile
-{
- print STDERR 'Consider using the new API with add_profile()/add_current_profile() instead of new_profile()/new_current_profile()',"\n";
- my ($self,$name,$transport,$t_params,$protocol,$p_params)=@_;
- Net::DRI::Exception->die(0,'DRI',12,'New profile name already in use') if $self->exist_profile($name);
-
- ## This API is a mess, due to non-optimal initial design
- ## This first case added last should have been the only one
- if (!defined($p_params) && $self->can('transport_protocol_default'))
- {
-  if (defined($protocol))
+  $self->log_output('emergency','core','For profile "'.$name.'", using INTERNAL TESTING configuration! This should not happen in production, but only during "make test"!');
+  Net::DRI::Exception::err_assert('test profile types are to be used only during internal tests') unless exists $INC{'Test/More.pm'};
+  $tc='Dummy';
+  $tp=$trans_p;
+  $trans_p=undef;
+  if ($type=~m/[A-Z]/)
   {
-   ($transport,$t_params,$protocol,$p_params)=$self->transport_protocol_default($transport,$t_params,$protocol);
-   Net::DRI::Exception::usererr_invalid_parameters('New form of new_profile is not available for this DRD, please report') unless (defined($t_params) && ref($t_params) && defined($p_params) && ref($p_params));
-  } else
-  {
-   $p_params=(defined($t_params) && ref($t_params) eq 'ARRAY')? $t_params : [];
-   $t_params=(defined($transport) && ref($transport) eq 'ARRAY')? $transport : [];
-   my @a=$self->transport_protocol_default($transport);
-   if (@a==2) ## this case should be deprecated
-   {
-    ($transport,$protocol)=@a;
-   } elsif (@a==4)
-   {
-    ($transport,$protocol)=@a[0,2];
-    $t_params=$a[1] unless @$t_params;
-    $p_params=$a[3] unless @$p_params;
-   } else ## this case should not happen
-   {
-     Net::DRI::Exception::usererr_invalid_parameters();
-   }
+   $pc=$type;
+   $pp=defined $prot_p ? $prot_p : {};
+   $prot_p=undef;
   }
  }
- return $self->_create_profile($name,$transport,$t_params,$protocol,$p_params);
-}
+ if (!Net::DRI::Util::all_valid($tc,$tp,$pc,$pp) || ref $tp ne 'HASH' || ref $pp ne 'HASH') { Net::DRI::Exception::usererr_invalid_parameters(sprintf('Registry "%s" does not provide profile type "%s")',$self->name(),$type)); }
 
-sub _create_profile
-{
- my ($self,$name,$transport,$t_params,$protocol,$p_params)=@_;
- Net::DRI::Exception::usererr_insufficient_parameters() unless (Net::DRI::Util::all_valid($transport,$t_params,$protocol,$p_params));
- Net::DRI::Exception::usererr_invalid_parameters() unless ((ref($t_params) eq 'ARRAY') && (ref($p_params) eq 'ARRAY'));
+ $tp={ %$tp, %$trans_p } if defined $trans_p;
+ $pp={ %$pp, %$prot_p  } if defined $prot_p;
+ $tc='Net::DRI::Transport::'.$tc unless ($tc=~m/::/);
+ $pc='Net::DRI::Protocol::'.$pc  unless ($pc=~m/::/);
 
- $transport='Net::DRI::Transport::'.$transport unless ($transport=~m/::/);
- $protocol ='Net::DRI::Protocol::'.$protocol   unless ($protocol=~m/::/);
+ $drd->transport_protocol_init($type,$tc,$tp,$pc,$pp,$test) if $drd->can('transport_protocol_init');
 
- $transport->require or Net::DRI::Exception::err_failed_load_module('DRI',$transport,$@);
- $protocol->require  or Net::DRI::Exception::err_failed_load_module('DRI',$protocol,$@);
+ $tc->require() or Net::DRI::Exception::err_failed_load_module('DRI',$tc,$@);
+ $pc->require() or Net::DRI::Exception::err_failed_load_module('DRI',$pc,$@);
+ $self->log_output('debug','core',sprintf('For profile "%s" attempting to initialize transport "%s" and protocol "%s"',$name,$tc,$pc));
 
- my $drd=$self->{driver};
- my $po=$protocol->new($drd,@{$p_params}); ## Protocol must come first, as it may be needed during transport setup
- ## After the switch to the new API, we will need *here* to call $po->transport_default() or something like it and merge result with $t_params
+ my $po=$pc->new($drd,$pp); ## Protocol must come first, as it may be needed during transport setup; it should not die
+ $tp={ $po->transport_default(), %$tp } if ($po->can('transport_default'));
+
  my $to;
- eval {
-  $to=$transport->new({registry=>$self,profile=>$name,protocol=>$po},@{$t_params}); ## this may die !
+ eval
+ {
+  $to=$tc->new({registry=>$self,profile=>$name,protocol=>$po},$tp); ## this may die !
  };
  if ($@) ## some kind of error happened
  {
@@ -460,17 +392,10 @@ sub _create_profile
   die($@);
  }
 
- my $compat=$self->driver()->transport_protocol_compatible($to,$po); ## 0/1/undef
- if (! defined $compat)
- {
-  my $c1=($to->can('is_compatible_with_protocol'))?  $to->is_compatible_with_protocol($po)  : 0; ## TODO : should it be undef if can not ?
-  my $c2=($po->can('is_compatible_with_transport'))? $po->is_compatible_with_transport($to) : 0;
-  $compat=$c1 || $c2;
- }
- if (! defined $compat) { Net::DRI::Exception->die(0,'DRI',13,sprintf('Transport %s & Protocol %s are not compatible for registry %s (profile %s)',$to->name(),$po->name(),$self->name(),$name)); }
-
- $self->{profiles}->{$name}={ fullname => sprintf('%s (%s/%s)',$name,$po->name(),$to->name()), transport => $to, protocol => $po, status => undef };
- return Net::DRI::Protocol::ResultStatus->new_success('COMMAND_SUCCESSFUL','Profile '.$name.' added successfully');
+ my $fullname=sprintf('%s (%s/%s + %s/%s)',$name,$po->name(),$po->version(),$to->name(),$to->version());
+ $self->{profiles}->{$name}={ fullname => $fullname, transport => $to, protocol => $po, status => undef };
+ $self->log_output('notice','core','Successfully added profile "'.$fullname.'"');
+ return Net::DRI::Protocol::ResultStatus->new_success('COMMAND_SUCCESSFUL','Profile "'.$name.'" added successfully');
 }
 
 sub del_profile
@@ -556,14 +481,15 @@ sub process
  {
   $self->log_output('debug','core',sprintf('New process loop iteration for TRID=%s with count=%d pause=%f timeout=%f',$trid,$count,$pause,$timeout));
   Time::HiRes::sleep($pause) if (defined($pause) && $pause && ($count > 1));
+  $self->log_output('warning','core',sprintf('Starting try #%d for TRID=%s',$count,$trid)) if $count>1;
   $r=eval
   {
    local $SIG{ALRM}=sub { die 'timeout' };
    alarm($timeout) if ($timeout);
-   $self->log_output('debug','core','Attempting to send information for TRID='.$trid);
+   $self->log_output('debug','core',sprintf('Attempting to send data for TRID=%s',$trid));
    ## Should we also pass the current registry driver (or at least its name), and the current profile name ? This may be useful in logging
    $to->send($ctx,$tosend,$count,$ta); ## either success or exception, no result code
-   $self->log_output('debug','core','Information sent for TRID='.$trid);
+   $self->log_output('debug','core','Successfully sent data to registry for TRID='.$trid);
    $self->{ops}->{$trid}->[0]=1; ## now it is sent
    return $self->process_back($trid,$po,$to,$otype,$oaction,$count) if $to->is_sync();
    my $rc=Net::DRI::Protocol::ResultStatus->new_success('COMMAND_SUCCESSFUL_PENDING');
@@ -577,14 +503,14 @@ sub process
    return $self->format_error($@) if (ref($@) eq 'Net::DRI::Protocol::ResultStatus'); ## should probably be a return here see below TODOXXX
    my $is_timeout=(!ref($@) && ($@=~m/timeout/))? 1 : 0;
    $@=$is_timeout? Net::DRI::Exception->new(1,'transport',1,'timeout') : Net::DRI::Exception->new(1,'internal',0,'Error not handled: '.$@) unless ref($@);
-   next if $to->try_again($po,$@,$count,$is_timeout,$self->{ops}->{$trid}->[0],\$pause,\$timeout); ## will determine if 1) we break now the loop/we propagate the error (fatal error) 2) we retry
+   $self->log_output('debug','core',$is_timeout? 'Got timeout for TRID='.$trid : 'Got error for TRID='.$trid.' : '.$@->as_string());
+   next if $to->try_again($ctx,$po,$@,$count,$is_timeout,$self->{ops}->{$trid}->[0],\$pause,\$timeout); ## will determine if 1) we break now the loop/we propagate the error (fatal error) 2) we retry
    die($@);
   }
   last if defined($r);
  } ## end of while
  alarm($prevalarm) if $prevalarm; ## re-enable previous alarm (warning, time is off !!)
- Net::DRI::Exception->die(0,'transport',1,sprintf('Unable to communicate with registry after %d retries for a total delay of %.03f seconds',$to->retry(),Time::HiRes::time()-$start)) unless defined($r);
-
+ Net::DRI::Exception->die(0,'transport',1,sprintf('Unable to communicate with registry after %d tries for a total delay of %.03f seconds',$to->retry(),Time::HiRes::time()-$start)) unless defined $r;
  return $r;
 }
 
@@ -608,10 +534,10 @@ sub process_back
  my $ctx={trid => $trid, registry => $self, profile => $self->profile(), otype => $otype, oaction => $oaction }; ## How will we fill that in case of async operation (direct call here) ?
  my ($rc,$ri,$oname);
 
- $self->log_output('debug','core','Attempting to receive information for TRID='.$trid);
+ $self->log_output('debug','core','Attempting to receive data from registry for TRID='.$trid);
  my $res=$to->receive($ctx,$count); ## a Net::DRI::Data::Raw or die inside
  my $stop=Time::HiRes::time();
- $self->log_output('debug','core','Information received for TRID='.$trid);
+ $self->log_output('debug','core','Successfully received data from registry for TRID='.$trid);
  Net::DRI::Exception->die(0,'transport',5,'Unable to receive message from registry') unless defined($res);
  $self->{ops}->{$trid}->[0]=2; ## now it is received
  $self->clear_info(); ## make sure we will overwrite current latest info
@@ -621,6 +547,7 @@ sub process_back
 
  if ($rc->is_closing() || (exists($ri->{_internal}) && exists($ri->{_internal}->{must_reconnect}) && $ri->{_internal}->{must_reconnect}))
  {
+  $self->log_output('notice','core','Registry closed connection, we will automatically reconnect during next exchange');
   $to->current_state(0);
  }
  delete($ri->{_internal});
@@ -629,6 +556,11 @@ sub process_back
  $self->status($rc);
 
  $ri->{session}->{exchange}->{result_from_cache}=0;
+ $ri->{session}->{exchange}->{protocol}=$po->name().'/'.$po->version();
+ $ri->{session}->{exchange}->{transport}=$to->name().'/'.$to->version();
+ $ri->{session}->{exchange}->{registry}=$self->name();
+ $ri->{session}->{exchange}->{profile}=$self->profile();
+ $ri->{session}->{exchange}->{trid}=$trid;
 
  ## set_info stores also data in last_data, so we make sure to call last for current object
  foreach my $type (keys(%$ri))
@@ -657,8 +589,9 @@ sub process_back
    delete($v2->{result_status}) if exists($v2->{result_status});
   }
  }
- ## Names of keys (duration/command/reply) have been carefully chosen so that in default aphabetical order, we have first the command sent, then the duration, and finally the reply
- $ri->{session}->{exchange}={ 'duration_seconds' => $stop-$self->{ops}->{$trid}->[2], command => $self->{ops}->{$trid}->[1]->as_string(), reply => $res->as_string(), result_from_cache => 0, type => $otype, action => $oaction };
+
+ $ri->{session}->{exchange}={ %{$ri->{session}->{exchange}}, duration_seconds => $stop-$self->{ops}->{$trid}->[2], raw_command => $self->{ops}->{$trid}->[1]->as_string(), raw_reply => $res->as_string(), object_type => $otype, object_action => $oaction };
+ $ri->{session}->{exchange}->{object_name}=$oname if $oname;
  $rc->_set_data($ri);
  delete($self->{ops}->{$trid});
  return $rc;
@@ -672,8 +605,8 @@ sub _extract_oname
  my $o=$pa->[0];
  return 'session' unless defined($o);
  $o=$o->[1] if (ref($o) eq 'ARRAY'); ## should be enough for _multi but still a little strange
- return $o unless ref($o);
- return ($otype eq 'nsgroup')? $o->name() : $o->get_details(1) if Net::DRI::Util::isa_hosts($o);
+ return (Net::DRI::Util::normalize_name($otype,$o))[1] unless ref($o); ## ?? ## TODO ## this fails t/626nominet line 306
+ return (Net::DRI::Util::normalize_name('nsgroup',$otype eq 'nsgroup'? $o->name() : $o->get_details(1)))[1] if Net::DRI::Util::isa_hosts($o);
  return $o->srid() if Net::DRI::Util::isa_contact($o);
  return 'session';
 }
@@ -700,6 +633,15 @@ sub protocol_capable
  return 0;
 }
 
+sub log_output
+{
+ my ($self,$level,$where,$msg)=@_;
+ my $r=$self->name();
+ $r.='.'.$self->{profile} if (defined $self->{profile});
+ $msg='('.$r.') '.$msg;
+ return $self->SUPER::log_output($level,$where,$msg);
+}
+
 ####################################################################################################
 
 sub AUTOLOAD
@@ -711,7 +653,7 @@ sub AUTOLOAD
 
  my $drd=$self->driver(); ## This is a DRD object
  Net::DRI::Exception::err_method_not_implemented($attr.' in '.$drd) unless (ref($drd) && $drd->can($attr));
- $self->log_output('debug','core',sprintf('Calling %s from Net::DRI::Registry (%s/%s)',$attr,$drd->name(),$self->{profile} || ''));
+ $self->log_output('debug','core',sprintf('Calling %s from Net::DRI::Registry',$attr));
  return $drd->$attr($self,@_);
 }
 

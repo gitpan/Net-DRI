@@ -1,9 +1,10 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 #
 #
 # A Net::DRI example
 
 use strict;
+use warnings;
 
 use Net::DRI;
 
@@ -89,6 +90,10 @@ $rc=$dri->target('US')->add_current_profile('profile1','whois');
 die($rc) unless $rc->is_success();
 display('disney.us',$dri);
 
+$dri->add_registry('PT',{});
+$rc=$dri->target('PT')->add_current_profile('profile1','whois');
+die($rc) unless $rc->is_success();
+display('lisboa.pt',$dri);
 
 $dri->end();
 };

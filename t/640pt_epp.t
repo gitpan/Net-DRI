@@ -21,7 +21,7 @@ sub r { my ($c,$m)=@_;  return '<result code="'.($c || 1000).'"><msg>'.($m || 'C
 my $dri=Net::DRI::TrapExceptions->new(10);
 $dri->{trid_factory}=sub { return 'ABC-12345'; };
 $dri->add_registry('PT');
-$dri->target('PT')->add_current_test_profile('p1','Dummy',{f_send=>\&mysend,f_recv=>\&myrecv},'Net::DRI::Protocol::EPP::Extensions::FCCN');
+$dri->target('PT')->add_current_profile('p1','test=Net::DRI::Protocol::EPP::Extensions::FCCN',{f_send=>\&mysend,f_recv=>\&myrecv});
 print $@->as_string() if $@;
 
 my ($rc,$s,$d,$dh,@c,$co);

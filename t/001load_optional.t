@@ -4,7 +4,7 @@
 # needed for some registries in Net::DRI but not all of them,
 # and we warn the user if they are not present
 
-use Test::More tests => 11;
+use Test::More tests => 12;
 
 SKIP: {
 	eval { require Net::SMTP; };
@@ -46,8 +46,9 @@ SKIP: {
 
 SKIP: {
 	eval { require HTTP::Request; };
-	skip('Module HTTP::Request is not installed, you need it if you want to use Net::DRI for: .PL (EPP over HTTPS)',1) if $@;
+	skip('Module HTTP::Request is not installed, you need it if you want to use Net::DRI for: .PL (EPP over HTTPS) .IT (EPP over HTTPS)',2) if $@;
 	require_ok('Net::DRI::Protocol::EPP::Extensions::PL::Connection');
+	require_ok('Net::DRI::Protocol::EPP::Extensions::IT::Connection');
 }
 
 SKIP: {

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Protocol superclass
 ##
-## Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,14 +18,25 @@
 package Net::DRI::Protocol;
 
 use strict;
+use warnings;
 
 use base qw(Class::Accessor::Chained::Fast);
 __PACKAGE__->mk_accessors(qw(name version commands message default_parameters));
 
+use DateTime;
+use DateTime::Duration;
+use DateTime::Format::ISO8601;
+use DateTime::Format::Strptime;
+
 use Net::DRI::Exception;
 use Net::DRI::Util;
+use Net::DRI::Data::Changes;
+use Net::DRI::Data::Contact;
+use Net::DRI::Data::ContactSet;
+use Net::DRI::Data::Hosts;
+use Net::DRI::Data::StatusList;
 
-our $VERSION=do { my @r=(q$Revision: 1.21 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.22 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -55,7 +66,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -71,8 +82,19 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $c=shift;
- my $self={ factories => {}, capabilities => {} };
+ my ($c)=@_;
+
+ my $self={	capabilities => {},
+		factories => { 	datetime	=> sub { return DateTime->new(@_); },
+				duration	=> sub { return DateTime::Duration->new(@_); },
+				changes  	=> sub { return Net::DRI::Data::Changes->new(@_); },
+				contact  	=> sub { return Net::DRI::Data::Contact->new(); },
+				contactset 	=> sub { return Net::DRI::Data::ContactSet->new(@_); },
+				hosts		=> sub { return Net::DRI::Data::Hosts->new(@_); },
+				status		=> sub { return Net::DRI::Data::StatusList->new(@_); },
+				},
+	};
+
  bless($self,$c);
 
  $self->message(undef);
@@ -80,23 +102,39 @@ sub new
  return $self;
 }
 
+sub parse_iso8601
+{
+ my ($self,$d)=@_;
+ $self->{iso8601_parser}=DateTime::Format::ISO8601->new() unless exists $self->{iso8601_parser};
+ return $self->{iso8601_parser}->parse_datetime($d);
+}
+
+sub build_strptime_parser
+{
+ my $self=shift;
+ my $key=join('|',@_);
+ $self->{strptime_parser}->{$key}=DateTime::Format::Strptime->new(@_) unless exists $self->{strptime_parser}->{$key};
+ return $self->{strptime_parser}->{$key};
+}
+
 sub create_local_object
 {
  my $self=shift;
  my $what=shift;
+ return unless defined $self && defined $what;
  my $fn=$self->factories();
  return unless (defined($fn) && ref($fn) && exists($fn->{$what}) && (ref($fn->{$what}) eq 'CODE'));
  return $fn->{$what}->(@_);
 }
 
+## This should not be called multiple times for a given Protocol class (as it will erase the loaded_modules slot)
 sub _load
 {
  my $self=shift;
  my $etype='protocol/'.$self->name();
  my $version=$self->version();
 
- my %c;
- my %done;
+ my (%c,%done,@done);
  foreach my $class (@_)
  {
   next if exists($done{$class});
@@ -116,9 +154,19 @@ sub _load
    }
   }
   $done{$class}=1;
+  push @done,$class;
  }
 
+ $self->{loaded_modules}=\@done;
  $self->commands(\%c);
+ return;
+}
+
+sub has_module
+{
+ my ($self,$mod)=@_;
+ return 0 unless defined $mod && $mod;
+ return (grep { $_ eq $mod } @{$self->{loaded_modules}})? 1 : 0;
 }
 
 sub _load_commands
@@ -152,8 +200,7 @@ sub action
  my $h=$self->_load_commands($otype,$oaction);
 
  ## Create a new message from scratch and loop through all functions registered for given action & type
- my $f=$self->factories();
- my $msg=$f->{message}->($trid,$otype,$oaction);
+ my $msg=$self->create_local_object('message',$trid,$otype,$oaction);
  Net::DRI::Exception->die(0,'protocol',1,'Unsuccessfull message creation') unless ($msg && ref($msg) && $msg->isa('Net::DRI::Protocol::Message'));
  $self->message($msg); ## store it for later use (in loop below)
 
@@ -172,8 +219,7 @@ sub reaction
 {
  my ($self,$otype,$oaction,$dr,$sent,$oname)=@_;
  my $h=$self->_load_commands($otype,$oaction);
- my $f=$self->factories();
- my $msg=$f->{message}->();
+ my $msg=$self->create_local_object('message');
  Net::DRI::Exception->die(0,'protocol',1,'Unsuccessfull message creation') unless ($msg && ref($msg) && $msg->isa('Net::DRI::Protocol::Message'));
 
  my %info;
@@ -217,7 +263,11 @@ sub nameversion
 sub factories
 {
  my ($self,$object,$code)=@_;
- $self->{factories}->{$object}=$code if defined($code);
+ if (defined $object && defined $code)
+ {
+  $self->{factories}->{$object}=$code;
+  return $self;
+ }
  return $self->{factories};
 }
 

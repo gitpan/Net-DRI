@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Whois commands for .COM/.NET (RFC3912)
 ##
-## Copyright (c) 2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2007,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,15 +18,13 @@
 package Net::DRI::Protocol::Whois::Domain::COM;
 
 use strict;
+use warnings;
 
 use Net::DRI::Exception;
 use Net::DRI::Util;
-use Net::DRI::Data::Hosts;
 use Net::DRI::Protocol::EPP::Core::Status;
 
-use DateTime::Format::Strptime;
-
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -56,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2007,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -92,21 +90,21 @@ sub info_parse
 
  my $rr=$mes->response();
  my $rd=$mes->response_raw();
- my ($domain,$exist)=parse_domain($rr,$rd,$rinfo);
+ my ($domain,$exist)=parse_domain($po,$rr,$rd,$rinfo);
  $rinfo->{domain}->{$domain}->{exist}=$exist;
  $rinfo->{domain}->{$domain}->{action}='info';
 
  return unless $exist;
 
- parse_registrars($domain,$rr,$rinfo);
- parse_dates($domain,$rr,$rinfo);
- parse_status($domain,$rr,$rinfo);
- parse_ns($domain,$rr,$rinfo);
+ parse_registrars($po,$domain,$rr,$rinfo);
+ parse_dates($po,$domain,$rr,$rinfo);
+ parse_status($po,$domain,$rr,$rinfo);
+ parse_ns($po,$domain,$rr,$rinfo);
 }
 
 sub parse_domain
 {
- my ($rr,$rd,$rinfo)=@_;
+ my ($po,$rr,$rd,$rinfo)=@_;
  my ($dom,$e);
  if (exists($rr->{'Domain Name'}))
  {
@@ -123,7 +121,7 @@ sub parse_domain
 
 sub parse_registrars
 {
- my ($domain,$rr,$rinfo)=@_;
+ my ($po,$domain,$rr,$rinfo)=@_;
  $rinfo->{domain}->{$domain}->{clName}=$rr->{'Registrar'}->[0];
  $rinfo->{domain}->{$domain}->{clWhois}=$rr->{'Whois Server'}->[0];
  $rinfo->{domain}->{$domain}->{clWebsite}=$rr->{'Referral URL'}->[0];
@@ -131,28 +129,27 @@ sub parse_registrars
 
 sub parse_dates
 {
- my ($domain,$rr,$rinfo)=@_;
- my $strp=DateTime::Format::Strptime->new(pattern => '%d-%b-%Y', locale => 'en_US', time_zone => 'America/New_York');
+ my ($po,$domain,$rr,$rinfo)=@_;
+ my $strp=$po->build_strptime_parser(pattern => '%d-%b-%Y', locale => 'en_US', time_zone => 'America/New_York');
  $rinfo->{domain}->{$domain}->{crDate}=$strp->parse_datetime($rr->{'Creation Date'}->[0]);
  $rinfo->{domain}->{$domain}->{upDate}=$strp->parse_datetime($rr->{'Updated Date'}->[0]);
  $rinfo->{domain}->{$domain}->{exDate}=$strp->parse_datetime($rr->{'Expiration Date'}->[0]);
 
  my ($l)=($rr->{'>>> Last update of whois database'}->[0]=~m/^(.+) <<<$/);
- $strp->time_zone('UTC');
- $strp->pattern('%a, %d %b %Y %T UTC');
+ $strp=$po->build_strptime_parser(pattern => '%a, %d %b %Y %T UTC', locale => 'en_US', time_zone => 'UTC');
  $rinfo->{domain}->{$domain}->{wuDate}=$strp->parse_datetime($l);
 }
 
 sub parse_status
 {
- my ($domain,$rr,$rinfo)=@_;
- $rinfo->{domain}->{$domain}->{status}=Net::DRI::Protocol::EPP::Core::Status->new($rr->{'Status'});
+ my ($po,$domain,$rr,$rinfo)=@_;
+ $rinfo->{domain}->{$domain}->{status}=Net::DRI::Protocol::EPP::Core::Status->new($rr->{'Status'}); #####
 }
 
 sub parse_ns
 {
- my ($domain,$rr,$rinfo)=@_;
- $rinfo->{domain}->{$domain}->{ns}=Net::DRI::Data::Hosts->new_set(@{$rr->{'Name Server'}}) if exists($rr->{'Name Server'});
+ my ($po,$domain,$rr,$rinfo)=@_;
+ $rinfo->{domain}->{$domain}->{ns}=$po->create_local_object('hosts')->set(@{$rr->{'Name Server'}}) if exists($rr->{'Name Server'});
 }
 
 ####################################################################################################

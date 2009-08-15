@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Message
 ##
-## Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,6 +18,7 @@
 package Net::DRI::Protocol::EPP::Message;
 
 use strict;
+use warnings;
 
 use DateTime::Format::ISO8601 ();
 use DateTime ();
@@ -30,7 +31,7 @@ use Net::DRI::Util;
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version command command_body cltrid svtrid msg_id node_resdata node_extension node_msg result_greeting));
 
-our $VERSION=do { my @r=(q$Revision: 1.23 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.24 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -60,7 +61,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -143,7 +144,7 @@ sub result_status
  {
   my $rso=Net::DRI::Protocol::ResultStatus->new('epp',$rs->{code},undef,_is_success($rs->{code}),$rs->{message},$rs->{lang},$rs->{extra_info});
   $rso->_set_trid([ $self->cltrid(),$self->svtrid() ]);
-  $rso->_set_next($prev) if defined($prev);
+  $rso->_add_next($prev) if defined($prev);
   $prev=$rso;
  }
  return $prev;
@@ -174,7 +175,7 @@ sub command_extension
 
 sub as_string
 {
- my ($self,$to)=@_;
+ my ($self)=@_;
  my $ens=sprintf('xmlns="%s" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="%s %s"',$self->nsattrs('_main'));
  my @d;
  push @d,'<?xml version="1.0" encoding="UTF-8" standalone="no"?>';
@@ -190,24 +191,21 @@ sub as_string
  {
   push @d,'<command>' if ($cmd ne 'hello');
   my $body=$self->command_body();
-  if (defined($ocmd) && $ocmd)
+
+  if (!defined $ocmd && !defined $body)
   {
-   push @d,'<'.$cmd.$attr.'>';
-   push @d,'<'.$ocmd.' '.$ons.'>';
-   push @d,Net::DRI::Util::xml_write($body);
-   push @d,'</'.$ocmd.'>';
-   push @d,'</'.$cmd.'>';
+   push @d,'<'.$cmd.$attr.'/>';
   } else
   {
-   if (defined($body) && $body)
+   push @d,'<'.$cmd.$attr.'>';
+   if (defined $body && length $body)
    {
-    push @d,'<'.$cmd.$attr.'>';
-    push @d,Net::DRI::Util::xml_write($body);
-    push @d,'</'.$cmd.'>';
+    push @d,(defined $ocmd && length $ocmd)? ('<'.$ocmd.' '.$ons.'>',Net::DRI::Util::xml_write($body),'</'.$ocmd.'>') : Net::DRI::Util::xml_write($body);
    } else
    {
-    push @d,'<'.$cmd.$attr.'/>';
+    push @d,'<'.$ocmd.' '.$ons.'/>';
    }
+   push @d,'</'.$cmd.'>';
   }
  }
 
@@ -271,12 +269,12 @@ sub parse
  if (my $g=$root->getChildrenByTagNameNS($NS,'greeting'))
  {
   push @{$self->{results}},{ code => 1000, message => undef, lang => undef, extra_info => []}; ## fake an OK
-  $self->result_greeting($self->parse_greeting($g->shift()));
+  $self->result_greeting($self->parse_greeting($g->get_node(1)));
   return;
  }
  my $c=$root->getChildrenByTagNameNS($NS,'response');
  Net::DRI::Exception->die(0,'protocol/EPP',1,'Unsuccessfull parse, no response block') unless ($c->size()==1);
- my $res=$c->shift();
+ my $res=$c->get_node(1);
 
  ## result block(s)
  foreach my $result ($res->getChildrenByTagNameNS($NS,'result')) ## one element if success, multiple elements if failure RFC4930 §2.6
@@ -288,7 +286,7 @@ sub parse
  $rinfo->{message}->{info}={ count => 0, checked_on => DateTime->now() };
  if ($c->size()) ## OPTIONAL
  {
-  my $msgq=$c->shift();
+  my $msgq=$c->get_node(1);
   my $id=$msgq->getAttribute('id'); ## id of the message that has just been retrieved and dequeued (RFC4930) OR id of *next* available message (RFC3730)
   $rinfo->{message}->{info}->{id}=$id;
   $rinfo->{message}->{info}->{count}=$msgq->getAttribute('count');
@@ -296,8 +294,8 @@ sub parse
   {
    my %d=( id => $id );
    $self->msg_id($id);
-   $d{qdate}=DateTime::Format::ISO8601->new()->parse_datetime(($msgq->getChildrenByTagNameNS($NS,'qDate'))[0]->firstChild()->getData());
-   my $msgc=($msgq->getChildrenByTagNameNS($NS,'msg'))[0];
+   $d{qdate}=DateTime::Format::ISO8601->new()->parse_datetime(Net::DRI::Util::xml_child_content($msgq,$NS,'qDate'));
+   my $msgc=$msgq->getChildrenByTagNameNS($NS,'msg')->get_node(1);
    $d{lang}=$msgc->getAttribute('lang') || 'en';
 
    if (grep { $_->nodeType() == 1 } $msgc->childNodes())
@@ -306,49 +304,36 @@ sub parse
     $self->node_msg($msgc);
    } else
    {
-    $d{content}=$msgc->firstChild()->getData();
+    $d{content}=$msgc->textContent();
    }
    $rinfo->{message}->{$id}=\%d;
   }
  }
 
  $c=$res->getChildrenByTagNameNS($NS,'resData');
- $self->node_resdata($c->shift()) if ($c->size()); ## OPTIONAL
+ $self->node_resdata($c->get_node(1)) if ($c->size()); ## OPTIONAL
  $c=$res->getChildrenByTagNameNS($NS,'extension');
- $self->node_extension($c->shift()) if ($c->size()); ## OPTIONAL
+ $self->node_extension($c->get_node(1)) if ($c->size()); ## OPTIONAL
 
  ## trID
- my $trid=($res->getChildrenByTagNameNS($NS,'trID'))[0]; ## we search only for <trID> as direct child of <response>, hence getChildren and not getElements !
- my $tmp=extract_trids($trid,$NS,'clTRID');
+ my $trid=$res->getChildrenByTagNameNS($NS,'trID')->get_node(1); ## we search only for <trID> as direct child of <response>, hence getChildren and not getElements !
+ my $tmp=Net::DRI::Util::xml_child_content($trid,$NS,'clTRID');
  $self->cltrid($tmp) if defined($tmp);
- $tmp=extract_trids($trid,$NS,'svTRID');
+ $tmp=Net::DRI::Util::xml_child_content($trid,$NS,'svTRID');
  $self->svtrid($tmp) if defined($tmp);
-}
-
-sub extract_trids
-{
- my ($trid,$NS,$what)=@_;
- my @tmp=$trid->getChildrenByTagNameNS($NS,$what);
- return unless @tmp && defined($tmp[0]) && defined($tmp[0]->firstChild());
- return $tmp[0]->firstChild()->getData();
 }
 
 sub parse_result
 {
  my ($self,$node)=@_;
  my $code=$node->getAttribute('code');
- my $msg=($node->getChildrenByTagNameNS($self->ns('_main'),'msg'))[0];
+ my $msg=$node->getChildrenByTagNameNS($self->ns('_main'),'msg')->get_node(1);
  my $lang=$msg->getAttribute('lang') || 'en';
- $msg=$msg->firstChild()->getData();
+
  my @i;
-
- my $c=$node->getFirstChild();
- while ($c)
+ foreach my $el (Net::DRI::Util::xml_list_children($node))
  {
-  next unless ($c->nodeType() == 1); ## only for element nodes
-  my $name=$c->nodeName();
-  next unless $name;
-
+  my ($name,$c)=@$el;
   if ($name eq 'extValue') ## OPTIONAL
   {
    push @i,substr(substr($c->toString(),10),0,-11); ## grab everything as a string, without <extValue> and </extValue>
@@ -356,47 +341,43 @@ sub parse_result
   {
    push @i,$c->toString();
   }
- } continue { $c=$c->getNextSibling(); }
+ }
 
- push @{$self->{results}},{ code => $code, message => $msg, lang => $lang, extra_info => \@i};
+ push @{$self->{results}},{ code => $code, message => $msg->textContent(), lang => $lang, extra_info => \@i};
 }
 
 sub parse_greeting
 {
  my ($self,$g)=@_;
  my %tmp;
- my $c=$g->getFirstChild();
- while($c)
+ 
+ foreach my $el (Net::DRI::Util::xml_list_children($g))
  {
-  next unless ($c->nodeType() == 1); ## only for element nodes
-  my $n=$c->getName();
+  my ($n,$c)=@$el;
   if ($n=~m/^(svID|svDate)$/)
   {
-   $tmp{$1}=$c->getFirstChild->getData();
+   $tmp{$1}=$c->textContent();
   } elsif ($n eq 'svcMenu')
   {
-   my $cc=$c->getFirstChild();
-   while($cc)
+   foreach my $sel (Net::DRI::Util::xml_list_children($c))
    {
-    next unless ($cc->nodeType() == 1); ## only for element nodes
-    my $nn=$cc->getName();
+    my ($nn,$cc)=@$sel;
     if ($nn=~m/^(version|lang)$/)
     {
-     push @{$tmp{$1}},$cc->getFirstChild->getData();
+     push @{$tmp{$1}},$cc->textContent();
     } elsif ($nn eq 'objURI')
     {
-     push @{$tmp{svcs}},$cc->getFirstChild->getData();
+     push @{$tmp{svcs}},$cc->textContent();
     } elsif ($nn eq 'svcExtension')
     {
-     push @{$tmp{svcext}},map { $_->getFirstChild->getData() } grep { $_->getName() eq 'extURI' } $cc->getChildNodes();
+     push @{$tmp{svcext}},map { $_->textContent() } grep { $_->getName() eq 'extURI' } $cc->getChildNodes();
     }
-   } continue { $cc=$cc->getNextSibling(); }
+   }
   } elsif ($n eq 'dcp')
   {
    ## TODO : do something with that data
   }
- } continue { $c=$c->getNextSibling(); }
-
+ }
  return \%tmp;
 }
 

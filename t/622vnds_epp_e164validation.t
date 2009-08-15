@@ -39,7 +39,7 @@ use Net::DRI::DRD::VNDS;
 }
 
 $dri->add_registry('VNDS');
-$dri->target('VNDS')->add_current_test_profile('p1','Dummy',{f_send=>\&mysend,f_recv=>\&myrecv},'EPP',['1.0',['E164Validation']]);
+$dri->target('VNDS')->add_current_profile('p1','test=EPP',{f_send=>\&mysend,f_recv=>\&myrecv},{extensions=>['E164Validation']});
 
 my ($rc,$e,$toc);
 

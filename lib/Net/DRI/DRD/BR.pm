@@ -18,10 +18,13 @@
 package Net::DRI::DRD::BR;
 
 use strict;
+use warnings;
+
 use base qw/Net::DRI::DRD/;
+
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -81,22 +84,14 @@ sub name     { return 'RegistroBR'; }
 ## See http://registro.br/info/dpn.html
 sub tlds     { return ('br',map { $_.'.br' } qw/com agr am art edu coop esp far fm g12 gov imb ind inf jus mil net org psi rec srv tmp tur tv etc adm adv arq ato bio bmd cim cng cnt ecn eng eti fnd fot fst ggf jor lel mat med mus not ntr odo ppg pro psc qql slg trd vet zlg blog flog nom vlog sec3 wiki/ ); }
 sub object_types { return ('domain','contact'); }
-
-sub transport_protocol_compatible
-{
- my ($self,$to,$po)=@_;
- my $pn=$po->name();
- my $tn=$to->name();
-
- return 1 if (($pn eq 'EPP') && ($tn eq 'socket_inet'));
- return;
-}
+sub profile_types { return qw/epp/; }
 
 sub transport_protocol_default
 {
- my ($drd,$ndr,$type,$ta,$pa)=@_;
- $type='epp' if (!defined($type) || ref($type));
- return Net::DRI::DRD::_transport_protocol_default_epp('Net::DRI::Protocol::EPP::Extensions::BR',$ta,$pa) if ($type eq 'epp');
+ my ($self,$type)=@_;
+
+ return ('Net::DRI::Transport::Socket',{},'Net::DRI::Protocol::EPP::Extensions::BR',{}) if $type eq 'epp';
+ return;
 }
 
 ####################################################################################################

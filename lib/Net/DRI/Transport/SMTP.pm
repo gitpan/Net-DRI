@@ -18,6 +18,8 @@
 package Net::DRI::Transport::SMTP;
 
 use strict;
+use warnings;
+
 use base qw/Net::DRI::Transport/; ## we are a subclass
 
 use Net::SMTP;
@@ -25,7 +27,7 @@ use Email::Valid;
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -71,10 +73,8 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $class=shift;
- my $ctx=shift;
-
- my %opts=(@_==1 && ref($_[0]))? %{$_[0]} : @_;
+ my ($class,$ctx,$rp)=@_;
+ my %opts=%$rp;
  my $self=$class->SUPER::new($ctx,\%opts); ## We are now officially a Net::DRI::Transport instance
  $self->has_state(0); ## We could be stateful by keeping a live connection to the SMTP host. But it would be useful only for high volumes
  $self->is_sync(0);

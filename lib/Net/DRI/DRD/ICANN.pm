@@ -1,6 +1,6 @@
 ## Domain Registry Interface, ICANN policy on reserved names
 ##
-## Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,8 +18,9 @@
 package Net::DRI::DRD::ICANN;
 
 use strict;
+use warnings;
 
-our $VERSION=do { my @r=(q$Revision: 1.12 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -49,7 +50,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -62,8 +63,8 @@ See the LICENSE file that comes with this distribution for more details.
 =cut
 
 ## See http://www.icann.org/registries/rsep/submitted_app.html for changes
-our %ALLOW1=(mobi => 1, coop => 1); ## Pending ICANN review: biz
-our %ALLOW2=(mobi => 1, coop => 1, name => 1, jobs => 1); ## Pending ICANN review: biz
+our %ALLOW1=map { $_ => 1 } qw/mobi coop biz pro/; ## Pending ICANN review: travel (#2009003)
+our %ALLOW2=map { $_ => 1 } qw/mobi coop name jobs biz pro/; ## Pending ICANN review: travel (#2009003)
 
 ## See http://www.icann.org/tlds/agreements/verisign/registry-agmt-appk-net-org-16apr01.htm & same
 ## Updated to http://www.icann.org/tlds/agreements/tel/appendix-6-07apr06.htm

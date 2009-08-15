@@ -5,7 +5,7 @@ use Net::DRI::Data::Raw;
 use DateTime;
 use DateTime::Duration;
 
-use Test::More tests => 216;
+use Test::More tests => 237;
 eval { no warnings; require Test::LongString; Test::LongString->import(max => 100); $Test::LongString::Context=50; };
 *{'main::is_string'}=\&main::is if $@;
 
@@ -37,7 +37,7 @@ sub r
 my $dri=Net::DRI::TrapExceptions->new(10);
 $dri->{trid_factory}=sub { return 'TRID-0001'; };
 $dri->add_registry('EURid');
-$dri->target('EURid')->add_current_test_profile('p1','Dummy',{f_send=>\&mysend,f_recv=>\&myrecv},'epp');
+$dri->target('EURid')->add_current_profile('p1','test=epp',{f_send=>\&mysend,f_recv=>\&myrecv});
 my $rc;
 my $s;
 my $d;
@@ -334,6 +334,14 @@ $rc=$dri->domain_delete('ecom.eu',{pure_delete=>1,deleteDate=>DateTime->new(year
 is_string($R1,'<?xml version="1.0" encoding="UTF-8" standalone="no"?><epp xmlns="http://www.eurid.eu/xml/epp/epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.eurid.eu/xml/epp/epp-1.0 epp-1.0.xsd"><command><delete><domain:delete xmlns:domain="http://www.eurid.eu/xml/epp/domain-1.0" xsi:schemaLocation="http://www.eurid.eu/xml/epp/domain-1.0 domain-1.0.xsd"><domain:name>ecom.eu</domain:name></domain:delete></delete><extension><eurid:ext xmlns:eurid="http://www.eurid.eu/xml/epp/eurid-1.0" xsi:schemaLocation="http://www.eurid.eu/xml/epp/eurid-1.0 eurid-1.0.xsd"><eurid:delete><eurid:domain><eurid:deleteDate>2005-09-29T14:40:51.000000000Z</eurid:deleteDate></eurid:domain></eurid:delete></eurid:ext></extension><clTRID>TRID-0001</clTRID></command></epp>','domain_delete build');
 is($rc->is_success(),1,'domain_delete is_success');
 
+## Release 5.6, page 28
+$R2=$E1.'<response>'.r().'<extension><eurid:ext><eurid:result><eurid:msg>OK</eurid:msg></eurid:result></eurid:ext></extension>'.$TRID.'</response>'.$E2;
+$rc=$dri->domain_delete('domain-to-update-overwrite-true.eu',{pure_delete=>1,overwrite=>1,deleteDate=>DateTime->new(year=>2010,month=>1,day=>1,hour=>0,minute=>0,second=>0)});
+is_string($R1,'<?xml version="1.0" encoding="UTF-8" standalone="no"?><epp xmlns="http://www.eurid.eu/xml/epp/epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.eurid.eu/xml/epp/epp-1.0 epp-1.0.xsd"><command><delete><domain:delete xmlns:domain="http://www.eurid.eu/xml/epp/domain-1.0" xsi:schemaLocation="http://www.eurid.eu/xml/epp/domain-1.0 domain-1.0.xsd"><domain:name>domain-to-update-overwrite-true.eu</domain:name></domain:delete></delete><extension><eurid:ext xmlns:eurid="http://www.eurid.eu/xml/epp/eurid-1.0" xsi:schemaLocation="http://www.eurid.eu/xml/epp/eurid-1.0 eurid-1.0.xsd"><eurid:delete><eurid:domain><eurid:deleteDate>2010-01-01T00:00:00.000000000Z</eurid:deleteDate><eurid:overwriteDeleteDate>true</eurid:overwriteDeleteDate></eurid:domain></eurid:delete></eurid:ext></extension><clTRID>TRID-0001</clTRID></command></epp>','domain_delete build'); 
+is($rc->is_success(),1,'domain_delete is_success');
+
+
+
 
 ## p.63
 $R2=$E1.'<response>'.r().'<extension><eurid:ext><eurid:result><eurid:msg>OK</eurid:msg></eurid:result></eurid:ext></extension>'.$TRID.'</response>'.$E2;
@@ -588,9 +596,48 @@ is($rc->is_success(),1,'domain_check_contact_for_transfer is_success');
 is($dri->get_info('percentage'),100,'domain_check_contact_for_transfer get_info(percentage)');
 
 ################################################################################################################
+## Release 5.6 october 2008
+
+## page 28
+$R2=$E1.'<response>'.r().'<extension><eurid:ext><eurid:infData><eurid:registrar><eurid:hitPoints><eurid:nbrHitPoints>1001</eurid:nbrHitPoints><eurid:maxNbrHitPoints>1000</eurid:maxNbrHitPoints><eurid:blockedUntil>2008-10-09T17:31:20.000Z</eurid:blockedUntil></eurid:hitPoints><eurid:amountAvailable>8922.00</eurid:amountAvailable><eurid:nbrRenewalCreditsAvailable>0</eurid:nbrRenewalCreditsAvailable><eurid:nbrPromoCreditsAvailable xsi:nil="true"/></eurid:registrar></eurid:infData></eurid:ext></extension>'.$TRID.'</response>'.$E2;
+$rc=$dri->registrar_info();
+is_string($R1,'<?xml version="1.0" encoding="UTF-8" standalone="no"?><epp xmlns="http://www.eurid.eu/xml/epp/epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.eurid.eu/xml/epp/epp-1.0 epp-1.0.xsd"><command><info><registrar:info xmlns:registrar="http://www.eurid.eu/xml/epp/registrar-1.0" xsi:schemaLocation="http://www.eurid.eu/xml/epp/registrar-1.0 registrar-1.0.xsd"/></info><extension><eurid:ext xmlns:eurid="http://www.eurid.eu/xml/epp/eurid-1.0" xsi:schemaLocation="http://www.eurid.eu/xml/epp/eurid-1.0 eurid-1.0.xsd"><eurid:info><eurid:registrar version="1.0"/></eurid:info></eurid:ext></extension><clTRID>TRID-0001</clTRID></command></epp>','registrar_info build');
+$s=$rc->get_data('hitpoints');
+isa_ok($s,'HASH','registrar_info get_data(hitpoints)');
+is($s->{current_number},1001,'registrar_info get_data(hitpoints) current_number');
+is($s->{maximum_number},1000,'registrar_info get_data(hitpoints) maximum_number');
+isa_ok($s->{blocked_until},'DateTime','registrar_info get_data(hitpoints) blocked_until isa DateTime');
+is(''.$s->{blocked_until},'2008-10-09T17:31:20','registrar_info get_data(hitpoints) blocked_until value');
+is($rc->get_data('amount_available'),8922,'registrar_info get_data(amount_available)');
+$s=$rc->get_data('credits');
+isa_ok($s,'HASH','registrar_info get_data(credits)');
+is($s->{renewal},0,'registrar_info get_data(credits) renewal');
+is($s->{promo},undef,'registrar_info get_data(credits) promo');
+
+## page 33
+$rc=$dri->domain_remind('abc.eu',{destination=>'owner'});
+is_string($R1,'<?xml version="1.0" encoding="UTF-8" standalone="no"?><epp xmlns="http://www.eurid.eu/xml/epp/epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.eurid.eu/xml/epp/epp-1.0 epp-1.0.xsd"><extension><eurid:ext xmlns:eurid="http://www.eurid.eu/xml/epp/eurid-1.0" xsi:schemaLocation="http://www.eurid.eu/xml/epp/eurid-1.0 eurid-1.0.xsd"><eurid:command><eurid:transferRemind><eurid:domainname>abc.eu</eurid:domainname><eurid:destination>owner</eurid:destination></eurid:transferRemind><eurid:clTRID>TRID-0001</eurid:clTRID></eurid:command></eurid:ext></extension></epp>','domain_remind destionation=owner build'); 
+$rc=$dri->domain_remind('abc.eu',{destination=>'buyer'});
+is_string($R1,'<?xml version="1.0" encoding="UTF-8" standalone="no"?><epp xmlns="http://www.eurid.eu/xml/epp/epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.eurid.eu/xml/epp/epp-1.0 epp-1.0.xsd"><extension><eurid:ext xmlns:eurid="http://www.eurid.eu/xml/epp/eurid-1.0" xsi:schemaLocation="http://www.eurid.eu/xml/epp/eurid-1.0 eurid-1.0.xsd"><eurid:command><eurid:transferRemind><eurid:domainname>abc.eu</eurid:domainname><eurid:destination>buyer</eurid:destination></eurid:transferRemind><eurid:clTRID>TRID-0001</eurid:clTRID></eurid:command></eurid:ext></extension></epp>','domain_remind destionation=owner build');
+
+## page 19
+$R2=$E1.'<response>'.r(1301,'Command completed successfully; ack to dequeue').'<msgQ count="3" id="6830"><qDate>2008-09-18T21:29:28.179+02:00</qDate><msg>Transfer of domain name mytransferdomain.eu</msg></msgQ><resData><eurid:pollRes><eurid:action>CONFIRM</eurid:action><eurid:domainname>mytransferdomain.eu</eurid:domainname><eurid:returncode>1155</eurid:returncode><eurid:type>TRANSFER</eurid:type></eurid:pollRes></resData>'.$TRID.'</response>'.$E2;
+$rc=$dri->message_retrieve();
+## This is a *very* convoluted way to access data, it is only done so to test everything is there
+$s=$rc->get_data('message','session','last_id');
+is($s,6830,'notification get_data(message,session,last_id)');
+$s=$rc->get_data('message',$s,'name');
+is($s,'mytransferdomain.eu','notification get_data(message,ID,name)');
+is($rc->get_data('domain',$s,'object_type'),$rc->get_data('object_type'),'notification get_data(domain,X,Y)=get_data(Y)');
+is($rc->get_data('exist'),1,'notification get_data(exist)');
+is($rc->get_data('return_code'),1155,'notification get_data(return_code)');
+is($rc->get_data('action'),'confirm_transfer','notification get_data(action)');
+is($rc->get_data('id'),6830,'notification get_data(id)');
+
+################################################################################################################
 
 ## Examples from Registration_guidelines_v1_0F-appendix2-sunrise.pdf
-$dri->target('EURid')->add_current_test_profile('p2','Dummy',{f_send=>\&mysend,f_recv=>\&myrecv},'epp',['1.0',['Net::DRI::Protocol::EPP::Extensions::EURid::Sunrise']]);
+$dri->target('EURid')->add_current_profile('p2','test=epp',{f_send=>\&mysend,f_recv=>\&myrecv},{extensions=>['Net::DRI::Protocol::EPP::Extensions::EURid::Sunrise']});
 
 ## p.8
 $R2='<?xml version="1.0" encoding="UTF-8" standalone="no"?><epp xmlns="http://www.eurid.eu/xml/epp/epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:contact="http://www.eurid.eu/xml/epp/contact-1.0" xmlns:domain="http://www.eurid.eu/xml/epp/domain-1.0" xmlns:eurid="http://www.eurid.eu/xml/epp/eurid-1.0" xmlns:nsgroup="http://www.eurid.eu/xml/epp/nsgroup-1.0" xsi:schemaLocation="http://www.eurid.eu/xml/epp/epp-1.0 epp-1.0.xsd http://www.eurid.eu/xml/epp/contact-1.0 contact-1.0.xsd http://www.eurid.eu/xml/epp/domain-1.0 domain-1.0.xsd http://www.eurid.eu/xml/epp/eurid-1.0 eurid-1.0.xsd http://www.eurid.eu/xml/epp/nsgroup-1.0 nsgroup-1.0.xsd"><response><result code="1500"><msg>Command completed successfully; ending session</msg></result><resData><domain:appData><domain:name>c-and-a.eu</domain:name><domain:reference>c-and-a_1</domain:reference><domain:code>2565100006029999</domain:code><domain:crDate>2005-11-08T14:51:08.929Z</domain:crDate></domain:appData></resData><extension><eurid:ext><eurid:result><eurid:msg>OK</eurid:msg></eurid:result></eurid:ext></extension><trID><clTRID>clientref-12310026</clTRID><svTRID>eurid-1589</svTRID></trID></response></epp>';

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, OpenSRS XCP Domain commands
 ##
-## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,16 +18,12 @@
 package Net::DRI::Protocol::OpenSRS::XCP::Domain;
 
 use strict;
-
-use DateTime::Format::ISO8601;
+use warnings;
 
 use Net::DRI::Exception;
 use Net::DRI::Util;
-use Net::DRI::Data::ContactSet;
-use Net::DRI::Data::Contact;
-use Net::DRI::Data::Hosts;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -57,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -75,8 +71,15 @@ sub register_commands
 {
  my ($class,$version)=@_;
  my %tmp=(
-		info => [\&info, \&info_parse ],
-	  );
+	  info  => [\&info,  \&info_parse ],
+          check => [\&check, \&check_parse ],
+          create => [ \&create, \&create_parse ], ## TODO : parsing of return messages
+          delete => [ \&delete, \&delete_parse ],
+	  renew => [ \&renew, \&renew_parse ],
+          transfer_request => [ \&transfer_request, \&transfer_request_parse ],
+          transfer_query => [ \&transfer_query, \&transfer_query_parse ],
+          transfer_cancel => [ \&transfer_cancel, \&transfer_cancel_parse ],
+         );
 
  return { 'domain' => \%tmp };
 }
@@ -107,21 +110,20 @@ sub info_parse
 
  $rinfo->{domain}->{$oname}->{action}='info';
  $rinfo->{domain}->{$oname}->{exist}=1;
- my $pd=DateTime::Format::ISO8601->new();
  my $ra=$mes->response_attributes(); ## Not parsed: dns_errors, descr
 
  my %d=(registry_createdate => 'crDate', registry_expiredate => 'exDate', registry_updatedate => 'upDate', registry_transferdate => 'trDate', expiredate => 'exDateLocal');
  while (my ($k,$v)=each(%d))
  {
   next unless exists($ra->{$k});
-  $ra->{$k}=~s/ /T/; ## with a little effort we become ISO8601
-  $rinfo->{domain}->{$oname}->{$v}=$pd->parse_datetime($ra->{$k});
+  $ra->{$k}=~s/\s+/T/; ## with a little effort we become ISO8601
+  $rinfo->{domain}->{$oname}->{$v}=$xcp->parse_iso8601($ra->{$k});
  }
 
  my $ns=$ra->{nameserver_list};
  if (defined($ns) && ref($ns) && @$ns)
  {
-  my $nso=Net::DRI::Data::Hosts->new();
+  my $nso=$xcp->create_local_object('hosts');
   foreach my $h (@$ns)
   {
    $nso->add($h->{name},[$h->{ipaddress}]);
@@ -138,10 +140,10 @@ sub info_parse
  my $c=$ra->{contact_set};
  if (defined($c) && ref($c) && keys(%$c))
  {
-  my $cs=Net::DRI::Data::ContactSet->new();
+  my $cs=$xcp->create_local_object('contactset');
   while (my ($type,$v)=each(%$c))
   {
-   my $c=parse_contact($v);
+   my $c=parse_contact($xcp,$v);
    $cs->add($c,$type eq 'owner'? 'registrant' : $type);
   }
   $rinfo->{domain}->{$oname}->{contact}=$cs;
@@ -152,24 +154,11 @@ sub info_parse
 
 sub parse_contact
 {
- my $rh=shift;
- my $c=Net::DRI::Data::Contact->new();
+ my ($xcp,$rh)=@_;
+ my $c=$xcp->create_local_object('contact');
  ## No ID given back ! Waouh that is great... not !
- my $n1=$rh->{first_name};
- my $n2=$rh->{last_name};
- if (defined($n1))
- {
-  if (defined($n2))
-  {
-   $c->name($n1.', '.$n2);
-  } else
-  {
-   $c->name($n1);
-  }
- } else
- {
-  $c->name($n2) if defined($n2);
- }
+ $c->firstname($rh->{first_name});
+ $c->name($rh->{last_name});
  $c->org($rh->{org_name}) if exists($rh->{org_name});
  $c->street([map { $rh->{'address'.$_} } grep {exists($rh->{'address'.$_}) && defined($rh->{'address'.$_}) } (1,2,3)]);
  $c->city($rh->{city}) if exists($rh->{city});
@@ -179,7 +168,331 @@ sub parse_contact
  $c->voice($rh->{phone}) if exists($rh->{voice});
  $c->fax($rh->{fax}) if exists($rh->{fax});
  $c->email($rh->{email}) if exists($rh->{email});
+ $c->url($rh->{url}) if exists($rh->{url});
  return $c;
+}
+
+sub check
+{
+ my ($xcp,$domain,$rd)=@_;
+ my $msg=$xcp->message();
+ my %r=(action=>'lookup',object=>'domain');
+ $r{registrant_ip}=$rd->{registrant_ip} if exists $rd->{registrant_ip};
+ $msg->command(\%r);
+ $msg->command_attributes({domain => $domain});
+}
+
+sub check_parse
+{
+ my ($xcp,$otype,$oaction,$oname,$rinfo)=@_;
+ my $mes=$xcp->message();
+ return unless $mes->is_success();
+
+ $rinfo->{domain}->{$oname}->{action}='check';
+ my $ra=$mes->response_attributes();
+ $rinfo->{domain}->{$oname}->{exist}=(exists $ra->{status} && defined($ra->{status}) && $ra->{status} eq 'available' && $mes->response_code()==210)? 0 : 1;
+ $rinfo->{domain}->{$oname}->{exist_reason}=$mes->response_text();
+}
+
+sub create
+{
+ my ($xcp,$domain,$rd)=@_;
+
+ sw_register($xcp, $domain, $rd, 'new'); # TBD: premium, sunrise, whois_privacy
+}
+
+sub create_parse
+{
+ my ($xcp,$otype,$oaction,$oname,$rinfo)=@_;
+ my $mes=$xcp->message();
+ return unless $mes->is_success();
+
+ $rinfo->{domain}->{$oname}->{action}='create';
+ my $ra=$mes->response_attributes();
+ foreach (qw/admin_email cancelled_orders error id queue_request_id forced_pending whois_privacy/) {
+  $rinfo->{domain}->{$oname}->{$_} = $ra->{$_} if exists $ra->{$_};
+ }
+}
+
+sub sw_register
+{
+ my ($xcp,$domain,$rd,$reg_type)=@_;
+
+ my $msg=$xcp->message();
+
+ my %r=(action => 'sw_register', object => 'domain');
+ $r{registrant_ip}=$rd->{registrant_ip} if exists $rd->{registrant_ip};
+
+ $msg->command(\%r);
+
+ Net::DRI::Exception::usererr_insufficient_parameters('Username+Password are required for sw_register') if grep { ! Net::DRI::Util::has_key($rd,$_) } qw/username password/;
+
+ Net::DRI::Exception::usererr_insufficient_parameters('contacts are mandatory') unless Net::DRI::Util::has_contact($rd);
+ my $cs=$rd->{contact};
+ foreach my $t (qw/registrant admin billing/)
+ {
+  my @t=$cs->get($t);
+  Net::DRI::Exception::usererr_invalid_parameters('one ' . $t . ' contact is mandatory') unless @t==1;
+  my $co=$cs->get($t);
+  Net::DRI::Exception::usererr_insufficient_parameters($t . 'contact is mandatory') unless Net::DRI::Util::isa_contact($co);
+  $co->validate();
+ }
+
+ my %contact_set = ();
+ my $attr = {reg_type => $reg_type, domain => $domain, contact_set => \%contact_set};
+ $contact_set{owner} = add_owner_contact($msg,$cs);
+ $contact_set{admin} = add_admin_contact($msg,$cs);
+ $contact_set{billing} = add_billing_contact($msg,$cs);
+ if ($cs->get('tech')) {
+  $contact_set{tech} = add_tech_contact($msg,$cs); ## optional
+  $attr->{custom_tech_contact} = 1;
+ } else {
+  $attr->{custom_tech_contact} = 0; # Use default tech contact
+ }
+
+ # These are all the OpenSRS names for optional parameters.  Might need to map generic names to OpenSRS namespace later.
+ foreach (qw/auto_renew affiliate_id f_lock_domain f_parkp f_whois_privacy/) {
+  $attr->{$_} = ($rd->{$_} ? 1 : 0 ) if Net::DRI::Util::has_key($rd, $_);
+ }
+ foreach (qw/affiliate_id reg_domain/) {
+  $attr->{$_} = ($rd->{$_}) if Net::DRI::Util::has_key($rd, $_);
+ }
+
+ # TBD: ccTLD-specific flags including domain encoding.
+ # TBD: handle, link_domains, etc.
+
+ if ($reg_type eq 'new') {
+  Net::DRI::Exception::usererr_insufficient_parameters('duration is mandatory') unless Net::DRI::Util::has_duration($rd);
+  $attr->{period} = $rd->{duration}->years();
+ }
+
+ $attr->{reg_username} = $rd->{username};
+ $attr->{reg_password} = $rd->{password};
+
+ $msg->command_attributes($attr);
+
+ add_all_ns($domain,$msg,$rd->{ns});
+}
+
+sub add_contact_info
+{
+ my ($msg,$co)=@_;
+ my %contact = ();
+
+ $contact{first_name} = $co->firstname();
+ $contact{last_name} = $co->name();
+
+ $contact{org_name} = $co->org() if $co->org();
+
+ my $s=$co->street();
+ Net::DRI::Exception::usererr_insufficient_parameters('1 line of address at least needed') unless ($s && (ref($s) eq 'ARRAY') && @$s && $s->[0]);
+
+ $contact{address1} = $s->[0];
+ $contact{address2} = $s->[1] if $s->[1];
+ $contact{address3} = $s->[2] if $s->[2];
+ Net::DRI::Exception::usererr_insufficient_parameters('city, sp, pc & cc mandatory') unless ($co->city() && $co->sp() && $co->pc() && $co->cc());
+ $contact{city} = $co->city();
+ $contact{state} = $co->sp();
+ $contact{postal_code} = $co->pc();
+ $contact{country} = uc($co->cc());
+ Net::DRI::Exception::usererr_insufficient_parameters('voice & email mandatory') unless ($co->voice() && $co->email());
+ $contact{phone} = $co->voice();
+ $contact{fax} = $co->fax() if $co->fax();
+ $contact{email} = $co->email();
+ $contact{url} = $co->url() if $co->url();
+ return \%contact;
+}
+
+sub add_owner_contact
+{
+ my ($msg,$cs)=@_;
+ my $co=$cs->get('registrant');
+ return add_contact_info($msg,$co) if Net::DRI::Util::isa_contact($co);
+}
+
+sub add_admin_contact
+{
+ my ($msg,$cs)=@_;
+ my $co=$cs->get('admin');
+ return add_contact_info($msg,$co) if Net::DRI::Util::isa_contact($co);
+}
+
+sub add_billing_contact
+{
+ my ($msg,$cs)=@_;
+ my $co=$cs->get('billing');
+ return add_contact_info($msg,$co) if Net::DRI::Util::isa_contact($co);
+}
+
+sub add_tech_contact
+{
+ my ($msg,$cs)=@_;
+ my $co=$cs->get('tech');
+ return add_contact_info($msg,$co) if Net::DRI::Util::isa_contact($co);
+}
+
+sub add_all_ns
+{
+ my ($domain,$msg,$ns)=@_;
+ my @nslist = ();
+
+ my $attr = $msg->command_attributes();
+ $attr->{custom_nameservers} = 0;
+
+ if (defined($ns)) {
+  Net::DRI::Exception::usererr_insufficient_parameters('at least 2 nameservers are mandatory') unless (Net::DRI::Util::isa_hosts($ns) && $ns->count()>=2); # Name servers are optional; if present must be >=2
+
+  for (my $i = 1; $i <= $ns->count(); $i++) { # Net:DRI name server list starts at 1.
+   my $name = $ns->get_details($i); # get_details in scalar returns name
+   push @nslist, { sortorder => $i, name => $name };
+  }
+  $attr->{custom_nameservers} = 1;
+  $attr->{nameserver_list} =  \@nslist;
+ }
+ $msg->command_attributes($attr);
+}
+
+sub delete
+{
+ my ($xcp,$domain,$rd)=@_;
+ my $msg=$xcp->message();
+
+ Net::DRI::Exception::usererr_insufficient_parameters('Reseller ID is mandatory') unless (Net::DRI::Util::has_key($rd, 'reseller_id'));
+
+ my %r=(action => 'revoke', object => 'domain');
+ $r{registrant_ip}=$rd->{registrant_ip} if exists $rd->{registrant_ip};
+
+ $msg->command(\%r);
+ my $attr = {domain => $domain, reseller => $rd->{reseller_id}};
+ $attr->{notes} = $rd->{notes} if Net::DRI::Util::has_key($rd, 'notes');
+ $msg->command_attributes({domain => $domain, reseller => $rd->{reseller_id}});
+}
+
+sub delete_parse
+{
+ my ($xcp,$otype,$oaction,$oname,$rinfo)=@_;
+ my $mes=$xcp->message();
+ return unless $mes->is_success();
+
+ $rinfo->{domain}->{$oname}->{action}='delete';
+ my $ra=$mes->response_attributes();
+ foreach (qw/charge price/) {
+  $rinfo->{domain}->{$oname}->{$_} = $ra->{$_} if exists $ra->{$_};
+ }
+}
+
+sub renew
+{
+ my ($xcp,$domain,$rd)=@_;
+ my $msg=$xcp->message();
+
+ my %r=(action => 'renew', object => 'domain');
+ $r{registrant_ip}=$rd->{registrant_ip} if exists $rd->{registrant_ip};
+
+ Net::DRI::Exception::usererr_insufficient_parameters('auto_renew setting is mandatory') unless (Net::DRI::Util::has_key($rd, 'auto_renew'));
+
+ Net::DRI::Exception::usererr_insufficient_parameters('duration is mandatory') unless Net::DRI::Util::has_duration($rd);
+ Net::DRI::Exception::usererr_insufficient_parameters('current expiration is mandatory') unless (Net::DRI::Util::has_key($rd, 'current_expiration') && Net::DRI::Util::check_isa($rd->{current_expiration}, 'DateTime')); # Can get this from set_cookie response.
+
+ my $attr = {domain => $domain, period => $rd->{duration}->years(), currentexpirationyear => $rd->{current_expiration}->year()};
+
+ # These are all the OpenSRS names for optional parameters.  Might need to map generic names to OpenSRS namespace later.
+ foreach (qw/auto_renew f_parkp/) {
+  $attr->{$_} = ($rd->{$_} ? 1 : 0 ) if Net::DRI::Util::has_key($rd, $_);
+ }
+ foreach (qw/affiliate_id notes/) {
+  $attr->{$_} = ($rd->{$_}) if Net::DRI::Util::has_key($rd, $_);
+ }
+
+ # TBD: handle, etc.
+
+ $msg->command(\%r);
+ $msg->command_attributes($attr);
+}
+
+sub renew_parse
+{
+ my ($xcp,$otype,$oaction,$oname,$rinfo)=@_;
+ my $mes=$xcp->message();
+ return unless $mes->is_success();
+
+ $rinfo->{domain}->{$oname}->{action}='renew';
+ my $ra=$mes->response_attributes();
+ foreach (qw/auto_renew admin_email order_id id queue_request_id/) {
+  $rinfo->{domain}->{$oname}->{$_} = $ra->{$_} if exists $ra->{$_};
+ }
+ my ($k,$v)=('registration expiration date', 'exDate');
+ $ra->{$k}=~s/\s+/T/; ## with a little effort we become ISO8601
+ $rinfo->{domain}->{$oname}->{$v}=$xcp->parse_iso8601($ra->{$k});
+}
+
+sub transfer_request
+{
+ my ($xcp,$domain,$rd)=@_;
+
+ sw_register($xcp, $domain, $rd, 'transfer');
+}
+
+sub transfer_request_parse
+{
+ my ($xcp,$otype,$oaction,$oname,$rinfo)=@_;
+ my $mes=$xcp->message();
+ return unless $mes->is_success();
+
+ $rinfo->{domain}->{$oname}->{action}='transfer_start';
+ my $ra=$mes->response_attributes();
+ foreach (qw/admin_email cancelled_orders error id queue_request_id forced_pending whois_privacy/) {
+  $rinfo->{domain}->{$oname}->{$_} = $ra->{$_} if exists $ra->{$_};
+ }
+}
+
+sub transfer_query
+{
+ my ($xcp,$domain,$rd)=@_;
+ my $msg=$xcp->message();
+
+ my %r=(action => 'check_transfer', object => 'domain');
+ $r{registrant_ip}=$rd->{registrant_ip} if exists $rd->{registrant_ip};
+
+ $msg->command(\%r);
+ $msg->command_attributes({domain => $domain, check_status => 1, get_request_address => 1}); # TBD: usable for checking transferability
+}
+
+sub transfer_query_parse
+{
+ my ($xcp,$otype,$oaction,$oname,$rinfo)=@_;
+ my $mes=$xcp->message();
+ return unless $mes->is_success();
+
+ $rinfo->{domain}->{$oname}->{action}='check_transfer';
+ my $ra=$mes->response_attributes();
+ foreach (qw/transferrable status request_address timestamp unixtime reason type noservice/) {
+  $rinfo->{domain}->{$oname}->{$_} = $ra->{$_} if exists $ra->{$_};
+ }
+}
+
+sub transfer_cancel
+{
+ my ($xcp,$domain,$rd)=@_;
+ my $msg=$xcp->message();
+
+ Net::DRI::Exception::usererr_insufficient_parameters('Reseller ID is mandatory') unless (Net::DRI::Util::has_key($rd, 'reseller_id'));
+
+ my %r=(action => 'cancel_transfer', object => 'transfer');
+ $r{registrant_ip}=$rd->{registrant_ip} if exists $rd->{registrant_ip};
+
+ $msg->command(\%r);
+ $msg->command_attributes({domain => $domain, reseller => $rd->{reseller_id}}); # TBD: optional order ID
+}
+
+sub transfer_cancel_parse
+{
+ my ($xcp,$otype,$oaction,$oname,$rinfo)=@_;
+ my $mes=$xcp->message();
+ return unless $mes->is_success();
+
+ $rinfo->{domain}->{$oname}->{action}='cancel_transfer';
+ # This response has no attributes to capture
 }
 
 ####################################################################################################

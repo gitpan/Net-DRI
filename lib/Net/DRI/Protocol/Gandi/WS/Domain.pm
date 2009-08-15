@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Gandi Web Services Domain commands
 ##
-## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,16 +18,14 @@
 package Net::DRI::Protocol::Gandi::WS::Domain;
 
 use strict;
+use warnings;
 
 use DateTime::Format::ISO8601;
 
 use Net::DRI::Exception;
 use Net::DRI::Util;
-use Net::DRI::Data::ContactSet;
-use Net::DRI::Data::Contact;
-use Net::DRI::Data::StatusList;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -57,7 +55,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -75,7 +73,8 @@ sub register_commands
 {
  my ($class,$version)=@_;
  my %tmp=(
-		info => [\&info, \&info_parse ],
+		info  => [\&info, \&info_parse ],
+		check => [\&check, \&check_parse ],
 	  );
 
  return { 'domain' => \%tmp };
@@ -100,7 +99,7 @@ sub info
 
 sub info_parse
 {
-  my ($po,$otype,$oaction,$oname,$rinfo)=@_;
+ my ($po,$otype,$oaction,$oname,$rinfo)=@_;
  my $mes=$po->message();
  return unless $mes->is_success();
 
@@ -110,19 +109,18 @@ sub info_parse
  my %r=%$r;
  $rinfo->{domain}->{$oname}->{action}='info';
  $rinfo->{domain}->{$oname}->{exist}=1;
- my $pd=DateTime::Format::ISO8601->new();
  my %d=(registry_creation_date => 'crDate', registry_last_update => 'upDate', registry_expiration_date => 'exDate', registrar_creation_date => 'trDate');
  while (my ($k,$v)=each(%d))
  {
   next unless exists($r{$k});
-  $rinfo->{domain}->{$oname}->{$v}=$pd->parse_datetime($r{$k});
+  $rinfo->{domain}->{$oname}->{$v}=$po->parse_iso8601($r{$k});
  }
  my %c=(owner_handle => 'registrant', admin_handle => 'admin', tech_handle => 'tech', billing_handle => 'billing');
- my $cs=Net::DRI::Data::ContactSet->new();
- while (my ($k,$v)=each(%d))
+ my $cs=$po->create_local_object('contactset');
+ while (my ($k,$v)=each(%c))
  {
   next unless exists($r{$k});
-  my $c=Net::DRI::Data::Contact->new()->srid($r{$k});
+  my $c=$po->create_local_object('contact')->srid($r{$k});
   $cs->add($c,$v);
  }
  $rinfo->{domain}->{$oname}->{contact}=$cs;
@@ -130,14 +128,35 @@ sub info_parse
 
  if ($r{locked})
  {
-  $rinfo->{domain}->{$oname}->{status}=Net::DRI::Data::StatusList->new()->add('clientTransferProhibited'); ## ?
+  $rinfo->{domain}->{$oname}->{status}=$po->create_local_object('status')->add('clientTransferProhibited'); ## ?
  } else
  {
-  $rinfo->{domain}->{$oname}->{status}=Net::DRI::Data::StatusList->new()->add('ok');
+  $rinfo->{domain}->{$oname}->{status}=$po->create_local_object('status')->add('ok');
  }
 
  ## And what about nameservers ? No information in documentation, only separate functions for that: domain_ns_*
  # $rinfo->{domain}->{$oname}->{ns}=??
+}
+
+sub check
+{
+ my ($po,$domain)=@_;
+ my $msg=$po->message();
+ build_msg($msg,'domain_available',$domain);
+ $msg->params([$domain]);
+}
+
+sub check_parse
+{
+ my ($po,$otype,$oaction,$oname,$rinfo)=@_;
+ my $mes=$po->message();
+ return unless $mes->is_success();
+
+ my $r=$mes->result();
+ Net::DRI::Exception->die(1,'protocol/gandi/ws',1,'Unexpected reply for domain_check: '.$r) unless (ref($r) eq 'HASH');
+
+ $rinfo->{domain}->{$oname}->{action}='check';
+ $rinfo->{domain}->{$oname}->{exist}=(exists($r->{$oname}) && $r->{$oname}==1)? 0 : 1;
 }
 
 ####################################################################################################

@@ -29,10 +29,9 @@ my $dri = Net::DRI->new(10);
 $dri->{trid_factory} = sub { return 'ABC-12345'; };
 eval {
 	$dri->add_registry('ASIA');
-	$dri->target('ASIA')->add_current_test_profile('p1',
-		'Dummy',
-		{f_send => \&mysend, f_recv => \&myrecv},'Net::DRI::Protocol::EPP::Extensions::ASIA',
-			['1.0', [':full']]);
+	$dri->target('ASIA')->add_current_profile('p1',
+		'test=Net::DRI::Protocol::EPP::Extensions::ASIA',
+		{f_send => \&mysend, f_recv => \&myrecv});
 };
 if ($@)
 {

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, OVH Web Services Domain commands
 ##
-## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,17 +18,12 @@
 package Net::DRI::Protocol::OVH::WS::Domain;
 
 use strict;
-
-use DateTime::Format::ISO8601;
+use warnings;
 
 use Net::DRI::Exception;
 use Net::DRI::Util;
-use Net::DRI::Data::ContactSet;
-use Net::DRI::Data::Contact;
-use Net::DRI::Data::Hosts;
-use Net::DRI::Data::StatusList;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -58,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -76,7 +71,8 @@ sub register_commands
 {
  my ($class,$version)=@_;
  my %tmp=(
-		info => [\&info, \&info_parse ],
+		info  => [\&info, \&info_parse ],
+		check => [\&check, \&check_parse ],
 	  );
 
  return { 'domain' => \%tmp };
@@ -84,9 +80,9 @@ sub register_commands
 
 sub parse_ArrayOfNsStruct
 {
- my ($r)=@_;
- Net::DRI::Exception->die(1,'protocol/ovh/ws',1,'Unexpected content for dns: '.$r) unless (ref($r) eq 'ArrayOfNsStruct');
- my $h=Net::DRI::Data::Hosts->new();
+ my ($po,$r)=@_;
+ Net::DRI::Exception->die(1,'protocol/ovh/ws',1,'Unexpected content for dns: '.$r) unless (ref($r) eq 'MyArrayOfNsStructType');
+ my $h=$po->create_local_object('hosts');
  foreach my $ns (@$r)
  {
   Net::DRI::Exception->die(1,'protocol/ovh/ws',1,'Unexpected content for ArrayOfNsStruct member: '.$ns) unless (ref($ns) eq 'nsStruct');
@@ -111,7 +107,7 @@ sub info
  my ($po,$domain)=@_;
  my $msg=$po->message();
  build_msg($msg,'domainInfo',$domain);
- $msg->params({ domain => $domain });
+ $msg->params([$domain]);
 }
 
 sub info_parse
@@ -121,25 +117,24 @@ sub info_parse
  return unless $mes->is_success();
 
  my $r=$mes->result();
- Net::DRI::Exception->die(1,'protocol/ovh/ws',1,'Unexpected reply for domainInfo: '.$r) unless (ref($r) eq 'domainInfoReturn');
+ Net::DRI::Exception->die(1,'protocol/ovh/ws',1,'Unexpected reply for domain_info: '.$r) unless (ref($r) eq 'domainInfoReturn');
 
  my %r=%$r;
  $oname=lc($r->{domain});
  $rinfo->{domain}->{$oname}->{action}='info';
  $rinfo->{domain}->{$oname}->{exist}=1;
- my $pd=DateTime::Format::ISO8601->new();
  my %d=(creation => 'crDate', modification => 'upDate', expiration => 'exDate');
  while (my ($k,$v)=each(%d))
  {
   next unless exists($r{$k});
-  $rinfo->{domain}->{$oname}->{$v}=$pd->parse_datetime($r{$k});
+  $rinfo->{domain}->{$oname}->{$v}=$po->parse_iso8601($r{$k});
  }
  my %c=(nicowner => 'registrant', nicadmin => 'admin', nictech => 'tech', nicbilling => 'billing');
- my $cs=Net::DRI::Data::ContactSet->new();
- while (my ($k,$v)=each(%d))
+ my $cs=$po->create_local_object('contactset');
+ while (my ($k,$v)=each(%c))
  {
   next unless exists($r{$k});
-  my $c=Net::DRI::Data::Contact->new()->srid($r{$k});
+  my $c=$po->create_local_object('contact')->srid($r{$k});
   $cs->add($c,$v);
  }
  $rinfo->{domain}->{$oname}->{contact}=$cs;
@@ -148,12 +143,35 @@ sub info_parse
  if (exists($r{authinfo}))
  {
   $rinfo->{domain}->{$oname}->{auth}={pw => $r{authinfo}};
-  $rinfo->{domain}->{$oname}->{status}=Net::DRI::Data::StatusList->new()->add('ok');
+  $rinfo->{domain}->{$oname}->{status}=$po->create_local_object('status')->add('ok');
  } else
  {
-  $rinfo->{domain}->{$oname}->{status}=Net::DRI::Data::StatusList->new()->add('clientLock'); ## ? ##
+  $rinfo->{domain}->{$oname}->{status}=$po->create_local_object('status')->add('clientLock'); ## ? ##
  }
- $rinfo->{domain}->{$oname}->{ns}=parse_ArrayOfNsStruct($r{dns}) if exists($r{dns});
+ $rinfo->{domain}->{$oname}->{ns}=parse_ArrayOfNsStruct($po,$r{dns}) if exists($r{dns});
+}
+
+sub check
+{
+ my ($po,$domain)=@_;
+ my $msg=$po->message();
+ build_msg($msg,'domainCheck',$domain);
+ $msg->params([$domain]);
+}
+
+sub check_parse
+{
+ my ($po,$otype,$oaction,$oname,$rinfo)=@_;
+ my $mes=$po->message();
+ return unless $mes->is_success();
+
+ my $r=$mes->result();
+ Net::DRI::Exception->die(1,'protocol/ovh/ws',1,'Unexpected reply for domain_check: '.$r) unless (ref($r) eq 'MyArrayOfDomainCheckStructType');
+
+ my @r=grep { exists $_->{predicate} && $_->{predicate} eq 'is_available' } @$r; ## also: is_transferable, is_renewable
+ $rinfo->{domain}->{$oname}->{action}='check';
+ $rinfo->{domain}->{$oname}->{exist}=(@r==1 && $r[0]->{value}==1)? 0 : 1;
+ $rinfo->{domain}->{$oname}->{exist_reason}=$r[0]->{reason} if @r==1;
 }
 
 ####################################################################################################

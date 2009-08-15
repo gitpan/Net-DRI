@@ -22,7 +22,7 @@ use strict;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -80,13 +80,12 @@ sub check
 {
  my ($po,$domain,$rd)=@_;
  my $mes=$po->message();
+ Net::DRI::Exception->die(1,'protocol/DAS',2,'Domain name needed') unless $domain;
+ Net::DRI::Exception->die(1,'protocol/DAS',10,'Invalid domain name: '.$domain) unless Net::DRI::Util::is_hostname($domain);
  my $tld=$po->tld();
- my ($dom)=($domain=~m/^(\S+)\.${tld}$/i);
- Net::DRI::Exception->die(1,'protocol/DAS',2,'Domain name needed') unless $dom;
- Net::DRI::Exception->die(1,'protocol/DAS',10,'Invalid domain name: '.$dom) unless Net::DRI::Util::is_hostname($dom);
+ $domain=~s/\.${tld}$// if defined $tld;
  $mes->command('get');
- $mes->command_param(lc($dom));
- $mes->command_tld($tld);
+ $mes->command_param(lc($domain));
 }
 
 sub check_parse
@@ -96,11 +95,11 @@ sub check_parse
  return unless $mes->is_success();
 
  my $rr=$mes->response();
- my $domain=lc($rr->{Domain}.'.'.$po->tld());
+ my $domain=(defined $po->tld())? lc($rr->{Domain}.'.'.$po->tld()) : lc($rr->{Domain});
  $rinfo->{domain}->{$domain}->{action}='check';
  my $s=uc($rr->{Status});
  $rinfo->{domain}->{$domain}->{exist}=($s eq 'FREE' || $s eq 'AVAILABLE')? 0 : 1;
- $rinfo->{domain}->{$domain}->{exist_reason}=$s;
+ $rinfo->{domain}->{$domain}->{exist_reason}=$rr->{Status};
 }
 
 ####################################################################################################

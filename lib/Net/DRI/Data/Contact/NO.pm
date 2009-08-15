@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Handling of contact data for .NO
 ##
-## Copyright (c) 2008 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
+## Copyright (c) 2008,2009 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
 ##                    Trond Haugen E<lt>info@norid.noE<gt>.
 ##                    All rights reserved.
 ##
@@ -20,12 +20,13 @@
 package Net::DRI::Data::Contact::NO;
 
 use strict;
+use warnings;
 use base qw/Net::DRI::Data::Contact/;
 use Email::Valid;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION = do { my @r = ( q$Revision: 1.3 $ =~ /\d+/gmx ); sprintf( "%d" . ".%02d" x $#r, @r ); };
+our $VERSION = do { my @r = ( q$Revision: 1.4 $ =~ /\d+/gmx ); sprintf( "%d" . ".%02d" x $#r, @r ); };
 
 __PACKAGE__->register_attributes(qw(type identity mobilephone organization rolecontact xemail xdisclose));
 
@@ -45,22 +46,22 @@ This subclass of Net::DRI::Data::Contact adds accessors and validation for
 The following accessors/mutators can be called in chain, as they all return 
 the object itself.
 
-=head2 type() 
+=head2 type()
 
 Mandatory, must be set for all contacts. Specify what type of contact to 
 register. Value must be one of: 'person', 'organization' or 'role'.
 
 Example: $co->type('organization')
 
-=head2 identity() 
+=head2 identity()
 
 Currently valid for type='organization' only.
 Must then be set to specify the organization number in Brønnøysund,
 the Norwegian Business Register.
 
 Example: $co->identity({type=>'organizationNumber', value=>'987654321'});
- 
-=head2 mobilephone() 
+
+=head2 mobilephone()
 
 Optional. Set a mobile phone number for the contact.
 
@@ -120,7 +121,7 @@ Trond Haugen, E<lt>info@norid.noE<gt>.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
+Copyright (c) 2008,2009 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
 Trond Haugen E<lt>info@norid.noE<gt>.
 All rights reserved.
 
@@ -159,9 +160,7 @@ sub validate {
             unless ( $self->type() );
     }
 
-    push @errs, 'roid'
-        if ( $self->roid() && $self->roid() !~ m/^\w{1,80}-\w{1,8}$/mx )
-        ;    ## \w includes _ in Perl
+    push @errs,'srid' if ($self->srid() && ! Net::DRI::Util::xml_is_token($self->srid(),3,16));
     push @errs, 'name'
         if ( $self->name()
         && grep { !Net::DRI::Util::xml_is_normalizedstring( $_, 1, 255 ) }
@@ -316,7 +315,7 @@ sub validate {
 }
 
 sub init {
-    my ( $self, $what ) = @_;
+    my ( $self, $what, $ndr ) = @_;
 
     if ( $what eq 'create' ) {
         my $a = $self->auth();

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Handling of contact data for .CH/.LI
 ##
-## Copyright (c) 2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+## Copyright (c) 2008,2009 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 ##                    All rights reserved.
 ##
 ## This file is part of Net::DRI
@@ -19,13 +19,14 @@
 package Net::DRI::Data::Contact::SWITCH;
 
 use strict;
+use warnings;
 use base qw/Net::DRI::Data::Contact/;
 
 use Net::DRI::Exception;
 use Net::DRI::Util;
 use Email::Valid;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -84,8 +85,7 @@ sub validate
   push @errs,'srid' unless Net::DRI::Util::xml_is_token($self->srid(),3,16);
  }
 
- push @errs,'roid' if ($self->roid() && $self->roid()!~m/^\w{1,80}-\w{1,8}$/); ## \w includes _ in Perl
-
+ push @errs,'srid' if ($self->srid() && $self->srid()!~m/^\w{1,80}-\w{1,8}$/); ## \w includes _ in Perl
  push @errs,'name' if ($self->name() && grep { !Net::DRI::Util::xml_is_normalizedstring($_,1,255) }     ($self->name()));
  push @errs,'org'  if ($self->org()  && grep { !Net::DRI::Util::xml_is_normalizedstring($_,undef,255) } ($self->org()));
 
@@ -115,7 +115,7 @@ sub validate
 
 sub init
 {
- my ($self,$what)=@_;
+ my ($self,$what,$ndr)=@_;
 
  if ($what eq 'create')
  {

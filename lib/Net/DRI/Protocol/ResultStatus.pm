@@ -24,8 +24,9 @@ use base qw(Class::Accessor::Chained::Fast);
 __PACKAGE__->mk_ro_accessors(qw(is_success native_code code message lang next));
 
 use Net::DRI::Exception;
+use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.22 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.23 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -41,7 +42,7 @@ with standardization on EPP as much as possible, for error codes and list of fie
 When an operation is done, data retrieved from the registry is also stored inside the ResultStatus object
 (besides being available through C<$dri->get_info()>). It can be queried using the C<get_data()> and
 C<get_data_collection> methods as explained below. The data is stored as a ref hash with 3 levels:
-the first keys haves as values a reference to another hash where keys are again associated with values
+the first keys have as values a reference to another hash where keys are again associated with values
 being a reference to another hash where the content (keys and values) depends on the registry, the operation
 attempted, and the result.
 
@@ -50,15 +51,15 @@ an hash with the following keys:
 
 =over
 
-=item command
-
-the message sent to the registry, as string
-
 =item duration_seconds
 
 the duration of the exchange with registry, in a floating point number of seconds
 
-=item reply
+=item raw_command
+
+the message sent to the registry, as string
+
+=item raw_reply
 
 the message received from the registry, as string
 
@@ -66,13 +67,25 @@ the message received from the registry, as string
 
 either 0 or 1 if these results were retrieved from L<Net::DRI> Cache object or not
 
-=item action
+=item object_action
 
 name of the action that has been done to achieve these results (ex: "info")
 
-=item type
+=item object_name
+
+name (or ID) of the object on which the action has been performed (not necessarily always defined)
+
+=item object_type
 
 type of object on which this operation has been done (ex: "domain")
+
+=item registry, profile, transport, protocol
+
+registry name, profile name, transport name+version, protocol name+version used for this exchange
+
+=item trid
+
+transaction ID of this exchange
 
 =back
 
@@ -89,7 +102,7 @@ for this operation (see RFC for full list and source of this file for local exte
 
 =head2 native_code()
 
-gives the true status code we got back from registry
+gives the true status code we got back from registry (this breaks the encapsulation provided by Net::DRI, you should not use it if possible)
 
 =head2 message()
 
@@ -204,6 +217,7 @@ our %EPP_CODES=(
                 COMMAND_SUCCESSFUL_END => 1500, ## after logout
 
                 COMMAND_SYNTAX_ERROR => 2001,
+                PARAMETER_VALUE_SYNTAX_ERROR => 2005,
                 AUTHENTICATION_ERROR => 2200,
                 AUTHORIZATION_ERROR => 2201,
                 OBJECT_EXISTS   => 2302,
@@ -253,6 +267,7 @@ sub get_data
  if (defined $k2 && defined $k3)
  {
   if (! exists $d->{$k1})               { return; }
+  ($k1,$k2)=Net::DRI::Util::normalize_name($k1,$k2);
   if (! exists $d->{$k1}->{$k2})        { return; }
   if (! exists $d->{$k1}->{$k2}->{$k3}) { return; }
   return $d->{$k1}->{$k2}->{$k3};
@@ -276,13 +291,17 @@ sub get_data_collection
  if (! defined $k1)             { return wantarray ? keys %$d : $d; }
  if (! exists $d->{$k1})        { return; }
  if (! defined $k2)             { return wantarray ? keys %{$d->{$k1}} : $d->{$k1}; }
+ ($k1,$k2)=Net::DRI::Util::normalize_name($k1,$k2);
  if (! exists $d->{$k1}->{$k2}) { return; }
  return wantarray ? keys %{$d->{$k1}->{$k2}} : $d->{$k1}->{$k2};
 }
 
+sub last { my $self=shift; while ( defined $self->next() ) { $self=$self->next(); } return $self; }
+
 ## These methods are not public !
 sub _set_trid { my ($self,$v)=@_; $self->{'trid'}=$v; }
-sub _set_next { my ($self,$v)=@_; $self->{'next'}=$v; }
+sub _add_next { my ($self,$v)=@_; $self->{'next'}=$v; }
+sub _add_last { my ($self,$v)=@_; while ( defined $self->next() ) { $self=$self->next(); } $self->{'next'}=$v; }
 sub _set_data { my ($self,$v)=@_; $self->{'data'}=$v; }
 sub _eppcode
 {

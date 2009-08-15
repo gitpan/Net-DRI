@@ -18,12 +18,14 @@
 package Net::DRI::DRD::CoCCA;
 
 use strict;
+use warnings;
+
 use base qw/Net::DRI::DRD/;
 
 use DateTime::Duration;
 use DateTime;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -72,34 +74,16 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub periods      { return map { DateTime::Duration->new(years => $_) } (1..5); }
 sub name         { return 'CoCCA'; }
-sub tlds         { return (qw/cx gs tl ki ms mu nf ht na ng/); }
+sub tlds         { return (qw/cx gs tl ki mu nf ht na ng cc cm sb mg/); }
 sub object_types { return ('domain','ns','contact'); }
-
-sub transport_protocol_compatible 
-{
- my ($self,$to,$po)=@_;
- my $pn=$po->name();
- my $pv=$po->version();
- my $tn=$to->name();
-
- return 1 if (($pn eq 'EPP') && ($tn eq 'socket_inet'));
- return;
-}
+sub profile_types { return qw/epp/; }
 
 sub transport_protocol_default
 {
- my ($drd,$ndr,$type,$ta,$pa)=@_;
- $type='epp' if (!defined($type) || ref($type));
- if ($type eq 'epp')
- {
-  return ('Net::DRI::Transport::Socket','Net::DRI::Protocol::EPP') unless (defined($ta) && defined($pa));
-  my %ta=( %Net::DRI::DRD::PROTOCOL_DEFAULT_EPP,
-                     remote_host => 'ote.epp.cocca.cx',
-                     (ref($ta) eq 'ARRAY')? %{$ta->[0]} : %$ta,
-                   );
-  my @pa=(ref($pa) eq 'ARRAY' && @$pa)? @$pa : ('1.0');
-  return ('Net::DRI::Transport::Socket',[\%ta],'Net::DRI::Protocol::EPP',\@pa);
- }
+ my ($self,$type)=@_;
+
+ return ('Net::DRI::Transport::Socket',{remote_host => 'ote.epp.cocca.cx'},'Net::DRI::Protocol::EPP',{}) if $type eq 'epp';
+ return;
 }
 
 ####################################################################################################

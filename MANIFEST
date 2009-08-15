@@ -3,9 +3,10 @@ eg/afnic_email.pl
 eg/afnic_ws.pl
 eg/cat_epp.pl
 eg/coop_epp.pl
+eg/das.pl
 eg/epp_client_no.pl
+eg/epp_client_se.pl
 eg/epp_server.pl
-eg/eurid_das.pl
 eg/eurid_epp.pl
 eg/iris_dchk.pl
 eg/whois.pl
@@ -33,6 +34,7 @@ lib/Net/DRI/Data/Contact/JOBS.pm
 lib/Net/DRI/Data/Contact/LU.pm
 lib/Net/DRI/Data/Contact/NO.pm
 lib/Net/DRI/Data/Contact/Nominet.pm
+lib/Net/DRI/Data/Contact/OpenSRS.pm
 lib/Net/DRI/Data/Contact/PL.pm
 lib/Net/DRI/Data/Contact/SE.pm
 lib/Net/DRI/Data/Contact/SWITCH.pm
@@ -43,6 +45,7 @@ lib/Net/DRI/Data/Raw.pm
 lib/Net/DRI/Data/RegistryObject.pm
 lib/Net/DRI/Data/StatusList.pm
 lib/Net/DRI/DRD.pm
+lib/Net/DRI/DRD/AdamsNames.pm
 lib/Net/DRI/DRD/AERO.pm
 lib/Net/DRI/DRD/AFNIC.pm
 lib/Net/DRI/DRD/AG.pm
@@ -68,6 +71,8 @@ lib/Net/DRI/DRD/ICANN.pm
 lib/Net/DRI/DRD/IENUMAT.pm
 lib/Net/DRI/DRD/IM.pm
 lib/Net/DRI/DRD/INFO.pm
+lib/Net/DRI/DRD/IRegistry.pm
+lib/Net/DRI/DRD/IT.pm
 lib/Net/DRI/DRD/LC.pm
 lib/Net/DRI/DRD/LU.pm
 lib/Net/DRI/DRD/ME.pm
@@ -85,6 +90,7 @@ lib/Net/DRI/DRD/PRO.pm
 lib/Net/DRI/DRD/PT.pm
 lib/Net/DRI/DRD/SC.pm
 lib/Net/DRI/DRD/SE.pm
+lib/Net/DRI/DRD/SIDN.pm
 lib/Net/DRI/DRD/SWITCH.pm
 lib/Net/DRI/DRD/TRAVEL.pm
 lib/Net/DRI/DRD/US.pm
@@ -97,6 +103,10 @@ lib/Net/DRI/Logging/Files.pm
 lib/Net/DRI/Logging/Null.pm
 lib/Net/DRI/Logging/Stderr.pm
 lib/Net/DRI/Protocol.pm
+lib/Net/DRI/Protocol/AdamsNames/WS.pm
+lib/Net/DRI/Protocol/AdamsNames/WS/Connection.pm
+lib/Net/DRI/Protocol/AdamsNames/WS/Domain.pm
+lib/Net/DRI/Protocol/AdamsNames/WS/Message.pm
 lib/Net/DRI/Protocol/AFNIC/Email.pm
 lib/Net/DRI/Protocol/AFNIC/Email/Domain.pm
 lib/Net/DRI/Protocol/AFNIC/Email/Message.pm
@@ -108,9 +118,21 @@ lib/Net/DRI/Protocol/BookMyName/WS/Account.pm
 lib/Net/DRI/Protocol/BookMyName/WS/Domain.pm
 lib/Net/DRI/Protocol/BookMyName/WS/Message.pm
 lib/Net/DRI/Protocol/DAS.pm
+lib/Net/DRI/Protocol/DAS/AdamsNames.pm
+lib/Net/DRI/Protocol/DAS/AdamsNames/Connection.pm
+lib/Net/DRI/Protocol/DAS/AdamsNames/Domain.pm
+lib/Net/DRI/Protocol/DAS/AdamsNames/Message.pm
+lib/Net/DRI/Protocol/DAS/AU.pm
+lib/Net/DRI/Protocol/DAS/AU/Connection.pm
+lib/Net/DRI/Protocol/DAS/AU/Domain.pm
+lib/Net/DRI/Protocol/DAS/AU/Message.pm
 lib/Net/DRI/Protocol/DAS/Connection.pm
 lib/Net/DRI/Protocol/DAS/Domain.pm
 lib/Net/DRI/Protocol/DAS/Message.pm
+lib/Net/DRI/Protocol/DAS/SIDN.pm
+lib/Net/DRI/Protocol/DAS/SIDN/Connection.pm
+lib/Net/DRI/Protocol/DAS/SIDN/Domain.pm
+lib/Net/DRI/Protocol/DAS/SIDN/Message.pm
 lib/Net/DRI/Protocol/EPP.pm
 lib/Net/DRI/Protocol/EPP/Connection.pm
 lib/Net/DRI/Protocol/EPP/Core/Contact.pm
@@ -173,12 +195,17 @@ lib/Net/DRI/Protocol/EPP/Extensions/EURid.pm
 lib/Net/DRI/Protocol/EPP/Extensions/EURid/Contact.pm
 lib/Net/DRI/Protocol/EPP/Extensions/EURid/Domain.pm
 lib/Net/DRI/Protocol/EPP/Extensions/EURid/Message.pm
+lib/Net/DRI/Protocol/EPP/Extensions/EURid/Notifications.pm
+lib/Net/DRI/Protocol/EPP/Extensions/EURid/Registrar.pm
 lib/Net/DRI/Protocol/EPP/Extensions/EURid/Sunrise.pm
 lib/Net/DRI/Protocol/EPP/Extensions/FCCN.pm
 lib/Net/DRI/Protocol/EPP/Extensions/FCCN/Contact.pm
 lib/Net/DRI/Protocol/EPP/Extensions/FCCN/Domain.pm
 lib/Net/DRI/Protocol/EPP/Extensions/GracePeriod.pm
 lib/Net/DRI/Protocol/EPP/Extensions/IENUMAT.pm
+lib/Net/DRI/Protocol/EPP/Extensions/IRegistry.pm
+lib/Net/DRI/Protocol/EPP/Extensions/IT.pm
+lib/Net/DRI/Protocol/EPP/Extensions/IT/Connection.pm
 lib/Net/DRI/Protocol/EPP/Extensions/LU.pm
 lib/Net/DRI/Protocol/EPP/Extensions/LU/Contact.pm
 lib/Net/DRI/Protocol/EPP/Extensions/LU/Domain.pm
@@ -213,6 +240,7 @@ lib/Net/DRI/Protocol/EPP/Extensions/PRO/AV.pm
 lib/Net/DRI/Protocol/EPP/Extensions/PRO/Domain.pm
 lib/Net/DRI/Protocol/EPP/Extensions/SE.pm
 lib/Net/DRI/Protocol/EPP/Extensions/SE/Extensions.pm
+lib/Net/DRI/Protocol/EPP/Extensions/SE/Message.pm
 lib/Net/DRI/Protocol/EPP/Extensions/SecDNS.pm
 lib/Net/DRI/Protocol/EPP/Extensions/SWITCH.pm
 lib/Net/DRI/Protocol/EPP/Extensions/US.pm
@@ -267,7 +295,6 @@ lib/Net/DRI/Protocol/RRP/Core/Status.pm
 lib/Net/DRI/Protocol/RRP/Message.pm
 lib/Net/DRI/Protocol/Whois.pm
 lib/Net/DRI/Protocol/Whois/Connection.pm
-lib/Net/DRI/Protocol/Whois/Domain.pm
 lib/Net/DRI/Protocol/Whois/Domain/AERO.pm
 lib/Net/DRI/Protocol/Whois/Domain/AT.pm
 lib/Net/DRI/Protocol/Whois/Domain/BIZ.pm
@@ -280,6 +307,7 @@ lib/Net/DRI/Protocol/Whois/Domain/LU.pm
 lib/Net/DRI/Protocol/Whois/Domain/MOBI.pm
 lib/Net/DRI/Protocol/Whois/Domain/NAME.pm
 lib/Net/DRI/Protocol/Whois/Domain/ORG.pm
+lib/Net/DRI/Protocol/Whois/Domain/PT.pm
 lib/Net/DRI/Protocol/Whois/Domain/SE.pm
 lib/Net/DRI/Protocol/Whois/Domain/TRAVEL.pm
 lib/Net/DRI/Protocol/Whois/Domain/US.pm
@@ -335,7 +363,7 @@ t/605vnds_epp_nsgroup.t
 t/606eurid_epp.t
 t/607pl_epp.t
 t/608afnic_email.t
-t/609vnds_epp_us.t
+t/609us_epp.t
 t/610vnds_epp_sync.t
 t/611vnds_epp_idnlang.t
 t/612vnds_epp_whoisinfo.t
@@ -368,5 +396,6 @@ t/701ovh_ws_live.t
 t/702bookmyname_ws_live.t
 t/703gandi_ws_live.t
 t/704opensrs_xcp_live.t
+t/705adamsnames_ws_live.t
 TODO
 META.yml                                 Module meta-data (added by MakeMaker)

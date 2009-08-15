@@ -18,11 +18,14 @@
 package Net::DRI::DRD::CAT;
 
 use strict;
+use warnings;
+
 use base qw/Net::DRI::DRD/;
 
 use DateTime::Duration;
+use Net::DRI::Data::Contact::CAT;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -81,33 +84,21 @@ sub periods  { return map { DateTime::Duration->new(years => $_) } (1..10); }
 sub name     { return 'CAT'; }
 sub tlds     { return ('cat'); }
 sub object_types { return ('domain','contact','ns'); }
-
-sub transport_protocol_compatible
-{
- my ($self,$to,$po)=@_;
- my $pn=$po->name();
- my $tn=$to->name();
-
- return 1 if (($pn eq 'EPP') && ($tn eq 'socket_inet'));
- return 1 if (($pn eq 'Whois') && ($tn eq 'socket_inet'));
- return;
-}
+sub profile_types { return qw/epp whois/; }
 
 sub transport_protocol_default
 {
-  my ($drd,$ndr,$type,$ta,$pa)=@_;
- $type='epp' if (!defined($type) || ref($type));
- if ($type eq 'epp')
- {
-  return ('Net::DRI::Transport::Socket','Net::DRI::Protocol::EPP::Extensions::CAT') unless (defined($ta) && defined($pa));
-  my %ta=( %Net::DRI::DRD::PROTOCOL_DEFAULT_EPP,
-                     remote_host=>'epp.ote.puntcat.corenic.net',
-                     (ref($ta) eq 'ARRAY')? %{$ta->[0]} : %$ta,
-                   );
-  my @pa=(ref($pa) eq 'ARRAY' && @$pa)? @$pa : ('1.0');
-  return ('Net::DRI::Transport::Socket',[\%ta],'Net::DRI::Protocol::EPP::Extensions::CAT',\@pa);
- }
- return ('Net::DRI::Transport::Socket',[{%Net::DRI::DRD::PROTOCOL_DEFAULT_WHOIS,remote_host=>'whois.cat'}],'Net::DRI::Protocol::Whois',[]) if (lc($type) eq 'whois');
+ my ($self,$type)=@_;
+
+ return ('Net::DRI::Transport::Socket',{remote_host=>'epp.ote.puntcat.corenic.net'},'Net::DRI::Protocol::EPP::Extensions::CAT',{}) if $type eq 'epp';
+ return ('Net::DRI::Transport::Socket',{remote_host=>'whois.cat'},'Net::DRI::Protocol::Whois',{})                                  if $type eq 'whois';
+ return;
+}
+
+sub set_factories
+{
+ my ($self,$po)=@_;
+ $po->factories('contact',sub { return Net::DRI::Data::Contact::CAT->new(@_); });
 }
 
 ####################################################################################################

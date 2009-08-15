@@ -5,7 +5,7 @@ use Net::DRI::Data::Raw;
 use DateTime;
 use DateTime::Duration;
 
-use Test::More tests => 233;
+use Test::More tests => 261;
 eval { no warnings; require Test::LongString; Test::LongString->import(max => 100); $Test::LongString::Context=50; };
 *{'main::is_string'}=\&main::is if $@;
 
@@ -29,7 +29,7 @@ sub myrecv
 
 my $dri=Net::DRI::TrapExceptions->new({cache_ttl => 10, trid_factory => sub { return 'ABC-12345'}, logging => 'null' });
 $dri->add_registry('VNDS');
-$dri->target('VNDS')->add_current_test_profile('p1','Dummy',{f_send=>\&mysend,f_recv=>\&myrecv},'EPP');
+$dri->target('VNDS')->add_current_profile('p1','test=EPP',{f_send=>\&mysend,f_recv=>\&myrecv});
 
 my $rc;
 my $s;
@@ -511,7 +511,31 @@ is($dri->get_info('lang','message',2),'en','message get_info lang (pure text mes
 ## RT#41032 : message IDs are XML token type, not digits only
 $R2='';
 $rc=$dri->message_delete('ABZ32');
-is($rc->is_success(),1,'RT#41032 message_delete with non numeric message id');
+is($rc->is_success(),1,'RT41032 message_delete with non numeric message id');
+
+####################################################################################################
+## Uppercases/Lowercases
+
+my @ul=qw/ab.com ab.com
+          cd.com CD.com
+          EF.com ef.com
+          GH.com GH.com/;
+my $c=0;
+while(@ul)
+{
+ $c++;
+ my $reg=shift(@ul); ## registry reply
+ my $cmd=shift(@ul); ## our command
+ $R2=$E1.'<response>'.r().'<resData><domain:infData xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>'.$reg.'</domain:name><domain:roid>EXAMPLE'.$c.'-REP</domain:roid><domain:status s="ok"/><domain:registrant>jd1234</domain:registrant><domain:contact type="admin">sh8013</domain:contact><domain:contact type="tech">sh8013</domain:contact><domain:ns><domain:hostObj>ns1.example.com</domain:hostObj><domain:hostObj>ns1.example.net</domain:hostObj></domain:ns><domain:host>ns1.example.com</domain:host><domain:host>ns2.example.com</domain:host><domain:clID>ClientX</domain:clID><domain:crID>ClientY</domain:crID><domain:crDate>1999-04-03T22:00:00.0Z</domain:crDate><domain:upID>ClientX</domain:upID><domain:upDate>1999-12-03T09:00:00.0Z</domain:upDate><domain:exDate>2005-04-03T22:00:00.0Z</domain:exDate><domain:trDate>2000-04-08T09:00:00.0Z</domain:trDate><domain:authInfo><domain:pw>2fooBAR</domain:pw></domain:authInfo></domain:infData></resData>'.$TRID.'</response>'.$E2;
+ $rc=$dri->domain_info($cmd,{auth=>{pw=>'2fooBAR'}});
+ is_string($R1,$E1.'<command><info><domain:info xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name hosts="all">'.$cmd.'</domain:name><domain:authInfo><domain:pw>2fooBAR</domain:pw></domain:authInfo></domain:info></info><clTRID>ABC-12345</clTRID></command>'.$E2,"UL case $c command build");
+ is($rc->get_data('roid'),"EXAMPLE$c-REP","UL case $c get_data short");
+ is($rc->get_data('domain',lc($cmd),'roid'),"EXAMPLE$c-REP","UL case $c get_data long lc");
+ is($rc->get_data('domain',uc($cmd),'roid'),"EXAMPLE$c-REP","UL case $c get_data long uc");
+ is($dri->get_info('roid'),"EXAMPLE$c-REP","UL case $c get_info short");
+ is($dri->get_info('roid','domain',lc($cmd)),"EXAMPLE$c-REP","UL case $c get_data long lc");
+ is($dri->get_info('roid','domain',uc($cmd)),"EXAMPLE$c-REP","UL case $c get_data long uc");
+}
 
 exit 0;
 

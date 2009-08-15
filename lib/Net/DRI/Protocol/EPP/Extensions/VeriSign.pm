@@ -1,6 +1,6 @@
 ## Domain Registry Interface, VeriSign EPP extensions
 ##
-## Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -22,7 +22,7 @@ use strict;
 use base qw/Net::DRI::Protocol::EPP/;
 use Net::DRI::Data::Contact::JOBS;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -52,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -65,32 +65,24 @@ See the LICENSE file that comes with this distribution for more details.
 =cut
 
 ####################################################################################################
-sub new
+
+sub setup
 {
- my ($c,$drd,$version,$extrah,$defproduct)=@_;
- my %e=map { $_ => 1 } (defined($extrah)? (ref($extrah)? @$extrah : ($extrah)) : ());
-
- $e{'Net::DRI::Protocol::EPP::Extensions::VeriSign::NameStore'}=1;
- $e{'Net::DRI::Protocol::EPP::Extensions::VeriSign::Sync'}=1;
- $e{'Net::DRI::Protocol::EPP::Extensions::VeriSign::PollLowBalance'}=1;
- $e{'Net::DRI::Protocol::EPP::Extensions::VeriSign::PollRGP'}=1;
- ## We do no load automatically IDNLanguage & WhoisInfo as we do not know if they are mandatory
- ## NameStore seems mandatory, and Sync is just another operation, hence optional in all cases
- if (exists($e{':full'})) ## useful shortcut, modeled after Perl itself
- {
-  delete($e{':full'});
-  $e{'Net::DRI::Protocol::EPP::Extensions::VeriSign::JobsContact'}=1 if (defined($defproduct) && $defproduct eq 'dotJOBS');
-  $e{'Net::DRI::Protocol::EPP::Extensions::VeriSign::IDNLanguage'}=1;
-  $e{'Net::DRI::Protocol::EPP::Extensions::VeriSign::WhoisInfo'}=1;
-  $e{'Net::DRI::Protocol::EPP::Extensions::GracePeriod'}=1;
- }
-
- my $self=$c->SUPER::new($drd,$version,[keys(%e)]);
- $self->default_parameters()->{subproductid}=$defproduct || '_auto_';
+ my ($self,$rp)=@_;
+ $self->default_parameters()->{subproductid}=$rp->{default_product} || '_auto_';
  $self->default_parameters()->{whois_info}=0;
  $self->default_parameters()->{breaks_rfc3915}=1;
- $self->factories('contact',sub { return Net::DRI::Data::Contact::JOBS->new(@_); }) if (grep { $_ =~ /JobsContact$/ } keys(%e));
- return $self;
+ $self->factories('contact',sub { return Net::DRI::Data::Contact::JOBS->new(@_); }) if $self->has_module('Net::DRI::Protocol::EPP::Extensions::VeriSign::JobsContact');
+ return;
+}
+
+sub default_extensions 
+{ 
+ my ($self,$rp)=@_;
+ my @c=qw/VeriSign::Sync VeriSign::PollLowBalance VeriSign::PollRGP VeriSign::IDNLanguage VeriSign::WhoisInfo GracePeriod/;
+ push @c,'VeriSign::JobsContact' if exists $rp->{default_product} && defined $rp->{default_product} && $rp->{default_product} eq 'dotJOBS';
+ push @c,'VeriSign::NameStore';
+ return @c;
 }
 
 ####################################################################################################

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Whois commands for .AT (RFC3912)
 ##
-## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,14 +18,12 @@
 package Net::DRI::Protocol::Whois::Domain::AT;
 
 use strict;
+use warnings;
 
-use DateTime::Format::Strptime;
 use Net::DRI::Exception;
 use Net::DRI::Util;
-use Net::DRI::Data::ContactSet;
-use Net::DRI::Data::Contact::AT;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -55,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -91,21 +89,21 @@ sub info_parse
 
  my $rr=$mes->response();
  my $rd=$mes->response_raw();
- my ($domain,$exist)=parse_domain($rr,$rd,$rinfo);
+ my ($domain,$exist)=parse_domain($po,$rr,$rd,$rinfo);
  $domain=lc($oname) unless defined($domain);
  $rinfo->{domain}->{$domain}->{exist}=$exist;
  $rinfo->{domain}->{$domain}->{action}='info';
 
  return unless $exist;
 
- parse_ns($domain,$rr,$rinfo);
- parse_dates($domain,$rr,$rinfo);
- parse_contacts($domain,$rr,$rd,$rinfo);
+ parse_ns($po,$domain,$rr,$rinfo);
+ parse_dates($po,$domain,$rr,$rinfo);
+ parse_contacts($po,$domain,$rr,$rd,$rinfo);
 }
 
 sub parse_domain
 {
- my ($rr,$rd,$rinfo)=@_;
+ my ($po,$rr,$rd,$rinfo)=@_;
  my ($dom,$e);
  if (exists($rr->{'domain'}))
  {
@@ -120,11 +118,11 @@ sub parse_domain
 
 sub parse_ns
 {
- my ($domain,$rr,$rinfo)=@_;
+ my ($po,$domain,$rr,$rinfo)=@_;
  return unless exists($rr->{'nserver'});
 
  ## I do not know how multiple IPs for one host are handled, we do the very crude way for now
- my $h=Net::DRI::Data::Hosts->new();
+ my $h=$po->create_local_object('hosts');
  my @n=grep { defined($_) && $_ } @{$rr->{'nserver'}};
  my @i=grep { defined($_) && $_ } @{$rr->{'remarks'}};
  while(@n)
@@ -136,22 +134,22 @@ sub parse_ns
 
 sub parse_dates
 {
- my ($domain,$rr,$rinfo)=@_;
- my $strp=DateTime::Format::Strptime->new(pattern => '%Y%m%d %T', time_zone => 'Europe/Vienna');
+ my ($po,$domain,$rr,$rinfo)=@_;
+ my $strp=$po->build_strptime_parser(pattern => '%Y%m%d %T', time_zone => 'Europe/Vienna');
  $rinfo->{domain}->{$domain}->{upDate}=$strp->parse_datetime($rr->{'changed'}->[0]);
 }
 
 sub parse_contacts
 {
- my ($domain,$rr,$rd,$rinfo)=@_;
- my $cs=Net::DRI::Data::ContactSet->new();
+ my ($po,$domain,$rr,$rd,$rinfo)=@_;
+ my $cs=$po->create_local_object('contactset');
  my %t=('registrant' => 'registrant', 'admin-c' => 'admin', 'tech-c' => 'tech');
  my %tmp;
 
  ## First pass, only the IDs
  foreach my $t (keys(%t))
  {
-  my $c=Net::DRI::Data::Contact::AT->new();
+  my $c=$po->create_local_object('contact');
   my $id=$rr->{$t}->[0];
   $tmp{$id}=$c;
   $c->srid($id);

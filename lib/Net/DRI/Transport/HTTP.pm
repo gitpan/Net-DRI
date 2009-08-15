@@ -27,7 +27,7 @@ use Net::DRI::Util;
 
 use LWP::UserAgent;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -122,37 +122,38 @@ our @HTTPS_ENV=qw/HTTPS_DEBUG HTTPS_VERSION HTTPS_CERT_FILE HTTPS_KEY_FILE HTTPS
 
 sub new
 {
- my $class=shift;
- my $ctx=shift;
+ my ($class,$ctx,$rp)=@_;
+ my %opts=%$rp;
  my $ndr=$ctx->{registry};
  my $pname=$ctx->{profile};
  my $po=$ctx->{protocol};
 
- my %opts=(@_==1 && ref($_[0]))? %{$_[0]} : @_;
+ my %t=(message_factory => $po->factories()->{message});
+ Net::DRI::Exception::usererr_insufficient_parameters('protocol_connection') unless (exists($opts{protocol_connection}) && $opts{protocol_connection});
+ $t{pc}=$opts{protocol_connection};
+ $t{pc}->require() or Net::DRI::Exception::err_failed_load_module('transport/http',$t{pc},$@);
+ if ($t{pc}->can('transport_default'))
+ {
+  %opts=($t{pc}->transport_default('http'),%opts);
+ }
+
  my $self=$class->SUPER::new($ctx,\%opts); ## We are now officially a Net::DRI::Transport instance
  $self->has_state(1); ## some registries need login (like .PL) some not (like .ES) ; see end of method & call to open_connection()
  $self->is_sync(1);
  $self->name('http');
  $self->version($VERSION);
 
- if (exists($opts{log_fh}) && defined($opts{log_fh}))
- {
-  print STDERR 'log_fh is deprecated and will not be used now, please use new Logging framework',"\n";
- }
-
- my %t=(message_factory => $po->factories()->{message});
  foreach my $k (qw/client_login client_password client_newpassword protocol_data/)
  {
   $t{$k}=$opts{$k} if exists($opts{$k});
  }
- Net::DRI::Exception::usererr_insufficient_parameters('protocol_connection') unless (exists($opts{protocol_connection}) && $opts{protocol_connection});
- $t{pc}=$opts{protocol_connection};
- $t{pc}->require() or Net::DRI::Exception::err_failed_load_module('transport/http',$t{pc},$@);
+
  my @need=qw/read_data write_message/;
  Net::DRI::Exception::usererr_invalid_parameters('protocol_connection class must have: '.join(' ',@need)) if (grep { ! $t{pc}->can($_) } @need);
  $t{protocol_data}=$opts{protocol_data} if (exists($opts{protocol_data}) && $opts{protocol_data});
  Net::DRI::Exception::usererr_insufficient_parameters('remote_url must be defined') unless (exists($opts{'remote_url'}) && defined($opts{'remote_url'}) && $opts{remote_url}=~m!^https?://\S+/\S*$!);
  $t{remote_url}=$opts{remote_url};
+ $t{remote_uri}=$t{remote_url}; ## only used for error messages
 
  my $ua=LWP::UserAgent->new();
  $ua->agent(sprintf('Net::DRI/%s Net::DRI::Transport::HTTP/%s ',$Net::DRI::VERSION,$VERSION)); ## the final space triggers LWP::UserAgent to add its own string
@@ -194,7 +195,7 @@ sub send_login
   $cltrid=$self->generate_trid(); ## not used for greeting (<hello> has no clTRID), but used in logging
   my $greeting=$pc->greeting($t->{message_factory});
   $self->log_output('notice','transport',{ctx=>$ctx,trid=>$cltrid,phase=>'opening',direction=>'out',driver=>$self->name().'/'.$self->version(),message=>$greeting});
-  Net::DRI::Exception->die(0,'transport/http',4,'Unable to send greeting message') unless $self->_http_send(1,$greeting,1);
+  Net::DRI::Exception->die(0,'transport/http',4,'Unable to send greeting message to '.$t->{remote_uri}) unless $self->_http_send(1,$greeting,1);
   $dr=$self->_http_receive(1);
   $self->log_output('notice','transport',{ctx=>$ctx,trid=>$cltrid,phase=>'opening',direction=>'in',driver=>$self->name().'/'.$self->version(),message=>$dr});
   my $rc1=$pc->parse_greeting($dr); ## gives back a Net::DRI::Protocol::ResultStatus
@@ -203,7 +204,7 @@ sub send_login
 
  my $login=$pc->login($t->{message_factory},$t->{client_login},$t->{client_password},$cltrid,$dr,$t->{client_newpassword},$t->{protocol_data});
  $self->log_output('notice','transport',{ctx=>$ctx,trid=>$cltrid,phase=>'opening',direction=>'out',driver=>$self->name().'/'.$self->version(),message=>$login});
- Net::DRI::Exception->die(0,'transport/http',4,'Unable to send login message') unless $self->_http_send(1,$login,1);
+ Net::DRI::Exception->die(0,'transport/http',4,'Unable to send login message to '.$t->{remote_uri}) unless $self->_http_send(1,$login,1);
  $dr=$self->_http_receive(1);
  $self->log_output('notice','transport',{ctx=>$ctx,trid=>$cltrid,phase=>'opening',direction=>'in',driver=>$self->name().'/'.$self->version(),message=>$dr});
  my $rc2=$pc->parse_login($dr); ## gives back a Net::DRI::Protocol::ResultStatus
@@ -240,7 +241,7 @@ sub send_logout
  my $cltrid=$self->generate_trid();
  my $logout=$pc->logout($t->{message_factory},$cltrid);
  $self->log_output('notice','transport',{ctx=>$ctx,trid=>$cltrid,phase=>'closing',direction=>'out',driver=>$self->name().'/'.$self->version(),message=>$logout});
- Net::DRI::Exception->die(0,'transport/http',4,'Unable to send logout message') unless $self->_http_send(1,$logout,3);
+ Net::DRI::Exception->die(0,'transport/http',4,'Unable to send logout message to '.$t->{remote_uri}) unless $self->_http_send(1,$logout,3);
  my $dr=$self->_http_receive(1);
  $self->log_output('notice','transport',{ctx=>$ctx,trid=>$cltrid,phase=>'closing',direction=>'in',driver=>$self->name().'/'.$self->version(),message=>$dr});
  my $rc1=$pc->parse_logout($dr);

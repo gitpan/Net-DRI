@@ -18,11 +18,13 @@
 package Net::DRI::DRD::AU;
 
 use strict;
+use warnings;
+
 use base qw/Net::DRI::DRD/;
 
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -78,25 +80,17 @@ sub new
 
 sub periods  { return map { DateTime::Duration->new(years => $_) } (2..3); }
 sub name     { return 'AU'; }
-sub tlds     { return ('com.au','net.au','org.au','asn.au','id.au','vic.au','tas.au','nsw.au','act.au','qld.au','sa.au','nt.au','wa.au'); }
+sub tlds     { return qw/com.au net.au org.au asn.au id.au vic.au tas.au nsw.au act.au qld.au sa.au nt.au wa.au/; }
 sub object_types { return ('domain','contact','ns'); }
-
-sub transport_protocol_compatible
-{
- my ($self,$to,$po)=@_;
- my $pn=$po->name();
- my $pv=$po->version();
- my $tn=$to->name();
-
- return 1 if (($pn eq 'EPP') && ($tn eq 'socket_inet'));
- return;
-}
+sub profile_types { return qw/epp das/; }
 
 sub transport_protocol_default
 {
- my ($drd,$ndr,$type,$ta,$pa)=@_;
- $type='epp' if (!defined($type) || ref($type));
- return Net::DRI::DRD::_transport_protocol_default_epp('Net::DRI::Protocol::EPP::Extensions::AU',$ta,$pa) if ($type eq 'epp');
+ my ($self,$type)=@_;
+
+ return ('Net::DRI::Transport::Socket',{},'Net::DRI::Protocol::EPP::Extensions::AU',{}) if $type eq 'epp';
+ return ('Net::DRI::Transport::Socket',{},'Net::DRI::Protocol::DAS::AU',{})             if $type eq 'das';
+ return;
 }
 
 ####################################################################################################

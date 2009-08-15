@@ -18,6 +18,7 @@
 package Net::DRI::Protocol::Whois::Message;
 
 use strict;
+use warnings;
 
 use Net::DRI::Protocol::ResultStatus;
 use Net::DRI::Exception;
@@ -26,7 +27,7 @@ use Net::DRI::Util;
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version errcode errmsg errlang command cltrid response response_raw));
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -72,10 +73,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $proto=shift;
- my $class=ref($proto) || $proto;
- my $trid=shift;
-
+ my ($class,$trid)=@_;
  my $self={
            errcode => -1000,
 	   response => {},
@@ -101,7 +99,7 @@ sub result_status
 
 sub as_string
 {
- my ($self,$to)=@_;
+ my ($self)=@_;
  my $s=sprintf("%s\x0d\x0a",$self->command());
  return $s;
 }

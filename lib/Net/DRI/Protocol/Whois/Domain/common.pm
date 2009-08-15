@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Whois common parse subroutines
 ##
-## Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,15 +18,11 @@
 package Net::DRI::Protocol::Whois::Domain::common;
 
 use strict;
+use warnings;
 
-use Net::DRI::Data::Hosts;
-use Net::DRI::Data::Contact;
-use Net::DRI::Data::ContactSet;
 use Net::DRI::Protocol::EPP::Core::Status;
 
-use DateTime::Format::Strptime;
-
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -56,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -72,7 +68,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub epp_parse_registrars
 {
- my ($domain,$rr,$rinfo)=@_;
+ my ($po,$domain,$rr,$rinfo)=@_;
  my %t=('Sponsoring Registrar' => 'cl',
         'Created By'           => 'cr',
 	'Created by Registrar' => 'cr',
@@ -97,9 +93,10 @@ sub epp_parse_registrars
 
 sub epp_parse_dates
 {
- my ($domain,$rr,$rinfo)=@_;
- my $strp=DateTime::Format::Strptime->new(pattern => '%d-%b-%Y %T UTC', locale => 'en_US', time_zone => 'UTC');
+ my ($po,$domain,$rr,$rinfo)=@_;
+ my $strp=$po->build_strptime_parser(pattern => '%d-%b-%Y %T UTC', locale => 'en_US', time_zone => 'UTC');
  $rinfo->{domain}->{$domain}->{crDate}=$strp->parse_datetime($rr->{'Created On'}->[0]);
+
  foreach my $k ('Updated On','Last Updated On')
  {
   next unless exists($rr->{$k});
@@ -116,7 +113,7 @@ sub epp_parse_dates
 
 sub epp_parse_status
 {
- my ($domain,$rr,$rinfo)=@_;
+ my ($po,$domain,$rr,$rinfo)=@_;
  my @s;
  if (exists($rr->{'Domain Status'}))
  {
@@ -130,11 +127,11 @@ sub epp_parse_status
 
 sub epp_parse_contacts
 {
- my ($domain,$rr,$rinfo,$rh,$f)=@_;
- my $cs=Net::DRI::Data::ContactSet->new();
+ my ($po,$domain,$rr,$rinfo,$rh)=@_;
+ my $cs=$po->create_local_object('contactset');
  while(my ($type,$whois)=each(%$rh))
  {
-  my $c=(defined($f) && ref($f) eq 'CODE')? $f->() : Net::DRI::Data::Contact->new();
+  my $c=$po->create_local_object('contact');
   $c->roid($rr->{$whois.' ID'}->[0]) if (exists($rr->{$whois.' ID'}) && $rr->{$whois.' ID'}->[0]);
   $c->name($rr->{$whois.' Name'}->[0]) if (exists($rr->{$whois.' Name'}) && $rr->{$whois.' Name'}->[0]);
   $c->org($rr->{$whois.' Organization'}->[0]) if (exists($rr->{$whois.' Organization'}) && $rr->{$whois.' Organization'}->[0]);
@@ -154,14 +151,14 @@ sub epp_parse_contacts
   my $t;
   foreach my $st ('Phone','Phone Number') ## 2nd form needed for .BIZ
   {
-   $t=epp_parse_tel($rr,$whois.' '.$st);
+   $t=epp_parse_tel($po,$rr,$whois.' '.$st);
    next unless $t;
    $c->voice($t);
    last;
   }
   foreach my $st ('FAX','Facsimile Number') ## 2nd form needed for .BIZ
   {
-   $t=epp_parse_tel($rr,$whois.' '.$st);
+   $t=epp_parse_tel($po,$rr,$whois.' '.$st);
    next unless $t;
    $c->fax($t);
    last;
@@ -174,7 +171,7 @@ sub epp_parse_contacts
 
 sub epp_parse_tel
 {
- my ($rr,$key)=@_;
+ my ($po,$rr,$key)=@_;
  return '' unless (exists($rr->{$key}) && $rr->{$key}->[0]);
  my $r=$rr->{$key}->[0];
  $r.='x'.$rr->{$key.' Ext.'}->[0] if (exists($rr->{$key.' Ext.'}) && $rr->{$key.' Ext.'}->[0]);
@@ -183,10 +180,10 @@ sub epp_parse_tel
 
 sub epp_parse_ns
 {
- my ($domain,$rr,$rinfo)=@_;
+ my ($po,$domain,$rr,$rinfo)=@_;
  return unless (exists($rr->{'Name Server'}));
  my @ns=grep { defined($_) && $_ } @{$rr->{'Name Server'}};
- $rinfo->{domain}->{$domain}->{ns}=Net::DRI::Data::Hosts->new_set(@ns) if @ns;
+ $rinfo->{domain}->{$domain}->{ns}=$po->create_local_object('hosts')->set(@ns) if @ns;
 }
 
 ####################################################################################################

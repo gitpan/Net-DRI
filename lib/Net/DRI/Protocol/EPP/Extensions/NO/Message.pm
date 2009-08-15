@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .NO message extensions
 ##
-## Copyright (c) 2008 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
+## Copyright (c) 2008,2009 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
 ##                    Trond Haugen E<lt>info@norid.noE<gt>
 ##                    All rights reserved.
 ##
@@ -20,14 +20,16 @@
 package Net::DRI::Protocol::EPP::Extensions::NO::Message;
 
 use strict;
+use warnings;
+
+use Net::DRI::Util;
 use Net::DRI::Exception;
-use Net::DRI::Protocol::EPP::Message;
 use Net::DRI::Protocol::EPP::Core::Domain;
 use Net::DRI::Protocol::EPP::Extensions::NO::Contact;
 use Net::DRI::Protocol::EPP::Extensions::NO::Host;
 use Net::DRI::Protocol::EPP::Extensions::NO::Result;
 
-our $VERSION = do { my @r = ( q$Revision: 1.3 $ =~ /\d+/gmx ); sprintf( "%d" . ".%02d" x $#r, @r ); };
+our $VERSION = do { my @r = ( q$Revision: 1.4 $ =~ /\d+/gmx ); sprintf( "%d" . ".%02d" x $#r, @r ); };
 
 =pod
 
@@ -57,7 +59,7 @@ Trond Haugen, E<lt>info@norid.noE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
+Copyright (c) 2008,2009 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
 Trond Haugen E<lt>info@norid.noE<gt>
 All rights reserved.
 
@@ -254,9 +256,9 @@ sub parse_poll {
     # Find the values and stash them in an $rinfo->{message}->{$msgid}->{trid} hash
 
     if (my $trid=(($data->getElementsByTagNameNS($eppNS,'trID'))[0])) {
-       my $tmp=Net::DRI::Protocol::EPP::Message::extract_trids($trid,$eppNS,'clTRID');
+       my $tmp=Net::DRI::Util::xml_child_content($trid,$eppNS,'clTRID');
        $rinfo->{message}->{$msgid}->{trid}->{cltrid} = $tmp if defined($tmp);
-       $tmp = Net::DRI::Protocol::EPP::Message::extract_trids($trid,$eppNS,'svTRID');
+       $tmp = Net::DRI::Util::xml_child_content($trid,$eppNS,'svTRID');
        $rinfo->{message}->{$msgid}->{trid}->{svtrid} = $tmp if defined($tmp);
     }
 

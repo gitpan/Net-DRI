@@ -1,6 +1,6 @@
-## Domain Registry Interface, Whois Domain commands (RFC3912)
+## Domain Registry Interface, .AU DAS Domain commands
 ##
-## Copyright (c) 2007 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -15,20 +15,21 @@
 #
 ####################################################################################################
 
-package Net::DRI::Protocol::Whois::Domain;
+package Net::DRI::Protocol::DAS::AU::Domain;
 
 use strict;
+use warnings;
 
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Protocol::Whois::Domain - Whois Domain commands (RFC3912) for Net::DRI
+Net::DRI::Protocol::DAS::AU::Domain - .AU DAS Domain commands for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -52,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2009 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -70,50 +71,32 @@ sub register_commands
 {
  my ($class,$version)=@_;
  my %tmp=(
-           info   => [ \&info, \&info_parse ],
+           check  => [ \&check, \&check_parse ],
          );
 
  return { 'domain' => \%tmp };
 }
 
-sub info
+sub check
 {
  my ($po,$domain,$rd)=@_;
  my $mes=$po->message();
- Net::DRI::Exception->die(1,'protocol/whois',10,'Invalid domain name: '.$domain) unless Net::DRI::Util::is_hostname($domain);
- $mes->command(build_command($domain,$rd));
+ Net::DRI::Exception->die(1,'protocol/DAS',2,'Domain name needed') unless $domain;
+ Net::DRI::Exception->die(1,'protocol/DAS',10,'Invalid domain name: '.$domain) unless Net::DRI::Util::is_hostname($domain) && $domain=~m/\.au$/i;
+ $mes->command_param(lc($domain));
 }
 
-sub info_parse
+sub check_parse
 {
  my ($po,$otype,$oaction,$oname,$rinfo)=@_;
  my $mes=$po->message();
  return unless $mes->is_success();
 
  my $rr=$mes->response();
- $rinfo->{_internal}->{must_reconnect}=1;
-
- my ($domain,$exist)=$po->parse_domain($rr,$rinfo);
- $rinfo->{domain}->{$domain}->{exist}=$exist;
- $rinfo->{domain}->{$domain}->{action}='info';
-
- return unless $exist;
-
- $po->parse_registrars($domain,$rr,$rinfo);
- $po->parse_dates($domain,$rr,$rinfo);
- $po->parse_status($domain,$rr,$rinfo);
- $po->parse_contacts($domain,$rr,$rinfo);
- $po->parse_ns($domain,$rr,$rinfo);
+ $rinfo->{domain}->{$oname}->{action}='check';
+ $rinfo->{domain}->{$oname}->{exist}=($rr eq 'Not Available')? 1 : 0;
+ $rinfo->{domain}->{$oname}->{exist_reason}=$rr;
 }
-
-## Must be defined in subclasses
-sub build_command    { Net::DRI::Exception::err_method_not_implemented(); }
-sub parse_domain     { Net::DRI::Exception::err_method_not_implemented(); } ## name, roid
-sub parse_registrars { Net::DRI::Exception::err_method_not_implemented(); } ## clID,crID,upID
-sub parse_dates      { Net::DRI::Exception::err_method_not_implemented(); } ## crDate,upDate,trDate,exDate
-sub parse_status     { Net::DRI::Exception::err_method_not_implemented(); }
-sub parse_contacts   { Net::DRI::Exception::err_method_not_implemented(); }
-sub parse_ns         { Net::DRI::Exception::err_method_not_implemented(); }
 
 ####################################################################################################
 1;

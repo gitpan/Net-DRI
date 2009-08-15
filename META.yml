@@ -1,9 +1,11 @@
 --- #YAML:1.0
 name:                Net-DRI
-version:             0.92_01
+version:             0.95
 abstract:            Interface to Domain Name Registries/Registrars/Resellers
 license:             gpl
-generated_by:        ExtUtils::MakeMaker version 6.32
+author:              
+    - Patrick Mevzek <netdri@dotandco.com>
+generated_by:        ExtUtils::MakeMaker version 6.42
 distribution_type:   module
 requires:     
     Carp:                          0
@@ -22,7 +24,5 @@ requires:
     UNIVERSAL::require:            0
     XML::LibXML:                   0
 meta-spec:
-    url:     http://module-build.sourceforge.net/META-spec-v1.2.html
-    version: 1.2
-author:
-    - Patrick Mevzek <netdri@dotandco.com>
+    url:     http://module-build.sourceforge.net/META-spec-v1.3.html
+    version: 1.3
