@@ -1,4 +1,4 @@
-## Domain Registry Interface, EPP Protocol (RFC 4930,4931,4932,4933,4934,3735)
+## Domain Registry Interface, EPP Protocol (STD 69)
 ##
 ## Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
@@ -25,15 +25,14 @@ use base qw(Net::DRI::Protocol);
 use Net::DRI::Util;
 use Net::DRI::Protocol::EPP::Message;
 use Net::DRI::Protocol::EPP::Core::Status;
-use Net::DRI::Data::Contact;
 
-our $VERSION=do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.14 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Protocol::EPP - EPP Protocol (RFC 4930,4931,4932,4933,4934 obsoleting RFC 3730,3731,3732,3733,3734 and RFC 3735) for Net::DRI
+Net::DRI::Protocol::EPP - EPP Protocol (STD 69 aka RFC 5730,5731,5732,5733,5734 obsoleting RFC 3730,3731,3732,3733,3734 and RFC 3735) for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -127,16 +126,6 @@ sub core_modules
 }
 
 sub server_greeting { my ($self,$v)=@_; $self->{server_greeting}=$v if $v; return $self->{server_greeting}; }
-
-sub parse_status
-{
- my ($self,$node)=@_;
- my %tmp;
- $tmp{name}=$node->getAttribute('s');
- $tmp{lang}=$node->getAttribute('lang') || 'en';
- $tmp{msg}=$node->firstChild()->getData() if ($node->firstChild());
- return \%tmp;
-}
 
 sub core_contact_types { return ('admin','tech','billing'); }
 

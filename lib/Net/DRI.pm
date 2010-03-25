@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Main entry point
 ##
-## Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -31,8 +31,8 @@ use base qw(Class::Accessor::Chained::Fast Net::DRI::BaseClass);
 __PACKAGE__->mk_ro_accessors(qw/trid_factory logging cache/);
 
 our $AUTOLOAD;
-our $VERSION='0.95';
-our $CVS_REVISION=do { my @r=(q$Revision: 1.35 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION='0.96';
+our $CVS_REVISION=do { my @r=(q$Revision: 1.38 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 our $RUNNING_POE=(exists($INC{'POE.pm'}))? $POE::Kernel::poe_kernel : undef;
 
 =pod
@@ -50,6 +50,10 @@ This documentation refers to Net::DRI version 0.95
 	use Net::DRI;
 	my $dri=Net::DRI->new({ cache_ttl => 10, trid_factory => ..., logging => .... });
 
+	... various operations ...
+
+	$dri->end();
+
 =head1 DESCRIPTION
 
 Net::DRI is a Perl library to access services offered by domain name
@@ -60,7 +64,7 @@ an abstraction over multiple providers, with multiple policies, transports
 and protocols all used through a uniform API.
 
 It is an object-oriented framework implementing RRP (RFC 2832/3632),
-EPP (core EPP in RFC 4930/4931/4932/4933/4934, extensions in
+EPP (core EPP in RFC 5730/5731/5732/5733/5734 aka STD69, extensions in
 RFC 3915/4114/4310/5076 and various extensions of ccTLDs/gTLDs
 - currently more than 30 TLDs are directly supported with extensions),
 RRI (.DE registration protocol), Whois, DAS (Domain Availability Service used by .BE, .EU, .AU, .NL),
@@ -108,7 +112,8 @@ it will not apply to already existing objects (registry profiles and transports)
 =head2 logging()
 
 This is an accessor to the underlying Logging object. During the C<new()> call you can
-provide the object, or just a string ("null", "stderr", or "files"), or a reference to an array
+provide the object, or just a string ("null", "stderr", "files" or "syslog" which are the
+current logging modules available in Net::DRI), or a reference to an array
 with the first parameter a string (same as previously) and the second parameter a reference to
 an hash with data needed by the logging class used (see for example L<Net::DRI::Logging::Files>).
 
@@ -140,7 +145,7 @@ and various contributors (see Changes file and web page above)
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 =head1 LICENSE
@@ -297,7 +302,7 @@ sub tld2reg
 
 sub installed_registries
 {
- return qw/AdamsNames AERO AFNIC AG ARNES ASIA AT AU BE BIZ BookMyName BR BZ CAT CentralNic CoCCA COOP CZ DENIC EURid Gandi HN IENUMAT IM INFO IRegistry IT LC LU ME MN MOBI NAME Nominet NO NU OpenSRS ORG OVH PL PRO PT SC SE SIDN SWITCH TRAVEL US VC VNDS WS/;
+ return qw/AdamsNames AERO AFNIC AG ARNES ASIA AT AU BE BIZ BookMyName BR BZ CAT CentralNic CIRA CoCCA COOP CZ DENIC EURid Gandi GL HN IENUMAT IM INFO IRegistry IT LC LU ME MN MOBI NAME Nominet NO NU OpenSRS ORG OVH PL PRO PT SC SE SIDN SWITCH TRAVEL US VC VNDS WS/;
 }
 
 ####################################################################################################
@@ -353,11 +358,14 @@ sub end
  $self->{tlds}={};
  $self->{registries}={};
  $self->{current_registry}=undef;
- $self->log_output('notice','core','Successfully ended Net::DRI object');
- $self->{logging}=undef;
+ if (defined $self->{logging})
+ {
+  $self->log_output('notice','core','Successfully ended Net::DRI object');
+  $self->{logging}=undef;
+ }
 }
 
-sub DESTROY { my $self=shift; $self->end() if %{$self->{registries}}; }
+sub DESTROY { my $self=shift; $self->end(); }
 
 ####################################################################################################
 

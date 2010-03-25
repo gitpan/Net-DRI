@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .UK EPP Contact commands
 ##
-## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009,2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -20,11 +20,11 @@ package Net::DRI::Protocol::EPP::Extensions::Nominet::Contact;
 use strict;
 use warnings;
 
-use Net::DRI::Protocol::EPP::Core::Contact;
 use Net::DRI::Util;
-use Net::DRI::Exception;;
+use Net::DRI::Exception;
+use Net::DRI::Protocol::EPP::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -54,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009,2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -84,7 +84,7 @@ sub build_command
  my ($msg,$command,$contact)=@_;
  Net::DRI::Exception->die(1,'protocol/EPP',2,'Contact id needed') unless (defined($contact));
 
- my $id=Net::DRI::Util::isa_contact($contact)? $contact->roid() : $contact;
+ my $id=Net::DRI::Util::isa_contact($contact,'Net::DRI::Data::Contact::Nominet')? $contact->roid() : $contact;
  Net::DRI::Exception->die(1,'protocol/EPP',2,'Contact id needed') unless (defined($id) && $id && !ref($id));
  Net::DRI::Exception->die(1,'protocol/EPP',10,'Invalid contact id: '.$id) unless Net::DRI::Util::xml_is_token($id,3,16); ## inherited from Core EPP
  my $tcommand=(ref($command))? $command->[0] : $command;
@@ -144,13 +144,13 @@ sub parse_infdata
    $contact->email($c->textContent());
   } elsif ($name eq 'phone') ## diverving from EPP voice
   {
-   $contact->voice(Net::DRI::Protocol::EPP::Core::Contact::parse_tel($c));
+   $contact->voice(Net::DRI::Protocol::EPP::Util::parse_tel($c));
   } elsif ($name eq 'fax')
   {
-   $contact->fax(Net::DRI::Protocol::EPP::Core::Contact::parse_tel($c));
+   $contact->fax(Net::DRI::Protocol::EPP::Util::parse_tel($c));
   } elsif ($name eq 'mobile')
   {
-    $contact->mobile(Net::DRI::Protocol::EPP::Core::Contact::parse_tel($c));
+    $contact->mobile(Net::DRI::Protocol::EPP::Util::parse_tel($c));
   }
  }
 
@@ -164,9 +164,9 @@ sub build_cdata
  my ($contact)=@_;
  my @d;
  push @d,['contact:name',$contact->name()] if (defined($contact->name()));
- push @d,Net::DRI::Protocol::EPP::Core::Contact::build_tel('contact:phone',$contact->voice()) if defined $contact->voice();
- push @d,Net::DRI::Protocol::EPP::Core::Contact::build_tel('contact:fax',$contact->fax()) if defined $contact->fax();
- push @d,Net::DRI::Protocol::EPP::Core::Contact::build_tel('contact:mobile',$contact->mobile()) if defined $contact->mobile();
+ push @d,Net::DRI::Protocol::EPP::Util::build_tel('contact:phone',$contact->voice()) if defined $contact->voice();
+ push @d,Net::DRI::Protocol::EPP::Util::build_tel('contact:fax',$contact->fax()) if defined $contact->fax();
+ push @d,Net::DRI::Protocol::EPP::Util::build_tel('contact:mobile',$contact->mobile()) if defined $contact->mobile();
  push @d,['contact:email',$contact->email()] if defined($contact->email());
  return @d;
 }
@@ -186,7 +186,7 @@ sub update
  my $newc=$todo->set('info');
  if ($newc)
  {
-  Net::DRI::Exception->die(1,'protocol/EPP',10,'Invalid contact '.$newc) unless (Net::DRI::Util::isa_contact($newc));
+  Net::DRI::Exception->die(1,'protocol/EPP',10,'Invalid contact '.$newc) unless (Net::DRI::Util::isa_contact($newc,'Net::DRI::Data::Contact::Nominet'));
   $newc->validate(1); ## will trigger an Exception if needed
   my @c=build_cdata($newc);
   if (@c)

@@ -30,7 +30,7 @@ use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version command command_body cltrid svtrid result
 	errcode errmsg node_resdata result_extra_info));
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -238,8 +238,7 @@ sub parse
    }
    else
    {
-    push @extra, $msg->getAttribute('code') . (defined($text) ? ': ' .
-    $text->getFirstChild()->getData() : '');
+    push @extra, { from => 'rri', type => 'text', code => $msg->getAttribute('code'), message => (defined $text ? $text->textContent() : '') };
    }
   }
   $self->result_extra_info(\@extra);

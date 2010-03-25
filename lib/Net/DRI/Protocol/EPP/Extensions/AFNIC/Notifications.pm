@@ -18,10 +18,12 @@
 package Net::DRI::Protocol::EPP::Extensions::AFNIC::Notifications;
 
 use strict;
+use warnings;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 use Net::DRI::Util;
+use Net::DRI::Protocol::EPP::Util;
 
 =pod
 
@@ -160,7 +162,7 @@ sub parse_identification
   my $oname=lc(Net::DRI::Util::xml_child_content($c,$ns,'name'));
   $rinfo->{domain}->{$oname}->{action}='review_identification';
   $rinfo->{domain}->{$oname}->{exist}=1;
-  $rinfo->{domain}->{$oname}->{status}=$po->create_local_object('status')->add($po->parse_status(Net::DRI::Util::xml_traverse($c,$ns,'status')));
+  $rinfo->{domain}->{$oname}->{status}=$po->create_local_object('status')->add(Net::DRI::Protocol::EPP::Util::parse_status(Net::DRI::Util::xml_traverse($c,$ns,'status')));
   $rinfo->{domain}->{$oname}->{contact}=$po->create_local_object('contactset')->set($po->create_local_object('contact')->srid(Net::DRI::Util::xml_child_content($c,$ns,'registrant')),'registrant');
   return;
  }

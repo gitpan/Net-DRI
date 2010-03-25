@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EURid (.EU) policy on reserved names
 ##
-## Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -26,7 +26,7 @@ use Net::DRI::Util;
 use Net::DRI::Exception;
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.14 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 __PACKAGE__->make_exception_for_unavailable_operations(qw/domain_transfer_query domain_transfer_accept domain_transfer_refuse domain_renew contact_check contact_check_multi contact_transfer contact_transfer_start contact_transfer_stop contact_transfer_query contact_transfer_accept contact_transfer_refuse/);
 
@@ -58,7 +58,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -112,7 +112,7 @@ sub verify_name_domain
  return $self->_verify_name_rules($domain,$op,{check_name => 1,
                                                my_tld => 1,
                                                min_length => 2,
-                                               no_double_hyphen => 1,
+                                               no_double_hyphen_except_idn => 1, ## temporary bypass for IDNs
                                                no_country_code => 1,
                                               });
 }

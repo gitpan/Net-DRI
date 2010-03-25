@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Message
 ##
-## Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -27,11 +27,12 @@ use XML::LibXML ();
 use Net::DRI::Protocol::ResultStatus;
 use Net::DRI::Exception;
 use Net::DRI::Util;
+use Net::DRI::Protocol::EPP::Util;
 
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version command command_body cltrid svtrid msg_id node_resdata node_extension node_msg result_greeting));
 
-our $VERSION=do { my @r=(q$Revision: 1.24 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.25 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -61,7 +62,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -279,7 +280,7 @@ sub parse
  ## result block(s)
  foreach my $result ($res->getChildrenByTagNameNS($NS,'result')) ## one element if success, multiple elements if failure RFC4930 §2.6
  {
-  $self->parse_result($result);
+  push @{$self->{results}},Net::DRI::Protocol::EPP::Util::parse_result($result,$NS);
  }
 
  $c=$res->getChildrenByTagNameNS($NS,'msgQ');
@@ -323,34 +324,18 @@ sub parse
  $self->svtrid($tmp) if defined($tmp);
 }
 
-sub parse_result
+sub add_to_extra_info
 {
- my ($self,$node)=@_;
- my $code=$node->getAttribute('code');
- my $msg=$node->getChildrenByTagNameNS($self->ns('_main'),'msg')->get_node(1);
- my $lang=$msg->getAttribute('lang') || 'en';
-
- my @i;
- foreach my $el (Net::DRI::Util::xml_list_children($node))
- {
-  my ($name,$c)=@$el;
-  if ($name eq 'extValue') ## OPTIONAL
-  {
-   push @i,substr(substr($c->toString(),10),0,-11); ## grab everything as a string, without <extValue> and </extValue>
-  } elsif ($name eq 'value') ## OPTIONAL
-  {
-   push @i,$c->toString();
-  }
- }
-
- push @{$self->{results}},{ code => $code, message => $msg->textContent(), lang => $lang, extra_info => \@i};
+ my ($self,$data)=@_;
+ push @{$self->{results}->[-1]->{extra_info}},$data;
 }
 
+## Move to Core/Session ?
 sub parse_greeting
 {
  my ($self,$g)=@_;
  my %tmp;
- 
+
  foreach my $el (Net::DRI::Util::xml_list_children($g))
  {
   my ($n,$c)=@$el;
@@ -375,7 +360,7 @@ sub parse_greeting
    }
   } elsif ($n eq 'dcp')
   {
-   ## TODO : do something with that data
+   $tmp{dcp}=$c->toString(); ## does someone really need this data ??
   }
  }
  return \%tmp;

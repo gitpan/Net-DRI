@@ -25,7 +25,7 @@ use base qw/Net::DRI::Protocol::EPP/;
 
 use Net::DRI::Data::Contact::Nominet;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -69,7 +69,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 ####################################################################################################
 
-our @NS=qw/account-1.1 domain-1.2 contact-1.1 ns-1.1 notifications-1.2/;
+our @NS=qw/account-1.1 domain-2.0 contact-1.1 ns-1.1 notifications-1.2/;
 
 sub setup
 {
@@ -112,7 +112,7 @@ sub transport_default
 ## Now we explicitely set them from what we support; this may break compatibility with registry as soon as they introduce a new version
 sub set_objuri
 {
- return map { ['objURI','http://www.nominet.org.uk/epp/xml/nom-'.$_] } @NS;
+ return (['objURI','urn:ietf:params:xml:ns:host-1.0'],map { ['objURI','http://www.nominet.org.uk/epp/xml/nom-'.$_] } @NS);
 }
 
 ####################################################################################################

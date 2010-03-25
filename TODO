@@ -7,6 +7,7 @@ All
 	* add some introspections to be able to know what methods are really available per DRD, instead of throwing an exception ?
 	* implement RFC5105 « ENUM Validation Token Format Definition »
 	* switch from ExtUtils::MakeMaker to Module::Build for better META.yml ?
+	* offer full asynchronous API ?
 
 Net::DRI
 	* IDN support (in a cross registry fashion) with Net-IDN-Tools (1)
@@ -32,10 +33,8 @@ Net::DRI::DRD::Nominet
 	* implement DAS and Whois
 
 Net::DRI::Transport::HTTP::*
-	* implement default logging: output data at wire level (SOAP envelope) or higher ?
 	* unify all three modules into one (Net::DRI::Transport::WS ?), taking into account all possible cases
 	* retrofit Transport/SOAP into Transport/HTTP/SOAPLite (1), depending also on previous point
-
 
 
 

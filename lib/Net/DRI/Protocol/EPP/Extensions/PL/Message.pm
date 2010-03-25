@@ -24,7 +24,7 @@ use strict;
 use Net::DRI::Exception;
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -114,7 +114,7 @@ sub parse_poll
 
   if ($cmdname eq 'pollAuthInfo') {
    my $ra = $rinfo->{message}->{$msgid}->{extra_info};
-   push @{$ra}, $cnode;
+   push @{$ra}, $cnode->toString(); ### ???
    $action = 'pollAuthInfo';
 
    foreach my $cnode ($cnode->childNodes) {

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, NORID (.NO) EPP extensions
 ##
-## Copyright (c) 2008,2009 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
+## Copyright (c) 2008-2010 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
 ##                    Trond Haugen E<lt>info@norid.noE<gt>
 ##                    All rights reserved.
 ##
@@ -20,12 +20,13 @@
 package Net::DRI::Protocol::EPP::Extensions::NO;
 
 use strict;
+use warnings;
 
 use base qw/Net::DRI::Protocol::EPP/;
 
 use Net::DRI::Data::Contact::NO;
 
-our $VERSION = do { my @r = ( q$Revision: 1.4 $ =~ /\d+/gmx ); sprintf( "%d" . ".%02d" x $#r, @r ); };
+our $VERSION = do { my @r = ( q$Revision: 1.5 $ =~ /\d+/gmx ); sprintf( "%d" . ".%02d" x $#r, @r ); };
 
 =pod
 
@@ -55,7 +56,7 @@ Trond Haugen, E<lt>info@norid.noE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008,2009 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
+Copyright (c) 2008-2010 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
 Trond Haugen E<lt>info@norid.noE<gt>
 All rights reserved.
 
@@ -80,9 +81,11 @@ sub setup {
              });
 
 
-    foreach my $o (qw/mobilephone identity xdisclose/)  { $self->capabilities('contact_update',$o,['set']); }
-    foreach my $o (qw/organization rolecontact xemail/) { $self->capabilities('contact_update',$o,['add','del']); }
+    foreach my $o (qw/mobilephone identity xdisclose facets/)  { $self->capabilities('contact_update',$o,['set']); }
+    foreach my $o (qw/organization rolecontact xemail/)        { $self->capabilities('contact_update',$o,['add','del']); }
     $self->capabilities('host_update','contact',['set']);
+    $self->capabilities('host_update','facets',['set']);
+    $self->capabilities('domain_update','facets',['set']);
     $self->factories('contact',sub { return Net::DRI::Data::Contact::NO->new(); });
 
     return;

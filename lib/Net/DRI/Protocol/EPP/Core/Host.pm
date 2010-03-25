@@ -22,8 +22,9 @@ use warnings;
 
 use Net::DRI::Util;
 use Net::DRI::Exception;
+use Net::DRI::Protocol::EPP::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.14 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.15 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -176,7 +177,7 @@ sub info_parse
    $rinfo->{host}->{$oname}->{roid}=$c->textContent();
   } elsif ($name eq 'status')
   {
-   push @s,$po->parse_status($c);
+   push @s,Net::DRI::Protocol::EPP::Util::parse_status($c);
   } elsif ($name eq 'addr')
   {
    my $ip=$c->textContent();
@@ -239,7 +240,7 @@ sub update
  my ($epp,$ns,$todo)=@_;
  my $mes=$epp->message();
 
- Net::DRI::Exception::usererr_invalid_parameters($todo.' must be a Net::DRI::Data::Changes object') unless Net::DRI::Util::isa_changes($todo);
+ Net::DRI::Exception::usererr_invalid_parameters($todo.' must be a non empty Net::DRI::Data::Changes object') unless Net::DRI::Util::isa_changes($todo);
 
  my $nsadd=$todo->add('ip');
  my $nsdel=$todo->del('ip');

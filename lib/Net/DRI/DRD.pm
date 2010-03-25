@@ -1,6 +1,6 @@
 ## Domain Registry Interface, virtual superclass for all DRD modules
 ##
-## Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -29,7 +29,7 @@ use Net::DRI::Exception;
 use Net::DRI::Util;
 use Net::DRI::DRD::ICANN;
 
-our $VERSION=do { my @r=(q$Revision: 1.32 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.33 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -77,7 +77,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -137,26 +137,27 @@ sub _verify_name_rules
   if ($r) { return $r; }
  }
 
- if (exists $rules->{my_tld} && $rules->{my_tld} && ! $self->is_my_tld($domain)) { return 10; }
- if (exists $rules->{my_tld_not_strict} && $rules->{my_tld_not_strict} && ! $self->is_my_tld($domain,0)) { return 10; }
- if (exists $rules->{icann_reserved} && $rules->{icann_reserved} && Net::DRI::DRD::ICANN::is_reserved_name($domain,$op)) { return 11; }
+ if (exists $rules->{my_tld} && $rules->{my_tld} && ! $self->is_my_tld($domain)) { return 'NAME_NOT_IN_TLD'; }
+ if (exists $rules->{my_tld_not_strict} && $rules->{my_tld_not_strict} && ! $self->is_my_tld($domain,0)) { return 'NAME_NOT_IN_TLD'; }
+ if (exists $rules->{icann_reserved} && $rules->{icann_reserved} && Net::DRI::DRD::ICANN::is_reserved_name($domain,$op)) { return 'NAME_RESERVED_PER_ICANN_RULES'; }
 
  my @d=split(/\./,$domain);
- if (exists $rules->{min_length} && $rules->{min_length} && length($d[0]) < $rules->{min_length}) { return 12; }
- if (exists $rules->{no_double_hyphen} && $rules->{no_double_hyphen} && substr($d[0],2,2) eq '--') { return 13; }
- if (exists $rules->{no_country_code} && $rules->{no_country_code} && exists $Net::DRI::Util::CCA2{uc($d[0])}) { return 14; }
- if (exists $rules->{no_digits_only} && $rules->{no_digits_only} && $d[0]=~m/^\d+$/) { return 15; }
+ if (exists $rules->{min_length} && $rules->{min_length} && length($d[0]) < $rules->{min_length}) { return 'NAME_TOO_SHORT'; }
+ if (exists $rules->{no_double_hyphen} && $rules->{no_double_hyphen} && substr($d[0],2,2) eq '--') { return 'NAME_WITH_TWO_HYPHENS'; }
+ if (exists $rules->{no_double_hyphen_except_idn} && $rules->{no_double_hyphen_except_idn} && substr($d[0],2,2) eq '--' && substr($d[0],0,2) ne 'xn') { return 'NAME_WITH_TWO_HYPHENS_NOT_IDN'; }
+ if (exists $rules->{no_country_code} && $rules->{no_country_code} && exists $Net::DRI::Util::CCA2{uc($d[0])}) { return 'NAME_WITH_COUNTRY_CODE'; }
+ if (exists $rules->{no_digits_only} && $rules->{no_digits_only} && $d[0]=~m/^\d+$/) { return 'NAME_WITH_ONLY_DIGITS'; }
 
- if ($domain=~m/\.e164\.arpa$/ && $domain!~m/^(?:\d+\.)+e164\.arpa$/) { return 16; }
+ if ($domain=~m/\.e164\.arpa$/ && $domain!~m/^(?:\d+\.)+e164\.arpa$/) { return 'NAME_INVALID_IN_E164'; }
 
  if (exists $rules->{excluded_labels})
  {
   my $n=join('|',ref $rules->{excluded_labels}? @{$rules->{excluded_labels}} : ($rules->{excluded_labels}));
-  if (lc($d[0])=~m/^(?:$n)$/o) { return 20; }
+  if (lc($d[0])=~m/^(?:$n)$/o) { return 'NAME_WITH_EXCLUDED_LABELS'; }
  }
 
  ## It seems all rules have passed successfully
- return 0;
+ return '';
 }
 
 ## Compute the number of dots for each tld in tlds(), returns a ref array and store it for later quick access
@@ -214,11 +215,11 @@ sub verify_name_domain
 sub verify_name_host
 {
  my ($self,$ndr,$host,$checktld)=@_;
- $host=$host->get_names(1) if (ref($host));
+ $host=$host->get_names(1) if ref $host;
  my $r=$self->check_name($host);
- return $r if ($r);
- return 10 if (defined $checktld && $checktld && !$self->is_my_tld($host,0));
- return 0;
+ return $r if length $r;
+ return 'HOST_NAME_NOT_IN_CORRECT_TLD' if (defined $checktld && $checktld && !$self->is_my_tld($host,0));
+ return '';
 }
 
 sub check_name
@@ -226,16 +227,18 @@ sub check_name
  my ($self,$ndr,$data,$dots)=@_;
  ($data,$dots)=($ndr,$data) unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
 
- return 1 unless (defined($data) && $data && !ref($data));
- return 2 unless Net::DRI::Util::is_hostname($data);
+ return 'UNDEFINED_NAME' unless defined $data;
+ return 'ZERO_LENGTH_NAME' unless length $data;
+ return 'NON_SCALAR_NAME' unless !ref($data);
+ return 'INVALID_HOSTNAME' unless Net::DRI::Util::is_hostname($data);
  if (defined($dots) && $data!~m/\.e164\.arpa$/)
  {
   my @d=split(/\./,$data);
   my @ok=ref($dots)? @$dots : ($dots);
-  return 3 unless grep { 1+$_== @d } @ok;
+  return 'INVALID_NUMBER_OF_DOTS_IN_NAME' unless grep { 1+$_== @d } @ok;
  }
 
- return 0; #everything ok
+ return ''; #everything ok
 }
 
 sub verify_duration_create
@@ -293,14 +296,14 @@ sub enforce_domain_name_constraints
 {
  my ($self,$ndr,$domain,$op)=@_;
  my $err=$self->verify_name_domain($ndr,$domain,$op);
- Net::DRI::Exception->die(0,'DRD',1,'Invalid domain name (error #'.$err.'): '.((defined($domain) && $domain)? $domain : '?')) if $err;
+ Net::DRI::Exception->die(0,'DRD',1,'Invalid domain name (error '.$err.'): '.((defined($domain) && $domain)? $domain : '?')) if length $err;
 }
 
 sub enforce_host_name_constraints
 {
  my ($self,$ndr,$dh,$checktld)=@_;
  my $err=$self->verify_name_host($ndr,$dh,$checktld);
- Net::DRI::Exception->die(0,'DRD',2,'Invalid host name (error #'.$err.'): '.((UNIVERSAL::isa($dh,'Net::DRI::Data::Hosts'))? $dh->get_names(1) : (defined $dh? $dh : '?'))) if $err;
+ Net::DRI::Exception->die(0,'DRD',2,'Invalid host name (error '.$err.'): '.((UNIVERSAL::isa($dh,'Net::DRI::Data::Hosts'))? $dh->get_names(1) : (defined $dh? $dh : '?'))) if length $err;
 }
 
 sub err_invalid_contact
@@ -324,7 +327,7 @@ sub domain_create
 
  if (!$pure)
  {
-  $rcl=$self->domain_check($domain,$rd);
+  $rcl=$self->domain_check($ndr,$domain,$rd);
   return $rcl unless ($rcl->is_success() && $rcl->get_data('domain',$domain,'exist')==0);
   $rc=$rcl;
  }
@@ -805,7 +808,8 @@ sub host_check_multi
 sub host_exist ## 1/0/undef
 {
  my ($self,$ndr,$dh,$rh)=@_;
-my $rc=$ndr->host_check($dh,$rh);
+
+ my $rc=$ndr->host_check($dh,$rh);
  return unless $rc->is_success();
  return $ndr->get_info('exist');
 }

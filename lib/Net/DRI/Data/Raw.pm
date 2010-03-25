@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Encapsulating raw data
 ##
-## Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -20,12 +20,13 @@ package Net::DRI::Data::Raw;
 use strict;
 use warnings;
 
+use Data::Dumper ();
 use Net::DRI::Exception;
 
 use base qw(Class::Accessor::Fast);
 __PACKAGE__->mk_ro_accessors(qw(type data hint));
 
-our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -55,7 +56,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -79,6 +80,7 @@ sub new
 ## type=3, data=ref to string NOTIMPL
 ## type=4, data=path to local file NOTIMPL
 ## type=5, data=object with a as_string method
+## type=6, data=complex object in a ref array
 
  my $self={type => $type,
            data => $data,
@@ -121,6 +123,10 @@ sub as_string
  {
   Net::DRI::Exception::err_method_not_implemented('as_string in '.ref($data)) unless $data->can('as_string');
   return $data->as_string();
+ }
+ if ($self->type()==6)
+ {
+  return Data::Dumper->new($data)->Indent(2)->Varname('')->Quotekeys(0)->Sortkeys(1)->Dump();
  }
 }
 

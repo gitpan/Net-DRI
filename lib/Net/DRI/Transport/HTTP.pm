@@ -1,6 +1,6 @@
 ## Domain Registry Interface, HTTP/HTTPS Transport
 ##
-## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -27,7 +27,7 @@ use Net::DRI::Util;
 
 use LWP::UserAgent;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -37,7 +37,7 @@ Net::DRI::Transport::HTTP - HTTP/HTTPS Transport for Net::DRI
 
 =head1 DESCRIPTION
 
-This module implements an HTTP/HTTPS stream for establishing connections in Net::DRI
+This module implements an HTTP/HTTPS transport for establishing connections in Net::DRI
 
 =head1 METHODS
 
@@ -65,7 +65,7 @@ protocol login & password
 
 =head2 protocol_connection
 
-Net::DRI class handling protocol connection details. (Ex: C<Net::DRI::Protocol::OpenSRS::XCP::Connection> or C<Net::DRI::Protocol::EPP::Extensions::PL::Connection>)
+Net::DRI class handling protocol connection details. Specifying it should not be needed, as the registry driver should have correct default values.
 
 =head2 protocol_data
 
@@ -102,7 +102,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008-2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -151,7 +151,8 @@ sub new
  my @need=qw/read_data write_message/;
  Net::DRI::Exception::usererr_invalid_parameters('protocol_connection class must have: '.join(' ',@need)) if (grep { ! $t{pc}->can($_) } @need);
  $t{protocol_data}=$opts{protocol_data} if (exists($opts{protocol_data}) && $opts{protocol_data});
- Net::DRI::Exception::usererr_insufficient_parameters('remote_url must be defined') unless (exists($opts{'remote_url'}) && defined($opts{'remote_url'}) && $opts{remote_url}=~m!^https?://\S+/\S*$!);
+ Net::DRI::Exception::usererr_insufficient_parameters('remote_url must be defined') unless (exists $opts{'remote_url'} && defined $opts{'remote_url'});
+ Net::DRI::Exception::usererr_invalid_parameters('remote_url must be an uri starting with http:// or https:// with a proper path') unless $opts{remote_url}=~m!^https?://\S+/\S*$!;
  $t{remote_url}=$opts{remote_url};
  $t{remote_uri}=$t{remote_url}; ## only used for error messages
 
@@ -192,21 +193,21 @@ sub send_login
  ## Get registry greeting, if available
  if ($pc->can('greeting') && $pc->can('parse_greeting'))
  {
-  $cltrid=$self->generate_trid(); ## not used for greeting (<hello> has no clTRID), but used in logging
+  $cltrid=$self->generate_trid($self->{logging_ctx}->{registry}); ## not used for greeting (<hello> has no clTRID), but used in logging
   my $greeting=$pc->greeting($t->{message_factory});
-  $self->log_output('notice','transport',{ctx=>$ctx,trid=>$cltrid,phase=>'opening',direction=>'out',driver=>$self->name().'/'.$self->version(),message=>$greeting});
+  $self->log_output('notice','transport',$ctx,{trid=>$cltrid,phase=>'opening',direction=>'out',message=>$greeting});
   Net::DRI::Exception->die(0,'transport/http',4,'Unable to send greeting message to '.$t->{remote_uri}) unless $self->_http_send(1,$greeting,1);
   $dr=$self->_http_receive(1);
-  $self->log_output('notice','transport',{ctx=>$ctx,trid=>$cltrid,phase=>'opening',direction=>'in',driver=>$self->name().'/'.$self->version(),message=>$dr});
+  $self->log_output('notice','transport',$ctx,{trid=>$cltrid,phase=>'opening',direction=>'in',message=>$dr});
   my $rc1=$pc->parse_greeting($dr); ## gives back a Net::DRI::Protocol::ResultStatus
   die($rc1) unless $rc1->is_success();
  }
 
  my $login=$pc->login($t->{message_factory},$t->{client_login},$t->{client_password},$cltrid,$dr,$t->{client_newpassword},$t->{protocol_data});
- $self->log_output('notice','transport',{ctx=>$ctx,trid=>$cltrid,phase=>'opening',direction=>'out',driver=>$self->name().'/'.$self->version(),message=>$login});
+ $self->log_output('notice','transport',$ctx,{trid=>$cltrid,phase=>'opening',direction=>'out',message=>$login});
  Net::DRI::Exception->die(0,'transport/http',4,'Unable to send login message to '.$t->{remote_uri}) unless $self->_http_send(1,$login,1);
  $dr=$self->_http_receive(1);
- $self->log_output('notice','transport',{ctx=>$ctx,trid=>$cltrid,phase=>'opening',direction=>'in',driver=>$self->name().'/'.$self->version(),message=>$dr});
+ $self->log_output('notice','transport',$ctx,{trid=>$cltrid,phase=>'opening',direction=>'in',message=>$dr});
  my $rc2=$pc->parse_login($dr); ## gives back a Net::DRI::Protocol::ResultStatus
  die($rc2) unless $rc2->is_success();
 }
@@ -224,48 +225,48 @@ sub open_connection
   $self->has_state(1);
   $self->current_state(1);
  }
+
  $self->time_open(time());
  $self->time_used(time());
  $self->transport_data()->{exchanges_done}=0;
-
 }
 
 sub send_logout
 {
- my ($self,$ctx)=@_;
+ my ($self)=@_;
  my $t=$self->transport_data();
  my $pc=$t->{pc};
 
  return unless ($pc->can('logout') && $pc->can('parse_logout'));
 
- my $cltrid=$self->generate_trid();
+ my $cltrid=$self->generate_trid($self->{logging_ctx}->{registry});
  my $logout=$pc->logout($t->{message_factory},$cltrid);
- $self->log_output('notice','transport',{ctx=>$ctx,trid=>$cltrid,phase=>'closing',direction=>'out',driver=>$self->name().'/'.$self->version(),message=>$logout});
+ $self->log_output('notice','transport',{otype=>'session',oaction=>'logout'},{trid=>$cltrid,phase=>'closing',direction=>'out',message=>$logout});
  Net::DRI::Exception->die(0,'transport/http',4,'Unable to send logout message to '.$t->{remote_uri}) unless $self->_http_send(1,$logout,3);
  my $dr=$self->_http_receive(1);
- $self->log_output('notice','transport',{ctx=>$ctx,trid=>$cltrid,phase=>'closing',direction=>'in',driver=>$self->name().'/'.$self->version(),message=>$dr});
+ $self->log_output('notice','transport',{otype=>'session',oaction=>'logout'},{trid=>$cltrid,phase=>'closing',direction=>'in',message=>$dr});
  my $rc1=$pc->parse_logout($dr);
  die($rc1) unless $rc1->is_success();
 }
 
 sub close_connection
 {
- my ($self,$ctx)=@_;
- $self->send_logout($ctx) if ($self->has_state() && $self->current_state());
+ my ($self)=@_;
+ $self->send_logout() if ($self->has_state() && $self->current_state());
  $self->transport_data()->{ua}->cookie_jar({});
  $self->current_state(0);
 }
 
 sub end
 {
- my ($self,$ctx)=@_;
+ my ($self)=@_;
  if ($self->current_state())
  {
   eval
   {
    local $SIG{ALRM}=sub { die 'timeout' };
    alarm(10);
-   $self->close_connection($ctx);
+   $self->close_connection();
   };
   alarm(0); ## since close_connection may die, this must be outside of eval to be executed in all cases
  }

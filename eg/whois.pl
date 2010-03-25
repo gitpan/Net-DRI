@@ -39,6 +39,7 @@ $dri->add_registry('EURid',{});
 $rc=$dri->target('EURid')->add_current_profile('profile1','whois');
 die($rc) unless $rc->is_success();
 display('europa.eu',$dri);
+display('eurid.eu',$dri);
 
 $dri->add_registry('BIZ',{});
 $rc=$dri->target('BIZ')->add_current_profile('profile1','whois');
@@ -123,7 +124,7 @@ sub display
  my $rc=$dri->domain_info($dom);
  print 'IS_SUCCESS: '.$dri->result_is_success().' [CODE: '.$dri->result_code().' / '.$dri->result_native_code()."]\n";
  my $e=$dri->get_info('exist');
- print 'EXIST: '.$e."\n";
+ print 'EXIST: '.$e."\n" if defined $e;
  if ($e)
  {
   foreach my $k (qw/clName clID clWebsite clWhois upName upID crName crID crDate upDate exDate wuDate/)

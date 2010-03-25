@@ -25,7 +25,7 @@ use Net::DRI::Protocol::EPP::Extensions::Nominet::Contact;
 use Net::DRI::Util;
 use Net::DRI::Exception;;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -104,9 +104,9 @@ sub extract_contact_id
  if (Net::DRI::Util::isa_contactset($contact))
  {
   my $c=$contact->get('registrant');
-  Net::DRI::Exception->die(1,'protocol/EPP',2,'ContactSet must contain a registrant contact object') unless (Net::DRI::Util::isa_contact($c));
+  Net::DRI::Exception->die(1,'protocol/EPP',2,'ContactSet must contain a registrant contact object') unless (Net::DRI::Util::isa_contact($c,'Net::DRI::Data::Contact::Nominet'));
   $id=$c->roid();
- } elsif (Net::DRI::Util::isa_contact($contact))
+ } elsif (Net::DRI::Util::isa_contact($contact,'Net::DRI::Data::Contact::Nominet'))
  {
   $id=$contact->roid();
  } else
@@ -258,7 +258,7 @@ sub add_account_data
  my $modtype=$ischange? 'update' : 'create';
  my @a;
  my @o=$cs->get('registrant');
- if (Net::DRI::Util::isa_contact($o[0]))
+ if (Net::DRI::Util::isa_contact($o[0],'Net::DRI::Data::Contact::Nominet'))
  {
   $o[0]->validate($ischange);
   push @a,['account:name',$o[0]->name()] unless $ischange;
@@ -272,7 +272,7 @@ sub add_account_data
   Net::DRI::Exception::usererr_insufficient_parameters('registrant data is mandatory') unless $ischange;
  }
 
- if (Net::DRI::Util::isa_contact($o[1]))
+ if (Net::DRI::Util::isa_contact($o[1],'Net::DRI::Data::Contact::Nominet'))
  {
   $o[1]->validate() unless $ischange;
   my @t=build_addr($o[1],'billing');
@@ -280,7 +280,7 @@ sub add_account_data
  }
 
  @o=$cs->get('admin');
- Net::DRI::Exception::usererr_insufficient_parameters('admin data is mandatory') unless ($ischange || Net::DRI::Util::isa_contact($o[0]));
+ Net::DRI::Exception::usererr_insufficient_parameters('admin data is mandatory') unless ($ischange || Net::DRI::Util::isa_contact($o[0],'Net::DRI::Data::Contact::Nominet'));
  foreach my $o (0..2)
  {
    last unless defined($o[$o]);

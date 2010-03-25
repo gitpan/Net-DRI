@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .CZ Contact EPP extension commands
 ##
-## Copyright (c) 2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+## Copyright (c) 2008,2010 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 ##                    All rights reserved.
 ##
 ## This file is part of Net::DRI
@@ -22,8 +22,9 @@ use strict;
 
 use Net::DRI::Exception;
 use Net::DRI::Util;
+use Net::DRI::Protocol::EPP::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -54,7 +55,7 @@ Tonnerre Lombard, E<lt>tonnerre.lombard@sygroup.chE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+Copyright (c) 2008,2010 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -143,19 +144,6 @@ sub info_parse
 
 ############ Transform commands
 
-sub build_tel
-{
-	my ($name, $tel) = @_;
-	if ($tel=~m/^(\S+)x(\S+)$/)
-	{
-		return [$name, $1, { x => $2 }];
-	}
-	else
-	{
-		return [$name, $tel];
-	}
-}
-
 sub build_authinfo
 {
 	my $contact = shift;
@@ -215,9 +203,9 @@ sub build_cdata
 
 	push(@post, ['contact:addr', @addr]) if (@addr);
 	push(@d, ['contact:postalInfo', @post]);
-	push(@d, build_tel('contact:voice', $contact->voice()))
+	push(@d, Net::DRI::Protocol::EPP::Util::build_tel('contact:voice', $contact->voice()))
 		if (defined($contact->voice()));
-	push(@d, build_tel('contact:fax', $contact->fax()))
+	push(@d, Net::DRI::Protocol::EPP::Util::build_tel('contact:fax', $contact->fax()))
 		if (defined($contact->fax()));
 	push(@d, ['contact:email', $contact->email()])
 		if (defined($contact->email()));

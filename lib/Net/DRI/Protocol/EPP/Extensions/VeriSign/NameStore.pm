@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP NameStore Extension for Verisign
 ##
-## Copyright (c) 2006,2008 Rony Meyer <perl@spot-light.ch>. All rights reserved.
+## Copyright (c) 2006,2008,2009 Rony Meyer <perl@spot-light.ch>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,11 +18,12 @@
 package Net::DRI::Protocol::EPP::Extensions::VeriSign::NameStore;
 
 use strict;
+use warnings;
 
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 our $NS='http://www.verisign-grs.com/epp/namestoreExt-1.1';
 
 =pod
@@ -181,7 +182,7 @@ sub parse_error
  $data=$data->shift();
 
  ## We add it to the latest status extra_info seen.
- push @{$mes->{results}->[-1]->{extra_info}},sprintf('%s (code=%d)',$data->getFirstChild()->getData(),$data->getAttribute('code'));
+ $mes->add_to_extra_info({from => 'verisign:namestoreExt', type => 'text', message => $data->textContent(), code => $data->getAttribute('code')});
 }
 
 #########################################################################################################

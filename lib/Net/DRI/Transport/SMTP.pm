@@ -27,7 +27,7 @@ use Email::Valid;
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -69,7 +69,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
-###################################################################################################
+####################################################################################################
 
 sub new
 {
@@ -96,7 +96,7 @@ sub new
 }
 
 ####################################################################################################
- 
+
 sub end { }
 
 sub send
@@ -114,13 +114,13 @@ sub _send
  my $head=$mime->head();
  $head->add('Cc',$rt->{cc})   if exists($rt->{cc});
  $head->add('Bcc',$rt->{bcc}) if exists($rt->{bcc});
- 
+
  my %rcpts=map { $_ => 1 } map { $head->get_all($_) } ('To','Cc','Bcc');
  $head->delete('Bcc');
 
  my $smtp=Net::SMTP->new($rt->{smtphost});
  my $ok=$smtp->mail($head->get('From'),Bits=>8) && $smtp->to(keys(%rcpts)) && $smtp->data($mime->stringify()) && $smtp->quit();
- 
+
  Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send message') unless $ok;
  return 1;
 }
@@ -128,7 +128,6 @@ sub _send
 sub receive
 {
  my ($self,$ctx,$count)=@_;
-
 }
 
 ####################################################################################################

@@ -1,7 +1,7 @@
 ## Domain Registry Interface, .SE EPP Domain/Contact Extensions for Net::DRI
 ## Contributed by Elias Sidenbladh and Ulrich Wisser from NIC SE
 ##
-## Copyright (c) 2006,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2008,2009,2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -22,9 +22,9 @@ use strict;
 use warnings;
 use Net::DRI::Util;
 use Net::DRI::Exception;
-use Net::DRI::Protocol::EPP::Core::Domain;
+use Net::DRI::Protocol::EPP::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -54,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2008,2009,2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -136,6 +136,16 @@ sub domain_parse {
     # parse deactDate (optional)
     foreach my $el ( $infData->getElementsByTagNameNS( $mes->ns('iis'), 'deactDate' ) ) {
         $rinfo->{domain}->{$oname}->{deactDate} = $po->parse_iso8601( $el->textContent() );
+    }
+
+    # parse relDate (optional)
+    foreach my $el ( $infData->getElementsByTagNameNS( $mes->ns('iis'), 'relDate' ) ) {
+        $rinfo->{domain}->{$oname}->{relDate} = $po->parse_iso8601( $el->textContent() );
+    }
+
+    # parse state
+    foreach my $el ( $infData->getElementsByTagNameNS( $mes->ns('iis'), 'state' ) ) {
+        $rinfo->{domain}->{$oname}->{state} = $el->textContent();
     }
 
     # done
@@ -311,7 +321,7 @@ sub domain_update {
     return unless @data;
 
     # create <iis:update/>
-    my $iis_extension = $mes->command_extension_register( 'iis:update', 'xmlns:iis="' . $mes->ns('iis') . '" xsi:schemaLocation="' . $mes->ns('iis') . ' iis-1.0.xsd"' );
+    my $iis_extension = $mes->command_extension_register( 'iis:update', 'xmlns:iis="' . $mes->ns('iis') . '" xsi:schemaLocation="' . $mes->ns('iis') . ' iis-1.1.xsd"' );
 
     # now add extension to message
     $mes->command_extension( $iis_extension, \@data );
@@ -326,13 +336,13 @@ sub domain_transfer {
     my $mes  = $epp->message();
 
     # new nameservers (optional)
-    push @data, Net::DRI::Protocol::EPP::Core::Domain::build_ns( $epp, $rd->{ns}, $domain ) if Net::DRI::Util::has_ns($rd);
+    push @data, [ 'iis:ns',  map { [ 'iis:hostObj', $_ ] } $rd->{ns}->get_names() ] if Net::DRI::Util::has_ns($rd);
 
     # only add body if any data gets added
     return unless @data;
 
     # create <iis:transfer/>
-    my $iis_extension = $mes->command_extension_register( 'iis:transfer', 'xmlns:iis="' . $mes->ns('iis') . '" xsi:schemaLocation="' . $mes->ns('iis') . ' iis-1.0.xsd" xmlns:domain="urn:ietf:params:xml:ns:domain-1.0"' );
+    my $iis_extension = $mes->command_extension_register( 'iis:transfer', 'xmlns:iis="' . $mes->ns('iis') . '" xsi:schemaLocation="' . $mes->ns('iis') . ' iis-1.1.xsd" xmlns:domain="urn:ietf:params:xml:ns:domain-1.0"' );
 
     # now add extension to message
     $mes->command_extension( $iis_extension, \@data );
@@ -369,7 +379,7 @@ sub contact_create {
     return unless @data;
 
     # create <iis:create/>
-    my $iis_extension = $mes->command_extension_register( 'iis:create', 'xmlns:iis="' . $mes->ns('iis') . '" xsi:schemaLocation="' . $mes->ns('iis') . ' iis-1.0.xsd"' );
+    my $iis_extension = $mes->command_extension_register( 'iis:create', 'xmlns:iis="' . $mes->ns('iis') . '" xsi:schemaLocation="' . $mes->ns('iis') . ' iis-1.1.xsd"' );
 
     # now add extension to message
     $mes->command_extension( $iis_extension, \@data );
@@ -400,7 +410,7 @@ sub contact_update {
     return unless @data;
 
     # create <iis:update/>
-    my $iis_extension = $mes->command_extension_register( 'iis:update', 'xmlns:iis="' . $mes->ns('iis') . '" xsi:schemaLocation="' . $mes->ns('iis') . ' iis-1.0.xsd"' );
+    my $iis_extension = $mes->command_extension_register( 'iis:update', 'xmlns:iis="' . $mes->ns('iis') . '" xsi:schemaLocation="' . $mes->ns('iis') . ' iis-1.1.xsd"' );
 
     # now add extension to message
     $mes->command_extension( $iis_extension, \@data );

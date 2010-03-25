@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Handling of contact data for .NO
 ##
-## Copyright (c) 2008,2009 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
+## Copyright (c) 2008-2010 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
 ##                    Trond Haugen E<lt>info@norid.noE<gt>.
 ##                    All rights reserved.
 ##
@@ -26,9 +26,9 @@ use Email::Valid;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION = do { my @r = ( q$Revision: 1.4 $ =~ /\d+/gmx ); sprintf( "%d" . ".%02d" x $#r, @r ); };
+our $VERSION = do { my @r = ( q$Revision: 1.5 $ =~ /\d+/gmx ); sprintf( "%d" . ".%02d" x $#r, @r ); };
 
-__PACKAGE__->register_attributes(qw(type identity mobilephone organization rolecontact xemail xdisclose));
+__PACKAGE__->register_attributes(qw(type identity mobilephone organization rolecontact xemail xdisclose facets));
 
 =pod
 
@@ -103,6 +103,19 @@ policy is used.
 
 Example: $co->xdisclose({mobilePhone=>0});
 
+=head2 facets()
+Facets are some special control attributes that can be used to
+implement a super registrar (admin registrar).
+
+A super registrar can suppress certain checks and perform actions on behalf of a normal registrar.
+
+Facets are key/values pairs.
+Net::DRI will not try to enforce what key/value pairs that are possible,
+but let the registry decide their validity.
+
+Example: $co->facets( { 'skip-manual-review' => 1, 'ignores-exceptions' => 'reg123'} );
+
+
 =head1 SUPPORT
 
 For now, support questions should be sent to:
@@ -121,7 +134,7 @@ Trond Haugen, E<lt>info@norid.noE<gt>.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008,2009 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
+Copyright (c) 2008-2010 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
 Trond Haugen E<lt>info@norid.noE<gt>.
 All rights reserved.
 

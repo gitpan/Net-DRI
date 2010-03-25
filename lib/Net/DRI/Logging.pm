@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Logging operations for Net::DRI
 ##
-## Copyright (c) 2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2009,2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -24,7 +24,7 @@ use base qw/Net::DRI::BaseClass/;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf '%d'.('.%02d' x $#r), @r; };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf '%d'.('.%02d' x $#r), @r; };
 
 __PACKAGE__->make_exception_if_not_implemented(qw/name setup_channel output/);
 
@@ -67,8 +67,7 @@ sub string_header
 {
  my ($self,$level,$type,$data)=@_;
  my $f=$self->{format_header};
- my $t=Net::DRI::Util::fulltime();
- $f=~s/%FULLTIME/$t/g;
+ $f=~s/%FULLTIME/Net::DRI::Util::fulltime()/eg;
  $f=~s/%ULEVEL/uc($level)/eg;
  $f=~s/%TYPE/$type/g;
  return $f;
@@ -226,7 +225,7 @@ See the C<new()> method.
 
 =head1 DEPENDENCIES
 
-This modules has to be used inside the Net::DRI framework and needs the following components:
+This module has to be used inside the Net::DRI framework and needs the following components:
 
 =over
 
@@ -275,7 +274,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright (c) 2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+Copyright (c) 2009,2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

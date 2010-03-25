@@ -35,7 +35,7 @@ use Net::DRI::DRD::VNDS;
  no strict;
  no warnings;
  sub Net::DRI::DRD::VNDS::tlds { return ('e164.arpa'); };
- sub Net::DRI::DRD::VNDS::verify_name_domain { return 0; };
+ sub Net::DRI::DRD::VNDS::verify_name_domain { return ''; };
 }
 
 $dri->add_registry('VNDS');

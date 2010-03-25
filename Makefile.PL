@@ -23,7 +23,7 @@ WriteMakefile(
 	'IO::Socket::INET' => 0,
         'IO::Socket::SSL' => '0.90',
 	'Email::Valid' => 0,
-	'XML::LibXML' => 0,
+	'XML::LibXML' => '1.61',
 	'UNIVERSAL::require' => 0,
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },

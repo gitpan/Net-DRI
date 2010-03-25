@@ -22,10 +22,11 @@ use warnings;
 
 use Net::DRI::Exception;
 use Net::DRI::Util;
+use Net::DRI::Protocol::ResultStatus;
 
 use Net::DRI::Protocol::EPP::Core::Status;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -91,6 +92,7 @@ sub info_parse
 
  my $rr=$mes->response();
  my $rd=$mes->response_raw();
+ die(Net::DRI::Protocol::ResultStatus->new_error('SESSION_LIMIT_EXCEEDED_CLOSING','Registry rate limiting','en')) if $rd=~m/Still in grace period, wait/;
  my ($domain,$exist)=parse_domain($po,$rr,$rd,$rinfo);
  $rinfo->{domain}->{$domain}->{exist}=$exist;
  $rinfo->{domain}->{$domain}->{action}='info';

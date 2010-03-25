@@ -38,8 +38,8 @@ $dri->{trid_factory}=sub { return 'ABC-12345'; };
 $dri->add_registry('NAME');
 $dri->target('NAME')->add_current_profile('p1','test=epp',{f_send => \&mysend, f_recv => \&myrecv});
 
-is($dri->verify_name_domain('firstname.lastname.name','info'),0,'firstname.lastname.name registrability');
-is($dri->verify_name_domain('lastname.name','info'),0,'lastname.name registrability');
+is($dri->verify_name_domain('firstname.lastname.name','info'),'','firstname.lastname.name registrability');
+is($dri->verify_name_domain('lastname.name','info'),'','lastname.name registrability');
 
 ####################################################################################################
 

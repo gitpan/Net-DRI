@@ -4,7 +4,7 @@ use DateTime::Duration;
 use Net::DRI;
 use Net::DRI::Data::Raw;
 
-use Test::More tests => 253;
+use Test::More tests => 287;
 
 our $E1='<?xml version="1.0" encoding="UTF-8" standalone="no"?><epp xmlns="urn:ietf:params:xml:ns:epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="urn:ietf:params:xml:ns:epp-1.0 epp-1.0.xsd">';
 our $E2='</epp>';
@@ -35,68 +35,107 @@ my $d;
 my ($dh,@c);
 
 ## Domain commands
-$R2=$E1.'<response>'.r().'<resData><domain:chkData xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:cd><domain:name avail="1">example3.no</domain:name></domain:cd></domain:chkData></resData>'.$TRID.'</response>'.$E2;
+my %facetsh = (
+    'skip-manual-review'    =>1,
+    'impersonate-registrar' => 'reg9094');
 
-$rc=$dri->domain_check('example3.no');
+my $no_facet = { facets => \%facetsh };
 
-is($R1,$E1.'<command><check><domain:check xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example3.no</domain:name></domain:check></check><clTRID>ABC-12345</clTRID></command>'.$E2,'domain_check build');
-is($rc->is_success(),1,'domain_check is_success');
-is($dri->get_info('action'),'check','domain_check get_info(action)');
-is($dri->get_info('exist'),0,'domain_check get_info(exist)');
-is($dri->get_info('exist','domain','example3.no'),0,'domain_check get_info(exist) from cache');
+my $NO_FACET=
+'<extension><no-ext-epp:extended xmlns:no-ext-epp="http://www.norid.no/xsd/no-ext-epp-1.0" xsi:schemaLocation="http://www.norid.no/xsd/no-ext-epp-1.0 no-ext-epp-1.0.xsd"><no-ext-epp:facet name="skip-manual-review">1</no-ext-epp:facet><no-ext-epp:facet name="impersonate-registrar">reg9094</no-ext-epp:facet></no-ext-epp:extended></extension>';
+
+my $ddomain = "example3.no";
+my $fdomain = "facet-$ddomain";
+
+######################
+# Domain commands
+#
+
+#--- domain_check
+
+foreach my $OP ( "", $NO_FACET) {
+    my $facet;
+    my $domain = $ddomain;
+    if ($OP) {
+       $facet = $no_facet;
+       $domain = $fdomain;
+    }
+    $R2=$E1.'<response>'.r().'<resData><domain:chkData xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:cd><domain:name avail="1">'.$domain.'</domain:name></domain:cd></domain:chkData></resData>'.$TRID.'</response>'.$E2;
+    $rc=$dri->domain_check($domain, $facet);
+    is($R1,$E1.'<command><check><domain:check xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>'.$domain.'</domain:name></domain:check></check>'.$OP. '<clTRID>ABC-12345</clTRID></command>'.$E2,'domain_check build');
+    is($rc->is_success(),1,'domain_check is_success');
+    is($dri->get_info('action'),'check','domain_check get_info(action)');
+    is($dri->get_info('exist'),0,'domain_check get_info(exist)');
+    is($dri->get_info('exist','domain',$domain),0,"domain_check $domain get_info(exist) from cache");
+}
+
+
+#---- domain_check_multi
 
 $R2=$E1.'<response>'.r().'<resData><domain:chkData xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:cd><domain:name avail="1">example22.no</domain:name></domain:cd><domain:cd><domain:name avail="0">example2.no</domain:name><domain:reason>In use</domain:reason></domain:cd></domain:chkData></resData>'.$TRID.'</response>'.$E2;
-
 $rc=$dri->domain_check_multi('example22.no','example2.no');
-
 is($R1,$E1.'<command><check><domain:check xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example22.no</domain:name><domain:name>example2.no</domain:name></domain:check></check><clTRID>ABC-12345</clTRID></command>'.$E2,'domain_check_multi build');
 is($rc->is_success(),1,'domain_check_multi is_success');
 is($dri->get_info('exist','domain','example22.no'),0,'domain_check_multi get_info(exist) 1/2');
 is($dri->get_info('exist','domain','example2.no'),1,'domain_check_multi get_info(exist) 2/2');
 is($dri->get_info('exist_reason','domain','example2.no'),'In use','domain_check_multi get_info(exist_reason)');
 
-$R2=$E1.'<response>'.r().'<resData><domain:infData xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example2.no</domain:name><domain:roid>EXAMPLE1-REP</domain:roid><domain:status s="ok"/><domain:registrant>jd1234</domain:registrant><domain:contact type="admin">sh8013</domain:contact><domain:contact type="tech">sh8013</domain:contact>
-<domain:ns><domain:hostObj>ns1.example.no</domain:hostObj><domain:hostObj>ns2.example.no</domain:hostObj></domain:ns><domain:host>ns1.example.no</domain:host><domain:host>ns2.example.no</domain:host><domain:clID>ClientX</domain:clID><domain:crID>ClientY</domain:crID><domain:crDate>1999-04-03T22:00:00.0Z</domain:crDate><domain:upID>ClientX</domain:upID><domain:upDate>1999-12-03T09:00:00.0Z</domain:upDate><domain:exDate>2005-04-03T22:00:00.0Z</domain:exDate><domain:trDate>2000-04-08T09:00:00.0Z</domain:trDate><domain:authInfo><domain:pw>2fooBAR</domain:pw></domain:authInfo></domain:infData></resData>'.$TRID.'</response>'.$E2;
-$rc=$dri->domain_info('example2.no',{auth=>{pw=>'2fooBAR'}});
-is($R1,$E1.'<command><info><domain:info xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name hosts="all">example2.no</domain:name><domain:authInfo><domain:pw>2fooBAR</domain:pw></domain:authInfo></domain:info></info><clTRID>ABC-12345</clTRID></command>'.$E2,'domain_info build with auth');
-is($dri->get_info('action'),'info','domain_info get_info(action)');
-is($dri->get_info('exist'),1,'domain_info get_info(exist)');
-is($dri->get_info('roid'),'EXAMPLE1-REP','domain_info get_info(roid)');
-$s=$dri->get_info('status');
-isa_ok($s,'Net::DRI::Data::StatusList','domain_info get_info(status)');
-is_deeply([$s->list_status()],['ok'],'domain_info get_info(status) list');
-is($s->is_active(),1,'domain_info get_info(status) is_active');
-$s=$dri->get_info('contact');
-isa_ok($s,'Net::DRI::Data::ContactSet','domain_info get_info(contact)');
-is_deeply([$s->types()],['admin','registrant','tech'],'domain_info get_info(contact) types');
-is($s->get('registrant')->srid(),'jd1234','domain_info get_info(contact) registrant srid');
-is($s->get('admin')->srid(),'sh8013','domain_info get_info(contact) admin srid');
-is($s->get('tech')->srid(),'sh8013','domain_info get_info(contact) tech srid');
-$dh=$dri->get_info('host');
-isa_ok($dh,'Net::DRI::Data::Hosts','domain_info get_info(host)');
-@c=$dh->get_names();
-is_deeply(\@c,['ns1.example.no','ns2.example.no'],'domain_info get_info(host) get_names');
-$dh=$dri->get_info('ns');
-isa_ok($dh,'Net::DRI::Data::Hosts','domain_info get_info(ns)');
-@c=$dh->get_names();
-is_deeply(\@c,['ns1.example.no','ns2.example.no'],'domain_info get_info(ns) get_names');
-is($dri->get_info('clID'),'ClientX','domain_info get_info(clID)');
-is($dri->get_info('crID'),'ClientY','domain_info get_info(crID)');
-$d=$dri->get_info('crDate');
-isa_ok($d,'DateTime','domain_info get_info(crDate)');
-is("".$d,'1999-04-03T22:00:00','domain_info get_info(crDate) value');
-is($dri->get_info('upID'),'ClientX','domain_info get_info(upID)');
-$d=$dri->get_info('upDate');
-isa_ok($d,'DateTime','domain_info get_info(upDate)');
-is("".$d,'1999-12-03T09:00:00','domain_info get_info(upDate) value');
-$d=$dri->get_info('exDate');
-isa_ok($d,'DateTime','domain_info get_info(exDate)');
-is("".$d,'2005-04-03T22:00:00','domain_info get_info(exDate) value');
-$d=$dri->get_info('trDate');
-isa_ok($d,'DateTime','domain_info get_info(trDate)');
-is("".$d,'2000-04-08T09:00:00','domain_info get_info(trDate) value');
-is_deeply($dri->get_info('auth'),{pw=>'2fooBAR'},'domain_info get_info(auth)');
 
+#---- domain_info
+foreach my $OP ( "", $NO_FACET) {
+    my $facet;
+    my $domain = $ddomain;
+    if ($OP) {
+       $facet =  \%facetsh;
+       $domain = $fdomain;
+    }
+    $R2=$E1.'<response>'.r().'<resData><domain:infData xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>'.$domain.'</domain:name><domain:roid>EXAMPLE1-REP</domain:roid><domain:status s="ok"/><domain:registrant>jd1234</domain:registrant><domain:contact type="admin">sh8013</domain:contact><domain:contact type="tech">sh8013</domain:contact><domain:ns><domain:hostObj>ns1.example.no</domain:hostObj><domain:hostObj>ns2.example.no</domain:hostObj></domain:ns><domain:host>ns1.example.no</domain:host><domain:host>ns2.example.no</domain:host><domain:clID>ClientX</domain:clID><domain:crID>ClientY</domain:crID><domain:crDate>1999-04-03T22:00:00.0Z</domain:crDate><domain:upID>ClientX</domain:upID><domain:upDate>1999-12-03T09:00:00.0Z</domain:upDate><domain:exDate>2005-04-03T22:00:00.0Z</domain:exDate><domain:trDate>2000-04-08T09:00:00.0Z</domain:trDate><domain:authInfo><domain:pw>2fooBAR</domain:pw></domain:authInfo></domain:infData></resData>'.$TRID.'</response>'.$E2;
+
+     $rc=$dri->domain_info($domain,  { auth => {pw=>'2fooBAR'}, facets => $facet });
+
+    is($R1,$E1.'<command><info><domain:info xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name hosts="all">'.$domain.'</domain:name><domain:authInfo><domain:pw>2fooBAR</domain:pw></domain:authInfo></domain:info></info>' . $OP . '<clTRID>ABC-12345</clTRID></command>'.$E2,'domain_info build with auth');
+
+    is($dri->get_info('action'),'info','domain_info get_info(action)');
+
+    is($dri->get_info('exist'),1,'domain_info get_info(exist)');
+    is($dri->get_info('roid'),'EXAMPLE1-REP','domain_info get_info(roid)');
+    $s=$dri->get_info('status');
+    isa_ok($s,'Net::DRI::Data::StatusList','domain_info get_info(status)');
+    is_deeply([$s->list_status()],['ok'],'domain_info get_info(status) list');
+    is($s->is_active(),1,'domain_info get_info(status) is_active');
+    $s=$dri->get_info('contact');
+    isa_ok($s,'Net::DRI::Data::ContactSet','domain_info get_info(contact)');
+    is_deeply([$s->types()],['admin','registrant','tech'],'domain_info get_info(contact) types');
+    is($s->get('registrant')->srid(),'jd1234','domain_info get_info(contact) registrant srid');
+    is($s->get('admin')->srid(),'sh8013','domain_info get_info(contact) admin srid');
+    is($s->get('tech')->srid(),'sh8013','domain_info get_info(contact) tech srid');
+    $dh=$dri->get_info('host');
+    isa_ok($dh,'Net::DRI::Data::Hosts','domain_info get_info(host)');
+    @c=$dh->get_names();
+    is_deeply(\@c,['ns1.example.no','ns2.example.no'],'domain_info get_info(host) get_names');
+    $dh=$dri->get_info('ns');
+    isa_ok($dh,'Net::DRI::Data::Hosts','domain_info get_info(ns)');
+    @c=$dh->get_names();
+    is_deeply(\@c,['ns1.example.no','ns2.example.no'],'domain_info get_info(ns) get_names');
+    is($dri->get_info('clID'),'ClientX','domain_info get_info(clID)');
+    is($dri->get_info('crID'),'ClientY','domain_info get_info(crID)');
+    $d=$dri->get_info('crDate');
+    isa_ok($d,'DateTime','domain_info get_info(crDate)');
+    is("".$d,'1999-04-03T22:00:00','domain_info get_info(crDate) value');
+    is($dri->get_info('upID'),'ClientX','domain_info get_info(upID)');
+    $d=$dri->get_info('upDate');
+    isa_ok($d,'DateTime','domain_info get_info(upDate)');
+    is("".$d,'1999-12-03T09:00:00','domain_info get_info(upDate) value');
+    $d=$dri->get_info('exDate');
+    isa_ok($d,'DateTime','domain_info get_info(exDate)');
+    is("".$d,'2005-04-03T22:00:00','domain_info get_info(exDate) value');
+    $d=$dri->get_info('trDate');
+    isa_ok($d,'DateTime','domain_info get_info(trDate)');
+    is("".$d,'2000-04-08T09:00:00','domain_info get_info(trDate) value');
+    is_deeply($dri->get_info('auth'),{pw=>'2fooBAR'},'domain_info get_info(auth)');
+}
+
+#---  domain_info without auth
 
 $R2=$E1.'<response>'.r().'<resData><domain:infData xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example200.no</domain:name><domain:roid>EXAMPLE1-REP</domain:roid><domain:clID>ClientX</domain:clID></domain:infData></resData>'.$TRID.'</response>'.$E2;
 $rc=$dri->domain_info('example200.no');
@@ -105,6 +144,7 @@ is($dri->get_info('exist'),1,'domain_info get_info(exist)');
 is($dri->get_info('roid'),'EXAMPLE1-REP','domain_info get_info(roid)');
 is($dri->get_info('clID'),'ClientX','domain_info get_info(clID)');
 
+#--- domain_transfer_query
 
 $R2=$E1.'<response>'.r().'<resData><domain:trnData xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example201.no</domain:name><domain:trStatus>pending</domain:trStatus><domain:reID>ClientX</domain:reID><domain:reDate>2000-06-06T22:00:00.0Z</domain:reDate><domain:acID>ClientY</domain:acID><domain:acDate>2000-06-11T22:00:00.0Z</domain:acDate><domain:exDate>2002-09-08T22:00:00.0Z</domain:exDate></domain:trnData></resData>'.$TRID.'</response>'.$E2; 
 
@@ -226,6 +266,11 @@ $rc=$dri->domain_update('example206.no',$toc);
 is($R1,$E1.'<command><update><domain:update xmlns:domain="urn:ietf:params:xml:ns:domain-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:domain-1.0 domain-1.0.xsd"><domain:name>example206.no</domain:name><domain:add><domain:ns><domain:hostObj>ns2.example.no</domain:hostObj></domain:ns><domain:contact type="tech">mak21</domain:contact><domain:status lang="en" s="clientHold">Payment overdue.</domain:status></domain:add><domain:rem><domain:ns><domain:hostObj>ns1.example.no</domain:hostObj></domain:ns><domain:contact type="tech">sh8013</domain:contact><domain:status s="clientUpdateProhibited"/></domain:rem><domain:chg><domain:registrant>sh8013</domain:registrant><domain:authInfo><domain:pw>2BARfoo</domain:pw></domain:authInfo></domain:chg></domain:update></update><clTRID>ABC-12345</clTRID></command>'.$E2,'domain_update build');
 is($rc->is_success(),1,'domain_update is_success');
  
+# The .no withdraw command extension
+$rc=$dri->domain_withdraw('example206.no');
+is($rc->is_success(),1,'domain_withdraw is_success');
+
+
 ##################################################################################################################
 ## Host commands
 
@@ -524,7 +569,7 @@ $R2=$E1.'<greeting><svID>Example EPP server epp.example.no</svID><svDate>2000-06
 $rc=$dri->process('session','connect',[]);
 is($R1,$E1.'<hello/>'.$E2,'session connect build (hello command)');
 is($rc->is_success(),1,'session connect is_success');
-is_deeply($dri->protocol->server_greeting(),{svID=>'Example EPP server epp.example.no',svDate=>'2000-06-08T22:00:00.0Z',version=>['1.0'],lang=>['en','fr'],svcext=>['http://custom/obj1ext-1.0'],svcs=>['urn:ietf:params:xml:ns:obj1','urn:ietf:params:xml:ns:obj2','urn:ietf:params:xml:ns:obj3']},'session connect server_greeting parse');
+is_deeply($dri->protocol->server_greeting(),{svID=>'Example EPP server epp.example.no',svDate=>'2000-06-08T22:00:00.0Z',version=>['1.0'],lang=>['en','fr'],svcext=>['http://custom/obj1ext-1.0'],svcs=>['urn:ietf:params:xml:ns:obj1','urn:ietf:params:xml:ns:obj2','urn:ietf:params:xml:ns:obj3'],dcp=>'<dcp><access><all/></access><statement><purpose><admin/><prov/></purpose><recipient><ours/><public/></recipient><retention><stated/></retention></statement></dcp>'},'session connect server_greeting parse');
 
 
 $R2='';

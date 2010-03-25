@@ -1,7 +1,7 @@
 ## Domain Registry Interface, EURid Sunrise EPP extension for Net::DRI
 ## (from registration_guidelines_v1_0F-appendix2-sunrise.pdf )
 ##
-## Copyright (c) 2005,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2007,2008,2009,2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -25,11 +25,11 @@ use DateTime::Format::ISO8601;
 
 use Net::DRI::Util;
 use Net::DRI::Exception;
-use Net::DRI::Protocol::EPP::Core::Domain;
 use Net::DRI::Protocol::EPP::Extensions::EURid::Domain;
 use Net::DRI::DRD::EURid;
+use Net::DRI::Protocol::EPP::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.14 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -136,7 +136,7 @@ sub info_parse
    $cs->add($po->create_local_object('contact')->srid($c->firstChild->getData()),$c->getAttribute('type'));
   } elsif ($name eq 'domain:ns')
   {
-   $rinfo->{domain}->{$oname}->{ns}=Net::DRI::Protocol::EPP::Core::Domain::parse_ns($po,$c);
+   $rinfo->{domain}->{$oname}->{ns}=Net::DRI::Protocol::EPP::Util::parse_ns($po,$c);
   } elsif ($name eq 'domain:adr')
   {
    $rinfo->{domain}->{$oname}->{adr}=Net::DRI::Util::xml_parse_boolean($c->firstChild->getData());
@@ -152,7 +152,7 @@ sub apply
 {
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
- my @d=Net::DRI::Protocol::EPP::Core::Domain::build_command($mes,'apply',$domain);
+ my @d=Net::DRI::Protocol::EPP::Util::domain_build_command($mes,'apply',$domain);
 
  Net::DRI::Exception::usererr_insufficient_parameters('Apply action needs parameters') unless (defined($rd) && (ref($rd) eq 'HASH'));
  my @need=grep { !(exists($rd->{$_}) && $rd->{$_}) } qw/reference right prior-right-on-name prior-right-country documentaryevidence evidence-lang/;
@@ -185,7 +185,7 @@ sub apply
 
 
  ## Nameservers, OPTIONAL
- push @d,Net::DRI::Protocol::EPP::Core::Domain::build_ns($epp,$rd->{ns},$domain,'domain') if Net::DRI::Util::has_ns($rd);
+ push @d,Net::DRI::Protocol::EPP::Util::build_ns($epp,$rd->{ns},$domain,'domain') if Net::DRI::Util::has_ns($rd);
 
  ## Contacts, all OPTIONAL
  if (Net::DRI::Util::has_contact($rd))
@@ -193,7 +193,7 @@ sub apply
   my $cs=$rd->{contact};
   my @o=$cs->get('registrant');
   push @d,['domain:registrant',$o[0]->srid()] if (@o);
-  push @d,Net::DRI::Protocol::EPP::Core::Domain::build_contact_noregistrant($epp,$cs);
+  push @d,Net::DRI::Protocol::EPP::Util::build_core_contacts($epp,$cs);
  }
 
  $mes->command_body(\@d);

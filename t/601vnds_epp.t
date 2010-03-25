@@ -458,7 +458,7 @@ $R2=$E1.'<greeting><svID>Example EPP server epp.example.com</svID><svDate>2000-0
 $rc=$dri->process('session','connect',[]);
 is($R1,$E1.'<hello/>'.$E2,'session connect build (hello command)');
 is($rc->is_success(),1,'session connect is_success');
-is_deeply($dri->protocol->server_greeting(),{svID=>'Example EPP server epp.example.com',svDate=>'2000-06-08T22:00:00.0Z',version=>['1.0'],lang=>['en','fr'],svcext=>['http://custom/obj1ext-1.0'],svcs=>['urn:ietf:params:xml:ns:obj1','urn:ietf:params:xml:ns:obj2','urn:ietf:params:xml:ns:obj3']},'session connect server_greeting parse');
+is_deeply($dri->protocol->server_greeting(),{svID=>'Example EPP server epp.example.com',svDate=>'2000-06-08T22:00:00.0Z',version=>['1.0'],lang=>['en','fr'],svcext=>['http://custom/obj1ext-1.0'],svcs=>['urn:ietf:params:xml:ns:obj1','urn:ietf:params:xml:ns:obj2','urn:ietf:params:xml:ns:obj3'],dcp=>'<dcp><access><all/></access><statement><purpose><admin/><prov/></purpose><recipient><ours/><public/></recipient><retention><stated/></retention></statement></dcp>'},'session connect server_greeting parse');
 
 
 $R2='';

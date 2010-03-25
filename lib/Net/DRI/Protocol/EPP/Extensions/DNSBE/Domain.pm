@@ -1,7 +1,7 @@
 ## Domain Registry Interface, DNSBE Domain EPP extension commands
 ## (based on Registration_guidelines_v4_7_2-Part_4-epp.pdf)
 ##
-## Copyright (c) 2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -25,10 +25,10 @@ use Carp;
 
 use Net::DRI::Util;
 use Net::DRI::Exception;
-use Net::DRI::Protocol::EPP::Core::Domain;
 use Net::DRI::Data::Hosts;
+use Net::DRI::Protocol::EPP::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -58,7 +58,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006-2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -189,7 +189,7 @@ sub add_transfer
  my @n;
 
  my $creg=$cs->get('registrant');
- Net::DRI::Exception::usererr_invalid_parameters('registrant must be a contact object or #AUTO#') unless (Net::DRI::Util::isa_contact($creg,'Net::DRI::Data::Contact') || (!ref($creg) && ($creg eq '#AUTO#')));
+ Net::DRI::Exception::usererr_invalid_parameters('registrant must be a contact object or #AUTO#') unless (Net::DRI::Util::isa_contact($creg,'Net::DRI::Data::Contact::BE') || (!ref($creg) && ($creg eq '#AUTO#')));
  push @n,['dnsbe:registrant',ref($creg)? $creg->srid() : '#AUTO#' ];
 
  if (exists($rd->{trDate}))
@@ -199,7 +199,7 @@ sub add_transfer
  }
 
  my $cbill=$cs->get('billing');
- Net::DRI::Exception::usererr_invalid_parameters('billing must be a contact object') unless Net::DRI::Util::isa_contact($cbill);
+ Net::DRI::Exception::usererr_invalid_parameters('billing must be a contact object') unless Net::DRI::Util::isa_contact($cbill,'Net::DRI::Data::Contact::BE');
  push @n,['dnsbe:billing',$cbill->srid()];
 
  push @n,add_contact('accmgr',$cs,1) if $cs->has_type('accmgr');
@@ -208,7 +208,7 @@ sub add_transfer
 
  if (Net::DRI::Util::has_ns($rd))
  {
-  my $n=Net::DRI::Protocol::EPP::Core::Domain::build_ns($epp,$rd->{ns},$domain,'dnsbe');
+  my $n=Net::DRI::Protocol::EPP::Util::build_ns($epp,$rd->{ns},$domain,'dnsbe');
   my @ns=$mes->nsattrs('domain');
   push @$n,{'xmlns:domain'=>shift(@ns),'xsi:schemaLocation'=>sprintf('%s %s',@ns)};
   push @n,$n;
@@ -230,7 +230,7 @@ sub add_contact
 {
  my ($type,$cs,$max)=@_;
  $max--;
- my @r=grep { Net::DRI::Util::isa_contact($_) } ($cs->get($type));
+ my @r=grep { Net::DRI::Util::isa_contact($_,'Net::DRI::Data::Contact::BE') } ($cs->get($type));
  return map { ['dnsbe:'.$type,$_->srid()] } grep {defined} @r[0..$max];
 }
 
@@ -238,7 +238,7 @@ sub undelete
 {
  my ($epp,$domain)=@_;
  my $mes=$epp->message();
- my @d=Net::DRI::Protocol::EPP::Core::Domain::build_command($mes,'undelete',$domain);
+ my @d=Net::DRI::Protocol::EPP::Util::domain_build_command($mes,'undelete',$domain);
  $mes->command_body(\@d);
 }
 
@@ -246,10 +246,10 @@ sub transferq_request
 {
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
- my @d=Net::DRI::Protocol::EPP::Core::Domain::build_command($mes,['transferq',{'op'=>'request'}],$domain);
+ my @d=Net::DRI::Protocol::EPP::Util::domain_build_command($mes,['transferq',{'op'=>'request'}],$domain);
 
  Carp::croak('Key "period" should be key "duration"') if Net::DRI::Util::has_key($rd,'period');
- push @d,Net::DRI::Protocol::EPP::Core::Domain::build_period($rd->{period}) if Net::DRI::Util::has_duration($rd);
+ push @d,Net::DRI::Protocol::EPP::Util::build_period($rd->{period}) if Net::DRI::Util::has_duration($rd);
  $mes->command_body(\@d);
 
  my @n=add_transfer($epp,$mes,$domain,$rd);
@@ -261,7 +261,7 @@ sub trade
 {
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
- my @d=Net::DRI::Protocol::EPP::Core::Domain::build_command($mes,['trade',{'op'=>'request'}],$domain);
+ my @d=Net::DRI::Protocol::EPP::Util::domain_build_command($mes,['trade',{'op'=>'request'}],$domain);
  $mes->command_body(\@d);
 
  my @n=add_transfer($epp,$mes,$domain,$rd);
@@ -273,7 +273,7 @@ sub reactivate
 {
  my ($epp,$domain)=@_;
  my $mes=$epp->message();
- my @d=Net::DRI::Protocol::EPP::Core::Domain::build_command($mes,'reactivate',$domain);
+ my @d=Net::DRI::Protocol::EPP::Util::domain_build_command($mes,'reactivate',$domain);
  $mes->command_body(\@d);
 }
 

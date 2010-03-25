@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Logging into files
 ##
-## Copyright (c) 2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2009,2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -26,7 +26,7 @@ use Net::DRI::Exception;
 
 use IO::Handle; ## needed for the autoflush method on any lexical $fh
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf('%d'.'.%02d' x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf('%d'.'.%02d' x $#r, @r); };
 
 ####################################################################################################
 
@@ -49,7 +49,7 @@ sub setup_channel
  my $name=$self->generate_filename($type,$data);
  if (exists $self->{fh}->{$name}) { return; }
  my $fh;
- open $fh,'>>',$name or Net::DRI::Exception->die(0,'logging',3,'File '.$name.' is not available or unwritable');
+ open $fh,'>>',$name or Net::DRI::Exception->die(0,'logging',3,'File '.$name.' can not be open for writing: '.$!);
  $fh->autoflush(1); ## this is possible thanks to IO::Handle
  $self->{fh}->{$name}=$fh;
  return;
@@ -69,12 +69,7 @@ sub output
 sub generate_filename
 {
  my ($self,$type,$ctx)=@_;
- my $name=$type; ## safe default if no context provided
- if (defined $ctx && ref $ctx eq 'HASH')
- {
-  if (exists $ctx->{ctx}) { $ctx=$ctx->{ctx}; }
-  $name=sprintf '%s-%s',$ctx->{registry}->name(),$ctx->{profile};
- }
+ my $name=(defined $ctx && ref $ctx eq 'HASH')? sprintf('%s-%s',$ctx->{registry},$ctx->{profile}) : $type;
  return sprintf '%s/%d-%s.log',$self->{output_directory},$$,$name;
 }
 
@@ -167,7 +162,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright (c) 2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+Copyright (c) 2009,2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

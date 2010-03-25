@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:                Net-DRI
-version:             0.95
+version:             0.96
 abstract:            Interface to Domain Name Registries/Registrars/Resellers
 license:             gpl
 author:              
@@ -22,7 +22,7 @@ requires:
     Test::More:                    0
     Time::HiRes:                   0
     UNIVERSAL::require:            0
-    XML::LibXML:                   0
+    XML::LibXML:                   1.61
 meta-spec:
     url:     http://module-build.sourceforge.net/META-spec-v1.3.html
     version: 1.3

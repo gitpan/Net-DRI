@@ -24,10 +24,11 @@ use Net::DRI::Util;
 use Net::DRI::Exception;
 use Net::DRI::Data::Hosts;
 use Net::DRI::Data::ContactSet;
+use Net::DRI::Protocol::EPP::Util;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -282,7 +283,7 @@ sub info_parse
 		}
 		elsif ($name eq 'status')
 		{
-			push(@s,$po->parse_status($c));
+			push(@s,Net::DRI::Protocol::EPP::Util::parse_status($c));
 		}
 		elsif ($name eq 'authInfo')
 		{

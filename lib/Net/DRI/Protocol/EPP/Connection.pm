@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Connection handling
 ##
-## Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -24,7 +24,7 @@ use Net::DRI::Util;
 use Net::DRI::Data::Raw;
 use Net::DRI::Protocol::ResultStatus;
 
-our $VERSION=do { my @r=(q$Revision: 1.17 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.18 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -54,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -82,7 +82,7 @@ sub login
  push @d,['clID',$id];
  push @d,['pw',$pass];
  push @d,['newPW',$newpass] if (defined($newpass) && $newpass);
- push @d,['options',['version',$rg->{version}->[0]],['lang','en']];
+ push @d,['options',['version',$rg->{version}->[0]],['lang','en']]; ## TODO: allow choice of language if multiple choices (like fr+en in .CA) ?
 
  my @s;
  push @s,map { ['objURI',$_] } @{$rg->{svcs}};
@@ -190,18 +190,17 @@ sub parse_logout
  }
 }
 
+## This simple regex based poking function does obviously not handle all cases correctly,
+## but should be enough for parsing greeting/login/logout exchanges, which is all what is needed here
 sub find_code
 {
  my $dc=shift;
  my $a=$dc->as_string();
  return () unless ($a=~m!</epp>!);
  return (1000,'Greeting OK','en')  if ($a=~m!<greeting>!);
- $a=~s/>[\n\s\t]+/>/g;
- $a=~s/[\n\s\t]+</</g;
  my ($code,$msg,$lang);
- return () unless (($code)=($a=~m!<response><result code=["'](\d+)["']>!));
- return () unless (($lang,$msg)=($a=~m!<msg(?: lang=["'](\S+)["'])?>(.+)</msg>!));
- return (0+$code,$msg,$lang || 'en');
+ return () unless (($code,$lang,$msg)=($a=~m!<response>\s*<result\s+code=["'](\d+)["']>\s*<msg(?:\s+lang=["'](\S\S)["']\s*)?>\s*(.+?)\s*</msg>\s*<(?:value|extValue|/result)>!));
+ return (0+$code,$msg,defined $lang && length $lang ? $lang : 'en');
 }
 
 ## TODO: implement defaults from 4934bis

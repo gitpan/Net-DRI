@@ -27,7 +27,7 @@ use Net::DRI::Exception;
 
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 ## No status at all with Nominet
 ## Only domain:check is available
@@ -82,7 +82,7 @@ sub new
 {
  my $class=shift;
  my $self=$class->SUPER::new(@_);
- $self->{info}->{host_as_attr}=0;
+ $self->{info}->{host_as_attr}=1;
 
  bless($self,$class);
  return $self;

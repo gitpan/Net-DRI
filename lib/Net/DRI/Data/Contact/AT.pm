@@ -1,7 +1,7 @@
 ## Domain Registry Interface, Handling of contact data for .AT
 ## Contributed by Michael Braunoeder from NIC.AT <mib@nic.at>
 ##
-## Copyright (c) 2006,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2008-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -20,9 +20,12 @@ package Net::DRI::Data::Contact::AT;
 
 use strict;
 use warnings;
+
 use base qw/Net::DRI::Data::Contact/;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+use Net::DRI::Util;
+
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 __PACKAGE__->register_attributes(qw(type));
 
@@ -63,7 +66,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2008-2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -92,26 +95,25 @@ sub validate
   Net::DRI::Exception::usererr_insufficient_parameters('Invalid contact information: type mandatory') unless ($self->type());
  }
 
- push @errs,'srid' if ($self->srid() && $self->srid()!~m/^\w{1,80}-\w{1,8}$/); ## \w includes _ in Perl
- push @errs,'name' if ($self->name() && grep { !Net::DRI::Util::xml_is_normalizedstring($_,1,255) }     ($self->name()));
- push @errs,'org'  if ($self->org()  && grep { !Net::DRI::Util::xml_is_normalizedstring($_,undef,255) } ($self->org()));
+ push @errs,'srid' if ($self->srid() && $self->srid()!~m/^\w{1,80}-\w{1,8}$/ && $self->srid()!~m/^AUTO$/i); ## \w includes _ in Perl
+ push @errs,'name' if ($self->name() && !Net::DRI::Util::xml_is_normalizedstring(($self->name())[1],1,255));
+ push @errs,'org'  if ($self->org()  && !Net::DRI::Util::xml_is_normalizedstring(($self->org())[1],undef,255));
 
  my @rs=($self->street());
- foreach my $i (0,1)
+ if ($rs[1])
  {
-  next unless $rs[$i];
-  push @errs,'street' if ((ref($rs[$i]) ne 'ARRAY') || (@{$rs[$i]} > 3) || (grep { !Net::DRI::Util::xml_is_normalizedstring($_,undef,255) } @{$rs[$i]}));
+  push @errs,'street' if ((ref($rs[1]) ne 'ARRAY') || (@{$rs[1]} > 3) || (grep { !Net::DRI::Util::xml_is_normalizedstring($_,undef,255) } @{$rs[1]}));
  }
 
- push @errs,'city' if ($self->city() && grep { !Net::DRI::Util::xml_is_normalizedstring($_,1,255) }     ($self->city()));
- push @errs,'sp'   if ($self->sp()   && grep { !Net::DRI::Util::xml_is_normalizedstring($_,undef,255) } ($self->sp()));
- push @errs,'pc'   if ($self->pc()   && grep { !Net::DRI::Util::xml_is_token($_,undef,16) }             ($self->pc()));
- push @errs,'cc'   if ($self->cc()   && grep { !Net::DRI::Util::xml_is_token($_,2,2) }                  ($self->cc()));
+ push @errs,'city' if ($self->city() && !Net::DRI::Util::xml_is_normalizedstring(($self->city())[1],1,255));
+ push @errs,'sp'   if ($self->sp()   && !Net::DRI::Util::xml_is_normalizedstring(($self->sp())[1],undef,255));
+ push @errs,'pc'   if ($self->pc()   && !Net::DRI::Util::xml_is_token(($self->pc())[1],1,16));
+ push @errs,'cc'   if ($self->cc()   && !Net::DRI::Util::xml_is_token(($self->cc())[1],2,2));
  push @errs,'cc'   if ($self->cc()   && grep { !exists($Net::DRI::Util::CCA2{uc($_)}) }                 ($self->cc()));
 
- push @errs,'voice' if ($self->voice() && !Net::DRI::Util::xml_is_token($self->voice(),undef,17) && $self->voice()!~m/^\+[0-9]{1,3}\.[0-9]{1,14}(?:x\d+)?$/);
- push @errs,'fax'   if ($self->fax()   && !Net::DRI::Util::xml_is_token($self->fax(),undef,17)   && $self->fax()!~m/^\+[0-9]{1,3}\.[0-9]{1,14}(?:x\d+)?$/);
- push @errs,'email' if ($self->email() && !Net::DRI::Util::xml_is_token($self->email(),1,undef) && !Email::Valid->rfc822($self->email()));
+ push @errs,'voice' if ($self->voice() && (!Net::DRI::Util::xml_is_token($self->voice(),undef,17) || $self->voice()!~m/^\+[0-9]{1,3}\.[0-9]{1,14}(?:x\d+)?$/));
+ push @errs,'fax'   if ($self->fax()   && (!Net::DRI::Util::xml_is_token($self->fax(),undef,16)   || $self->fax()!~m/^\+[0-9]{1,3}\.[0-9]{1,14}(?:x\d+)?$/));
+ push @errs,'email' if ($self->email() && (!Net::DRI::Util::xml_is_token($self->email(),1,undef)  || !Email::Valid->rfc822($self->email())));
 
  my $ra=$self->auth();
  push @errs,'auth' if ($ra && (ref($ra) eq 'HASH') && exists($ra->{pw}) && !Net::DRI::Util::xml_is_normalizedstring($ra->{pw}));

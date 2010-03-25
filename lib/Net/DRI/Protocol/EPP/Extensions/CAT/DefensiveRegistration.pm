@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .CAT Defensive Registration EPP extension commands
 ##
-## Copyright (c) 2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -22,9 +22,9 @@ use warnings;
 
 use Net::DRI::Util;
 use Net::DRI::Exception;
-use Net::DRI::Protocol::EPP::Core::Domain;
+use Net::DRI::Protocol::EPP::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -54,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006-2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -121,7 +121,7 @@ sub build_contact
 {
  my ($d,$type)=@_;
  Net::DRI::Exception::usererr_insufficient_parameters($type.' contact is mandatory') unless (defined($d) && $d);
- $d=$d->srid() if Net::DRI::Util::isa_contact($d);
+ $d=$d->srid() if Net::DRI::Util::isa_contact($d,'Net::DRI::Data::Contact::CAT');
  Net::DRI::Exception->die(1,'protocol/EPP',10,"Invalid $type contact id: $d") unless Net::DRI::Util::xml_is_token($d,3,16);
  return ($type eq 'registrant')? ['defreg:registrant',$d] : ['defreg:contact',$d,{type => $type}];
 }
@@ -186,7 +186,7 @@ sub build_trademark
 
 sub build_period
 {
- my $p=Net::DRI::Protocol::EPP::Core::Domain::build_period(shift);
+ my $p=Net::DRI::Protocol::EPP::Util::build_period(shift);
  $p->[0]='defreg:period';
  return $p;
 }
@@ -267,7 +267,7 @@ sub info_parse
    $rinfo->{defreg}->{$oname}->{pattern}=$c->textContent();
   } elsif ($name eq 'status')
   {
-   push @s,$po->parse_status($c);
+   push @s,Net::DRI::Protocol::EPP::Util::parse_status($c);
   } elsif ($name eq 'registrant')
   {
    $cs->set($po->create_local_object('contact')->srid($c->textContent()),'registrant');
@@ -412,7 +412,7 @@ sub update
  my (@chg,$chg);
 
  $chg=$todo->set('registrant');
- push @chg,['defreg:registrant',$chg->srid()] if Net::DRI::Util::isa_contact($chg);
+ push @chg,['defreg:registrant',$chg->srid()] if Net::DRI::Util::isa_contact($chg,'Net::DRI::Data::Contact::CAT');
  $chg=$todo->set('auth');
  push @chg,build_authinfo($chg) if ($chg && ref($chg));
  $chg=$todo->set('maintainer');

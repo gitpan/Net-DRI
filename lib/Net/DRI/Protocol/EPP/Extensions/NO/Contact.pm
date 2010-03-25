@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .NO Contact extensions
 ##
-## Copyright (c) 2008 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
+## Copyright (c) 2008,2010 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
 ##                    Trond Haugen E<lt>info@norid.noE<gt>
 ##                    All rights reserved.
 ##
@@ -20,10 +20,13 @@
 package Net::DRI::Protocol::EPP::Extensions::NO::Contact;
 
 use strict;
-use Net::DRI::Util;
-use Net::DRI::Protocol::EPP::Core::Contact;
+use warnings;
 
-our $VERSION = do { my @r = ( q$Revision: 1.2 $ =~ /\d+/gmx ); sprintf( "%d" . ".%02d" x $#r, @r ); };
+use Net::DRI::Util;
+use Net::DRI::Protocol::EPP::Util;
+use Net::DRI::Protocol::EPP::Extensions::NO::Host;
+
+our $VERSION = do { my @r = ( q$Revision: 1.3 $ =~ /\d+/gmx ); sprintf( "%d" . ".%02d" x $#r, @r ); };
 
 =pod
 
@@ -53,7 +56,7 @@ Trond Haugen, E<lt>info@norid.noE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
+Copyright (c) 2008,2010 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
 Trond Haugen E<lt>info@norid.noE<gt>
 All rights reserved.
 
@@ -71,9 +74,12 @@ See the LICENSE file that comes with this distribution for more details.
 sub register_commands {
     my ( $class, $version ) = @_;
     my %tmp = (
+        check  => [ \&facet,  undef ],
+        info   => [ \&facet,  \&parse_info ],
+       delete => [ \&facet,  undef ],
         create => [ \&create, undef ],
-        info   => [ undef,    \&parse_info ],
         update => [ \&update, undef ],
+
     );
 
     return { 'contact' => \%tmp };
@@ -142,7 +148,7 @@ sub parse_info {
     @e = $condata->getElementsByTagNameNS( $NS, 'mobilePhone' );
     if ( @e && $e[0] ) {
         $c->mobilephone(
-            Net::DRI::Protocol::EPP::Core::Contact::parse_tel( $e[0] ) );
+            Net::DRI::Protocol::EPP::Util::parse_tel( $e[0] ) );
         $rinfo->{contact}->{$oname}->{identity} = $c->mobilephone();
     }
 
@@ -200,6 +206,12 @@ sub parse_info {
     return;
 }
 
+sub facet {
+    my ( $epp, $o, $rd ) = @_;
+
+    return Net::DRI::Protocol::EPP::Extensions::NO::Host::build_facets( $epp, $rd );
+}
+
 sub build_command_extension {
     my ( $mes, $epp, $tag ) = @_;
 
@@ -222,6 +234,7 @@ sub add_no_extensions {
     my $rc  = $contact->rolecontact();
     my $aem = $contact->xemail();
     my $xd  = $contact->xdisclose();
+    my $fs  = $contact->facets();
 
     return
         unless ( defined($ty)
@@ -229,7 +242,10 @@ sub add_no_extensions {
         || defined($mp)
         || defined($org)
         || defined($rc)
-        || defined($aem) );
+        || defined($aem)
+       || defined($fs)
+       );
+
 
     my $eid = build_command_extension( $mes, $epp, 'no-ext-contact:' . $op );
     my @e;
@@ -251,7 +267,7 @@ sub add_no_extensions {
 
     #mobile is an e164 number
     push @e,
-        Net::DRI::Protocol::EPP::Core::Contact::build_tel(
+        Net::DRI::Protocol::EPP::Util::build_tel(
         'no-ext-contact:mobilePhone', $mp )
         if defined($mp);
 
@@ -308,7 +324,16 @@ sub add_no_extensions {
             [ 'no-ext-contact:disclose', @d, { flag => ( keys(%v) )[0] } ];
 	}
     }
-    return $mes->command_extension( $eid, \@e );
+    my $r = $mes->command_extension( $eid, \@e );
+
+    # Add facet if any is set
+    if ($fs) {
+       my $rd;
+       $rd->{facets} = $fs;
+       $r = facet($epp, $contact, $rd);
+    }
+
+    return $r;
 }
 
 sub create {
@@ -320,9 +345,11 @@ sub update {
     my ( $epp, $co, $todo ) = @_;
     my $mes = $epp->message();
 
+    my $r;
     my $mp = $todo->set('mobilephone');
     my $id = $todo->set('identity');
     my $xd = $todo->set('xdisclose');
+    my $fs = $todo->set('facets');
 
     my $orgtoadd = $todo->add('organization');
     my $orgtodel = $todo->del('organization');
@@ -333,8 +360,18 @@ sub update {
     my $xetoadd = $todo->add('xemail');
     my $xetodel = $todo->del('xemail');
 
-    return
-        unless ( defined($mp)
+    return unless ( defined($mp)
+                   || $id
+                   || $orgtoadd
+                   || $orgtodel
+                   || $rctoadd
+                   || $rctodel
+                   || $xetoadd
+                   || $xetodel
+                   || $xd
+                   || $fs);
+
+    if ( defined($mp)
         || $id
         || $orgtoadd
         || $orgtodel
@@ -342,78 +379,87 @@ sub update {
         || $rctodel
         || $xetoadd
         || $xetodel
-        || $xd );
+        || $xd) {
 
-    my $eid = build_command_extension( $mes, $epp, 'no-ext-contact:update' );
+       my $eid = build_command_extension( $mes, $epp, 'no-ext-contact:update' );
 
-    my ( @n, @s );
+       my ( @n, @s );
 
-    if ( defined($mp) ) {
-        push @s,
-            Net::DRI::Protocol::EPP::Core::Contact::build_tel(
-            'no-ext-contact:mobilePhone', $mp );
-    }
-    if (   defined($id)
-        && ( ref($id) eq 'HASH' )
-        && exists( $id->{type} )
-        && exists( $id->{value} ) )
-    {
-        push @s,
+       if ( defined($mp) ) {
+           push @s,
+            Net::DRI::Protocol::EPP::Util::build_tel(
+               'no-ext-contact:mobilePhone', $mp );
+       }
+       if (   defined($id)
+              && ( ref($id) eq 'HASH' )
+              && exists( $id->{type} )
+              && exists( $id->{value} ) )
+       {
+           push @s,
             [
             'no-ext-contact:identity', { type => $id->{type} },
             $id->{value}
             ];
-    }
+       }
 
-    # xdisclose
-    if ( ref($xd) && $xd ) {
-        my @d;
-        my %v = map { $_ => 1 } values(%$xd);
-        push @d, ['no-ext-contact:mobilePhone']
-            if exists( $xd->{mobilePhone} );
-        push @s,
+       # xdisclose
+       if ( ref($xd) && $xd ) {
+           my @d;
+           my %v = map { $_ => 1 } values(%$xd);
+           push @d, ['no-ext-contact:mobilePhone']
+               if exists( $xd->{mobilePhone} );
+           push @s,
             [ 'no-ext-contact:disclose', @d, { flag => ( keys(%v) )[0] } ];
-    }
-    push @n, [ 'no-ext-contact:chg', @s ] if ( @s > 0 );
+       }
+       push @n, [ 'no-ext-contact:chg', @s ] if ( @s > 0 );
 
-    @s = undef;
-    if (   ( defined($orgtoadd) || defined($rctoadd) || defined($xetoadd) )
-        && ( $rctoadd || $orgtoadd || $xetoadd ) )
-    {
-        push @s,
+       @s = undef;
+       if (   ( defined($orgtoadd) || defined($rctoadd) || defined($xetoadd) )
+              && ( $rctoadd || $orgtoadd || $xetoadd ) )
+       {
+           push @s,
             map { [ 'no-ext-contact:email', $_ ] }
             ( ref($xetoadd) eq 'ARRAY' ) ? @$xetoadd : ($xetoadd)
-            if ($xetoadd);
-        push @s,
+               if ($xetoadd);
+           push @s,
             map { [ 'no-ext-contact:organization', $_ ] }
             ( ref($orgtoadd) eq 'ARRAY' ) ? @$orgtoadd : ($orgtoadd)
-            if ($orgtoadd);
-        push @s,
+               if ($orgtoadd);
+           push @s,
             map { [ 'no-ext-contact:roleContact', $_ ] }
             ( ref($rctoadd) eq 'ARRAY' ) ? @$rctoadd : ($rctoadd)
-            if ($rctoadd);
-        push @n, [ 'no-ext-contact:add', @s ] if ( @s > 0 );
-    }
-    @s = undef;
-    if (   defined($orgtodel)
-        || defined( $rctodel || defined($xetoadd) )
-        && ( $rctodel || $orgtodel || $xetodel ) )
-    {
-        push @s,
+               if ($rctoadd);
+           push @n, [ 'no-ext-contact:add', @s ] if ( @s > 0 );
+       }
+       @s = undef;
+       if (   defined($orgtodel)
+              || defined( $rctodel || defined($xetoadd) )
+              && ( $rctodel || $orgtodel || $xetodel ) )
+       {
+           push @s,
             map { [ 'no-ext-contact:email', $_ ] }
             ( ref($xetodel) eq 'ARRAY' ) ? @$xetodel : ($xetodel)
-            if ($xetodel);
-        push @s,
+               if ($xetodel);
+           push @s,
             map { [ 'no-ext-contact:organization', $_ ] }
             ( ref($orgtodel) eq 'ARRAY' ) ? @$orgtodel : ($orgtodel)
-            if ($orgtodel);
-        push @s,
+               if ($orgtodel);
+           push @s,
             map { [ 'no-ext-contact:roleContact', $_ ] }
             ( ref($rctodel) eq 'ARRAY' ) ? @$rctodel : ($rctodel)
-            if ($rctodel);
-        push @n, [ 'no-ext-contact:rem', @s ] if ( @s > 0 );
+               if ($rctodel);
+           push @n, [ 'no-ext-contact:rem', @s ] if ( @s > 0 );
+       }
+       $r = $mes->command_extension( $eid, \@n );
     }
-    return $mes->command_extension( $eid, \@n );
+
+    if ($fs) {
+       my $rd;
+       $rd->{facets} = $fs;
+       $r = facet($epp, $co, $rd);
+       
+    }
+    return $r;
 }
 
 ####################################################################################################

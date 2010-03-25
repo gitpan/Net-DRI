@@ -1,6 +1,6 @@
 ## Domain Registry Interface, AFNIC EPP Domain extensions
 ##
-## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -23,7 +23,7 @@ use warnings;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -53,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008-2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -71,6 +71,7 @@ sub register_commands
 {
  my ($class,$version)=@_;
  my %tmp=(
+           create => [ \&create, undef ],
            update => [ \&update, undef ],
            transfer_request => [ \&transfer_request, undef ],
            trade_request    => [ \&trade_request, \&trade_parse ],
@@ -104,10 +105,11 @@ sub build_domain
 sub build_registrant
 {
  my ($rd)=@_;
- Net::DRI::Exception::usererr_invalid_parameters('AFNIC needs contact for domain_trade') unless Net::DRI::Util::has_contact($rd);
+ Net::DRI::Exception::usererr_invalid_parameters('AFNIC needs contacts for domain operations') unless Net::DRI::Util::has_contact($rd);
  my @t=$rd->{contact}->get('registrant');
- Net::DRI::Exception::usererr_invalid_parameters('AFNIC needs one contact of type registrant') unless (@t==1 && Net::DRI::Util::isa_contact($t[0]));
+ Net::DRI::Exception::usererr_invalid_parameters('AFNIC needs one contact of type registrant') unless (@t==1 && Net::DRI::Util::isa_contact($t[0],'Net::DRI::Data::Contact::AFNIC'));
  $t[0]->validate_registrant();
+ Net::DRI::Exception::usererr_invalid_parameters('Registrant contact must have an id') unless length $t[0]->srid();
  return ['frnic:registrant',$t[0]->srid()];
 }
 
@@ -120,10 +122,10 @@ sub build_cltrid
 sub verify_contacts
 {
  my $rd=shift;
- Net::DRI::Exception::usererr_invalid_parameters('AFNIC needs contact for domain_transfer/domain_trade') unless Net::DRI::Util::has_contact($rd);
+ Net::DRI::Exception::usererr_invalid_parameters('AFNIC needs contacts for domain operations') unless Net::DRI::Util::has_contact($rd);
  my @t=$rd->{contact}->get('admin');
- Net::DRI::Exception::usererr_invalid_parameters('AFNIC needs one contact of type admin, and only one') unless (@t==1 && Net::DRI::Util::isa_contact($t[0]));
- @t=grep { Net::DRI::Util::isa_contact($_) } $rd->{contact}->get('tech');
+ Net::DRI::Exception::usererr_invalid_parameters('AFNIC needs one contact of type admin, and only one') unless (@t==1 && Net::DRI::Util::isa_contact($t[0],'Net::DRI::Data::Contact::AFNIC'));
+ @t=grep { Net::DRI::Util::isa_contact($_,'Net::DRI::Data::Contact::AFNIC') } $rd->{contact}->get('tech');
  Net::DRI::Exception::usererr_invalid_parameters('AFNIC needs one to three contacts of type tech') unless (@t >= 1 && @t <= 3);
  }
 
@@ -136,6 +138,17 @@ sub build_contacts
  push @n,map { ['frnic:contact',{type => 'tech'},$_->srid()] } $cs->get('tech'); ## 1 to 3 allowed
  return @n;
 }
+
+sub create
+{
+ my ($epp,$domain,$rd)=@_;
+ my $mes=$epp->message();
+
+ ## We just make sure that we have all contact data
+ verify_contacts($rd);
+ build_registrant($rd);
+}
+
 
 sub update
 {

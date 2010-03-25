@@ -1,6 +1,6 @@
 ## Domain Registry Interface, SOAP Transport (HTTP/HTTPS)
 ##
-## Copyright (c) 2005,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2009,2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -26,7 +26,7 @@ use Net::DRI::Exception;
 
 use SOAP::Lite;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -93,7 +93,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2009,2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -105,12 +105,12 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
-#######################################################################################
+####################################################################################################
+
 sub new
 {
  my ($class,$ctx,$rp)=@_;
  my %opts=%$rp;
- my %opts=(@_==1 && ref($_[0]))? %{$_[0]} : @_;
  my $self=$class->SUPER::new($ctx,\%opts); ## We are now officially a Net::DRI::Transport instance
  $self->has_state(0);
  $self->is_sync(1);
@@ -119,12 +119,11 @@ sub new
 
  my %t;
 
- Net::DRI::Exception::usererr_insufficient_parameters("proxy_url must be defined") unless (exists($opts{proxy_url}));
- Net::DRI::Exception::usererr_invalid_parameters("proxy_url must be http:// or https://") unless ($opts{proxy_url}=~m!^https?://!);
+ Net::DRI::Exception::usererr_insufficient_parameters('proxy_url must be defined') unless (exists($opts{proxy_url}));
+ Net::DRI::Exception::usererr_invalid_parameters('proxy_url must be http:// or https://') unless ($opts{proxy_url}=~m!^https?://!);
+ Net::DRI::Exception::usererr_insufficient_parameters('service_wsdl') unless (exists($opts{service_wsdl}));
+ Net::DRI::Exception::usererr_invalid_parameters('service_wsdl must be a ref hash') unless (ref($opts{service_wsdl}) eq 'HASH'); ## Name (without .wsdl),ex: Domain => Path to corresponding wsdl file
 
- Net::DRI::Exception::usererr_insufficient_parameters("service_wsdl") unless (exists($opts{service_wsdl}));
- Net::DRI::Exception::usererr_invalid_parameters("service_wsdl must be a ref hash") unless (ref($opts{service_wsdl}) eq 'HASH'); ## Name (without .wsdl),ex: Domain => Path to corresponding wsdl file
- 
  my $service=SOAP::Lite->on_fault(\&soap_fault);
  my %st;
 
@@ -132,6 +131,7 @@ sub new
  {
   my $go=$service->service($v);
   my $t=$go->transport();
+  $t->agent(sprintf('Net::DRI/%s Net::DRI::Transport::SOAP/%s',$Net::DRI::VERSION,$VERSION).$t->agent());
   if ($self->timeout())
   {
    $t->proxy($opts{proxy_url},timeout => $self->timeout());
@@ -152,7 +152,7 @@ sub new
  {
   $ENV{HTTPS_CA_FILE}=$opts{ssl_ca_file}; ## How to handle multiple SOAP instances in the same process ??
  }
- 
+
  $t{soap}=$service;
  $self->{transport}=\%t;
  bless($self,$class);
@@ -162,8 +162,8 @@ sub new
 sub soap_fault
 {
  my($soap,$res)=@_; 
- my $msg=ref($res)? $res->faultstring : $soap->transport->status;
- Net::DRI::Exception->die(1,'transport/soap',7,"SOAP fault: $msg");
+ my $msg=ref $res ? $res->faultstring() : $soap->transport()->status();
+ Net::DRI::Exception->die(1,'transport/soap',7,'SOAP fault: '.$msg);
 }
 
 sub send
@@ -205,5 +205,5 @@ sub _soap_receive
  return $r; ## will we need one day access to $so ?
 }
 
-#####################################################################################################
+####################################################################################################
 1;

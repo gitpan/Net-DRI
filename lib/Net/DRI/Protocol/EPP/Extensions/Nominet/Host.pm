@@ -23,7 +23,7 @@ use warnings;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -179,8 +179,8 @@ sub update
 
  if (defined($ipset) && $ipset)
  {
-  Net::DRI::Exception::usererr_invalid_parameters($todo.' must be a Net::DRI::Data::Hosts object') unless Net::DRI::Util::isa_hosts($todo);
-  my ($name,$r4,$r6)=$ns->get_details(1);
+  Net::DRI::Exception::usererr_invalid_parameters($ipset.' must be a Net::DRI::Data::Hosts object') unless Net::DRI::Util::isa_hosts($ipset);
+  my ($name,$r4,$r6)=$ipset->get_details(1);
   push @d,['ns:addr',{ip=>'v4'},$r4->[0]] if @$r4; ## it seems only one IP is allowed
   push @d,['ns:addr',{ip=>'v6'},$r6->[0]] if @$r6; ## ditto
  }

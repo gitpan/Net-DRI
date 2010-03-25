@@ -21,8 +21,9 @@ use strict;
 use warnings;
 
 use Net::DRI::Util;
+use Net::DRI::Protocol::EPP::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -96,7 +97,7 @@ sub parse
    $oname=lc($c->textContent());
   } elsif ($name eq 'rgpStatus')
   {
-   $w{status}=$po->create_local_object('status')->add($po->parse_status($c));
+   $w{status}=$po->create_local_object('status')->add(Net::DRI::Protocol::EPP::Util::parse_status($c));
   } elsif ($name=~m/^(reqDate|reportDueDate)$/)
   {
    $w{Net::DRI::Util::remcam($name)}=$po->parse_iso8601($c->textContent());

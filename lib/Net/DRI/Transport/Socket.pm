@@ -1,6 +1,6 @@
 ## Domain Registry Interface, TCP/SSL Socket Transport
 ##
-## Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -30,7 +30,7 @@ use Net::DRI::Exception;
 use Net::DRI::Util;
 use Net::DRI::Data::Raw;
 
-our $VERSION=do { my @r=(q$Revision: 1.30 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.32 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -112,7 +112,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -146,6 +146,9 @@ sub new
  $self->is_sync(1);
  $self->name('socket_inet');
  $self->version('0.3');
+ delete($ctx->{protocol});
+ delete($ctx->{registry});
+ delete($ctx->{profile});
 
  Net::DRI::Exception::usererr_insufficient_parameters('socktype must be defined') unless (exists($opts{socktype}));
  Net::DRI::Exception::usererr_invalid_parameters('socktype must be ssl, tcp or udp') unless ($opts{socktype}=~m/^(ssl|tcp|udp)$/);
@@ -161,7 +164,7 @@ sub new
  if (exists($opts{find_remote_server}) && defined($opts{find_remote_server}) && $t{pc}->can('find_remote_server'))
  {
   ($opts{remote_host},$opts{remote_port})=$t{pc}->find_remote_server($self,$opts{find_remote_server});
-  $self->log_output('notice','transport',{ctx=>$ctx,trid=>$ctx->{trid},phase=>'opening',driver=>$self->name().'/'.$self->version(),message=>'Found the following remote_host:remote_port = '.$opts{remote_host}.':'.$opts{remote_port}});
+  $self->log_output('notice','transport',$ctx,{phase=>'opening',message=>'Found the following remote_host:remote_port = '.$opts{remote_host}.':'.$opts{remote_port}});
  }
  foreach my $p ('remote_host','remote_port','protocol_version')
  {
@@ -241,10 +244,10 @@ sub open_socket
   $sock=IO::Socket::INET->new(%n);
  }
 
- Net::DRI::Exception->die(1,'transport/socket',6,'Unable to setup the socket for '.$t->{remote_uri}.' with error: '.$@.($type eq 'ssl'? ' and SSL error: '.IO::Socket::SSL::errstr() : '')) unless defined($sock);
+ Net::DRI::Exception->die(1,'transport/socket',6,'Unable to setup the socket for '.$t->{remote_uri}.' with error: "'.$!.($type eq 'ssl'? '" and SSL error: "'.IO::Socket::SSL::errstr().'"' : '"')) unless defined $sock;
  $sock->autoflush(1);
  $self->sock($sock);
- $self->log_output('notice','transport',{ctx=>$ctx,trid=>$ctx->{trid},phase=>'opening',driver=>$self->name().'/'.$self->version(),message=>'Successfully opened socket to '.$t->{remote_uri}});
+ $self->log_output('notice','transport',$ctx,{phase=>'opening',message=>'Successfully opened socket to '.$t->{remote_uri}});
  return;
 }
 
@@ -255,13 +258,13 @@ sub send_login
  my $sock=$self->sock();
  my $pc=$t->{pc};
  my $dr;
- my $cltrid=$self->generate_trid();
+ my $cltrid=$self->generate_trid($self->{logging_ctx}->{registry});
 
  ## Get server greeting, if any
  if ($pc->can('parse_greeting'))
  {
   $dr=$pc->read_data($self,$sock);
-  $self->log_output('notice','transport',{ctx=>$ctx,trid=>$cltrid,phase=>'opening',direction=>'in',driver=>$self->name().'/'.$self->version(),message=>$dr});
+  $self->log_output('notice','transport',$ctx,{trid=>$cltrid,phase=>'opening',direction=>'in',message=>$dr});
   my $rc1=$pc->parse_greeting($dr); ## gives back a Net::DRI::Protocol::ResultStatus
   die($rc1) unless $rc1->is_success();
  }
@@ -272,33 +275,33 @@ sub send_login
   Net::DRI::Exception::usererr_insufficient_parameters($p.' must be defined') unless (exists($t->{$p}) && $t->{$p});
  }
 
- $cltrid=$self->generate_trid();
+ $cltrid=$self->generate_trid($self->{logging_ctx}->{registry});
  my $login=$pc->login($t->{message_factory},$t->{client_login},$t->{client_password},$cltrid,$dr,$t->{client_newpassword},$t->{protocol_data});
- $self->log_output('notice','transport',{ctx=>$ctx,trid=>$cltrid,phase=>'opening',direction=>'out',driver=>$self->name().'/'.$self->version(),message=>$login});
+ $self->log_output('notice','transport',$ctx,{otype=>'session',oaction=>'login',trid=>$cltrid,phase=>'opening',direction=>'out',message=>$login});
  Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send login message to '.$t->{remote_uri}) unless ($sock->print($pc->write_message($self,$login)));
 
  ## Verify login successful
  $dr=$pc->read_data($self,$sock);
- $self->log_output('notice','transport',{ctx=>$ctx,trid=>$cltrid,phase=>'opening',direction=>'in',driver=>$self->name().'/'.$self->version(),message=>$dr});
+ $self->log_output('notice','transport',$ctx,{trid=>$cltrid,phase=>'opening',direction=>'in',message=>$dr});
  my $rc2=$pc->parse_login($dr); ## gives back a Net::DRI::Protocol::ResultStatus
  die($rc2) unless $rc2->is_success();
 }
 
 sub send_logout
 {
- my ($self,$ctx)=@_;
+ my ($self)=@_;
  my $t=$self->transport_data();
  my $sock=$self->sock();
  my $pc=$t->{pc};
 
  return unless ($pc->can('logout') && $pc->can('parse_logout'));
 
- my $cltrid=$self->generate_trid();
+ my $cltrid=$self->generate_trid($self->{logging_ctx}->{registry});
  my $logout=$pc->logout($t->{message_factory},$cltrid);
- $self->log_output('notice','transport',{ctx=>$ctx,trid=>$cltrid,phase=>'closing',direction=>'out',driver=>$self->name().'/'.$self->version(),message=>$logout});
+ $self->log_output('notice','transport',{otype=>'session',oaction=>'logout'},{trid=>$cltrid,phase=>'closing',direction=>'out',message=>$logout});
  Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send logout message to '.$t->{remote_uri}) unless ($sock->print($pc->write_message($self,$logout)));
  my $dr=$pc->read_data($self,$sock); ## We expect this to throw an exception, since the server will probably cut the connection
- $self->log_output('notice','transport',{ctx=>$ctx,trid=>$cltrid,phase=>'closing',direction=>'in',driver=>$self->name().'/'.$self->version(),message=>$dr});
+ $self->log_output('notice','transport',{otype=>'session',oaction=>'logout'},{trid=>$cltrid,phase=>'closing',direction=>'in',message=>$dr});
  my $rc1=$pc->parse_logout($dr);
  die($rc1) unless $rc1->is_success();
 }
@@ -316,25 +319,25 @@ sub open_connection
 
 sub ping
 {
- my ($self,$autorecon,$ctx)=@_;
- $autorecon||=0;
+ my ($self,$autorecon)=@_;
+ $autorecon=0 unless defined $autorecon;
  my $t=$self->transport_data();
  my $sock=$self->sock();
  my $pc=$t->{pc};
  Net::DRI::Exception::err_method_not_implemented() unless ($pc->can('keepalive') && $pc->can('parse_keepalive'));
 
- my $cltrid=$self->generate_trid();
+ my $cltrid=$self->generate_trid($self->{logging_ctx}->{registry});
  eval
  {
   local $SIG{ALRM}=sub { die 'timeout' };
   alarm(10);
   my $noop=$pc->keepalive($t->{message_factory},$cltrid);
-  $self->log_output('notice','transport',{ctx=>$ctx,trid=>$cltrid,phase=>'keepalive',direction=>'out',driver=>$self->name().'/'.$self->version(),message=>$noop});
+  $self->log_output('notice','transport',{otype=>'session',oaction=>'keepalive'},{trid=>$cltrid,phase=>'keepalive',direction=>'out',message=>$noop});
   Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send ping message to '.$t->{remote_uri}) unless ($sock->print($pc->write_message($self,$noop)));
   $self->time_used(time());
   $t->{exchanges_done}++;
   my $dr=$pc->read_data($self,$sock);
-  $self->log_output('notice','transport',{ctx=>$ctx,trid=>$cltrid,phase=>'keepalive',direction=>'in',driver=>$self->name().'/'.$self->version(),message=>$dr});
+  $self->log_output('notice','transport',{otype=>'session',oaction=>'keepalive'},{trid=>$cltrid,phase=>'keepalive',direction=>'in',message=>$dr});
   my $rc=$pc->parse_keepalive($dr);
   die($rc) unless $rc->is_success();
  };
@@ -343,7 +346,7 @@ sub ping
  if ($@)
  {
   $self->current_state(0);
-  $self->open_connection($ctx) if $autorecon;
+  $self->open_connection({}) if $autorecon;
  } else
  {
   $self->current_state(1);
@@ -353,31 +356,31 @@ sub ping
 
 sub close_socket
 {
- my ($self,$ctx)=@_;
+ my ($self)=@_;
  my $t=$self->transport_data();
  $self->sock()->close();
- $self->log_output('notice','transport',{ctx=>$ctx,trid=>$ctx->{trid},phase=>'closing',driver=>$self->name().'/'.$self->version(),message=>'Successfully closed socket for '.$t->{remote_uri}});
+ $self->log_output('notice','transport',{},{phase=>'closing',message=>'Successfully closed socket for '.$t->{remote_uri}});
  $self->sock(undef);
 }
 
 sub close_connection
 {
- my ($self,$ctx)=@_;
- $self->send_logout($ctx);
- $self->close_socket($ctx);
+ my ($self)=@_;
+ $self->send_logout();
+ $self->close_socket();
  $self->current_state(0);
 }
 
 sub end
 {
- my ($self,$ctx)=@_;
+ my ($self)=@_;
  if ($self->current_state())
  {
   eval
   {
    local $SIG{ALRM}=sub { die 'timeout' };
    alarm(10);
-   $self->close_connection($ctx);
+   $self->close_connection();
   };
   alarm(0); ## since close_connection may die, this must be outside of eval to be executed in all cases
  }
@@ -395,7 +398,7 @@ sub send
 
 sub _print ## here we are sure open_connection() was called before
 {
- my ($self,$count,$tosend)=@_;
+ my ($self,$count,$tosend,$ctx)=@_;
  my $pc=$self->transport_data('pc');
  my $sock=$self->sock();
  my $m=($self->transport_data('socktype') eq 'udp')? 'send' : 'print';
@@ -419,16 +422,10 @@ sub _get
  ## Answer
  my $dr=$pc->read_data($self,$sock);
  $t->{exchanges_done}++;
-
- ## EOF signaling is not available for udp & ssl
- if (($self->transport_data('socktype') eq 'tcp') && $sock->eof() && $self->has_state())
+ if ($t->{exchanges_done}==$t->{close_after} && $self->has_state() && $self->current_state())
  {
-  $self->log_output('notice','transport',{ctx=>$ctx,trid=>$ctx->{trid},phase=>'closing',driver=>$self->name().'/'.$self->version(),message=>'Received EOF notification on '.$t->{remote_uri}});
-  $self->current_state(0);
- } elsif ($t->{exchanges_done}==$t->{close_after} && $self->has_state() && $self->current_state())
- {
-  $self->log_output('notice','transport',{ctx=>$ctx,trid=>$ctx->{trid},phase=>'closing',driver=>$self->name().'/'.$self->version(),message=>'Due to maximum number of exchanges reached, closing connection to '.$t->{remote_uri}});
-  $self->close_connection($ctx);
+  $self->log_output('notice','transport',$ctx,{phase=>'closing',message=>'Due to maximum number of exchanges reached, closing connection to '.$t->{remote_uri}});
+  $self->close_connection();
  }
  return $dr;
 }
@@ -446,10 +443,10 @@ sub try_again
  ## See RFC4993 section 4
  if ($step==1 && $istimeout==1 && $self->transport_data()->{socktype} eq 'udp')
  {
-  $self->log_output('debug','transport',{ctx=>$ctx,trid=>$ctx->{trid},phase=>'active',driver=>$self->name().'/'.$self->version(),message=>sprintf('In try_again, currently: pause=%f timeout=%f',$$rpause,$$rtimeout)});
+  $self->log_output('debug','transport',$ctx,{phase=>'active',message=>sprintf('In try_again, currently: pause=%f timeout=%f',$$rpause,$$rtimeout)});
   $$rtimeout=2*$$rtimeout;
   $$rpause+=rand(1+int($$rpause/2));
-  $self->log_output('debug','transport',{ctx=>$ctx,trid=>$ctx->{trid},phase=>'active',driver=>$self->name().'/'.$self->version(),message=>sprintf('In try_again, new values: pause=%f timeout=%f',$$rpause,$$rtimeout)});
+  $self->log_output('debug','transport',$ctx,{phase=>'active',message=>sprintf('In try_again, new values: pause=%f timeout=%f',$$rpause,$$rtimeout)});
   return 1; ## we will retry
  }
 

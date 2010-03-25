@@ -1,7 +1,7 @@
 ## Domain Registry Interface, .SE policy on reserved names
 ## Contributed by Elias Sidenbladh and Ulrich Wisser from NIC SE
 ##
-## Copyright (c) 2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -27,7 +27,7 @@ use DateTime::Duration;
 use Net::DRI::Util;
 use Net::DRI::Data::Contact::SE;
 
-our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 ## Only transfer requests and queries are possible, the rest is handled "off line".
 __PACKAGE__->make_exception_for_unavailable_operations(qw/domain_transfer_stop domain_transfer_accept domain_transfer_refuse domain_delete/);
@@ -60,7 +60,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006-2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -84,16 +84,9 @@ sub new
  return $self;
 }
 
-sub periods {
-
-    # This doesn't work because renew can be done 3 month before expiration
-    # return map { DateTime::Duration->new( years => $_ ) } (1);
-
-    return ( DateTime::Duration->new( years => 1, ), DateTime::Duration->new( years => 1, months => 3, ), );
-}
-
 sub name     { return 'se'; }
 sub tlds     { return ('SE'); }
+sub periods  { return map { DateTime::Duration->new(months => $_) } (12..120); }
 sub object_types { return ('domain','contact','ns'); }
 sub profile_types { return qw/epp whois/; }
 
@@ -126,14 +119,36 @@ sub verify_duration_create
 {
  my ($self,$ndr,$duration,$domain)=@_;
  ($duration,$domain)=($ndr,$duration) unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
- return 0;
+
+ if ( defined($duration) ) {
+  my $m = $duration->in_units( 'months' );
+
+  ## Only 12 - 120 months allowed
+  unless ( $m >= 12 && $m <= 120 )
+  {
+   Net::DRI::Exception::usererr_invalid_parameters( 'Invalid duration for create, must be 12..120 months (was '.$m.')' );
+   return 1;    # if exception is removed, return an error
+  }
+ }
+ return 0;    ## everything ok
 }
 
 sub verify_duration_renew
 {
  my ($self,$ndr,$duration,$domain,$curexp)=@_;
  ($duration,$domain,$curexp)=($ndr,$duration,$domain) unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
- return 0;
+
+ if ( defined($duration) ) {
+  my $m = $duration->in_units( 'months' );
+
+  ## Only 12 - 120 months allowed
+  unless ( $m >= 12 && $m <= 120 )
+  {
+   Net::DRI::Exception::usererr_invalid_parameters( 'Invalid duration for renew, must be 12..120 months (was '.$m.')' );
+   return 1;    # if exception is removed, return an error
+  }
+ }
+ return 0;    ## everything ok
 }
 
 ####################################################################################################

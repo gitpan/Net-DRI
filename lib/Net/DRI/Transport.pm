@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Superclass of all Transport/* modules (hence virtual class, never used directly)
 ##
-## Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -25,7 +25,7 @@ __PACKAGE__->mk_accessors(qw/name version retry pause trace timeout defer curren
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.19 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.20 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -79,7 +79,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -111,6 +111,7 @@ sub new
            has_state     => undef, ## do we need to open a session before sending commands ?
            transport     => undef, ## will be defined in subclasses
            time_creation => time(),
+           logging_ctx => { registry => $ndr->name(), profile => $pname, protocol => $ctx->{protocol}->name() },
           };
 
  if (exists($ropts->{log_fh}) && defined($ropts->{log_fh}))
@@ -119,12 +120,20 @@ sub new
  }
 
  bless $self,$class;
- $self->log_setup_channel($class,'transport',{ registry => $ndr, profile => $pname }); ## if we need the transport name here, we will have to put that further below, in another method called after new() ; otherwise we derive it from $class
+ $self->log_setup_channel($class,'transport',$self->{logging_ctx}); ## if we need the transport name here, we will have to put that further below, in another method called after new() ; otherwise we derive it from $class
  $self->log_output('debug','core',sprintf('Added transport %s for registry %s',$class,$ndr->name()));
  return $self;
 }
 
 sub transport_data { my ($self,$data)=@_; return defined $data ? $self->{transport}->{$data} : $self->{transport}; }
+
+sub log_output
+{
+ my ($self,$level,$type,$data1,$data2)=@_;
+ return $self->logging()->output($level,$type,$data1) unless defined $data2;
+ $self->{logging_ctx}->{transport}=$self->name().'/'.$self->version() unless exists $self->{logging_ctx}->{transport};
+ return $self->logging()->output($level,$type,{ %{$self->{logging_ctx}}, %$data1, %$data2 });
+}
 
 sub send
 {
@@ -135,8 +144,8 @@ sub send
  ## Try to reconnect if needed
  $self->open_connection($ctx) if ($self->has_state() && !$self->current_state());
  ## Here $tosend is a Net::DRI::Protocol::Message object (in fact, a subclass of that), in perl internal encoding, no transport related data (such as EPP 4 bytes header)
- $self->log_output('notice','transport',{ctx=>$ctx,trid=>$ctx->{trid},phase=>'active',direction=>'out',driver=>$self->name().'/'.$self->version(),message=>$tosend});
- $ok=$self->$cb1($count,$tosend);
+ $self->log_output('notice','transport',$ctx,{phase=>'active',direction=>'out',message=>$tosend});
+ $ok=$self->$cb1($count,$tosend,$ctx);
  $self->time_used(time());
 
  Net::DRI::Exception->die(0,'transport',4,'Unable to send message to registry') unless $ok;
@@ -151,7 +160,7 @@ sub receive
  $ans=$self->$cb1($count,$ctx); ## a Net::DRI::Data::Raw object
  Net::DRI::Exception->die(0,'transport',5,'Unable to receive message from registry') unless defined($ans);
  ## $ans should have been properly decoded into a native Perl string
- $self->log_output('notice','transport',{ctx=>$ctx,trid=>$ctx->{trid},phase=>'active',direction=>'in',driver=>$self->name().'/'.$self->version(),message=>$ans});
+ $self->log_output('notice','transport',$ctx,{phase=>'active',direction=>'in',message=>$ans});
  return $ans;
 }
 
@@ -160,16 +169,6 @@ sub try_again ## TO BE SUBCLASSED
  my ($self,$ctx,$po,$err,$count,$istimeout,$step,$rpause,$rtimeout)=@_; ## $step is 0 before send, 1 after, and 2 after receive successful
  ## Should return 1 if we try again, or 0 if we should stop processing now
  return ($istimeout && ($count <= $self->{retry}))? 1 : 0;
-}
-
-####################################################################################################
-## Returns 1 if we are still connected, 0 otherwise (and sets current_state to 0)
-## Pass a true value if you want the connection to be automatically redone if the ping failed
-sub ping
-{
- my ($self,$autorecon,$ctx)=@_;
- return unless $self->has_state();
- Net::DRI::Exception::err_method_not_implemented();
 }
 
 sub open_connection
@@ -181,7 +180,17 @@ sub open_connection
 
 sub end
 {
- my ($self,$ctx)=@_;
+ my ($self)=@_;
+ return unless $self->has_state();
+ Net::DRI::Exception::err_method_not_implemented();
+}
+
+####################################################################################################
+## Returns 1 if we are still connected, 0 otherwise (and sets current_state to 0)
+## Pass a true value if you want the connection to be automatically redone if the ping failed
+sub ping
+{
+ my ($self,$autorecon)=@_;
  return unless $self->has_state();
  Net::DRI::Exception::err_method_not_implemented();
 }

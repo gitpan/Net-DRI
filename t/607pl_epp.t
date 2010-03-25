@@ -213,9 +213,9 @@ is($dri->get_info('object_type', 'message', 8308), 'domain', 'Object type is cor
 
 ## Multiple level domain registration
 
-is($dri->verify_name_domain('sygroup.com.pl', 'info'), 0,
+is($dri->verify_name_domain('sygroup.com.pl', 'info'), '',
 	'third.com.pl registrability');
-is($dri->verify_name_domain('sygroup.net.pl', 'info'), 0,
+is($dri->verify_name_domain('sygroup.net.pl', 'info'), '',
 	'third.net.pl registrability');
 
 

@@ -1,11 +1,11 @@
+Net::DRI is Copyright (C) 2005-2010, Patrick Mevzek <netdri@dotandco.com>
+Official website for Net::DRI information and download:
+http://www.dotandco.com/services/software/Net-DRI/index.en
+
 Net::DRI
 ========
 
-A Perl library to access Domain Name Registries/Registrars
-Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>
-with help and bugfix from various individuals
-(see Changes file and our website)
-
+A Perl library to access Domain Name Registries/Registrars:
 DRI stands for Domain Registration Interface and aims to be,
 for domain name registries/registrars/resellers
 what Perl DBI is for databases.
@@ -34,8 +34,7 @@ in production by various organizations with success.
 Currently Net::DRI ships with:
 
 - a full RRP implementation (RFC 2832 & 3632)
-- a full EPP implementation (RFC 4930/4931/4932/4933/4934 obsoleting RFC 3730/3731/3732/3733/3734,
-                             and RFC 3735), including poll messages
+- a full EPP implementation (STD 69 aka RFC 5730/5731/5732/5733/5734/3735 ), including registry notifications
 - many EPP extensions:
   * GracePeriod (RFC 3915)
   * E164 for ENUM (RFC 4114)
@@ -47,7 +46,7 @@ Currently Net::DRI ships with:
   * Domain/Contact/Host and other extensions needed for extra services in various TLD:
     .EU .COM .NET .MOBI .AERO .CAT .US .PL .SE .BE .AT .COOP .LU .ASIA .AU .NAME .ORG .UK
     .DE .CH .LI .HN .SC .VC .AG .BZ .LC .MN .ME .CZ .TRAVEL .NO .BR .JOBS .PRO .FR .PT
-    .CX .GS .TL .KI .MS .MU .NF .HT .IM .SI .NG .NA
+    .CX .GS .TL .KI .MS .MU .NF .HT .IM .SI .NG .NA .IT .NL .CA
 - a full DAS (Domain Availability Service) implementation for .BE .EU .NL .AU
 - a full Whois implementation (RFC 3912) for thin and thick registries :
      support included for domain names in .COM .NET .ORG .BIZ .INFO .AERO
@@ -62,7 +61,7 @@ Currently Net::DRI ships with:
 - Net::DRI::DRD::* modules for : .EU .COM .NET .TV .CC .WS .SE .PL .US .CAT .FR
 		.BE .MOBI .INFO .ORG .AT .LU .BIZ .NAME .NU .UK .AU .AERO .ASIA .COOP
 		IENUMAT .DE .CH .LI .HN .SC .VC .AG .BZ .LC .MN .ME .CZ .TRAVEL .PT
-                .NO .BR .PRO CoCCA CentralNic .IM .SI .CO.CZ .IT AdamsNames .AU .NL
+                .NO .BR .PRO CoCCA CentralNic .IM .SI .CO.CZ .IT AdamsNames .AU .GL .NL .CA
 - a Net::DRI::DRD::AFNIC covering AFNIC registry for .FR
      (only domain_check through web services and all operations by email or EPP)
 - Net::DRI::DRD::* modules to use registrars API for Gandi, OVH, BookMyName, OpenSRS
@@ -99,16 +98,16 @@ Time::HiRes
 Email::Valid
 IO::Socket::INET (*)
 IO::Socket::SSL (>=0.90)
-XML::LibXML
+XML::LibXML (>=1.61)
 UNIVERSAL::require
 SOAP::Lite (needed only for AFNIC, BookMyName, OVH, Gandi webservices)
 SOAP::WSDL (needed only for OVH webservices)
 MIME::Entity (needed only for AFNIC emails)
 Net::SMTP (needed only for AFNIC emails)
-LWP::UserAgent (needed only for OpenSRS, and .PL)
+LWP::UserAgent (needed only for OpenSRS, .PL and .IT)
 Digest::MD5 (needed only for OpenSRS)
 Net::DNS (needed only for .DE IRIS DCHK queries)
-IO::Uncompress::Inflate & IO::Uncompress::RawInflate (needed only for .DE IRIS DCHK queries) (*)
+IO::Uncompress::RawInflate (needed only for .DE IRIS DCHK queries) (*)
 
 
 All dates and durations exchanged with Net::DRI should be
@@ -125,6 +124,24 @@ Or just copy the content of the lib/ directory somewhere in your path.
 You can use tests available in t/ to make sure everything is well.
 (all tests are done locally and do not require a network connection;
 those who require a network connection are not enabled by default)
+
+LICENSE INFORMATION
+-------------------
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+See the accompanying LICENSE file for all details.
+
+Some parts of this library have been contributed by other authors,
+and are copyrighted to them. See each specific module documentation.
 
 How to use
 ----------

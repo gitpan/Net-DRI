@@ -23,7 +23,7 @@ sub myrecv
  return Net::DRI::Data::Raw->new_from_string($R2? $R2 : $E1.'<response>'.r().$TRID.'</response>'.$E2);
 }
 
-my $dri=Net::DRI->new(10);
+my $dri=Net::DRI::TrapExceptions->new(10);
 $dri->{trid_factory}=sub { return 'ABC-12345'; };
 
 use Net::DRI::DRD::VNDS;
@@ -31,7 +31,7 @@ use Net::DRI::DRD::VNDS;
  no strict;
  no warnings;
  sub Net::DRI::DRD::VNDS::tlds { return ('e164.arpa'); };
- sub Net::DRI::DRD::VNDS::verify_name_domain { return 0; };
+ sub Net::DRI::DRD::VNDS::verify_name_domain { return ''; };
 }
 
 $dri->add_registry('VNDS');

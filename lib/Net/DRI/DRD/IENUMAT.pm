@@ -1,7 +1,7 @@
 ## Domain Registry Interface, Infrastructure ENUM.AT policy on reserved names
 ## Contributed by Michael Braunoeder from ENUM.AT <michael.braunoeder@enum.at>
 ##
-## Copyright (c) 2006,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2008-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -26,7 +26,7 @@ use base qw/Net::DRI::DRD/;
 use Net::DRI::Util;
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 ## The domain renew command are not implemented at the ienum43 EPP server, domains are renewed automatically
 __PACKAGE__->make_exception_for_unavailable_operations(qw/domain_renew/);
@@ -59,7 +59,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2008-2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -98,26 +98,14 @@ sub transport_protocol_default
 }
 
 ####################################################################################################
-## TODO : this should be converted to the new framework !
+
 sub verify_name_domain
 {
- my ($self,$ndr,$domain)=@_;
- $domain=$ndr unless (defined($ndr) && $ndr && (ref($ndr) eq 'Net::DRI::Registry'));
-
-
-
- my @splited = split /\./,$domain;
- my $count = @splited;
- $count--;
- my $r=$self->SUPER::check_name($domain,$count);
- return $r if ($r);
- return 10 unless $self->is_my_tld($ndr,$domain,0);
-
- my @d=split(/\./,$domain);
-
- return 14 if exists($Net::DRI::Util::CCA2{uc($d[0])});
-
- return 0;
+ my ($self,$ndr,$domain,$op)=@_;
+ return $self->_verify_name_rules($domain,$op,{check_name_no_dots => 1, ## is this correct?
+                                               my_tld_not_strict => 1, ## is this correct?
+                                               no_country_code => 1,
+                                              });
 }
 
 ####################################################################################################

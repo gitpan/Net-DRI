@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .NO Domain extensions
 ##
-## Copyright (c) 2008 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
+## Copyright (c) 2008-2010 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
 ##                    Trond Haugen E<lt>info@norid.noE<gt>
 ##                    All rights reserved.
 ##
@@ -22,11 +22,12 @@ package Net::DRI::Protocol::EPP::Extensions::NO::Domain;
 use strict;
 use Net::DRI::DRD::NO;
 use Net::DRI::Protocol::EPP::Core::Domain;
-use Net::DRI::Protocol::EPP::Core::Contact;
 use Net::DRI::Util;
 use Net::DRI::Exception;
+use Net::DRI::Protocol::EPP::Util;
+use Net::DRI::Protocol::EPP::Extensions::NO::Host;
 
-our $VERSION = do { my @r = ( q$Revision: 1.2 $ =~ /\d+/gmx ); sprintf( "%d" . ".%02d" x $#r, @r ); };
+our $VERSION = do { my @r = ( q$Revision: 1.3 $ =~ /\d+/gmx ); sprintf( "%d" . ".%02d" x $#r, @r ); };
 
 =pod
 
@@ -56,7 +57,7 @@ Trond Haugen, E<lt>info@norid.noE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
+Copyright (c) 2008-2010 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
 Trond Haugen E<lt>info@norid.noE<gt>
 All rights reserved.
 
@@ -74,6 +75,14 @@ See the LICENSE file that comes with this distribution for more details.
 sub register_commands {
     my ( $class, $version ) = @_;
     my %tmp = (
+       check            => [ \&facet, undef ],
+       info             => [ \&facet, undef ],
+       create           => [ \&facet, undef ],
+        transfer_cancel  => [ \&facet, undef ],
+       transfer_query   => [ \&facet, undef ],
+       renew            => [ \&facet, undef ],
+
+       update           => [ \&update, undef ],
         delete           => [ \&delete,           undef ],
         transfer_request => [ \&transfer_request, undef ],
         transfer_execute => [
@@ -98,24 +107,50 @@ sub build_command_extension {
     );
 }
 
+sub facet {
+    my ( $epp, $o, $rd ) = @_;
+
+    return Net::DRI::Protocol::EPP::Extensions::NO::Host::build_facets( $epp, $rd );
+}
+
+sub update {
+    my ( $epp, $domain, $todo ) = @_;
+
+    my $fs = $todo->set('facets');
+    return unless ( defined($fs) && $fs);    # No facets set
+
+    my $rd;
+    $rd->{facets} = $fs;
+    return facet($epp, $domain, $rd);
+}
+
+
 sub delete {
     my ( $epp, $domain, $rd ) = @_;
     my $mes = $epp->message();
 
-    my $q = $rd->{deletefromdns};
-    my $r = $rd->{deletefromregistry};
+    my $dfd = $rd->{deletefromdns};
+    my $dfr = $rd->{deletefromregistry};
+    my $fs  = $rd->{facets};
 
-    return unless ( ( defined($q) || defined($r) ) && ( $q || $r ) );
+    return unless ( ( defined($dfd) || defined($dfr) || defined($fs) ) && ( $dfd || $dfr || $fs ) );
 
-    my $eid = build_command_extension( $mes, $epp, 'no-ext-domain:delete' );
+    my $r;
+    if ( $dfd || $dfr ) {
+       my $eid = build_command_extension( $mes, $epp, 'no-ext-domain:delete' );
+       my @e;
+       push @e, [ 'no-ext-domain:deleteFromDNS', $dfd ] if ( defined($dfd) && $dfd );
+       push @e, [ 'no-ext-domain:deleteFromRegistry', $dfr ] if ( defined($dfr) && $dfr );
 
-    my @e;
-    push @e, [ 'no-ext-domain:deleteFromDNS', $q ] if ( defined($q) && $q );
-    push @e, [ 'no-ext-domain:deleteFromRegistry', $r ]
-        if ( defined($r) && $r );
+       $r = $mes->command_extension( $eid, \@e ) if (@e);
+    }
+    if ($fs) {
+       $r = facet($epp, $domain, $rd);
+    }
+    return $r;
 
-    return $mes->command_extension( $eid, \@e );
 }
+
 
 sub transfer_request {
     my ( $epp, $domain, $rd ) = @_;
@@ -123,23 +158,34 @@ sub transfer_request {
 
     my $mp = $rd->{mobilephone};
     my $em = $rd->{email};
+    my $fs = $rd->{facets};
 
-    return unless ( ( defined($mp) || defined($em) ) && ( $mp || $em ) );
+    return unless ( ( defined($mp) || defined($em) || defined($fs) ) && ( $mp || $em || $fs) );
 
-    my $eid = build_command_extension( $mes, $epp, 'no-ext-domain:transfer' );
+    my $r;
+    if ($mp || $em) {
+       my $eid = build_command_extension( $mes, $epp, 'no-ext-domain:transfer' );
 
-    my @d;
-    push @d,
-        Net::DRI::Protocol::EPP::Core::Contact::build_tel(
-        'no-ext-domain:mobilePhone', $mp )
-        if ( defined($mp) && $mp );
-    push @d, [ 'no-ext-domain:email', $em ] if ( defined($em) && $em );
+       my @d;
+       push @d,
+        Net::DRI::Protocol::EPP::Util::build_tel(
+           'no-ext-domain:mobilePhone', $mp )
+            if ( defined($mp) && $mp );
+       push @d, [ 'no-ext-domain:email', $em ] if ( defined($em) && $em );
 
-    my @e;
-    push @e, [ 'no-ext-domain:notify', @d ];
+       my @e;
+       push @e, [ 'no-ext-domain:notify', @d ];
+       $r = $mes->command_extension( $eid, \@e );
 
-    return $mes->command_extension( $eid, \@e );
+    }
+    if ($fs) {
+       $r = facet($epp, $domain, $rd);
+    }
+
+    return $r;
+
 }
+
 
 sub withdraw {
     my ( $epp, $domain, $rd ) = @_;
@@ -148,14 +194,19 @@ sub withdraw {
     my $transaction;
     $transaction = $rd->{transactionname} if $rd->{transactionname};
 
-    return unless ( $transaction && $transaction eq 'withdraw' );
+    my $fs = $rd->{facets};
+
+    return unless ( $transaction && $transaction eq 'withdraw');
 
     Net::DRI::Exception::usererr_insufficient_parameters(
         'Witdraw command requires a domain name')
         unless ( defined($domain) && $domain );
 
+    my $r;
+
     my (undef,$NS,$NSX)=$mes->nsattrs('no_domain');
     my (undef,$ExtNS,$ExtNSX)=$mes->nsattrs('no_epp');
+
     my $eid = $mes->command_extension_register( 'command',
               'xmlns="' 
             . $ExtNS
@@ -170,7 +221,7 @@ sub withdraw {
     $domns{'xmlns:domain'}       = $NS;
     $domns{'xsi:schemaLocation'} = $NS . " $NSX";
 
-    return $mes->command_extension(
+    $r=$mes->command_extension(
         $eid,
         [   [   'withdraw',
                 [   'domain:withdraw', [ 'domain:name', $domain ],
@@ -179,7 +230,14 @@ sub withdraw {
             ],
             [ 'clTRID', $cltrid ]
         ]
-    );
+       );
+
+    if ( defined($fs) && $fs ) {
+       $r = facet($epp, $domain, $rd);
+    }
+
+    return $r;
+
 }
 
 sub transfer_execute {
@@ -194,11 +252,11 @@ sub transfer_execute {
     my (undef,$NS,$NSX)=$mes->nsattrs('no_domain');
     my (undef,$ExtNS,$ExtNSX)=$mes->nsattrs('no_epp');
 
-    my ( $auth, $du, $token );
+    my ( $auth, $du, $token, $fs );
     $auth  = $rd->{auth}     if $rd->{auth};
     $du    = $rd->{duration} if $rd->{duration};
     $token = $rd->{token}    if $rd->{token};
-
+    $fs    = $rd->{facets}   if $rd->{facets};
 
     # An execute must contain either an authInfo or a token, optionally also a duration
     Net::DRI::Exception::usererr_insufficient_parameters(
@@ -216,7 +274,7 @@ sub transfer_execute {
 
         Net::DRI::Exception->die( 0, 'DRD::NO', 3, 'Invalid duration' )
             if Net::DRI::DRD::NO->verify_duration_renew( $du, $domain );
-        $dur = Net::DRI::Protocol::EPP::Core::Domain::build_period($du);
+        $dur = Net::DRI::Protocol::EPP::Util::build_period($du);
     }
 
     my $eid = $mes->command_extension_register( 'command',
@@ -239,10 +297,12 @@ sub transfer_execute {
     $domns2{'xmlns:no-ext-domain'} = $NS;
     $domns2{'xsi:schemaLocation'}  = $NS . " $NSX";
 
+    my $r;
+
     if ( Net::DRI::Util::has_auth( $rd )
         && ( ref( $rd->{auth} ) eq 'HASH' ) )
     {
-        return $mes->command_extension(
+        $r=$mes->command_extension(
             $eid,
             [   [   'transfer',
                     { 'op' => 'execute' },
@@ -250,7 +310,7 @@ sub transfer_execute {
                         \%domns,
                         [ 'domain:name', $domain ],
                         $dur,
-                        Net::DRI::Protocol::EPP::Core::Domain::build_authinfo(
+                        Net::DRI::Protocol::EPP::Util::domain_build_authinfo(
                             $epp, $rd->{auth}
                         ),
                     ],
@@ -259,7 +319,7 @@ sub transfer_execute {
             ]
         );
     } elsif ($token) {
-        return $mes->command_extension(
+        $r=$mes->command_extension(
             $eid,
             [   [   'transfer',
                     { 'op' => 'execute' },
@@ -276,6 +336,13 @@ sub transfer_execute {
             ]
         );
     }
+
+    if ( defined($fs) && $fs ) {
+       $r = facet($epp, $domain, $rd);
+    }
+
+    return $r;
+
 }
 
 ####################################################################################################

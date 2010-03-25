@@ -52,7 +52,8 @@ is_deeply($dri->protocol->server_greeting(), {
 		'urn:ietf:params:xml:ns:domain-1.0',
 		'urn:ietf:params:xml:ns:contact-1.0',
 		'urn:ietf:params:xml:ns:host-1.0'
-	]
+	],
+	dcp => '<dcp><access><personalAndOther/></access><statement><purpose><admin/><other/><prov/></purpose><recipient><ours/><public/></recipient><retention><legal/></retention></statement></dcp>',
 }, 'session connect server_greeting parse');
 
 exit 0;

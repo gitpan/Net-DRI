@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 ##
-## Copyright (c) 2008 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
+## Copyright (c) 2008-2010 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
 ##                    Trond Haugen E<lt>info@norid.noE<gt>
 ##                    All rights reserved.
 ##
@@ -43,9 +43,9 @@ $Data::Dumper::Indent=1;
 
 use encoding "utf-8";    # assume utf-8 encoded argument input
 
-our $VERSION     = '0.85.no';
+our $VERSION     = '0.95.no';
 our $SVN_VERSION = do {
-    my @r = ( q$Revision: 1.2 $ =~ /\d+/gxm );
+    my @r = ( q$Revision: 1.3 $ =~ /\d+/gxm );
     sprintf( "%d" . ".%02d" x $#r, @r );
 };
 
@@ -65,7 +65,7 @@ my @cm = (
 
     # .no extra methods
     'type', 'identity', 'mobilephone',
-    'organization', 'rolecontact', 'xemail', 'xdisclose'
+    'organization', 'rolecontact', 'xemail', 'xdisclose', 'facets'
 );
 
 # args
@@ -108,6 +108,15 @@ my %obj = (
     'message'      => 'message',
 );
 
+# The possible facet keys must be registered here, the value part must be TRUE
+# in this hash for the facet to be activated
+my %facets = (
+       'skip-dns-checks'                => 1,
+       'skip-manual-review'             => 1,
+       'ignore-exceptions-as-registrar' => 1,
+       'impersonate-registrar'          => 1
+    );
+
 # Hash to hold the EPP arguments
 my %p;
 
@@ -144,6 +153,13 @@ unless ( $opt_c eq 'hello' ) {
     #print "p: $opt_p \n";
     unless ( parse_params($opt_p) ) {
         pexit("Specify a valid parameter string");
+    }
+}
+
+if ($p{facets}) {
+    # verify that the facets are among the valid and registered ones
+    foreach my $fkey (keys(%{$p{facets}})) {
+       pexit("Invalid facet: '$fkey'") unless ($facets{$fkey});
     }
 }
 
@@ -535,15 +551,24 @@ sub get_info_object_as_string {
 sub init_reg_no {
     my ( $clid, $pw, $newpw, $socktype, $server, $port, $fh ) = @_;
 
-    my $dri = Net::DRI->new(10);
+    my $dri = Net::DRI->new(
+       {
+           cache_ttl => 10,
+           logging => ['files',
+                       {output_directory => './',
+                        output_filename=>$opt_f,
+                        level=>'notice',
+                        xml_indent=>1}]
+       }
+);
+
     $dri->add_registry( 'NO', { clid => $clid } );
 
     my %pars = (
-        log_fh => $fh || \*STDERR,
         defer => 0,
         socktype            => $socktype,
-        remote_host         => $server || 'kvikk.norid.no',
-        remote_port         => $port || 7009,
+        remote_host         => $server || 'epp.test.norid.no',
+        remote_port         => $port || 700,
         protocol_connection => 'Net::DRI::Protocol::EPP::Connection',
         protocol_version    => 1,
         client_login        => $clid,
@@ -552,10 +577,10 @@ sub init_reg_no {
 
     $pars{client_newpassword} = $newpw if ($newpw);
 
-    my $rc = $dri->target('NO')->new_current_profile(
-        'profile1', 'Net::DRI::Transport::Socket',
-        [ { %pars, } ],
-        'Net::DRI::Protocol::EPP::Extensions::NO', []
+    my $rc = $dri->target('NO')->add_current_profile(
+        'profile1',
+       'epp',
+        { %pars, },
     );
 
     ## Here we catch all errors during setup of transport, such as
@@ -587,7 +612,7 @@ sub do_command {
     if ( $obj eq 'host' ) {
         if ( $cmd eq 'check' ) {
             print ".check ", $p{name}, "\n";
-            $rc = $dri->host_check( $p{name} );
+            $rc = $dri->host_check( $p{name}, { facets => $p{facets}} );
             print_result( $dri, $rc );
             die($rc) unless $rc->is_success();
 
@@ -596,12 +621,14 @@ sub do_command {
                 $dri->get_info('exist') ? "exists" : "do not exist";
         }
         if ( $cmd eq 'info' ) {
-            my %oi;
+            my %a;
 
-            # host info can specify a ownerid
-            $oi{ownerid} = $p{ownerid} if ( $p{ownerid} );
+            # host info can specify a sponsoringclientid
+            $a{sponsoringclientid} = $p{sponsoringclientid} if ( $p{sponsoringclientid} );
+            
+           $a{facets} = $p{facets} if ( $p{facets} );
 
-            $rc = $dri->host_info( $p{name}, \%oi );
+            $rc = $dri->host_info( $p{name}, \%a );
             print_result( $dri, $rc );
             die($rc) unless $rc->is_success();
 
@@ -613,12 +640,8 @@ sub do_command {
             my $nso = $dri->local_object('hosts');
 
             $nso->add( $p{name}, $p{v4}, $p{v6} );
+           $rc = $dri->host_create( $nso, { contact => $p{contact}, facets => $p{facets} } );
 
-            if ( $p{contact} ) {
-                $rc = $dri->host_create( $nso, { contact => $p{contact} } );
-            } else {
-                $rc = $dri->host_create($nso);
-            }
             print_result($dri);
             die($rc) unless $rc->is_success();
         }
@@ -658,12 +681,18 @@ sub do_command {
                     $toc->$s( 'contact', $n ) if ( defined($n) && $n );
                 }
             }
-            $rc = $dri->host_update( $p{name}, $toc );
+
+           # Facets
+            if ( defined($p{facets}) ) {
+                $toc->set( 'facets', $p{facets} );
+            }
+
+            $rc = $dri->host_update( $p{name}, $toc);
             print_result($dri);
             die($rc) unless $rc->is_success();
         }
         if ( $cmd eq 'delete' ) {
-            $rc = $dri->host_delete( $p{name} );
+            $rc = $dri->host_delete( $p{name}, { facets => $p{facets} } );
             print_result($dri);
             die($rc) unless $rc->is_success();
         }
@@ -674,7 +703,7 @@ sub do_command {
         if ( $cmd eq 'check' ) {
             my $co = $dri->local_object('contact')->new()->srid( $p{srid} );
 
-            $rc = $dri->contact_check($co);
+            $rc = $dri->contact_check($co, { facets => $p{facets} } );
             print_result($dri);
 
             die($rc) unless $rc->is_success();
@@ -686,7 +715,7 @@ sub do_command {
         if ( $cmd eq 'info' ) {
             my $co = $dri->local_object('contact')->new()->srid( $p{srid} );
 
-            $rc = $dri->contact_info($co);
+            $rc = $dri->contact_info($co, { facets => $p{facets} } );
 
 # print "Contact $p{srid} ", $dri->get_info('exist')?" exists":"do not exist";
             print_result($dri);
@@ -750,7 +779,6 @@ sub do_command {
             if ( $p{identity} ) {
                 $toc->set( 'identity', $p{identity} );
             }
-
             #
             # organization data
             #
@@ -779,13 +807,18 @@ sub do_command {
             # xemail data
             #
             if ( $p{xemail} ) {
-
                 # add and del keys shall describe what to do
                 foreach my $s ( 'add', 'del' ) {
                     my $n = $p{xemail}{$s};
                     $toc->$s( 'xemail', $n ) if ( defined($n) && $n );
                 }
             }
+
+           # Facets
+            if ( defined($p{facets}) ) {
+                $toc->set( 'facets', $p{facets} );
+            }
+
             $rc = $dri->contact_update( $co, $toc );
 
             print_result($dri);
@@ -795,7 +828,7 @@ sub do_command {
         if ( $cmd eq 'delete' ) {
             my $co = $dri->local_object('contact')->new()->srid( $p{srid} );
 
-            $rc = $dri->contact_delete($co);
+            $rc = $dri->contact_delete($co, { facets => $p{facets} } );
             print_result($dri);
 
             die($rc) unless $rc->is_success();
@@ -833,7 +866,7 @@ sub do_command {
 
         if ( $cmd eq 'check' ) {
 
-            $rc = $dri->domain_check($ace);
+            $rc = $dri->domain_check($ace, { facets => $p{facets} });
 
             print_rc_result($rc);
             print_result($dri);
@@ -845,7 +878,7 @@ sub do_command {
         }
 
         if ( $cmd eq 'info' ) {
-            $rc = $dri->domain_info($ace);
+            $rc = $dri->domain_info($ace, { facets => $p{facets} });
             print_result($dri);
             die($rc) unless $rc->is_success();
 
@@ -918,7 +951,8 @@ sub do_command {
                     auth     => { pw => $p{pw} },
                     duration => $du,
                     contact  => $cs,
-                    ns       => $nso
+                    ns       => $nso,
+                   facets   => $p{facets},
                 }
             );
             print_result($dri);
@@ -1025,6 +1059,11 @@ sub do_command {
                     }
                 }
             }
+           # Facets
+            if ( defined($p{facets}) ) {
+                $toc->set( 'facets', $p{facets} );
+            }
+
             $rc = $dri->domain_update( $ace, $toc );
             print_result($dri);
             die($rc) unless $rc->is_success();
@@ -1034,10 +1073,13 @@ sub do_command {
                 "Cannot delete domain, rejected by DRI:domain_status_allows_delete()"
                 unless ( $dri->domain_status_allows_delete($ace) );
 
+           # pure_delete should suppress a domain_info() from being first performed
+           # to check if the domain exists
             my %a=(pure_delete => 1);
+
             $a{deletefromdns} = $p{deletefromdns} if $p{deletefromdns};
-            $a{deletefromregistry} = $p{deletefromregistry}
-                if $p{deletefromregistry};
+            $a{deletefromregistry} = $p{deletefromregistry} if $p{deletefromregistry};
+           $a{facets} = $p{facets} if $p{facets};
 
             $rc = $dri->domain_delete( $ace, \%a );
 
@@ -1048,15 +1090,18 @@ sub do_command {
         if ( $cmd eq 'transfer_query' ) {
             my %a;
             $a{auth} = { pw => $p{pw} } if ( $p{pw} );
+           $a{facets} = $p{facets} if ( $p{facets} );
 
             $rc = $dri->domain_transfer_query( $ace, \%a );
             print_rc_result($rc);
             print_result($dri);
             die($rc) unless $rc->is_success();
         }
+
         if ( $cmd eq 'transfer_cancel' ) {
             my %a;
             $a{auth} = { pw => $p{pw} } if ( $p{pw} );
+           $a{facets} = $p{facets} if ( $p{facets} );
 
             $rc = $dri->domain_transfer_stop( $ace, \%a );
             print_rc_result($rc);
@@ -1070,6 +1115,7 @@ sub do_command {
 
             my %a;
             $a{auth} = { pw => $p{pw} } if ( $p{pw} );
+           $a{facets} = $p{facets} if ( $p{facets} );
 
             # notify parameters
             if ( $p{notify} ) {
@@ -1086,8 +1132,9 @@ sub do_command {
         }
         if ( $cmd eq 'transfer_execute' ) {
             my %a;
-            $a{auth} = { pw => $p{pw} } if ( $p{pw} );
-            $a{token} = $p{token} if ( $p{token} );
+            $a{auth}   = { pw => $p{pw} } if ( $p{pw} );
+            $a{token}  = $p{token} if ( $p{token} );
+           $a{facets} = $p{facets} if ( $p{facets} );
 
             # require either a token or a pw
             unless ( exists( $p{token} ) && $p{token} || exists( $p{pw} ) ) {
@@ -1099,7 +1146,7 @@ sub do_command {
                 $du = DateTime::Duration->new( $p{duration} );
                 die "Illegal duration value" unless ($du);
                 $a{duration} = $du;
-            }
+           }
             $rc = $dri->domain_transfer_execute( $ace, \%a );
             print_rc_result($rc);
             print_result($dri);
@@ -1122,7 +1169,7 @@ sub do_command {
                 );
                 die "$0: Illegal curexpiry date " unless ($exp);
             }
-            $rc = $dri->domain_renew( $ace, $du, $exp );
+            $rc = $dri->domain_renew( $ace, { duration => $du, current_expiration => $exp, facets => $p{facets} } );
             print_rc_result($rc);
             print_result($dri);
             die($rc) unless $rc->is_success();
@@ -1130,7 +1177,7 @@ sub do_command {
 
         if ( $cmd eq 'withdraw' ) {
 
-            $rc = $dri->domain_withdraw($ace);
+            $rc = $dri->domain_withdraw($ace, { facets => $p{facets} } );
             print_rc_result($rc);
             print_result($dri);
             die($rc) unless $rc->is_success();
@@ -1168,13 +1215,13 @@ my @noc = (
     if ( $obj eq 'message' ) {
 
         if ( $cmd eq 'waiting' ) {
-            print "Poll: messages waiting: ", $dri->message_waiting(), "\n";
+            print "Poll: messages waiting: ", $dri->message_waiting({ facets => $p{facets} }), "\n";
         }
         if ( $cmd eq 'count' ) {
-            print "Poll: message count: ", $dri->message_count(), "\n";
+            print "Poll: message count: ", $dri->message_count({ facets => $p{facets} }), "\n";
         }
         if ( $cmd eq 'retrieve' ) {
-            $rc = $dri->message_retrieve();
+            $rc = $dri->message_retrieve({ facets => $p{facets} });
 
             print_rc_result($rc);
             print_result($dri);
@@ -1215,7 +1262,7 @@ my @noc = (
         }
         if ( $cmd eq 'delete' ) {
             if ( my $id = $p{id} ) {
-                $rc = $dri->message_delete($id);
+                $rc = $dri->message_delete($id, { facets => $p{facets} });
                 print_rc_result($rc);
                 print_result($dri);
                 die($rc) unless $rc->is_success();
@@ -1488,9 +1535,9 @@ External name servers must be registered without any IP-addresses.
 =item 2 info on a host object sponsored (owned) by another registrar
 
 It is possible to query hosts sponsored by other registrars, but you need to 
-specify his registrar id by the 'ownerID'.
+specify his registrar id by the 'sponsoringClientID'.
 
--o host -c info -p E<34>%p=(name=>'ns1.suniswanted.no', ownerid=>'reg9998')E<34>
+-o host -c info -p E<34>%p=(name=>'ns1.suniswanted.no', sponsoringclientid=>'reg9998')E<34>
 
 =back
 
@@ -1841,9 +1888,42 @@ server message queue.
 
 =back
 
+=head2 Facets
+
+Facets are some special control attributes that can be used to
+trig special behaviour by the registry when a transaction is received.
+
+By use of facets, a registrar can suppress certain checks and perform
+actions on behalf of another registrar. The right do do such an
+operation could be defined as a super registrar function.
+
+The facets are only available for a registrar account when the account
+has been granted these special control rights by server configuration.
+
+Warning:
+If facets are attempted set by a non-authorized registrar account, they
+will be rejected. The registry may detect such abuse and apply prevailing
+actions towards non-authorized registrars, so don't play with this
+mechanism unless you know you have the rights to use a facet on your account.
+
+=head3 Facet keys, values and functionality
+
+Facets are key/value pairs and their names and syntax are decided by the registry.
+
+
+=head3 Facets usage in commands
+
+Facets may be set for any EPP command.
+
+To add facets into the parameter string, use the following facet syntax
+in the parameter string:
+
+   facets => { '<facet1>' => '<value1>', '<facet2>' => '<value2>', <facet3> => <value3>', ... }
+
+
 =head1 COPYRIGHT
 
-Copyright (c) 2008 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
+Copyright (c) 2008-2010 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
 Trond Haugen E<lt>info@norid.noE<gt>
 All rights reserved.
 
@@ -1859,3 +1939,4 @@ See the LICENSE file that comes with this distribution for more details.
 Trond Haugen, E<lt>info@norid.noE<gt>
 
 =cut
+

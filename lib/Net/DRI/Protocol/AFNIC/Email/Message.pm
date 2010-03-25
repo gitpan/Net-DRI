@@ -1,6 +1,6 @@
 ## Domain Registry Interface, AFNIC Email Message
 ##
-## Copyright (c) 2006,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2009,2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,6 +18,7 @@
 package Net::DRI::Protocol::AFNIC::Email::Message;
 
 use strict;
+use warnings;
 
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version trid email_from client_auth));
@@ -27,7 +28,7 @@ use MIME::Entity ();
 use Net::DRI::Protocol::ResultStatus;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -57,7 +58,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2009,2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

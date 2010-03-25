@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .UK EPP Domain commands
 ##
-## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009,2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -25,8 +25,9 @@ use Net::DRI::Exception;
 use Net::DRI::Protocol::EPP::Core::Domain;
 use Net::DRI::Protocol::EPP::Extensions::Nominet::Account;
 use Net::DRI::Protocol::EPP::Extensions::Nominet::Host;
+use Net::DRI::Protocol::EPP::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -56,7 +57,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009,2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -96,7 +97,7 @@ sub info
 {
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
- my @d=Net::DRI::Protocol::EPP::Core::Domain::build_command($mes,'info',$domain);
+ my @d=Net::DRI::Protocol::EPP::Util::domain_build_command($mes,'info',$domain);
  $mes->command_body(\@d);
 }
 
@@ -132,15 +133,7 @@ sub info_parse
    $rinfo->{domain}->{$oname}->{contact}=$cs;
   } elsif ($name eq 'ns')
   {
-   foreach my $nsinf ($c->getChildrenByTagNameNS($mes->ns('ns'),'infData'))
-   {
-    my $dh=Net::DRI::Protocol::EPP::Extensions::Nominet::Host::parse_infdata($po,$mes,$nsinf,undef,$rinfo);
-    my @a=$dh->get_details(1);
-    splice(@a,3,1,1);
-    $ns->add(@a);
-   }
-   ## We loose here roid, clId, crId, crDate, upId, upDate, but this seems useless in a domain_info call ! They can always be accessed indirectly if really needed (see test file)
-   ## If really needed, they could be added to Hosts (extra parameters)
+   $rinfo->{domain}->{$oname}->{ns}=Net::DRI::Protocol::EPP::Util::parse_ns($po,$c);
   } elsif ($name=~m/^(clID|crID|upID)$/)
   {
    $rinfo->{domain}->{$oname}->{$1}=$c->textContent();
@@ -160,8 +153,8 @@ sub renew
 {
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
- my @d=Net::DRI::Protocol::EPP::Core::Domain::build_command($mes,'renew',$domain);
- push @d,Net::DRI::Protocol::EPP::Core::Domain::build_period($rd->{duration}) if Net::DRI::Util::has_duration($rd);
+ my @d=Net::DRI::Protocol::EPP::Util::domain_build_command($mes,'renew',$domain);
+ push @d,Net::DRI::Protocol::EPP::Util::build_period($rd->{duration}) if Net::DRI::Util::has_duration($rd);
  $mes->command_body(\@d);
 }
 
@@ -169,7 +162,7 @@ sub transfer_request
 {
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
- my @d=Net::DRI::Protocol::EPP::Core::Domain::build_command($mes,['transfer',{'op'=>'request'}],$domain);
+ my @d=Net::DRI::Protocol::EPP::Util::domain_build_command($mes,['transfer',{'op'=>'request'}],$domain);
 
  Net::DRI::Exception::usererr_insufficient_parameters('Extra parameters must be provided for domain transfer request, at least a registrar_tag') unless Net::DRI::Util::has_key($rd,'registrar_tag');
  Net::DRI::Exception::usererr_invalid_parameters('Registrar tag must be an XML token from 2 to 16 characters') unless Net::DRI::Util::xml_is_token($rd->{registrar_tag},2,16);
@@ -200,38 +193,31 @@ sub transfer_answer
 
 sub build_ns
 {
- my ($mes,$ns)=@_;
+ my ($epp,$ns,$domain)=@_;
+
  my @d;
- my $l=$ns->count();
- $l=10 if $l>10;
- my $needns=0;
-
- foreach my $i (1..$l)
+ foreach my $i (1..$ns->count())
  {
-  my ($n,$r4,$r6,$rextra)=$ns->get_details($i);
-
-  if (defined($rextra) && exists($rextra->{roid}) && $rextra->{roid})
+  my ($n,$r4,$r6)=$ns->get_details($i);
+  my @h;
+  push @h,['domain:hostName',$n];
+  if (($n=~m/\S+\.${domain}$/i) || (lc($n) eq lc($domain)))
   {
-    push @d,['domain:nsObj',$rextra->{roid}];
-  } else
-  {
-   my @h;
-   push @h,['ns:name',$n];
-   push @h,['ns:addr',{ip=>'v4'},$r4->[0]] if @$r4; ## it seems only one IP is allowed
-   push @h,['ns:addr',{ip=>'v6'},$r6->[0]] if @$r6; ## ditto
-   push @d,['ns:create',@h];
-   $needns=1;
+   ## The registry accepts only ONE Ipv4 or IPv6 address :-( !
+   push @h,['domain:hostAddr',$r4->[0],{ip=>'v4'}] if @$r4;
+   push @h,['domain:hostAddr',$r6->[0],{ip=>'v6'}] if @$r6;
   }
+  push @d,['domain:host',@h];
  }
- return ['domain:ns',@d,$needns? {'xmlns:ns'=>$mes->ns('ns')} : {}];
+ return ['domain:ns',@d];
 }
 
 sub create
 {
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
- my @d=Net::DRI::Protocol::EPP::Core::Domain::build_command($mes,'create',$domain);
- push @d,Net::DRI::Protocol::EPP::Core::Domain::build_period($rd->{duration}) if Net::DRI::Util::has_duration($rd);
+ my @d=Net::DRI::Protocol::EPP::Util::domain_build_command($mes,'create',$domain);
+ push @d,Net::DRI::Protocol::EPP::Util::build_period($rd->{duration}) if Net::DRI::Util::has_duration($rd);
 
  ## account=contact
  Net::DRI::Exception::usererr_insufficient_parameters('account data is mandatory') unless Net::DRI::Util::has_key($rd,'contact');
@@ -244,7 +230,7 @@ sub create
  }
 
  ## ns, optional
- push @d,build_ns($mes,$rd->{ns}) if (Net::DRI::Util::has_ns($rd));
+ push @d,build_ns($mes,$rd->{ns},$domain) if (Net::DRI::Util::has_ns($rd));
 
  ## See http://www.nominet.org.uk/registrars/systems/data/fields/#billing
  push @d,['domain:first-bill',$rd->{'first-bill'}] if (Net::DRI::Util::has_key($rd,'first-bill') && $rd->{'first-bill'}=~m/^(?:th|bc)$/);
@@ -279,24 +265,6 @@ sub create_parse
    my $roid=Net::DRI::Protocol::EPP::Extensions::Nominet::Account::parse_credata($mes,$node,$po,$cs,$rinfo);
    $rinfo->{account}->{$roid}->{action}='create';
    $rinfo->{domain}->{$oname}->{contact}=$cs;
-  } elsif ($name eq 'ns')
-  {
-    my $ns=$po->create_local_object('hosts');
-    my $nsns=$mes->ns('ns');
-    foreach my $node ($c->getChildrenByTagNameNS($nsns,'creData'))
-    {
-     my $roid=$node->getChildrenByTagNameNS($nsns,'roid')->get_node(1)->textContent();
-     my $name=$node->getChildrenByTagNameNS($nsns,'name')->get_node(1)->textContent();
-     my $date=$po->parse_iso8601($node->getChildrenByTagNameNS($nsns,'crDate')->get_node(1)->textContent());
-     $ns->add($name,[],[],undef,{roid => $roid});
-     ## See Host::parse_infdata
-     $rinfo->{host}->{$name}->{exist}=$rinfo->{host}->{$roid}->{exist}=1;
-     $rinfo->{host}->{$name}->{roid}=$roid;
-     $rinfo->{host}->{$name}->{crDate}=$date;
-     $rinfo->{host}->{$roid}->{name}=$name;
-     $rinfo->{host}->{$roid}->{crDate}=$date;
-    }
-   $rinfo->{domain}->{$oname}->{ns}=$ns
   } elsif ($name=~m/^(crDate|exDate)$/)
   {
    $rinfo->{domain}->{$oname}->{$1}=$po->parse_iso8601($c->textContent());
@@ -311,7 +279,7 @@ sub update
 
  Net::DRI::Exception::usererr_invalid_parameters($todo.' must be a Net::DRI::Data::Changes object') unless Net::DRI::Util::isa_changes($todo);
 
- my @d=Net::DRI::Protocol::EPP::Core::Domain::build_command($mes,'update',$domain);
+ my @d=Net::DRI::Protocol::EPP::Util::domain_build_command($mes,'update',$domain);
  my $ns=$todo->set('ns');
  my $co=$todo->set('contact');
 
@@ -329,7 +297,7 @@ sub update
    push @d,['domain:ns']; ## empty domain:ns means removal of all nameservers from domain
   } else
   {
-   push @d,build_ns($mes,$ns);
+   push @d,build_ns($mes,$ns,$domain);
   }
  }
 

@@ -1,7 +1,7 @@
 ## Domain Registry Interface, EURid Domain EPP extension commands
 ## (based on EURid registration_guidelines_v1_0E-epp.pdf)
 ##
-## Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -23,9 +23,9 @@ use warnings;
 
 use Net::DRI::Util;
 use Net::DRI::Exception;
-use Net::DRI::Protocol::EPP::Core::Domain;
+use Net::DRI::Protocol::EPP::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.14 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.15 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -55,7 +55,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -311,7 +311,7 @@ sub add_transfer
  my @n;
 
  my $creg=$cs->get('registrant');
- Net::DRI::Exception::usererr_invalid_parameters('registrant must be a contact object or the string #AUTO#') unless (Net::DRI::Util::isa_contact($creg) || (!ref($creg) && (uc($creg) eq '#AUTO#')));
+ Net::DRI::Exception::usererr_invalid_parameters('registrant must be a contact object or the string #AUTO#') unless (Net::DRI::Util::isa_contact($creg,'Net::DRI::Data::Contact::EURid') || (!ref($creg) && (uc($creg) eq '#AUTO#')));
  push @n,['eurid:registrant',ref($creg)? $creg->srid() : '#AUTO#' ];
 
  if (exists($rd->{trDate}))
@@ -321,7 +321,7 @@ sub add_transfer
  }
 
  my $cbill=$cs->get('billing');
- Net::DRI::Exception::usererr_invalid_parameters('billing must be a contact object') unless Net::DRI::Util::isa_contact($cbill);
+ Net::DRI::Exception::usererr_invalid_parameters('billing must be a contact object') unless Net::DRI::Util::isa_contact($cbill,'Net::DRI::Data::Contact::EURid');
  push @n,['eurid:billing',$cbill->srid()];
 
  push @n,add_contact('tech',$cs,9) if $cs->has_type('tech');
@@ -329,7 +329,7 @@ sub add_transfer
 
  if (Net::DRI::Util::has_ns($rd))
  {
-  my $n=Net::DRI::Protocol::EPP::Core::Domain::build_ns($epp,$rd->{ns},$domain,'eurid');
+  my $n=Net::DRI::Protocol::EPP::Util::build_ns($epp,$rd->{ns},$domain,'eurid');
   my @ns=$mes->nsattrs('domain');
   push @$n,{'xmlns:domain'=>shift(@ns),'xsi:schemaLocation'=>sprintf('%s %s',@ns)};
   push @n,$n;
@@ -351,7 +351,7 @@ sub add_contact
 {
  my ($type,$cs,$max)=@_;
  $max--;
- my @r=grep { Net::DRI::Util::isa_contact($_) } ($cs->get($type));
+ my @r=grep { Net::DRI::Util::isa_contact($_,'Net::DRI::Data::Contact::EURid') } ($cs->get($type));
  return map { ['eurid:'.$type,$_->srid()] } grep {defined} @r[0..$max];
 }
 
@@ -359,7 +359,7 @@ sub undelete
 {
  my ($epp,$domain)=@_;
  my $mes=$epp->message();
- my @d=Net::DRI::Protocol::EPP::Core::Domain::build_command($mes,'undelete',$domain);
+ my @d=Net::DRI::Protocol::EPP::Util::domain_build_command($mes,'undelete',$domain);
  $mes->command_body(\@d);
 }
 
@@ -367,8 +367,8 @@ sub transferq_request
 {
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
- my @d=Net::DRI::Protocol::EPP::Core::Domain::build_command($mes,['transferq',{'op'=>'request'}],$domain);
- push @d,Net::DRI::Protocol::EPP::Core::Domain::build_period($rd->{duration}) if Net::DRI::Util::has_duration($rd);
+ my @d=Net::DRI::Protocol::EPP::Util::domain_build_command($mes,['transferq',{'op'=>'request'}],$domain);
+ push @d,Net::DRI::Protocol::EPP::Util::build_period($rd->{duration}) if Net::DRI::Util::has_duration($rd);
  $mes->command_body(\@d);
 
  my @n=add_transfer($epp,$mes,$domain,$rd);
@@ -380,7 +380,7 @@ sub transferq_cancel
 {
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
- my @d=Net::DRI::Protocol::EPP::Core::Domain::build_command($mes,['transferq',{'op'=>'cancel'}],$domain);
+ my @d=Net::DRI::Protocol::EPP::Util::domain_build_command($mes,['transferq',{'op'=>'cancel'}],$domain);
  $mes->command_body(\@d);
 
  Net::DRI::Exception::usererr_insufficient_parameters('reason is mandatory for transferq_cancel') unless (Net::DRI::Util::has_key($rd,'reason') && $rd->{reason});
@@ -393,7 +393,7 @@ sub trade_request
 {
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
- my @d=Net::DRI::Protocol::EPP::Core::Domain::build_command($mes,['trade',{'op'=>'request'}],$domain);
+ my @d=Net::DRI::Protocol::EPP::Util::domain_build_command($mes,['trade',{'op'=>'request'}],$domain);
  $mes->command_body(\@d);
 
  my @n=add_transfer($epp,$mes,$domain,$rd);
@@ -405,7 +405,7 @@ sub trade_cancel
 {
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
- my @d=Net::DRI::Protocol::EPP::Core::Domain::build_command($mes,['trade',{'op'=>'cancel'}],$domain);
+ my @d=Net::DRI::Protocol::EPP::Util::domain_build_command($mes,['trade',{'op'=>'cancel'}],$domain);
  $mes->command_body(\@d);
 
  Net::DRI::Exception::usererr_insufficient_parameters('reason is mandatory for trade_cancel') unless (Net::DRI::Util::has_key($rd,'reason') && $rd->{reason});
@@ -418,7 +418,7 @@ sub reactivate
 {
  my ($epp,$domain)=@_;
  my $mes=$epp->message();
- my @d=Net::DRI::Protocol::EPP::Core::Domain::build_command($mes,'reactivate',$domain);
+ my @d=Net::DRI::Protocol::EPP::Util::domain_build_command($mes,'reactivate',$domain);
  $mes->command_body(\@d);
 }
 
@@ -432,7 +432,7 @@ sub checkcontact
  my @d=(['eurid:domainName',$domain]);
 
  Net::DRI::Exception::usererr_insufficient_parameters('registrant key is mandatory for check_contact_for_transfer') unless Net::DRI::Util::has_key($rd,'registrant');
- Net::DRI::Exception::usererr_invalid_parameters('registrant must be a contact object') unless Net::DRI::Util::isa_contact($rd->{registrant});
+ Net::DRI::Exception::usererr_invalid_parameters('registrant must be a contact object') unless Net::DRI::Util::isa_contact($rd->{registrant},'Net::DRI::Data::Contact::EURid');
  push @d,['eurid:registrant',$rd->{registrant}->srid()];
 
  my $eid=build_command_extension($mes,$epp,'eurid:ext');

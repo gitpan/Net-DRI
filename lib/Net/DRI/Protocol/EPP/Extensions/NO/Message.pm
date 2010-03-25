@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .NO message extensions
 ##
-## Copyright (c) 2008,2009 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
+## Copyright (c) 2008-2010 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
 ##                    Trond Haugen E<lt>info@norid.noE<gt>
 ##                    All rights reserved.
 ##
@@ -28,8 +28,11 @@ use Net::DRI::Protocol::EPP::Core::Domain;
 use Net::DRI::Protocol::EPP::Extensions::NO::Contact;
 use Net::DRI::Protocol::EPP::Extensions::NO::Host;
 use Net::DRI::Protocol::EPP::Extensions::NO::Result;
+use Net::DRI::Protocol::EPP::Util;
 
-our $VERSION = do { my @r = ( q$Revision: 1.4 $ =~ /\d+/gmx ); sprintf( "%d" . ".%02d" x $#r, @r ); };
+use DateTime::Format::ISO8601;
+
+our $VERSION = do { my @r = ( q$Revision: 1.5 $ =~ /\d+/gmx ); sprintf( "%d" . ".%02d" x $#r, @r ); };
 
 =pod
 
@@ -59,7 +62,7 @@ Trond Haugen, E<lt>info@norid.noE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008,2009 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
+Copyright (c) 2008-2010 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
 Trond Haugen E<lt>info@norid.noE<gt>
 All rights reserved.
 
@@ -85,51 +88,43 @@ sub register_commands {
     return { 'message' => \%tmp };
 }
 
+sub facet {
+    my ( $epp, $rd ) = @_;
+
+    return Net::DRI::Protocol::EPP::Extensions::NO::Host::build_facets( $epp, $rd );
+}
+
 sub pollack {
-    my ( $epp, $msgid ) = @_;
+    my ( $epp, $msgid, $rd ) = @_;
 
     my $mes = $epp->message();
-    return (
-        $mes->command( [ [ 'poll', { op => 'ack', msgID => $msgid } ] ] ) );
+    my $r = ( $mes->command( [ [ 'poll', { op => 'ack', msgID => $msgid } ] ] ) );
+
+    if (defined($rd->{facets}) && $rd->{facets}) {
+       $r = facet( $epp, $rd );
+    }
+    return $r;
 }
 
 sub pollreq {
-    my ( $epp, $msgid ) = @_;
+    my ( $epp, $rd ) = @_;
 
-    Net::DRI::Exception::usererr_invalid_parameters(
-        'In EPP, you can not specify the message id you want to retrieve')
-        if defined($msgid);
     my $mes = $epp->message();
-    return ( $mes->command( [ [ 'poll', { op => 'req' } ] ] ) );
+
+    my $r = ( $mes->command( [ [ 'poll', { op => 'req' } ] ] ) );
+
+    if (defined($rd->{facets}) && $rd->{facets}) {
+       $r = facet( $epp, $rd );
+    }
+    
+    return $r;
 }
 
 sub parse_resp_result
 {
  my ($node, $NS, $rinfo, $msgid)=@_;
 
- my $code=$node->getAttribute('code');
- my $msg=($node->getChildrenByTagNameNS($NS,'msg'))[0];
- my $lang=$msg->getAttribute('lang') || 'en';
- $msg=$msg->firstChild()->getData();
- my @i;
-
- my $c=$node->getFirstChild();
- while ($c)
- {
-  next unless ($c->nodeType() == 1); ## only for element nodes
-  my $name=$c->nodeName();
-  next unless $name;
-
-  if ($name eq 'extValue') ## OPTIONAL
-  {
-   push @i,substr(substr($c->toString(),10),0,-11); ## grab everything as a string, without <extValue> and </extValue>
-  } elsif ($name eq 'value') ## OPTIONAL
-  {
-   push @i,$c->toString();
-  }
- } continue { $c=$c->getNextSibling(); }
-
- push @{$rinfo->{message}->{$msgid}->{results}}, { code => $code, message => $msg, lang => $lang, extra_info => \@i};
+ push @{$rinfo->{message}->{$msgid}->{results}},Net::DRI::Protocol::EPP::Util::parse_result($node,$NS,'no');
  return;
 }
 
@@ -153,7 +148,7 @@ sub transfer_resp_parse {
 
    $rinfo->{message}->{$msgid}->{domain}->{$oname}->{exist}=1;
   } elsif ($name=~m/^(trStatus|reID|acID)$/mx) {
-   $rinfo->{message}->{$msgid}->{domain}->{$oname}->{$1}=$c->getFirstChild()->getData();
+   $rinfo->{message}->{$msgid}->{domain}->{$oname}->{$1}=$c->getFirstChild()->getData() if ($c->getFirstChild());
   } elsif ($name=~m/^(reDate|acDate|exDate)$/mx) {
    $rinfo->{message}->{$msgid}->{domain}->{$oname}->{$1}=$pd->parse_datetime($c->getFirstChild()->getData());
   }
@@ -161,6 +156,31 @@ sub transfer_resp_parse {
  return;
 }
 
+sub contact_resp_parse {
+ my ($credata, $oname, $rinfo, $msgid)=@_;
+
+ return unless $credata;
+ 
+ my $c=$credata->getFirstChild();
+ 
+ while ($c)
+ {
+  next unless ($c->nodeType() == 1); ## only for element nodes
+  my $name=$c->localname() || $c->nodeName();
+  if ($name eq 'id')
+  {
+   my $new=$c->getFirstChild()->getData();
+   $rinfo->{message}->{$msgid}->{contact}->{$oname}->{id}=$new if (defined($oname) && ($oname ne $new)); ## registry may give another id than the one we requested or not take ours into account at all !
+   $oname=$new;
+   $rinfo->{message}->{$msgid}->{contact}->{$oname}->{id}=$oname;
+   $rinfo->{message}->{$msgid}->{contact}->{$oname}->{action}='create';
+   $rinfo->{message}->{$msgid}->{contact}->{$oname}->{exist}=1;
+  } elsif ($name=~m/^(crDate)$/)
+  {
+   $rinfo->{message}->{$msgid}->{contact}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
+  }
+ } continue { $c=$c->getNextSibling(); }
+}
 
 ## We take into account all parse functions, to be able to parse any result
 sub parse_poll {
@@ -275,6 +295,11 @@ sub parse_poll {
     # Parse any domain transfer late response data
     if (my $trndata = (($data->getElementsByTagNameNS($mes->ns('domain'), 'trnData'))[0])) {
 	transfer_resp_parse($trndata, $oname, $rinfo, $msgid);
+    }
+
+    # Parse any any contact create late response data
+    if (my $credata = (($data->getElementsByTagNameNS($mes->ns('contact'), 'creData'))[0])) {
+       contact_resp_parse($credata, $oname, $rinfo, $msgid);
     }
 
     # Parse any any contact info late response data

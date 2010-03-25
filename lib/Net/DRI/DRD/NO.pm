@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .NO policies for Net::DRI
 ##
-## Copyright (c) 2008,2009 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
+## Copyright (c) 2008-2010 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
 ##                    Trond Haugen E<lt>info@norid.noE<gt>
 ##                    All rights reserved.
 ##
@@ -28,7 +28,7 @@ use DateTime::Duration;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION = do { my @r = ( q$Revision: 1.4 $ =~ /\d+/gxm ); sprintf( "%d" . ".%02d" x $#r, @r ); };
+our $VERSION = do { my @r = ( q$Revision: 1.5 $ =~ /\d+/gxm ); sprintf( "%d" . ".%02d" x $#r, @r ); };
 
 # let contact check support be decided by the server policy
 __PACKAGE__->make_exception_for_unavailable_operations(qw/domain_transfer_accept domain_transfer_refuse contact_transfer_stop contact_transfer_query contact_transfer_accept contact_transfer_refuse/);
@@ -61,7 +61,7 @@ Trond Haugen E<lt>info@norid.noE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008,2009 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
+Copyright (c) 2008-2010 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
 Trond Haugen E<lt>info@norid.noE<gt>
 All rights reserved.
 
@@ -104,22 +104,7 @@ sub transport_protocol_default {
     return;
 }
 
-#########################################################################
-# need to accept all tlds for hosts, so subclass this method and
-# remove the tld check
-sub verify_name_host {
-    my ( $self, $ndr, $host, $checktld ) = @_;
-    $checktld ||= 0;
-    ( $host, $checktld ) = ( $ndr, $host )
-        unless ( defined($ndr)
-        && $ndr
-        && ( ref($ndr) eq 'Net::DRI::Registry' ) );
-
-    $host = $host->get_names(1) if ( ref($host) );
-    my $r = $self->check_name($host);
-    return $r if ($r);
-    return 0;
-}
+####################################################################################################
 
 =head1 verify_name_domain
 
@@ -217,7 +202,7 @@ sub host_update {
     foreach my $t ( $tochange->types() ) {
         Net::DRI::Exception->die( 0, 'DRD', 6,
             "Change host_update/${t} not handled" )
-            unless ( $t =~ m/^(?:ip|status|name|contact)$/mx );
+            unless ( $t =~ m/^(?:ip|status|name|contact|facets)$/mx );
         next if $ndr->protocol_capable( 'host_update', $t );
         Net::DRI::Exception->die( 0, 'DRD', 5,
             "Protocol ${fp} is not capable of host_update/${t}" );
@@ -268,28 +253,34 @@ sub host_update {
 }
 
 sub message_retrieve {
-    my ( $self, $ndr, $id ) = @_;
-    my $rc = $ndr->process( 'message', 'noretrieve', [$id] );
+    my ( $self, $ndr, $rd ) = @_;
+
+    my $rc = $ndr->process( 'message', 'noretrieve', [$rd] );
     return $rc;
 }
 
 sub message_delete {
-    my ( $self, $ndr, $id ) = @_;
-    my $rc = $ndr->process( 'message', 'nodelete', [$id] );
+    my ( $self, $ndr, $id, $rd ) = @_;
+
+    my $rc = $ndr->process( 'message', 'nodelete', [$id, $rd] );
     return $rc;
 }
 
 sub message_waiting {
-    my ( $self, $ndr ) = @_;
-    my $c = $self->message_count($ndr);
+    my ( $self, $ndr, $rd ) = @_;
+
+    my $c = $self->message_count($ndr, $rd);
     return ( defined($c) && $c ) ? 1 : 0;
 }
 
 sub message_count {
-    my ( $self, $ndr ) = @_;
+    my ( $self, $ndr, $rd ) = @_;
+
     my $count = $ndr->get_info( 'count', 'message', 'info' );
     return $count if defined($count);
-    my $rc = $ndr->process( 'message', 'noretrieve' );
+
+    my $rc = $ndr->process( 'message', 'noretrieve',  [$rd] );
+
     return unless $rc->is_success();
     $count = $ndr->get_info( 'count', 'message', 'info' );
     return ( defined($count) && $count ) ? $count : 0;

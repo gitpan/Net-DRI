@@ -1,6 +1,6 @@
 ## Domain Registry Interface, CZ domain transactions extension
 ##
-## Copyright (c) 2008,2009 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+## Copyright (c) 2008,2009,2010 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 ##                    All rights reserved.
 ##
 ## This file is part of Net::DRI
@@ -24,10 +24,11 @@ use Net::DRI::Util;
 use Net::DRI::Exception;
 use Net::DRI::Data::ContactSet;
 use Net::DRI::Data::Hosts;
+use Net::DRI::Protocol::EPP::Util;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION = do { my @r = ( q$Revision: 1.3 $ =~ /\d+/g ); sprintf( "%d" . ".%02d" x $#r, @r ); };
+our $VERSION = do { my @r = ( q$Revision: 1.4 $ =~ /\d+/g ); sprintf( "%d" . ".%02d" x $#r, @r ); };
 
 =pod
 
@@ -57,7 +58,7 @@ Tonnerre Lombard, E<lt>tonnerre.lombard@sygroup.chE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008,2009 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+Copyright (c) 2008,2009,2010 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -114,33 +115,6 @@ sub build_authinfo
 	return ['domain:authInfo', $rauth->{pw}];
 }
 
-sub build_period
-{
-	my $dtd = shift; ## DateTime::Duration
-	## all values are integral, but may be negative
-	my ($y, $m) = $dtd->in_units('years', 'months');
-	($y, $m) = (0, $m + 12 * $y) if ($y && $m);
-	my ($v, $u);
-
-	if ($y)
-	{
-		Net::DRI::Exception::usererr_invalid_parameters('years must ' .
-			'be between 1 and 99') unless ($y >= 1 && $y <= 99);
-		$v = $y;
-		$u = 'y';
-	}
-	else
-	{
-		Net::DRI::Exception::usererr_invalid_parameters('months must ' .
-			'be between 1 and 99') unless ($m >= 1 && $m <= 99);
-		$v = $m;
-		$u = 'm';
-	}
- 
-	return ['domain:period', $v, {'unit' => $u}];
-}
-
-
 ####################################################################################################
 ########### Query commands
 
@@ -181,7 +155,7 @@ sub info_parse
 		}
 		elsif ($name eq 'status')
 		{
-			push(@s, $po->parse_status($c));
+			push(@s, Net::DRI::Protocol::EPP::Util::parse_status($c));
 		}
 		elsif ($name =~ /^(registrant|admin)$/)
 		{
@@ -254,7 +228,7 @@ sub create
 	}
 
 	## Period, OPTIONAL
-	push(@d, build_period($rd->{duration})) if Net::DRI::Util::has_duration($rd);
+	push(@d, Net::DRI::Protocol::EPP::Util::build_period($rd->{duration})) if Net::DRI::Util::has_duration($rd);
 
 	## Nameserver sets, OPTIONAL
 	push(@d, ['domain:nsset', $rd->{nsset}]) if (Net::DRI::Util::has_key($rd, 'nsset'));
@@ -313,11 +287,11 @@ sub update
 	my $cdel = $todo->del('contact');
 	my (@add, @del);
 
-	push(@add, build_ns($epp, $nsadd, $domain))		if ($nsadd &&
+	push(@add, Net::DRI::Protocol::EPP::Util::build_ns($epp, $nsadd, $domain))		if ($nsadd &&
 		!$nsadd->is_empty());
 	push(@add, build_contacts($cadd))			if ($cadd);
 	push(@add, $sadd->build_xml('domain:status', 'core'))	if ($sadd);
-	push(@del, build_ns($epp, $nsdel, $domain))		if ($nsdel &&
+	push(@del, Net::DRI::Protocol::EPP::Util::build_ns($epp, $nsdel, $domain))		if ($nsdel &&
 		!$nsdel->is_empty());
 	push(@del, build_contacts($cdel))			if ($cdel);
 	push(@del, $sdel->build_xml('domain:status', 'core'))	if ($sdel);

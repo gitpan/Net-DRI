@@ -1,6 +1,6 @@
-## Domain Registry Interface, EPP Connection handling for .IT
+## Domain Registry Interface, EPP over HTTP/HTTPS Connection handling
 ##
-## Copyright (c) 2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -15,7 +15,7 @@
 #
 ####################################################################################################
 
-package Net::DRI::Protocol::EPP::Extensions::IT::Connection;
+package Net::DRI::Protocol::EPP::Extensions::HTTP;
 
 use strict;
 use warnings;
@@ -35,7 +35,7 @@ our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r,
 
 =head1 NAME
 
-Net::DRI::Protocol::EPP::Extensions::IT::Connection - .IT EPP over HTTPS connection handling for Net::DRI
+Net::DRI::Protocol::EPP::Extensions::HTTP - EPP over HTTP/HTTPS connection handling for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -59,7 +59,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008-2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

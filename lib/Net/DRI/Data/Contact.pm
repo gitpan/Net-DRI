@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Handling of contact data
 ##
-## Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -31,7 +31,7 @@ use Net::DRI::Util;
 use Email::Valid;
 use Encode (); ## we need here direct use of Encode, not through Net::DRI::Util::encode_* as we need the default substitution for unknown data
 
-our $VERSION=do { my @r=(q$Revision: 1.13 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.14 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -164,7 +164,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -245,7 +245,7 @@ sub int2loc
 }
 
 sub has_loc { return shift->_has(0); }
-sub has_int  { return shift->_has(1); }
+sub has_int { return shift->_has(1); }
 sub _has
 {
  my ($self,$pos)=@_;
@@ -285,9 +285,9 @@ sub validate ## See RFC4933,§4
  push @errs,'cc'   if ($self->cc()   && grep { !Net::DRI::Util::xml_is_token($_,2,2) }                  ($self->cc()));
  push @errs,'cc'   if ($self->cc()   && grep { !exists($Net::DRI::Util::CCA2{uc($_)}) }                 ($self->cc()));
 
- push @errs,'voice' if ($self->voice() && !Net::DRI::Util::xml_is_token($self->voice(),undef,17) && $self->voice()!~m/^\+[0-9]{1,3}\.[0-9]{1,14}(?:x\d+)?$/);
- push @errs,'fax'   if ($self->fax()   && !Net::DRI::Util::xml_is_token($self->fax(),undef,17)   && $self->fax()!~m/^\+[0-9]{1,3}\.[0-9]{1,14}(?:x\d+)?$/);
- push @errs,'email' if ($self->email() && !Net::DRI::Util::xml_is_token($self->email(),1,undef) && !Email::Valid->rfc822($self->email()));
+ push @errs,'voice' if ($self->voice() && ! ($self->voice()=~m/^\+[0-9]{1,3}\.[0-9]{1,14}(?:x\d+)?$/));
+ push @errs,'fax'   if ($self->fax()   && ! ($self->fax()=~m/^\+[0-9]{1,3}\.[0-9]{1,14}(?:x\d+)?$/));
+ push @errs,'email' if ($self->email() && ! (Net::DRI::Util::xml_is_token($self->email(),1,undef)  && Email::Valid->rfc822($self->email())));
 
  my $ra=$self->auth();
  push @errs,'auth' if ($ra && (ref($ra) eq 'HASH') && exists($ra->{pw}) && !Net::DRI::Util::xml_is_normalizedstring($ra->{pw}));

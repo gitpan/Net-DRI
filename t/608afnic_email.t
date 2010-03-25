@@ -78,7 +78,7 @@ Content-Type: text/plain; charset="iso-8859-15"
 Content-Disposition: inline
 Content-Transfer-Encoding: 8bit
 MIME-Version: 1.0
-X-Mailer: Net::DRI 0.95/1.02 via MIME-tools 5.417 (Entity 5.417)
+X-Mailer: Net::DRI 0.96/1.03 via MIME-tools 5.417 (Entity 5.417)
 From: test@localhost
 To: domain@nic.fr
 Subject: CLIENTID domain_create [TRID-12345]
@@ -130,7 +130,7 @@ Content-Type: text/plain; charset="iso-8859-15"
 Content-Disposition: inline
 Content-Transfer-Encoding: 8bit
 MIME-Version: 1.0
-X-Mailer: Net::DRI 0.95/1.02 via MIME-tools 5.417 (Entity 5.417)
+X-Mailer: Net::DRI 0.96/1.03 via MIME-tools 5.417 (Entity 5.417)
 From: test@localhost
 To: domain@nic.fr
 Subject: CLIENTID domain_create [TRID-12345]

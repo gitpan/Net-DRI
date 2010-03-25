@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Encapsulating result status, standardized on EPP codes
 ##
-## Copyright (c) 2005,2006,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2008-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -26,7 +26,7 @@ __PACKAGE__->mk_ro_accessors(qw(is_success native_code code message lang next));
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.23 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.25 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -196,7 +196,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2008-2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -224,6 +224,7 @@ our %EPP_CODES=(
                 OBJECT_DOES_NOT_EXIST => 2303,
                 COMMAND_FAILED => 2400, ## Internal server error not related to the protocol
                 COMMAND_FAILED_CLOSING => 2500, ## Same + connection dropped
+		SESSION_LIMIT_EXCEEDED_CLOSING => 2502, ## useful for rate limiting problems
 
                 GENERIC_SUCCESS => 1900, ## these codes are not defined in EPP RFCs, but provide a nice extension
                 GENERIC_ERROR   => 2900, ##     19XX for ok (1900=Undefined success), 29XX for errors (2900=Undefined error)
@@ -322,11 +323,11 @@ sub new_error           { my ($class,$code,$msg,$lang,$ri)=@_; return $class->ne
 sub as_string
 {
  my ($self,$withinfo)=@_;
- my $b=sprintf('%s: %s (%s/%s)',$self->is_success()? 'SUCCESS' : 'ERROR',$self->message() || '(No message given)',$self->code(),$self->native_code());
+ my $b=sprintf('%s %d %s',$self->is_success()? 'SUCCESS' : 'ERROR',$self->code(),length $self->message() ? ($self->code() eq $self->native_code()? $self->message() : $self->message().' ['.$self->native_code().']') : '(No message given)');
  if (defined($withinfo) && $withinfo)
  {
   my @i=$self->get_extended_results();
-  $b.="\n".join("\n",@i) if @i;
+  $b.="\n".join("\n",map { my $rh=$_; join(' ',map { $_.'='.$rh->{$_} } sort(keys(%$rh))) } @i) if @i;
  }
  return $b;
 }
@@ -340,11 +341,8 @@ sub is_closing { my $c=shift->code(); return ($c==$EPP_CODES{COMMAND_SUCCESSFUL_
 sub is
 {
  my ($self,$symcode)=@_;
- if (defined $symcode && length $symcode && exists $EPP_CODES{$symcode})
- {
-  return ($self->code()==$EPP_CODES{$symcode})? 1 : 0;
- }
- return;
+ return unless (defined $symcode && length $symcode && exists $EPP_CODES{$symcode});
+ return ($self->code()==$EPP_CODES{$symcode})? 1 : 0;
 }
 
 ####################################################################################################

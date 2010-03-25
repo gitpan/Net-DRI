@@ -318,14 +318,13 @@ $toc->del('nsgroup',$dri->local_object('hosts')->name('nsgroup-eurid'));
 $rc=$dri->domain_update('ecom.eu',$toc);
 is_string($R1,'<?xml version="1.0" encoding="UTF-8" standalone="no"?><epp xmlns="http://www.eurid.eu/xml/epp/epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.eurid.eu/xml/epp/epp-1.0 epp-1.0.xsd"><command><update><domain:update xmlns:domain="http://www.eurid.eu/xml/epp/domain-1.0" xsi:schemaLocation="http://www.eurid.eu/xml/epp/domain-1.0 domain-1.0.xsd"><domain:name>ecom.eu</domain:name><domain:add><domain:ns><domain:hostAttr><domain:hostName>ns.unknown.eu</domain:hostName></domain:hostAttr></domain:ns><domain:contact type="tech">mmai1</domain:contact></domain:add><domain:rem><domain:contact type="tech">mt24</domain:contact></domain:rem></domain:update></update><extension><eurid:ext xmlns:eurid="http://www.eurid.eu/xml/epp/eurid-1.0" xsi:schemaLocation="http://www.eurid.eu/xml/epp/eurid-1.0 eurid-1.0.xsd"><eurid:update><eurid:domain><eurid:add><eurid:nsgroup>nsgroup-eurid2</eurid:nsgroup></eurid:add><eurid:rem><eurid:nsgroup>nsgroup-eurid</eurid:nsgroup></eurid:rem></eurid:domain></eurid:update></eurid:ext></extension><clTRID>TRID-0001</clTRID></command></epp>','domain_update 1 build');
 is($rc->is_success(),1,'domain_update 1 is_success');
-is_deeply([$rc->get_extended_results()],['OK'],'domain_update 1 info');
+is_deeply([$rc->get_extended_results()],[{type=>'text',from=>'eurid',message=>'OK'}],'domain_update 1 info');
 
 
 $R2=$E1.'<response>'.r(2308,'Data management policy violation').'<extension><eurid:ext><eurid:result><eurid:msg>Contact mt24 is not linked to domain ecom</eurid:msg></eurid:result></eurid:ext></extension>'.$TRID.'</response>'.$E2;
 $rc=$dri->domain_update('ecom.eu',$toc);
 is($rc->is_success(),0,'domain_update 2 is_success');
-my @i=$rc->get_extended_results();
-is_deeply(\@i,['Contact mt24 is not linked to domain ecom'],'domain_update 2 info');
+is_deeply([$rc->get_extended_results()],[{type=>'text',from=>'eurid',message=>'Contact mt24 is not linked to domain ecom'}],'domain_update 2 info');
 
 
 ## p.61

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Handling of contact data for AFNIC
 ##
-## Copyright (c) 2006,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2008,2009,2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -27,7 +27,7 @@ use Email::Valid;
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 __PACKAGE__->register_attributes(qw(firstname legal_form legal_form_other legal_id jo trademark key birth vat id_status));
 
@@ -110,7 +110,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2008,2009,2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -145,7 +145,7 @@ sub validate
  $self->SUPER::validate(1); ## will trigger an Exception if problem
 
  my @errs;
- push @errs,'srid' if ($self->srid() && $self->srid()!~m/^[A-Z]+(?:[1-9][0-9]*)?$/i);
+ push @errs,'srid' if ($self->srid() && $self->srid()!~m/^[A-Z]+(?:[1-9][0-9]*)?(?:-FRNIC)?$/i);
  push @errs,'name' if ($self->name() && ($self->name()!~m/^${NOM_PROPRE}$/ || ! is_nom_libre($self->name())));
  push @errs,'firstname' if ($self->firstname() && $self->firstname()!~m/^${NOM_PROPRE}$/);
  push @errs,'org'  if ($self->org()  && ! is_nom_libre($self->org()));
@@ -225,7 +225,7 @@ sub validate_registrant
   push @errs,'cc' if !exists($Net::DRI::Util::CCA2{uc($cc)});
   $isccfr=is_code_fr(uc($cc));
  }
- Net::DRI::Exception::usererr_invalid_parameters('Registrant contact must be in France') unless ($self->srid() || is_code_fr(uc($self->cc())));
+
  my $pc=$self->pc();
  if ($pc)
  {

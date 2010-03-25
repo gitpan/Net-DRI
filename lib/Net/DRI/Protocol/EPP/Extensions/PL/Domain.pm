@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .PL Domain EPP extension commands
 ##
-## Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com> and Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. 
+## Copyright (c) 2006,2008,2009,2010 Patrick Mevzek <netdri@dotandco.com> and Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. 
 ## All rights reserved.
 ##
 ## This file is part of Net::DRI
@@ -19,13 +19,14 @@
 package Net::DRI::Protocol::EPP::Extensions::PL::Domain;
 
 use strict;
+use warnings;
 
 use Net::DRI::Exception;
 use Net::DRI::Util;
 use Net::DRI::Data::Hosts;
-use Net::DRI::Protocol::EPP::Core::Domain;
+use Net::DRI::Protocol::EPP::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -56,7 +57,7 @@ Tonnerre Lombard <tonnerre.lombard@sygroup.ch>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com> and Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+Copyright (c) 2006,2008,2009,2010 Patrick Mevzek <netdri@dotandco.com> and Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -102,7 +103,7 @@ sub create
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
 
- my @d=Net::DRI::Protocol::EPP::Core::Domain::build_command($mes,'create',$domain);
+ my @d=Net::DRI::Protocol::EPP::Util::domain_build_command($mes,'create',$domain);
  my $def = $epp->default_parameters();
 
  if ($def && (ref($def) eq 'HASH') && exists($def->{domain_create}) && (ref($def->{domain_create}) eq 'HASH'))
@@ -116,7 +117,7 @@ sub create
  }
 
  ## Period, OPTIONAL
- push @d,build_period($rd->{duration}) if Net::DRI::Util::has_duration($rd);
+ push @d,Net::DRI::Protocol::EPP::Util::build_period($rd->{duration}) if Net::DRI::Util::has_duration($rd);
 
  ## Nameservers, OPTIONAL
  push @d,build_ns($epp,$rd->{ns},$domain) if Net::DRI::Util::has_ns($rd);
@@ -127,12 +128,12 @@ sub create
   my $cs=$rd->{contact};
   my @o=$cs->get('registrant');
   push @d,['domain:registrant',$o[0]->srid()] if (@o);
-  push @d,Net::DRI::Protocol::EPP::Core::Domain::build_contact_noregistrant($epp,$cs);
+  push @d,Net::DRI::Protocol::EPP::Util::build_core_contacts($epp,$cs);
  }
 
  ## AuthInfo
  Net::DRI::Exception::usererr_insufficient_parameters("authInfo is mandatory") unless (Net::DRI::Util::has_auth($rd));
- push @d,Net::DRI::Protocol::EPP::Core::Domain::build_authinfo($epp,$rd->{auth});
+ push @d,Net::DRI::Protocol::EPP::Util::domain_build_authinfo($epp,$rd->{auth});
  $mes->command_body(\@d);
 
  return unless exists($rd->{reason}) || exists($rd->{book});
@@ -153,7 +154,7 @@ sub update
 
  Net::DRI::Exception::usererr_invalid_parameters($todo.' must be a Net::DRI::Data::Changes object') unless Net::DRI::Util::isa_changes($todo);
 
- my @d=Net::DRI::Protocol::EPP::Core::Domain::build_command($mes,'update',$domain);
+ my @d=Net::DRI::Protocol::EPP::Util::domain_build_command($mes,'update',$domain);
 
  my $nsadd=$todo->add('ns');
  my $nsdel=$todo->del('ns');
@@ -164,10 +165,10 @@ sub update
  my (@add,@del);
 
  push @add,build_ns($epp,$nsadd,$domain)		if $nsadd && !$nsadd->is_empty();
- push @add,Net::DRI::Protocol::EPP::Core::Domain::build_contact_noregistrant($epp,$cadd) if $cadd;
+ push @add,Net::DRI::Protocol::EPP::Util::build_core_contacts($epp,$cadd) if $cadd;
  push @add,$sadd->build_xml('domain:status','core')	if $sadd;
  push @del,build_ns($epp,$nsdel,$domain,undef,1)	if $nsdel && !$nsdel->is_empty();
- push @del,Net::DRI::Protocol::EPP::Core::Domain::build_contact_noregistrant($epp,$cdel) if $cdel;
+ push @del,Net::DRI::Protocol::EPP::Util::build_core_contacts($epp,$cdel) if $cdel;
  push @del,$sdel->build_xml('domain:status','core')	if $sdel;
 
  push @d,['domain:add',@add] if @add;
@@ -175,9 +176,9 @@ sub update
 
  my $chg=$todo->set('registrant');
  my @chg;
- push @chg,['domain:registrant',$chg->srid()] if Net::DRI::Util::isa_contact($chg);
+ push @chg,['domain:registrant',$chg->srid()] if Net::DRI::Util::isa_contact($chg,'Net::DRI::Data::Contact::PL');
  $chg=$todo->set('auth');
- push @chg,Net::DRI::Protocol::EPP::Core::Domain::build_authinfo($chg) if ($chg && ref($chg));
+ push @chg,Net::DRI::Protocol::EPP::Util::domain_build_authinfo($chg) if ($chg && ref($chg));
  push @d,['domain:chg',@chg] if @chg;
  $mes->command_body(\@d);
 }

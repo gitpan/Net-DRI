@@ -1,7 +1,7 @@
 ## Domain Registry Interface, Net::DRI::Protocol::EPP class for .SE
 ## Contributed by Elias Sidenbladh and Ulrich Wisser from NIC SE
 ##
-## Copyright (c) 2006,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2008-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -25,7 +25,7 @@ use base qw/Net::DRI::Protocol::EPP/;
 
 use Net::DRI::Protocol::EPP::Extensions::SE::Message;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -55,7 +55,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2008-2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -73,12 +73,12 @@ sub setup
 {
     my ($self,$rp)=@_;
     my $version=$self->version();
-    $self->ns({iis=>['urn:se:iis:xml:epp:iis-1.0','iis-1.0.xsd']});
+    $self->ns({iis=>['urn:se:iis:xml:epp:iis-1.1','iis-1.1.xsd']});
     $self->factories('message',sub { my $m = Net::DRI::Protocol::EPP::Extensions::SE::Message->new(@_); $m->ns( $self->ns() ); $m->version($version); return $m; } );
     return;
 }
 
-sub default_extensions { return qw/SE::Extensions/; }
+sub default_extensions { return qw/SE::Extensions SecDNS/; }
 
 ####################################################################################################
 1;

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Contact commands (RFC4933)
 ##
-## Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -22,8 +22,9 @@ use warnings;
 
 use Net::DRI::Util;
 use Net::DRI::Exception;
+use Net::DRI::Protocol::EPP::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.17 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.18 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -53,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -189,7 +190,7 @@ sub info_parse
    $rinfo->{contact}->{$oname}->{roid}=$contact->roid();
   } elsif ($name eq 'status')
   {
-   push @s,$po->parse_status($c);
+   push @s,Net::DRI::Protocol::EPP::Util::parse_status($c);
   } elsif ($name=~m/^(clID|crID|upID)$/)
   {
    $rinfo->{contact}->{$oname}->{$1}=$c->textContent();
@@ -201,10 +202,10 @@ sub info_parse
    $contact->email($c->textContent());
   } elsif ($name eq 'voice')
   {
-   $contact->voice(parse_tel($c));
+   $contact->voice(Net::DRI::Protocol::EPP::Util::parse_tel($c));
   } elsif ($name eq 'fax')
   {
-   $contact->fax(parse_tel($c));
+   $contact->fax(Net::DRI::Protocol::EPP::Util::parse_tel($c));
   } elsif ($name eq 'postalInfo')
   {
    parse_postalinfo($po,$c,\%cd);
@@ -227,15 +228,6 @@ sub info_parse
 
  $rinfo->{contact}->{$oname}->{status}=$po->create_local_object('status')->add(@s);
  $rinfo->{contact}->{$oname}->{self}=$contact;
-}
-
-sub parse_tel
-{
- my $node=shift;
- my $ext=$node->getAttribute('x') || '';
- my $num=$node->textContent();
- $num.='x'.$ext if $ext;
- return $num;
 }
 
 sub parse_postalinfo
@@ -340,18 +332,6 @@ sub transfer_parse
 
 ############ Transform commands
 
-sub build_tel
-{
- my ($name,$tel)=@_;
- if ($tel=~m/^(\S+)x(\S+)$/)
- {
-  return [$name,$1,{x=>$2}];
- } else
- {
-  return [$name,$tel];
- }
-}
-
 sub build_authinfo
 {
  my $contact=shift;
@@ -413,8 +393,8 @@ sub build_cdata
  push @d,['contact:postalInfo',@postl,{type=>'loc'}] if (($v & 5) && $hasloc); ## loc+int OR loc
  push @d,['contact:postalInfo',@posti,{type=>'int'}] if (($v & 6) && $hasint); ## loc+int OR int
 
- push @d,build_tel('contact:voice',$contact->voice()) if defined($contact->voice());
- push @d,build_tel('contact:fax',$contact->fax()) if defined($contact->fax());
+ push @d,Net::DRI::Protocol::EPP::Util::build_tel('contact:voice',$contact->voice()) if defined($contact->voice());
+ push @d,Net::DRI::Protocol::EPP::Util::build_tel('contact:fax',$contact->fax()) if defined($contact->fax());
  push @d,['contact:email',$contact->email()] if defined($contact->email());
  push @d,build_authinfo($contact);
  push @d,build_disclose($contact);
@@ -514,7 +494,7 @@ sub update
  my ($epp,$contact,$todo)=@_;
  my $mes=$epp->message();
 
- Net::DRI::Exception::usererr_invalid_parameters($todo.' must be a Net::DRI::Data::Changes object') unless Net::DRI::Util::isa_changes($todo);
+ Net::DRI::Exception::usererr_invalid_parameters($todo.' must be a non empty Net::DRI::Data::Changes object') unless Net::DRI::Util::isa_changes($todo);
 
  my $sadd=$todo->add('status');
  my $sdel=$todo->del('status');

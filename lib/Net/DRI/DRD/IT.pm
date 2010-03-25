@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .IT policies
 ##
-## Copyright (c) 2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2009,2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -25,7 +25,9 @@ use base qw/Net::DRI::DRD/;
 use Net::DRI::Exception;
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+
+__PACKAGE__->make_exception_for_unavailable_operations(qw/host_check host_info host_update host_delete host_create contact_transfer contact_transfer_start contact_transfer_stop contact_transfer_query contact_transfer_accept contact_transfer_refuse domain_renew/);
 
 =pod
 
@@ -57,7 +59,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2009,2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -75,6 +77,7 @@ sub new
 {
  my $class=shift;
  my $self=$class->SUPER::new(@_);
+ $self->{info}->{host_as_attr}=1;
  bless($self,$class);
  return $self;
 }
@@ -89,7 +92,7 @@ sub transport_protocol_default
 {
  my ($self,$type)=@_;
 
- return ('Net::DRI::Transport::HTTP',{protocol_connection=>'Net::DRI::Protocol::EPP::Extensions::IT::Connection'},'Net::DRI::Protocol::EPP::Extensions::IT',{}) if $type eq 'epp'; ## EPP is over HTTPS here
+ return ('Net::DRI::Transport::HTTP',{protocol_connection=>'Net::DRI::Protocol::EPP::Extensions::HTTP'},'Net::DRI::Protocol::EPP::Extensions::IT',{}) if $type eq 'epp'; ## EPP is over HTTPS here
  return;
 }
 

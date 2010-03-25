@@ -1,6 +1,6 @@
 ## Domain Registry Interface, SOAP+WSDL Transport
 ##
-## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -27,7 +27,7 @@ use Net::DRI::Data::Raw;
 use Net::DRI::Util;
 use SOAP::WSDL;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -57,7 +57,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008-2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -76,7 +76,7 @@ sub new
  my ($class,$ctx,$rp)=@_;
  my %opts=%$rp;
  my $po=$ctx->{protocol};
- 
+
  my %t=(message_factory => $po->factories()->{message});
  if (exists($opts{protocol_connection}) && $opts{protocol_connection})
  {
@@ -153,23 +153,17 @@ sub new
 sub soap { my ($self,$v)=@_; $self->{transport}->{soap}=$v if @_==2; return $self->{transport}->{soap}; }
 sub session_data { my ($self,$v)=@_; $self->{transport}->{session_data}=$v if @_==2; return $self->{transport}->{session_data}; }
 
-sub soap_fault
-{
- my($soap,$res)=@_; 
- my $msg=ref($res)? $res->faultstring() : $soap->transport()->status();
- Net::DRI::Exception->die(1,'transport/http/soapwsdl',7,'SOAP fault: '.$msg);
-}
-
 sub init
 {
  my ($self)=@_;
  return if defined($self->soap());
- my $soap=SOAP::WSDL->new()->on_fault(\&soap_fault);
+ my $soap=SOAP::WSDL->new();
  $soap->wsdl($self->{transport}->{wsdl_uri});
  $soap->proxy($self->{transport}->{proxy_uri});
  $soap->wsdlinit();
  $soap->servicename($self->{transport}->{servicename});
  $soap->portname($self->{transport}->{portname});
+ $soap->get_client()->get_transport()->agent(sprintf('Net::DRI/%s Net::DRI::Transport::HTTP::SOAPWSDL/%s ',$Net::DRI::VERSION,$VERSION).$soap->get_client()->get_transport()->agent());
  $self->soap($soap);
 }
 
@@ -184,12 +178,9 @@ sub send_login
  }
 
  my $pc=$t->{protocol_connection};
- my $cltrid=$self->generate_trid();
+ my $cltrid=$self->generate_trid($self->{logging_ctx}->{registry});
  my $login=$pc->login($t->{message_factory},$t->{client_login},$t->{client_password},$cltrid);
- my $res=$self->soap()->call( $login->method() => %{$login->params()});
- ## TODO logging
- Net::DRI::Exception->die(1,'transport/soapwsdl',4,'Unable to send login message due to SOAP fault: '.$res->faultcode().' '.$res->faultstring()) if ($res->fault());
- ## TODO logging
+ my $res=$self->_send_receive({otype=>'session',oaction=>'login',trid=>$cltrid,phase=>'opening'},$login);
  my $msg=$t->{message_factory}->();
  $msg->parse(Net::DRI::Data::Raw->new(1,[$res->result()]));
  my $rc=$pc->parse_login($msg);
@@ -200,23 +191,40 @@ sub send_login
 
 sub send_logout
 {
- my ($self,$ctx)=@_;
+ my ($self)=@_;
  my $t=$self->{transport};
  return unless $t->{has_logout};
 
  my $pc=$t->{protocol_connection};
- my $cltrid=$self->generate_trid();
+ my $cltrid=$self->generate_trid($self->{logging_ctx}->{registry});
  my $logout=$pc->logout($t->{message_factory},$cltrid,$t->{session_data});
- my $res=$self->soap()->call( $logout->method() => %{$logout->params()});
- ## TODO logging
- Net::DRI::Exception->die(1,'transport/soapwsdl',4,'Unable to send logout message due to SOAP fault: '.$res->faultcode().' '.$res->faultstring()) if ($res->fault());
- ## TODO logging
+ my $res=$self->_send_receive({otype=>'session',oaction=>'logout',trid=>$cltrid,phase=>'closing'},$logout);
  my $msg=$t->{message_factory}->();
  $msg->parse(Net::DRI::Data::Raw->new(1,[$res->result()]));
  my $rc=$pc->parse_logout($msg);
  die($rc) unless $rc->is_success();
 
  $self->session_data({});
+}
+
+sub _send_receive
+{
+ my ($self,$ctx,$msg)=@_;
+ my $soap=$self->soap();
+ my $res=$soap->call($msg->method(),%{$msg->params()});
+ if (my $httpres=$soap->get_client()->get_transport()->http_response())
+ {
+  $self->log_output('notice','transport',$ctx,{direction=>'out',message=>$httpres->request()});
+  $self->log_output('notice','transport',$ctx,{direction=>'in', message=>$httpres});
+ } else
+ {
+  $soap->no_dispatch(1);
+  $self->log_output('error','transport',$ctx,{direction=>'out',message=>'No response for message '.$soap->call($msg->method(), %{$msg->params()})});
+  $soap->no_dispatch(0);
+ }
+ return $res if $res; ## SOAP::WSDL::Client returns a fault object on errors, even on transport layer errors.
+
+ Net::DRI::Exception->die(1,'transport/soapwsdl',4,'Unable to send message due to SOAP fault: '.$res->faultcode().' '.$res->faultstring());
 }
 
 sub open_connection
@@ -231,22 +239,22 @@ sub open_connection
 
 sub close_connection
 {
- my ($self,$ctx)=@_;
- $self->send_logout($ctx);
+ my ($self)=@_;
+ $self->send_logout();
  $self->soap(undef);
  $self->current_state(0);
 }
 
 sub end
 {
- my ($self,$ctx)=@_;
+ my ($self)=@_;
  if ($self->has_state() && $self->current_state())
  {
   eval
   {
    local $SIG{ALRM}=sub { die 'timeout' };
    alarm(10);
-   $self->close_connection($ctx);
+   $self->close_connection();
   };
   alarm(0); ## since close_connection may die, this must be outside of eval to be executed in all cases
  }
@@ -262,10 +270,10 @@ sub send
 
 sub _soap_send
 {
- my ($self,$count,$tosend)=@_;
+ my ($self,$count,$tosend,$ctx)=@_;
  my $t=$self->{transport};
  $tosend->add_session($self->session_data());
- my $res=$self->soap()->call( $tosend->method() => %{$tosend->params()});
+ my $res=$self->_send_receive($ctx,$tosend);
  $t->{last_reply}=$res;
  return 1; ## very important
 }
@@ -281,9 +289,8 @@ sub _soap_receive
  my ($self,$count)=@_;
  my $t=$self->{transport};
  my $r=$t->{last_reply};
- Net::DRI::Exception->die(1,'transport/soapwsdl',7,'SOAP fault: '.$r->faultcode().' '.$r->faultstring()) if ($r->fault());
  $t->{last_reply}=undef;
- return Net::DRI::Data::Raw->new(1,[$r->result()]);
+ return Net::DRI::Data::Raw->new(6,[$r->result()]);
 }
 
 ####################################################################################################
