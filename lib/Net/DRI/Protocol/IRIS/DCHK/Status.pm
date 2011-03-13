@@ -1,6 +1,6 @@
 ## Domain Registry Interface, IRIS DCHK Status
 ##
-## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -20,10 +20,11 @@ package Net::DRI::Protocol::IRIS::DCHK::Status;
 use base qw!Net::DRI::Data::StatusList!;
 
 use strict;
+use warnings;
 
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -53,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -72,8 +73,8 @@ sub new
  my $class=shift;
  my $self=$class->SUPER::new('iris-dchk','1.0');
  my $msg=shift;
- return $self unless defined($msg);
- Net::DRI::Exception::err_invalid_parameters() unless (ref($msg) eq 'ARRAY');
+ return $self unless defined $msg;
+ Net::DRI::Exception::err_invalid_parameters('new() expects a ref array') unless ref $msg eq 'ARRAY';
  $self->add(@$msg);
  return $self;
 }

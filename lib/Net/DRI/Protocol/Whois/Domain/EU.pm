@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Whois commands for .EU (RFC3912)
 ##
-## Copyright (c) 2007,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2007,2009,2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -26,7 +26,7 @@ use Net::DRI::Protocol::ResultStatus;
 
 use Net::DRI::Protocol::EPP::Core::Status;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -56,7 +56,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2007,2009,2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -96,6 +96,7 @@ sub info_parse
  my ($domain,$exist)=parse_domain($po,$rr,$rd,$rinfo);
  $rinfo->{domain}->{$domain}->{exist}=$exist;
  $rinfo->{domain}->{$domain}->{action}='info';
+ $rinfo->{domain}->{$domain}->{ace}=$rr->{'IDNA Domain'}.'.eu' if exists $rr->{'IDNA Domain'};
 
  return unless $exist;
 

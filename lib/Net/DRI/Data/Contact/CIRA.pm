@@ -25,7 +25,7 @@ use base qw/Net::DRI::Data::Contact/;
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 __PACKAGE__->register_attributes(qw(legal_form lang is_individual ip_address agreement reseller_id whois_display));
 
@@ -108,7 +108,7 @@ legal form (see registry list of possible CPR values), mandatory for registrant 
 
 =head2 lang()
 
-contact prefered language, either 'fr' or 'en'
+contact preferred language, either 'fr' or 'en'
 
 =head2 ip_address()
 

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, OpenSRS Registry Driver
 ##
-## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -25,7 +25,7 @@ use base qw/Net::DRI::DRD/;
 use DateTime::Duration;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -59,7 +59,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008-2011 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -82,7 +82,7 @@ sub new
 
 sub periods      { return map { DateTime::Duration->new(years => $_) } (1..10); }
 sub name         { return 'OpenSRS'; }
-sub tlds         { return (qw/example com net org info biz mobi name asia at be ca cc ch cn de dk es eu fr it li me com.mx nl tv uk us/); } ## see http://services.tucows.com/services/domains/pricing.php
+sub tlds         { return (qw/example com net org info biz mobi name asia at au be bz ca cc ch cn co de dk es eu fr in it li me com.mx mx nl tel tv co.uk org.uk uk us ws/); } ## see http://www.opensrs.com/services/domains/domains-pricing
 sub object_types { return ('domain'); }
 sub profile_types { return qw/xcp/; }
 
@@ -121,7 +121,7 @@ sub domain_info
   ## First grab a cookie, if needed
   unless (Net::DRI::Util::has_key($rd,'cookie'))
   {
-   $rd={} unless defined($rd); ## will fail in set_cookie because other params needed, but at least this will be ok for next line ; otherwise do true checks of value needed
+   $rd=Net::DRI::Util::create_params('domain_info',$rd); ## will fail in set_cookie because other params needed, but at least this will be ok for next line ; otherwise do true checks of value needed
    $rd->{domain}=$domain;
    $rc=$ndr->process('session','set_cookie',[$rd]);
    return $rc unless $rc->is_success();
@@ -130,6 +130,44 @@ sub domain_info
   ## Now do the real info
   $rc=$ndr->process('domain','info',[$domain,$rd]); ## the $domain is not really used here, as it was used during set_cookie above
  }
+ return $rc;
+}
+
+sub domain_update
+{
+ my ($self,$ndr,$domain,$changes,$rd)=@_;
+ $self->enforce_domain_name_constraints($ndr,$domain,'update');
+
+ ## First grab a cookie, if needed
+ unless (Net::DRI::Util::has_key($rd,'cookie'))
+ {
+  $rd=Net::DRI::Util::create_params('domain_update',$rd); ## will fail in set_cookie because other params needed, but at least this will be ok for next line ; otherwise do true checks of value needed
+  $rd->{domain}=$domain;
+  my $rc=$ndr->process('session','set_cookie',[$rd]);
+  return $rc unless $rc->is_success();
+  $rd->{cookie}=$ndr->get_info('value','session','cookie'); ## Store cookie somewhere (taking into account date of expiry or some TTLs) ?
+ }
+ ## Now do the real update
+ my $rc=$ndr->process('domain','update',[$domain,$changes,$rd]); ## the $domain is not really used here, as it was used during set_cookie above
+ return $rc;
+}
+
+sub domain_is_mine
+{
+ my ($self,$ndr,$domain,$rd)=@_;
+ my $clid=$self->info('clid');
+ return unless defined $clid;
+ my $rc=$ndr->process('domain','is_mine',[$domain,$rd]);
+ return unless $rc->is_success();
+ my $mine=$ndr->get_info('mine');
+ return unless defined $mine;
+ return $mine;
+}
+
+sub domain_send_authcode
+{
+ my ($self,$ndr,$domain)=@_;
+ my $rc=$ndr->process('domain','send_authcode',[$domain]);
  return $rc;
 }
 

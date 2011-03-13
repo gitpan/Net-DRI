@@ -22,7 +22,7 @@ use strict;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -99,7 +99,7 @@ sub info
   }
  }
  Net::DRI::Exception::usererr_invalid_parameters('Whois Info must be true/false/1/0') unless Net::DRI::Util::xml_is_boolean($wi);
- 
+
  my $eid=$mes->command_extension_register('whoisInf:whoisInf','xmlns:whoisInf="http://www.verisign.com/epp/whoisInf-1.0" xsi:schemaLocation="http://www.verisign.com/epp/whoisInf-1.0 whoisInf-1.0.xsd"');
  $mes->command_extension($eid,['whoisInf:flag',$wi]);
 }

@@ -1,7 +1,7 @@
 ## Domain Registry Interface, AFNIC (.FR/.RE) EPP extensions
 ## From http://www.afnic.fr/data/divers/public/afnic-epp-rc1.pdf (2008-06-30)
 ##
-## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009,2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -25,7 +25,7 @@ use base qw/Net::DRI::Protocol::EPP/;
 use Net::DRI::Data::Contact::AFNIC;
 use Net::DRI::Protocol::EPP::Extensions::AFNIC::Status;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -55,7 +55,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009,2011 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -83,7 +83,7 @@ sub setup
 }
 
 sub core_contact_types { return ('admin','tech'); } ## No billing contact in .FR
-sub default_extensions { return qw/AFNIC::Domain AFNIC::Contact AFNIC::Notifications GracePeriod/; }
+sub default_extensions { return qw/AFNIC::Domain AFNIC::Contact AFNIC::Notifications GracePeriod SecDNS/; }
 
 ####################################################################################################
 1;

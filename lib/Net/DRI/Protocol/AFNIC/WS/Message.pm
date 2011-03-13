@@ -1,6 +1,6 @@
 ## Domain Registry Interface, AFNIC WS Message
 ##
-## Copyright (c) 2005,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2008-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,13 +18,14 @@
 package Net::DRI::Protocol::AFNIC::WS::Message;
 
 use strict;
+use warnings;
 
 use Net::DRI::Protocol::ResultStatus;
 
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version service method params result errcode));
 
-our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -54,7 +55,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2008-2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -127,7 +128,7 @@ sub result_status
  my $self=shift;
  my $r=$self->result();
 
- return Net::DRI::Protocol::ResultStatus->new_success('COMMAND_SUCCESSFUL',$r->{message}) if ($r->{free});
+ return Net::DRI::Protocol::ResultStatus->new_success($r->{message}) if $r->{free};
 
  my %codes=( 0   => 2400, # problème de connexion à la base de données => Command failed
              1   => 2302, # le nom de domaine est déjà enregistré => Object exists
@@ -139,8 +140,7 @@ sub result_status
            );
 
  my $code=$self->errcode();
- my $eppcode=(!defined($code) || $code >=1000 || !exists($codes{$code}))? 'GENERIC_ERROR' : $codes{$code};
-
+ my $eppcode=(defined $code && exists $codes{$code})? $codes{$code} : 'COMMAND_FAILED';
  return Net::DRI::Protocol::ResultStatus->new('afnic_ws_check_domain',$code,$eppcode,$self->is_success(),$r->{message});
  ## Warning: when we handle multiple web services, we will need a way to retrieve the method name called,
  ## to find the correct key of the hash (and special case of free <=> 2303)

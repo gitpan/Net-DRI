@@ -1,7 +1,6 @@
-## Domain Registry Interface, EPP Message class for .SE
-## Contributed by Ulrich Wisser from NIC SE
+## Domain Registry Interface, EPP Message for Afilias
 ##
-## Copyright (c) 2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -16,18 +15,51 @@
 #
 ####################################################################################################
 
-package Net::DRI::Protocol::EPP::Extensions::SE::Message;
+package Net::DRI::Protocol::EPP::Extensions::Afilias::Message;
 
 use strict;
 use warnings;
-use base 'Net::DRI::Protocol::EPP::Message';
+
 our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+
+####################################################################################################
+
+sub register_commands
+{
+ my ($class,$version)=@_;
+ return { 'message' => { 'result' => [ undef, \&parse ] } };
+}
+
+## Parse error message with a <value> node in the oxrs namespace to enhance what is reported back to application
+sub parse
+{
+ my ($po,$otype,$oaction,$oname,$rinfo)=@_;
+ my $mes=$po->message();
+ my @r=$mes->results_extra_info();
+ return unless @r;
+
+ foreach my $r (@r)
+ {
+  foreach my $rinfo (@$r)
+  {
+   next unless $rinfo->{from} eq 'eppcom:value' && $rinfo->{type} eq 'rawxml' && $rinfo->{message}=~m!^<value xmlns:oxrs="urn:afilias:params:xml:ns:oxrs-1.0"><oxrs:xcp>(.+?)</oxrs:xcp></value>$!;
+   $rinfo->{message}=$1;
+   $rinfo->{from}='oxrs';
+   $rinfo->{type}='text';
+  }
+ }
+}
+
+####################################################################################################
+1;
+
+__END__
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Protocol::EPP::Extensions::SE::Message - .SE EPP Message for Net::DRI
+Net::DRI::Protocol::EPP::Extensions::Afilias::Message - EPP Afilias Message for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -51,7 +83,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -62,23 +94,3 @@ the Free Software Foundation; either version 2 of the License, or
 See the LICENSE file that comes with this distribution for more details.
 
 =cut
-
-####################################################################################################
-
-#
-# This is an exact copy of Net::DRI::Protocol::EPP::Message::_get_content
-# Only getChildrenByTagNameNS has been replaced with getElementsByTagNameNS
-# to enable parsing of <???:infData/> inside <iis:notifyXXX/> elements.
-#
-sub _get_content {
-    my ( $self, $node, $nstag, $nodename ) = @_;
-    return unless ( defined($node) && defined($nstag) && $nstag && defined($nodename) && $nodename );
-    my $ns = $self->ns($nstag);
-    $ns = $nstag unless defined($ns) && $ns;
-    my @tmp = $node->getElementsByTagNameNS( $ns, $nodename );
-    return unless @tmp;
-    return $tmp[0];
-}
-
-####################################################################################################
-1;

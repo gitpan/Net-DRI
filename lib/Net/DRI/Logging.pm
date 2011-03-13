@@ -24,7 +24,7 @@ use base qw/Net::DRI::BaseClass/;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf '%d'.('.%02d' x $#r), @r; };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf '%d'.('.%02d' x $#r), @r; };
 
 __PACKAGE__->make_exception_if_not_implemented(qw/name setup_channel output/);
 
@@ -43,6 +43,7 @@ sub new
  if (! exists $self->{encoding}         || ! defined $self->{encoding} )         { $self->{encoding}        ='UTF-8'; }
  if (! exists $self->{format_header}    || ! defined $self->{format_header} )    { $self->{format_header}   ='%FULLTIME [%ULEVEL] <%TYPE>'; }
  if (! exists $self->{format_transport} || ! defined $self->{format_transport} ) { $self->{format_transport}='%TRID %UDIRECTION %MESSAGE'; }
+ if (! exists $self->{format_protocol}  || ! defined $self->{format_protocol} )  { $self->{format_protocol} ='%TRID %UDIRECTION %MESSAGE'; }
  bless $self,$c;
  $self->level($self->{level}); ## convert the level token to a numerical value
  return $self;
@@ -87,7 +88,7 @@ sub string_data
    $ct=$msg->hint();
   } else
   {
-   if (! $msg->can('as_string')) { Net::DRI::Exception::err_method_not_implemented('as_string in '.ref $msg); }
+   if (! $msg->can('as_string')) { Net::DRI::Exception::method_not_implemented('as_string',ref $msg); }
   }
   $msg=$msg->as_string();
  }

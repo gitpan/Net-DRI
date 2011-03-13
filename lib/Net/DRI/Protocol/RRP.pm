@@ -1,6 +1,6 @@
 ## Domain Registry Interface, RRP Protocol
 ##
-## Copyright (c) 2005,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2008-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,6 +18,7 @@
 package Net::DRI::Protocol::RRP;
 
 use strict;
+use warnings;
 
 use base qw(Net::DRI::Protocol);
 
@@ -31,7 +32,7 @@ use DateTime;
 use DateTime::TimeZone;
 use DateTime::Format::Strptime;
 
-our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -61,7 +62,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2008-2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -89,8 +90,9 @@ our %IDS=('registrar'  => 'clID',
 
 sub new
 {
- my ($c,$drd,$rp)=@_;
- my $self=$c->SUPER::new();
+ my ($c,$ctx,$rp)=@_;
+ my $drd=$ctx->{registry}->driver();
+ my $self=$c->SUPER::new($ctx);
  $self->name('RRP');
  my $version=Net::DRI::Util::check_equal($rp->{version},['1.1','2.0'],'2.0'); ## 1.1 (RFC #2832) or 2.0 (RFC #3632)
  $self->version($version);
@@ -106,10 +108,10 @@ sub new
  Net::DRI::Exception::usererr_insufficient_parameters('no registry timezone') unless (defined($tzname));
  my $tz;
  eval { $tz=DateTime::TimeZone->new(name => $tzname); };
- Net::DRI::Exception::usererr_invalid_parameters("invalid registry timezone ($tzname)") unless (defined($tz) && ref($tz));
+ Net::DRI::Exception::usererr_invalid_parameters("invalid registry timezone ($tzname), unable to instantiate") unless (defined $tz && ref $tz);
  my $dtp;
  eval { $dtp=DateTime::Format::Strptime->new(time_zone=>$tz, pattern=>'%Y-%m-%d %H:%M:%S.0'); };
- Net::DRI::Exception::usererr_invalid_parameters("invalid registry timezone ($tzname)") unless (defined($dtp) && ref($dtp));
+ Net::DRI::Exception::usererr_invalid_parameters("invalid registry timezone ($tzname), unable to create parser") unless (defined $dtp && ref $dtp);
  $self->{dt_parse}=$dtp;
 
  $self->_load($rp);
@@ -119,13 +121,9 @@ sub new
 sub _load
 {
  my ($self,$rp)=@_;
- my $extrah=$rp->{extensions};
- my @class=map { "Net::DRI::Protocol::RRP::Core::".$_ } ('Session','Domain','Host');
- if (defined($extrah) && $extrah)
- {
-  push @class,map { /::/? $_ : "Net::DRI::Protocol::RRP::Extensions::".$_ } (ref($extrah)? @$extrah : ($extrah));
- }
-
+ my $extramods=$rp->{extensions};
+ my @class=map { 'Net::DRI::Protocol::RRP::Core::'.$_ } ('Session','Domain','Host');
+ push @class,map { my $f=$_; $f='Net::DRI::Protocol::EPP::Extensions::'.$f unless ($f=~s/^\+//); $f; } (ref($extramods)? @$extramods : ($extramods)) if defined $extramods && $extramods;
  $self->SUPER::_load(@class);
 }
 

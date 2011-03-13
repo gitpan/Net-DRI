@@ -25,7 +25,7 @@ use base qw/Net::DRI::DRD/;
 use Net::DRI::Exception;
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 __PACKAGE__->make_exception_for_unavailable_operations(qw/host_check host_info host_update host_delete host_create contact_transfer contact_transfer_start contact_transfer_stop contact_transfer_query contact_transfer_accept contact_transfer_refuse domain_renew/);
 
@@ -38,8 +38,6 @@ Net::DRI::DRD::IT - .IT policies for Net::DRI
 =head1 DESCRIPTION
 
 Please see the README file for details.
-
-This is only a stub for now, no .IT extensions are implemented currently.
 
 =head1 SUPPORT
 

@@ -1,6 +1,7 @@
 ## Domain Registry Interface, .INFO policies
 ##
-## Copyright (c) 2006,2007,2008,2009 Rony Meyer <perl@spot-light.ch>. All rights reserved.
+## Copyright (c) 2006-2009 Rony Meyer <perl@spot-light.ch>. All rights reserved.
+##           (c) 2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -24,7 +25,7 @@ use base qw/Net::DRI::DRD/;
 
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -54,7 +55,8 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2007,2008,2009 Rony Meyer <perl@spot-light.ch>.
+Copyright (c) 2006-2009 Rony Meyer <perl@spot-light.ch>.
+          (c) 2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -73,7 +75,8 @@ sub new
  my $class=shift;
  my $self=$class->SUPER::new(@_);
  $self->{info}->{host_as_attr}=0;
-
+ $self->{info}->{contact_i18n}=2; ## INT only
+ $self->{info}->{check_limit}=38; ## Upper limit computed to that XML stream length is < 4096 bytes
  bless($self,$class);
  return $self;
 }
@@ -88,7 +91,7 @@ sub transport_protocol_default
 {
  my ($self,$type)=@_;
  
- return ('Net::DRI::Transport::Socket',{},'Net::DRI::Protocol::EPP',{})                                    if $type eq 'epp';
+ return ('Net::DRI::Transport::Socket',{},'Net::DRI::Protocol::EPP::Extensions::Afilias',{})               if $type eq 'epp';
  return ('Net::DRI::Transport::Socket',{remote_host=>'whois.afilias.info'},'Net::DRI::Protocol::Whois',{}) if $type eq 'whois';
  return;
 }

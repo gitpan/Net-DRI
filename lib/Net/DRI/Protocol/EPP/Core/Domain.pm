@@ -1,4 +1,4 @@
-## Domain Registry Interface, EPP Domain commands (RFC4931)
+## Domain Registry Interface, EPP Domain commands (RFC5731)
 ##
 ## Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
@@ -24,13 +24,13 @@ use Net::DRI::Util;
 use Net::DRI::Exception;
 use Net::DRI::Protocol::EPP::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.21 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.22 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Protocol::EPP::Core::Domain - EPP Domain commands (RFC4931 obsoleting RFC3731) for Net::DRI
+Net::DRI::Protocol::EPP::Core::Domain - EPP Domain commands (RFC5731 obsoleting RFC4931 and RFC3731) for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -132,8 +132,7 @@ sub info
 {
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
- my $hosts='all';
- $hosts=$rd->{hosts} if (defined($rd) && (ref($rd) eq 'HASH') && exists($rd->{hosts}) && ($rd->{hosts}=~m/^(?:all|del|sub|none)$/));
+ my $hosts=(defined $rd && ref $rd eq 'HASH' && exists $rd->{hosts} && $rd->{hosts}=~m/^(?:all|del|sub|none)$/)? $rd->{hosts} : 'all';
  my @d=Net::DRI::Protocol::EPP::Util::domain_build_command($mes,'info',$domain,{'hosts'=> $hosts});
  push @d,Net::DRI::Protocol::EPP::Util::domain_build_authinfo($epp,$rd->{auth}) if Net::DRI::Util::has_auth($rd);
  $mes->command_body(\@d);
@@ -162,7 +161,7 @@ sub info_parse
    $rinfo->{domain}->{$oname}->{roid}=$c->textContent();
   } elsif ($name eq 'status')
   {
-   push @s,Net::DRI::Protocol::EPP::Util::parse_status($c);
+   push @s,Net::DRI::Protocol::EPP::Util::parse_node_status($c);
   } elsif ($name eq 'registrant')
   {
    $cs->set($po->create_local_object('contact')->srid($c->textContent()),'registrant');
@@ -189,7 +188,7 @@ sub info_parse
 
  $rinfo->{domain}->{$oname}->{contact}=$cs;
  $rinfo->{domain}->{$oname}->{status}=$po->create_local_object('status')->add(@s);
- $rinfo->{domain}->{$oname}->{host}=$po->create_local_object('hosts')->set(@host) if @host;
+ $rinfo->{domain}->{$oname}->{subordinate_hosts}=$po->create_local_object('hosts')->set(@host) if @host;
 }
 
 sub transfer_query

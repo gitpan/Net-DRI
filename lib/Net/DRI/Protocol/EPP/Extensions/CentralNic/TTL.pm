@@ -1,7 +1,7 @@
 ## Domain Registry Interface, CentralNic DNS TTL EPP extension
 ## (http://labs.centralnic.com/epp/ext/ttl.php)
 ##
-## Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2007,2008,2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -19,10 +19,13 @@
 package Net::DRI::Protocol::EPP::Extensions::CentralNic::TTL;
 
 use strict;
+use warnings;
 
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+use Net::DRI::Util;
+
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -52,7 +55,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2007,2008,2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -91,7 +94,7 @@ sub info_parse
  my @secs=$infdata->getChildrenByTagNameNS($mes->ns('ttl'),'secs');
  return unless @secs;
 
- $rinfo->{domain}->{$oname}->{ttl}=DateTime::Duration->new(seconds => $secs[0]->getFirstChild()->getData());
+ $rinfo->{domain}->{$oname}->{ttl}=DateTime::Duration->new(seconds => $secs[0]->textContent());
 }
 
 ############ Transform commands
@@ -101,7 +104,7 @@ sub create
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
 
- return unless (exists($rd->{ttl}) && ((ref($rd->{ttl}) && UNIVERSAL::isa($rd->{ttl},'DateTime::Duration')) || $rd->{ttl}=~m/^\d+$/));
+ return unless (exists($rd->{ttl}) && ((ref($rd->{ttl}) && Net::DRI::Util::is_class($rd->{ttl},'DateTime::Duration')) || $rd->{ttl}=~m/^\d+$/));
 
  my $eid=$mes->command_extension_register('ttl:create',sprintf('xmlns:ttl="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('ttl')));
  my @n=(['ttl:secs',ref($rd->{ttl})? $rd->{ttl}->in_units('seconds') : $rd->{ttl}]);
@@ -114,7 +117,7 @@ sub update
  my $mes=$epp->message();
 
  my $toset=$todo->set('ttl');
- return unless (defined($toset) && ((ref($toset) && UNIVERSAL::isa($toset,'DateTime::Duration')) || $toset=~m/^\d+$/));
+ return unless (defined $toset && ((ref $toset && Net::DRI::Util::is_class($toset,'DateTime::Duration')) || $toset=~m/^\d+$/));
 
  my $eid=$mes->command_extension_register('ttl:update',sprintf('xmlns:ttl="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('ttl')));
  my @n=(['ttl:secs',ref($toset)? $toset->in_units('seconds') : $toset]);

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Shell interface
 ##
-## Copyright (c) 2008-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -20,6 +20,9 @@ package Net::DRI::Shell;
 use strict;
 use warnings;
 
+use Exporter qw(import);
+our @EXPORT=qw(run);
+
 use Net::DRI;
 use Net::DRI::Util;
 use Net::DRI::Protocol::ResultStatus;
@@ -27,7 +30,7 @@ use Term::ReadLine; ## see also Term::Shell
 use Time::HiRes ();
 use IO::Handle ();
 
-our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 exit __PACKAGE__->run(@ARGV) if (!caller() || caller() eq 'PAR'); ## This is a modulino :-)
 
@@ -41,6 +44,8 @@ Net::DRI::Shell - Command Line Shell for Net::DRI, with batch features and autoc
 
  perl -I../../ ./Shell.pm
  or
+ perl -MNet::DRI::Shell -e run
+ or
  perl -MNet::DRI::Shell -e 'Net::DRI::Shell->run()'
  or in your programs
  use Net::DRI::Shell;
@@ -49,8 +54,8 @@ Net::DRI::Shell - Command Line Shell for Net::DRI, with batch features and autoc
  Welcome to Net::DRI shell, version 1.07
  Net::DRI object created with a cache TTL of 10 seconds and logging into files in current directory
 
- NetDRI> add_registry registry=EURid clID=YOURLOGIN
- NetDRI(EURid)> add_current_profile name=profile1 type=epp defer=0 client_login=YOURLOGIN client_password=YOURPASSWORD
+ NetDRI> add_registry registry=EURid client_id=YOURID
+ NetDRI(EURid)> add_current_profile name=profile1 type=epp client_login=YOURLOGIN client_password=YOURPASSWORD
  Profile profile1 added successfully (1000/COMMAND_SUCCESSFUL) SUCCESS
  NetDRI(EURid,profile1)> domain_info example.eu
  Command completed successfully (1000/1000) SUCCESS
@@ -82,19 +87,20 @@ After having started this shell, the available commands are the following.
 
 =head2 SESSION COMMANDS
 
-=head3 add_registry registry=REGISTRYNAME clID=YOURLOGIN
+=head3 add_registry registry=REGISTRYNAME client_id=YOURID
 
-Replace REGISTRYNAME with the Net::DRI::DRD module you want to use, and YOURLOGIN
-with your client login for this registry.
+Replace REGISTRYNAME with the Net::DRI::DRD module you want to use, and YOURID
+with your client identification for this registry (may be the same as the login used
+to connect, or not).
 
-=head3 add_current_profile name=profile1 type=epp defer=0 client_login=YOURLOGIN client_password=YOURPASSWORD
+=head3 add_current_profile name=profile1 type=epp client_login=YOURLOGIN client_password=YOURPASSWORD
 
 This will really connect to the registry, replace YOURLOGIN by your client login at registry,
 and YOURPASSWORD by the associated password. You may have to add parameters remote_host= and remote_port=
 to connect to other endpoints than the hardcoded default which is most of the time the registry OT&E server,
 and not the production one !
 
-=head3 add registry=REGISTRYNAME clID=YOURLOGIN name=profile1 type=epp defer=0 client_login=YOURLOGIN client_password=YOURPASSWORD
+=head3 add registry=REGISTRYNAME client_id=YOURID name=profile1 type=epp client_login=YOURLOGIN client_password=YOURPASSWORD
 
 This is a shortcut, doing the equivalent of add_registry, and then add_current_profile.
 
@@ -499,7 +505,7 @@ sub run
  output($ctx,"Net::DRI object created with a cache TTL of 10 seconds and logging into files in current directory\n\n");
 
  $ctx->{file_quit}=0;
- shift(@args) if ($args[0] eq 'Net::DRI::Shell');
+ shift(@args) if (@args && $args[0] eq 'Net::DRI::Shell');
  handle_line($ctx,'run '.$args[0]) if (@args);
 
  unless ($ctx->{file_quit})
@@ -543,7 +549,7 @@ sub handle_file
   chomp($l);
   next if ($l=~m/^\s*$/ || $l=~m/^#/);
   my $pl=$l;
-  $pl=~s/(clID|client_login|client_password)=\S+/$1=********/g;
+  $pl=~s/(clID|clid|client_id|client_login|client_password)=\S+/$1=********/g;
   output($ctx,$pl."\n");
   if (handle_line($ctx,$l))
   {
@@ -567,16 +573,17 @@ sub handle_line
 
  my ($rc,$msg);
 
- eval
+ my $ok=eval
  {
   ($rc,$msg)=process($ctx,$l);
   $msg.="\n".dump_info($ctx,scalar $rc->get_data_collection()) if (defined($rc) && (($l=~m/^(?:(?:domain|contact|host)_?(?:check|info|create)|domain_renew) / && (!defined($msg) || index($msg,'on average')==-1) && $rc->is_success()) || $ctx->{config}->{verbose}==1));
+  1;
  };
-
  $ctx->{last_line}=$l;
- if ($@)
+ if (! $ok)
  {
-  output($ctx,"An error happened:\n",ref($@)? $@->msg() : $@,"\n");
+  my $err=$@;
+  output($ctx,"An error happened:\n",ref $err ? $err->msg() : $err,"\n");
  } else
  {
   my @r;
@@ -629,9 +636,9 @@ sub complete
   } else
   {
    my @p;
-   @p=qw/registry clID/ if $cmd eq 'add_registry';
+   @p=qw/registry client_id/ if $cmd eq 'add_registry';
    @p=qw/type name/ if ($cmd=~m/^add_(?:current_)?profile$/);
-   @p=qw/registry clID type name/ if $cmd eq 'add';
+   @p=qw/registry client_id type name/ if $cmd eq 'add';
    return map { $_.'=' } grep { /^$text/ } @p;
   }
  }
@@ -933,9 +940,9 @@ sub help
 Available commands (parameters after the first one can be in any order):
 
 help
-add registry=REGISTRYNAME type=TYPE [cLID=YOURLOGIN]
-add_registry registry=REGISTRYNAME [clID=YOURLOGIN]
-add_current_profile name=PROFILENAME type=TYPE defer=0 client_login=YOURLOGIN client_password=YOURPASSWORD
+add registry=REGISTRYNAME type=TYPE [client_id=YOURLOGIN]
+add_registry registry=REGISTRYNAME [client_id=YOURLOGIN]
+add_current_profile name=PROFILENAME type=TYPE client_login=YOURLOGIN client_password=YOURPASSWORD
 get_info_all
 show profiles
 show tlds
@@ -1038,9 +1045,12 @@ sub do_set
 sub do_add
 {
  my($ctx,$cmd,$ra,$rh)=@_;
- return (undef,'Usage: add registry=REGISTRYNAME type=PROTOCOLTYPE [clID=LOGIN] [name=PROFILENAME] [...]') unless (Net::DRI::Util::has_key($rh,'registry') && Net::DRI::Util::has_key($rh,'type'));
+ return (undef,'Usage: add registry=REGISTRYNAME type=PROTOCOLTYPE [client_id=ID] [name=PROFILENAME] [...]') unless (Net::DRI::Util::has_key($rh,'registry') && Net::DRI::Util::has_key($rh,'type'));
  my %r=(registry => $rh->{registry});
- $r{clID}=$rh->{clID} if exists($rh->{clID});
+ foreach my $clid (qw/clID clid/)
+ {
+  $r{client_id}=$rh->{$clid} if exists($rh->{$clid});
+ }
  my @r=do_add_registry($ctx,'add_registry',$ra,\%r);
  if (! defined $r[0] || ! $r[0]->is_success()) { return @r; }
  unless (exists($rh->{name}) && defined($rh->{name}))
@@ -1050,19 +1060,21 @@ sub do_add
  }
  delete($rh->{registry});
  delete($rh->{clID});
+ delete($rh->{clid});
+ delete($rh->{client_id});
  return do_add_current_profile($ctx,'add_current_profile',$ra,$rh);
 }
 
 sub do_add_registry
 {
  my ($ctx,$cmd,$ra,$rh)=@_;
- return (undef,'Usage: add_registry registry=REGISTRYNAME [clID=LOGIN]') unless Net::DRI::Util::has_key($rh,'registry');
+ return (undef,'Usage: add_registry registry=REGISTRYNAME [client_id=ID]') unless Net::DRI::Util::has_key($rh,'registry');
  my $reg=$rh->{registry};
  delete($rh->{registry});
  if (! grep { $reg eq $_ } $ctx->{dri}->available_registries() ) { $ctx->{dri}->add_registry($reg,$rh); }
  $ctx->{dri}->target($reg);
  $ctx->{prompt}=$ctx->{dprompt}.'('.$reg.')';
- return (Net::DRI::Protocol::ResultStatus->new_generic_success('Registry "'.$reg.'" added successfully'),undef);
+ return (Net::DRI::Protocol::ResultStatus->new_success('Registry "'.$reg.'" added successfully'),undef);
 }
 
 sub do_target
@@ -1076,7 +1088,7 @@ sub do_target
 sub do_add_current_profile
 {
  my ($ctx,$cmd,$ra,$rh)=@_;
- return (undef,'Usage: add_current_profile name=PROFILENAME type=SERVICENAME [defer=0] [client_login=YOURLOGIN] [client_password=YOURPASSWORD]') unless (Net::DRI::Util::has_key($rh,'name') && Net::DRI::Util::has_key($rh,'type'));
+ return (undef,'Usage: '.$cmd.' name=PROFILENAME type=SERVICENAME [client_login=YOURLOGIN] [client_password=YOURPASSWORD]') unless (Net::DRI::Util::has_key($rh,'name') && Net::DRI::Util::has_key($rh,'type'));
  my $name=$rh->{name};
  my $type=$rh->{type};
  my $rp=defined $rh->{protocol}? $rh->{protocol} : {};

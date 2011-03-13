@@ -1,6 +1,6 @@
 ## Domain Registry Interface, AFNIC Email Protocol
 ##
-## Copyright (c) 2006,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2008-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,6 +18,7 @@
 package Net::DRI::Protocol::AFNIC::Email;
 
 use strict;
+use warnings;
 
 use base qw(Net::DRI::Protocol);
 
@@ -27,7 +28,7 @@ use Net::DRI::Exception;
 use Net::DRI::Protocol::AFNIC::Email::Message;
 use Net::DRI::Data::Contact::AFNIC;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -57,7 +58,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2008-2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -73,7 +74,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my ($c,$drd,$rp)=@_;
+ my ($c,$ctx,$rp)=@_;
  my $clientid=$rp->{username};
  my $clientpw=$rp->{password};
  my $emailfrom=$rp->{email_from};
@@ -83,7 +84,7 @@ sub new
  Net::DRI::Exception::usererr_insufficient_parameters('from email must be defined') unless $emailfrom;
  Net::DRI::Exception::usererr_invalid_parameters($emailfrom.' is not a valid email address') unless Email::Valid->rfc822($emailfrom);
 
- my $self=$c->SUPER::new();
+ my $self=$c->SUPER::new($ctx);
  $self->name('afnic_email');
  $self->version($VERSION);
 

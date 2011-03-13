@@ -28,7 +28,7 @@ use Net::DRI::Protocol::EPP::Util;
 
 use DateTime::Format::ISO8601;
 
-our $VERSION = do { my @r = ( q$Revision: 1.4 $ =~ /\d+/g ); sprintf( "%d" . ".%02d" x $#r, @r ); };
+our $VERSION = do { my @r = ( q$Revision: 1.5 $ =~ /\d+/g ); sprintf( "%d" . ".%02d" x $#r, @r ); };
 
 =pod
 
@@ -155,7 +155,7 @@ sub info_parse
 		}
 		elsif ($name eq 'status')
 		{
-			push(@s, Net::DRI::Protocol::EPP::Util::parse_status($c));
+			push(@s, Net::DRI::Protocol::EPP::Util::parse_node_status($c));
 		}
 		elsif ($name =~ /^(registrant|admin)$/)
 		{

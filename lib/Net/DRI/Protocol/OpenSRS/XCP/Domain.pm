@@ -1,6 +1,6 @@
 ## Domain Registry Interface, OpenSRS XCP Domain commands
 ##
-## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -23,7 +23,7 @@ use warnings;
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -53,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008-2011 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -79,6 +79,9 @@ sub register_commands
           transfer_request => [ \&transfer_request, \&transfer_request_parse ],
           transfer_query => [ \&transfer_query, \&transfer_query_parse ],
           transfer_cancel => [ \&transfer_cancel, \&transfer_cancel_parse ],
+          is_mine => [\&is_mine, \&is_mine_parse ],
+          update => [\&update, undef],
+          send_authcode => [ \&send_authcode ],
          );
 
  return { 'domain' => \%tmp };
@@ -254,7 +257,7 @@ sub sw_register
  foreach (qw/auto_renew affiliate_id f_lock_domain f_parkp f_whois_privacy/) {
   $attr->{$_} = ($rd->{$_} ? 1 : 0 ) if Net::DRI::Util::has_key($rd, $_);
  }
- foreach (qw/affiliate_id reg_domain/) {
+ foreach (qw/affiliate_id reg_domain encoding_type tld_data/) {
   $attr->{$_} = ($rd->{$_}) if Net::DRI::Util::has_key($rd, $_);
  }
 
@@ -272,6 +275,53 @@ sub sw_register
  $msg->command_attributes($attr);
 
  add_all_ns($domain,$msg,$rd->{ns});
+}
+
+sub update
+{
+ my ($xcp,$domain,$todo,$rd)=@_;
+
+ my $msg=$xcp->message();
+ my $attr = { domain => $domain };
+ $msg->command_attributes($attr);
+
+ Net::DRI::Exception::usererr_invalid_parameters($todo.' must be a non empty Net::DRI::Data::Changes object') unless Net::DRI::Util::isa_changes($todo);
+ Net::DRI::Exception::usererr_insufficient_parameters('A cookie is needed for domain_info') unless Net::DRI::Util::has_key($rd,'cookie');
+
+ my $nsset=$todo->set('ns');
+ my $contactset=$todo->set('contact');
+
+ if (defined $nsset)
+ {
+  Net::DRI::Exception::usererr_invalid_parameters('ns changes for set must be a Net::DRI::Data::Hosts object') unless Net::DRI::Util::isa_hosts($nsset);
+  Net::DRI::Exception::usererr_invalid_parameters('change of nameservers and contacts is not supported in the same operation') if defined $contactset;
+  Net::DRI::Exception::usererr_insufficient_parameters('at least 2 nameservers are mandatory') unless ($nsset->count()>=2);
+
+  build_msg_cookie($msg,'advanced_update_nameservers',$rd->{cookie},$rd->{registrant_ip});
+  $attr->{op_type}='assign';
+  $attr->{assign_ns}=[ $nsset->get_names() ];
+ }
+ else 
+ {
+  Net::DRI::Exception::usererr_invalid_parameters('contact changes for set must be a Net::DRI::Data::ContactSet') unless defined($contactset) && Net::DRI::Util::isa_contactset($contactset);
+
+  build_msg_cookie($msg,'update_contacts',$rd->{cookie},$rd->{registrant_ip});
+  my %contact_set = ();
+  my $types = [];
+  foreach my $t (qw/registrant admin billing tech/)
+  {
+   my @t=$contactset->get($t);
+   next unless @t==1;
+   my $co=$t[0];
+   next unless Net::DRI::Util::isa_contact($co);
+   $co->validate();
+   my $registry_type = $t eq 'registrant' ? 'owner' : $t;
+   $contact_set{$registry_type}=add_contact_info($msg,$co);
+   push @$types, $registry_type;
+  }
+  $attr->{contact_set} = \%contact_set;
+  $attr->{types} = $types;
+ }
 }
 
 sub add_contact_info
@@ -493,6 +543,47 @@ sub transfer_cancel_parse
 
  $rinfo->{domain}->{$oname}->{action}='cancel_transfer';
  # This response has no attributes to capture
+}
+
+sub is_mine
+{
+ my ($xcp,$domain,$rd)=@_;
+ my $msg=$xcp->message();
+
+ # Cookie isn't used with belongs_to_rsp
+
+ $msg->command ({ action => 'belongs_to_rsp' });
+ $msg->command_attributes ({ domain => $domain });
+}
+
+sub is_mine_parse
+{
+ my ($xcp,$otype,$oaction,$oname,$rinfo)=@_;
+ my $mes=$xcp->message();
+ return unless $mes->is_success();
+
+ $rinfo->{domain}->{$oname}->{action} = 'is_mine';
+ $rinfo->{domain}->{$oname}->{exist} = 1;
+
+ my $ra=$mes->response_attributes();
+ return unless exists $ra->{belongs_to_rsp} && defined $ra->{belongs_to_rsp};
+
+ $rinfo->{domain}->{$oname}->{mine}=($ra->{belongs_to_rsp})? 1 : 0;
+ if (exists $ra->{domain_expdate} && defined $ra->{domain_expdate}) ## only here if belongs_to_rsp=1
+ {
+  my $d=$ra->{domain_expdate}; 
+  $d=~s/\s+/T/; ## with a little effort we become ISO8601
+  $rinfo->{domain}->{$oname}->{exDate}=$xcp->parse_iso8601($d);
+ }
+}
+
+sub send_authcode
+{
+ my ($xcp,$domain,$rd)=@_;
+ my $msg=$xcp->message();
+ my %r=(action=>'send_authcode',object=>'domain');
+ $msg->command(\%r);
+ $msg->command_attributes({domain_name => $domain});
 }
 
 ####################################################################################################

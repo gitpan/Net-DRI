@@ -23,9 +23,7 @@ use warnings;
 
 use base qw/Net::DRI::Protocol::EPP/;
 
-use Net::DRI::Protocol::EPP::Extensions::SE::Message;
-
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -74,7 +72,6 @@ sub setup
     my ($self,$rp)=@_;
     my $version=$self->version();
     $self->ns({iis=>['urn:se:iis:xml:epp:iis-1.1','iis-1.1.xsd']});
-    $self->factories('message',sub { my $m = Net::DRI::Protocol::EPP::Extensions::SE::Message->new(@_); $m->ns( $self->ns() ); $m->version($version); return $m; } );
     return;
 }
 

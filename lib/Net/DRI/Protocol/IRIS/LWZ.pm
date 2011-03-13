@@ -28,8 +28,9 @@ use Net::DRI::Protocol::ResultStatus;
 use Net::DNS ();
 
 use IO::Uncompress::RawInflate (); ## RFC1951 per the LWZ RFC
+use IO::Compress::RawDeflate ();
 
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -112,15 +113,15 @@ sub write_message
  my $m=Net::DRI::Util::encode_utf8($msg);
  my $hdr='00001000'; ## §3.1.3 : V=0 RR=Request PD=no DS=yes Reserved PT=xml
 
- ## TODO : handle message payload deflation, as needed (the RFC says when over 1500 bytes
- ## However, pay attention to the fact that some server do not accept such messages, see §3.1.7 "no-inflation-support-error", this is the case of DENIC server !
- ## So either code that information per DRD, or try anyway & fallback based on reply (this will need multiple exchanges, so probably some changes in Net::DRI::Registry::process)
-
-# use IO::Compress::RawDeflate;
-# my $mm;
-# IO::Compress::RawDeflate::rawdeflate(\$m,\$mm);
-# $m=$mm;
-# $hdr='00011000';
+ ## If not specificed in DRD, other option is to try anyway & fallback based on reply (this will need multiple exchanges, so probably some changes in Net::DRI::Registry::process)
+ my $deflate=$msg->options()->{request_deflate};
+ if ($deflate==2 || ($deflate==1 && length $m > 1500)) ## Deflate if forced or if message is over 1500 bytes (per RFC)
+ {
+  my $mm;
+  IO::Compress::RawDeflate::rawdeflate( \$m,\$mm);
+  $m=$mm;
+  $hdr='00011000';
+ }
 
  my ($tid)=($msg->tid()=~m/(\d{6})$/); ## 16 digits, we need to convert to a 16-bit value, we take the microsecond part modulo 65535 (since 0xFFFF is reserved)
  $tid%=65535;
@@ -160,7 +161,7 @@ sub transport_default
 {
  my ($self,$tname)=@_;
  ## RFC4993 Section 4 gives recommandation for timeouts and retry algorithm
- ## retry=5 is computed so that the whole sequence stops after 60 seconds: t,p+2t,3/2(p+2)-2+4t,3/2*3/2*(p+2)-2+8t,...
+ ## retry=5 is computed so that the whole sequence stops after 60 seconds: t,p+2t,3/2*(p+2)-2+4t,3/2*3/2*(p+2)-2+8t, ...
  return (defer => 1, close_after => 1, socktype=>'udp', timeout => 1, pause => 2, retry => 5);
 }
 

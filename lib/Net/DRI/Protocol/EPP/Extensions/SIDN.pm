@@ -24,9 +24,8 @@ use base qw/Net::DRI::Protocol::EPP/;
 
 use Net::DRI::Util;
 use Net::DRI::Data::Contact::SIDN;
-use Net::DRI::Protocol::EPP::Extensions::SIDN::Message;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 ####################################################################################################
 
@@ -40,15 +39,13 @@ sub setup
  $self->capabilities('contact_update','disclose',undef);
  $self->capabilities('host_update','status',undef);
  $self->capabilities('host_update','name',undef);
-
- $self->factories('message',sub { my $m=Net::DRI::Protocol::EPP::Extensions::SIDN::Message->new(@_); $m->ns($self->{ns}); $m->version($version); return $m;} );
  $self->factories('contact',sub { return Net::DRI::Data::Contact::SIDN->new(); });
  $self->default_parameters({domain_create => { auth => { pw => '' } } }); ## authInfo not used by SIDN
  return;
 }
 
 sub core_contact_types { return ('admin','tech'); } ## No billing contact in .NL
-sub default_extensions { return qw/SIDN::Domain SIDN::Contact SIDN::Host SIDN::Notifications/; }
+sub default_extensions { return qw/SIDN::Message SIDN::Domain SIDN::Contact SIDN::Host SIDN::Notifications/; }
 
 ####################################################################################################
 1;

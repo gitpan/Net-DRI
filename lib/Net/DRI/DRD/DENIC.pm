@@ -1,6 +1,7 @@
 ## Domain Registry Interface, DENIC policies
 ##
 ## Copyright (c) 2007,2008,2009 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
+##           (c) 2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -23,8 +24,9 @@ use warnings;
 use base qw/Net::DRI::DRD/;
 
 use DateTime::Duration;
+use Net::DRI::Util;
 
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -55,6 +57,7 @@ Tonnerre Lombard, E<lt>tonnerre.lombard@sygroup.chE<gt>
 =head1 COPYRIGHT
 
 Copyright (c) 2007,2008,2009 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+          (c) 2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -89,7 +92,8 @@ sub transport_protocol_default
  my ($self,$type)=@_;
 
  return ('Net::DRI::Transport::Socket',{remote_host=>'rri.test.denic.de',remote_port=>51131,defer=>1,close_after=>1,socktype=>'tcp'},'Net::DRI::Protocol::RRI',{version=>'2.0'}) if $type eq 'rri';
- return ('Net::DRI::Transport::Socket',{find_remote_server => ['de.','DCHK1:iris.lwz']},'Net::DRI::Protocol::IRIS',{version=>'1.0',authority=>'de'}) if $type eq 'dchk';
+ ## DENIC IRIS server does not support request deflation, see §3.1.7 "no-inflation-support-error", so we force no deflate
+ return ('Net::DRI::Transport::Socket',{find_remote_server => ['de.','DCHK1:iris.lwz']},'Net::DRI::Protocol::IRIS',{version=>'1.0',authority=>'de',request_deflate=>0})          if $type eq 'dchk';
  return;
 }
 
@@ -125,6 +129,7 @@ sub contact_update
 sub domain_update
 {
  my ($self, $reg, $dom, $changes, $rd) = @_;
+ $rd=Net::DRI::Util::create_params('domain_update',$rd);
  my $cs = $reg->get_info('contact', 'domain', $dom);
  my $ns = $reg->get_info('ns', 'domain', $dom);
 

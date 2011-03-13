@@ -29,7 +29,7 @@ use Net::DRI::Exception;
 use Net::DRI::Util;
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -163,7 +163,7 @@ sub emailfwd_update
  ## Technical syntax check of email object needed here
  Net::DRI::Util::check_isa($tochange,'Net::DRI::Data::Changes');
 
-  foreach my $t ($tochange->types())
+ foreach my $t ($tochange->types())
  {
   next if $ndr->protocol_capable('emailfwd_update',$t);
   Net::DRI::Exception->die(0,'DRD',5,'Protocol '.$fp.' is not capable of emailfwd_update/'.$t);

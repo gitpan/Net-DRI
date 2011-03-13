@@ -26,7 +26,7 @@ use Email::Valid;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION = do { my @r = ( q$Revision: 1.5 $ =~ /\d+/gmx ); sprintf( "%d" . ".%02d" x $#r, @r ); };
+our $VERSION = do { my @r = ( q$Revision: 1.6 $ =~ /\d+/gmx ); sprintf( "%d" . ".%02d" x $#r, @r ); };
 
 __PACKAGE__->register_attributes(qw(type identity mobilephone organization rolecontact xemail xdisclose facets));
 
@@ -306,7 +306,7 @@ sub validate {
                         if ( $e
                         && !Net::DRI::Util::xml_is_token( $e, 3, 16 ) );
                 }
-                push @errs, "xemail:$er" if ($er);
+                push @errs, "$el:$er" if ($er);
             }
         }
     }

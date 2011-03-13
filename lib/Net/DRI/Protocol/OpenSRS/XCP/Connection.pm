@@ -1,6 +1,6 @@
 ## Domain Registry Interface, OpenSRS XCP Connection handling
 ##
-## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,6 +18,7 @@
 package Net::DRI::Protocol::OpenSRS::XCP::Connection;
 
 use strict;
+use warnings;
 
 use Digest::MD5 ();
 use HTTP::Request ();
@@ -27,7 +28,7 @@ use Net::DRI::Exception;
 use Net::DRI::Data::Raw;
 use Net::DRI::Protocol::ResultStatus;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -57,7 +58,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008-2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -90,9 +91,9 @@ sub write_message
  my $req=HTTP::Request->new('POST',$t->{remote_url});
  $req->header('Content-Type','text/xml');
  $req->header('X-Username',$t->{client_login});
- my $body=$msg->get_body();
+ my $body=Net::DRI::Util::encode_utf8($msg->get_body());
  $req->header('X-Signature',Digest::MD5::md5_hex(Digest::MD5::md5_hex($body,$t->{client_password}),$t->{client_password})); ## client_password is in fact the reseller key
- $req->content(Net::DRI::Util::encode_utf8($body));
+ $req->content($body);
  ## Content-Length will be automatically computed during Transport by LWP::UserAgent
  return $req;
 }

@@ -20,21 +20,25 @@ package Net::DRI::Protocol::EPP::Extensions::SIDN::Message;
 use strict;
 use warnings;
 
-use base qw/Net::DRI::Protocol::EPP::Message/;
-
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 ####################################################################################################
 
+sub register_commands
+{
+ my ($class,$version)=@_;
+ return { 'message' => { 'result' => [ undef, \&parse ] } };
+}
+
 sub parse
 {
- my $self=shift;
- $self->SUPER::parse(@_);
+ my ($po,$otype,$oaction,$oname,$rinfo)=@_;
+ my $mes=$po->message();
 
  ## Parse sidn:ext
- my $result=$self->get_extension('sidn','ext');
+ my $result=$mes->get_extension('sidn','ext');
  return unless $result;
- my $ns=$self->ns('sidn');
+ my $ns=$mes->ns('sidn');
  $result=$result->getChildrenByTagNameNS($ns,'response');
  return unless $result->size();
 
@@ -42,7 +46,7 @@ sub parse
  foreach my $el ($result->get_node(1)->getChildrenByTagNameNS($ns,'msg'))
  {
   ## code is mandatory, as well as text probably, field is optional
-  $self->add_to_extra_info({from => 'sidn', type => 'text', code => $el->getAttribute('code'),field => $el->getAttribute('field'), message => $el->textContent()});
+  $mes->add_to_extra_info({from => 'sidn', type => 'text', code => $el->getAttribute('code'),field => $el->getAttribute('field'), message => $el->textContent()});
  }
 }
 

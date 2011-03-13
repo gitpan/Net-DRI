@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .SI policies
 #
-## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -24,7 +24,7 @@ use base qw/Net::DRI::DRD/;
 
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 __PACKAGE__->make_exception_for_unavailable_operations(qw/domain_transfer_stop domain_transfer_accept domain_transfer_refuse/);
 
@@ -56,7 +56,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008-2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -100,9 +100,7 @@ sub domain_trade_start
 {
  my ($self,$ndr,$domain,$rd)=@_;
  $self->enforce_domain_name_constraints($ndr,$domain,'trade');
-
- my $rc=$ndr->process('domain','transfer_registrant_request',[$domain,$rd]);
- return $rc;
+ return $ndr->process('domain','transfer_registrant_request',[$domain,$rd]);
 }
 
 ####################################################################################################

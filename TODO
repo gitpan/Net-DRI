@@ -12,10 +12,10 @@ All
 Net::DRI
 	* IDN support (in a cross registry fashion) with Net-IDN-Tools (1)
 		see also http://www.bsdprojects.net/cgi-bin/archzoom.cgi/tonnerre@bsdprojects.net--2006/Net-DRI--tonnerre--0.81.1--patch-12?log
+	* Exception handling using Exception::Class instead of internal implementation ? (1)
 
 Net::DRI::DRD
 	* bulk operations (many domains at once)
-	* domain_delete() : try to rename nameservers created in domain about to be deleted
 	* domain_update() / host_update()
 	  - try to accomodate (set=>info+add+del, add=>info+set, del=>info+set)
           - verify not same info in add & del

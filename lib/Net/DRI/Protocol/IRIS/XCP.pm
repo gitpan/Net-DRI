@@ -1,6 +1,6 @@
 ## Domain Registry Interface, IRIS XCP Connection handling
 ##
-## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,6 +18,7 @@
 package Net::DRI::Protocol::IRIS::XCP;
 
 use strict;
+use warnings;
 
 use XML::LibXML ();
 
@@ -27,7 +28,7 @@ use Net::DRI::Data::Raw;
 use Net::DRI::Protocol::ResultStatus;
 use Net::DRI::Protocol::IRIS::Core;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -57,7 +58,7 @@ Only SASL PLAIN is handled
 
 =item *
 
-Blocks splitted over multiple chunks are not handled, except for application data
+Blocks split over multiple chunks are not handled, except for application data
 
 =item *
 
@@ -88,7 +89,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008-2010 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -120,7 +121,7 @@ sub read_data # §4
  my $keepopen=parse_block_header($hdr);
  $to->send_logout() unless ($keepopen); ## will not truly send anything, as there is no logout, but will properly close the socket and prepare everything as needed for next connection
 
- ## We do not handle blocks splitted over multiple chunks, except for application data
+ ## We do not handle blocks split over multiple chunks, except for application data
  my $m='';
  my ($lastchunk,$datacomplete,$chunktype);
  while(($lastchunk,$datacomplete,$chunktype,$data)=parse_chunk($sock))
@@ -150,7 +151,7 @@ sub read_data # §4
 
   last if $lastchunk==1;
  }
- die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED','Last chunk has not DC=1','en')) unless $datacomplete==1; ## TODO: does that happen IRL ?
+ die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED','Last chunk does not have DC=1','en')) unless $datacomplete==1; ## TODO: does that happen IRL ?
  $m=Net::DRI::Util::decode_utf8($m); ## do it only once at end, when all chunks of application data were joined together again
 
  die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_SYNTAX_ERROR',$m? 'Got unexpected reply message: '.$m : '<empty message from server>','en')) unless ($m=~m!</(?:\S+:)?response>\s*$!s); ## we do not handle other things than plain responses (see Message)
