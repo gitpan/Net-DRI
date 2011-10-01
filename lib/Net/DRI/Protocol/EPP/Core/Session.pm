@@ -10,9 +10,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 #########################################################################################
 
 package Net::DRI::Protocol::EPP::Core::Session;
@@ -22,8 +19,6 @@ use warnings;
 
 use Net::DRI::Exception;
 use Net::DRI::Util;
-
-our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -130,16 +125,28 @@ sub parse_greeting
   }
  }
 
+ my %ctxlog=(action=>'greeting',direction=>'in',trid=>$mes->cltrid());
+
+ $po->log_output('info','protocol',{%ctxlog,message=>'EPP lang announced by server: '.join(' ',@{$tmp{lang}})});
+ if (exists $tmp{version})
+ {
+  $po->log_output('warning','procotol',{%ctxlog,message=>'Server announced more than one EPP version: '.join(' ',@{$tmp{version}})}) if @{$tmp{version}} > 1;
+  $po->log_output('error','protocol',{%ctxlog,message=>sprintf('Mismatch between EPP server version(s) announced ("%s") and locally supported version "%s"',join(' ',@{$tmp{version}}),$po->version())}) unless grep { $po->version() eq $_ } @{$tmp{version}};
+ } else ## .PRO server does not seem to send a version info
+ {
+  $po->log_output('warning','protocol',{%ctxlog,message=>'Server did not announce any EPP version contrary to specifications; switching to default local version value of '.$po->version()});
+  $tmp{version}=[$po->version()];
+ }
+
  ## By default, we will use all extensions announced by server;
  ## EPP extension modules are expected to tweak that depending on their own needs
  $tmp{extensions_announced}=[] unless exists $tmp{extensions_announced};
  $tmp{extensions_selected}=$tmp{extensions_announced};
 
- my %ctxlog=(action=>'greeting',direction=>'in',trid=>$mes->cltrid());
  $po->log_output('info','protocol',{%ctxlog,message=>'EPP extensions announced by server: '.join(' ',@{$tmp{extensions_announced}})});
  my %ext=map { $_ => 1 } (@{$tmp{extensions_announced}},@{$tmp{objects}});
- $ext{'urn:ietf:params:xml:ns:epp-1.0'}=1;
- my %ns=map { $_->[0] => 1 } values(%{$mes->ns()});
+ my %ns=map { $_->[0] => 1 } values %{$mes->ns()};
+ delete $ns{$mes->ns('_main')};
  foreach my $ns (keys %ext)
  {
   next if exists $ns{$ns};
@@ -182,13 +189,15 @@ sub login
   push @d,['newPW',$rdata->{client_newpassword}];
  }
 
- my (@o,$tmp);
+ my (@o,$tmp,@tmp);
  my $sdata=$po->default_parameters()->{server};
 
  $tmp=Net::DRI::Util::has_key($rdata,'version') ? $rdata->{version} : $sdata->{version};
  Net::DRI::Exception::usererr_insufficient_parameters('version') unless defined $tmp;
- $tmp=$tmp->[0] if ref $tmp eq 'ARRAY';
- Net::DRI::Exception::usererr_invalid_parameters('version') unless ($tmp=~m/^[1-9]+\.[0-9]+$/);
+ @tmp=ref $tmp eq 'ARRAY' ? @$tmp : ($tmp);
+ ($tmp)=(grep { defined && $_ eq $po->version() } @tmp)[0];
+ Net::DRI::Exception::usererr_insufficient_parameters(sprintf('No compatible EPP version found: local version "%s" vs user or server provided "%s"',$po->version(),join(' ',@tmp))) unless defined $tmp;
+ Net::DRI::Exception::usererr_invalid_parameters('version') unless $tmp=~m/^[1-9]+\.[0-9]+$/;
  push @o,['version',$tmp];
 
  $tmp=Net::DRI::Util::has_key($rdata,'lang') ? $rdata->{lang} : $sdata->{lang};

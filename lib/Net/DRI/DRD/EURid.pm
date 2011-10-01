@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EURid (.EU) policy on reserved names
 ##
-## Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -10,9 +10,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 #########################################################################################
 
 package Net::DRI::DRD::EURid;
@@ -26,9 +23,7 @@ use Net::DRI::Util;
 use Net::DRI::Exception;
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.15 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
-
-__PACKAGE__->make_exception_for_unavailable_operations(qw/domain_transfer_query domain_transfer_accept domain_transfer_refuse domain_renew contact_check contact_check_multi contact_transfer contact_transfer_start contact_transfer_stop contact_transfer_query contact_transfer_accept contact_transfer_refuse/);
+__PACKAGE__->make_exception_for_unavailable_operations(qw/domain_transfer_query domain_transfer_accept domain_transfer_refuse contact_check contact_transfer contact_transfer_start contact_transfer_stop contact_transfer_query contact_transfer_accept contact_transfer_refuse/);
 
 =pod
 
@@ -58,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2011 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -81,11 +76,10 @@ sub new
  my $self=$class->SUPER::new(@_);
  $self->{info}->{host_as_attr}=1;
  $self->{info}->{contact_i18n}=1; ## LOC only
- bless($self,$class);
  return $self;
 }
 
-sub periods  { return map { DateTime::Duration->new(years => $_) } (1); }
+sub periods  { return map { DateTime::Duration->new(years => $_) } (1..10); }
 sub name     { return 'EURid'; }
 sub tlds     { return ('eu'); }
 sub object_types { return (qw/domain contact nsgroup keygroup/); }
@@ -95,11 +89,11 @@ sub transport_protocol_default
 {
  my ($self,$type)=@_;
 
- return ('Net::DRI::Transport::Socket',{remote_host=>'epp.registry.tryout.eu',remote_port=>33128},'Net::DRI::Protocol::EPP::Extensions::EURid',{}) if $type eq 'epp';
- return ('Net::DRI::Transport::Socket',{remote_host=>'das.eu'},'Net::DRI::Protocol::DAS',{no_tld=>1,version=>'2.0'})                               if $type eq 'das';
- return ('Net::DRI::Transport::Socket',{remote_host=>'whois.eu'},'Net::DRI::Protocol::Whois',{})                                                   if $type eq 'whois';
- return ('Net::DRI::Transport::Socket',{remote_host=>'das.registry.eu'},'Net::DRI::Protocol::DAS',{no_tld=>1,version=>'2.0'})                      if $type eq 'das-registrar';
- return ('Net::DRI::Transport::Socket',{remote_host=>'whois.registry.eu'},'Net::DRI::Protocol::Whois',{})                                          if $type eq 'whois-registrar';
+ return ('Net::DRI::Transport::Socket',{remote_host=>'epp.tryout.registry.eu',remote_port=>700},'Net::DRI::Protocol::EPP::Extensions::EURid',{}) if $type eq 'epp';
+ return ('Net::DRI::Transport::Socket',{remote_host=>'das.eu'},'Net::DRI::Protocol::DAS',{no_tld=>1,version=>'2.0'})                             if $type eq 'das';
+ return ('Net::DRI::Transport::Socket',{remote_host=>'whois.eu'},'Net::DRI::Protocol::Whois',{})                                                 if $type eq 'whois';
+ return ('Net::DRI::Transport::Socket',{remote_host=>'das.registry.eu'},'Net::DRI::Protocol::DAS',{no_tld=>1,version=>'2.0'})                    if $type eq 'das-registrar';
+ return ('Net::DRI::Transport::Socket',{remote_host=>'whois.registry.eu'},'Net::DRI::Protocol::Whois',{})                                        if $type eq 'whois-registrar';
  return;
 }
 

@@ -1,6 +1,6 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 ##
-## Copyright (c) 2008 .SE, <http://www.iis.se>,
+## Copyright (c) 2008,2011 .SE, <http://www.iis.se>,
 ##                    Jan Saell <jan@yask.se>
 ##                    All rights reserved.
 ##
@@ -30,6 +30,8 @@
 #######
 
 use strict;
+use warnings;
+
 use Net::DRI;
 use DateTime::Duration;
 use Pod::Usage;
@@ -72,7 +74,7 @@ my @cm = (
 
 # args
 use vars qw($opt_c $opt_o $opt_h $opt_p $opt_f $opt_P $opt_S
-    $opt_L $opt_C $opt_W $opt_w);
+    $opt_L $opt_C $opt_W $opt_w $opt_F $opt_K);
 
 # Operations
 my %op = (
@@ -104,12 +106,13 @@ my %obj = (
     'host'         => 'host',
     'domain'       => 'domain',
     'message'      => 'message',
+    'hello'        => 'hello',
 );
 
 # Hash to hold the EPP arguments
 my %p;
 
-&getopts("Lo:c:p:f:S:P:C:W:");
+&getopts("Lo:c:p:f:S:P:C:W:F:K:w:");
 
 #server and port must be specified
 my $socktype = 'tcp';
@@ -117,6 +120,9 @@ die "No server specified"    unless ($opt_S);
 die "No port specified"      unless ($opt_P);
 die "No client id specified" unless ($opt_C);
 die "No password specified"  unless ($opt_W);
+die "No client certificate specified"  unless ($opt_F);
+die "No certificate password specified"  unless ($opt_w);
+die "No command specified" unless ($opt_c);
 
 my $server = $opt_S;
 my $port   = $opt_P;
@@ -124,13 +130,18 @@ $socktype = 'ssl' if ($opt_L);
 
 my $clid = $opt_C;
 my $pass = $opt_W;
+my $cert = $opt_F;
+my $key  = $opt_K;
+my $cpwd = $opt_w;
 
 my $newpass;
 
 unless ( $opt_c && $op{$opt_c} ) {
     pexit("Specify a valid command");
 }
-unless ( $opt_c eq 'hello' ) {
+if ( $opt_c eq 'hello' ) {
+   $opt_o = $opt_c;
+} else {
     unless ( $opt_o && $obj{$opt_o} ) {
         pexit("Specify a valid object type");
     }
@@ -147,8 +158,9 @@ unless ( $opt_c eq 'hello' ) {
 my $t1 = time();
 
 my $logf = 'results-' . time() . '.log';
+my $fh;
 $logf = $opt_f if ($opt_f);
-open( my $fh, '>>', $logf ) || die $!;
+if ($opt_f) { open( my $fh, '>>', $logf ) || die $!; }
 
 do_epp_operation(
     $obj{$opt_o}, $opt_c,  $clid, $pass, $newpass,
@@ -173,7 +185,7 @@ sub parse_params {
     if ($@) {
 
         # eval has failed, $@ tells us why
-        pexit(    "Eval failed, specify a valid parameter string, msg: " 
+        pexit(    "Eval failed, specify a valid parameter string, msg: "
                 . $@
                 . "\n" );
     }
@@ -479,7 +491,6 @@ sub domain_object_as_string {
 	    if ($count > 0) {
 		$s .= sprintf "$F", 'SecDNS Key count', $count;
 
-#print "SecDNS: ", Dumper \$secdns;
 	    my $i = 0;
 	    while ($i < $count) {
 		my $n = $secdns->[$i];
@@ -558,35 +569,51 @@ sub get_info_object_as_string {
 
 sub init_reg_se {
     my ( $clid, $pw, $newpw, $socktype, $server, $port, $fh ) = @_;
+    my $dri;
 
-    my $dri = Net::DRI->new(10);
+    if ($opt_f) {
+       $dri = Net::DRI->new(
+       {
+           cache_ttl => 10,
+           logging => ['files',
+                       {output_directory => './',
+                        output_filename=>$opt_f,
+                        level=>'notice',
+                        xml_indent=>1}]
+       }
+       );
+    } else {
+       $dri = Net::DRI->new(
+       {
+           cache_ttl => 10,
+       }
+       );
+    }
+
     $dri->add_registry( 'SE', { clid => $clid } );
 
     my %pars = (
-        log_fh => $fh || \*STDERR,
-        defer => 0,
+        defer               => 0,
         socktype            => $socktype,
-        remote_host         => $server || 'epptest.iis.se',
+        remote_host         => $server || 'epptestv3.iis.se',
         remote_port         => $port || 700,
         protocol_connection => 'Net::DRI::Protocol::EPP::Connection',
         protocol_version    => 1,
         client_login        => $clid,
         client_password     => $pw,
+        ssl_debug           => 0,
+        ssl_passwd_cb       => sub{return $cpwd},
+        ssl_key_file        => $key,
+        ssl_cert_file       => $cert,
+        ssl_version         => 'TLSv1',
+        ssl_verify          => 0x00,
     );
 
     $pars{client_newpassword} = $newpw if ($newpw);
 
-    my $rc = $dri->target('SE')->new_current_profile(
-        'profile1', 'Net::DRI::Transport::Socket',
-        [ { %pars, } ],
-        'Net::DRI::Protocol::EPP::Extensions::SE', [
-            '1.0',
-            [
-                'SecDNS',
-                'Net::DRI::Protocol::EPP::Extensions::SE::Extensions',
-            ],
-
-	]
+    my $rc = $dri->target('SE')->add_current_profile(
+        'profile1', 'epp',
+        { %pars, },
     );
 
     ## Here we catch all errors during setup of transport, such as
@@ -598,9 +625,6 @@ sub init_reg_se {
 
 sub do_command {
     my ( $obj, $cmd, $dri, $rc, %p ) = @_;
-
-    use Data::Dumper;
-    $Data::Dumper::Indent = 1;
 
     if ( $cmd eq 'hello' ) {
         print "*** hello ***\n";
@@ -958,9 +982,9 @@ sub do_command {
 
   # see the DRI README doc.
   #  - domain_create() does a lot of checking and creating if the objects does
-  #    not exist,
-  #  - domain_create_only() has a simpler behaviour
-  #  We use domain_create_only(), it's simplest
+  #    not exist when used with pure_create=0,
+  #  - domain_create() with pure_create=1 has a simpler behaviour
+  #  We use domain_create() with pure_create=1, it's simplest
             my $nso = $dri->local_object('hosts');
             if ( $p{nsset} ) {
                 if ( my @ns = @{ $p{nsset} } ) {
@@ -976,13 +1000,14 @@ sub do_command {
                   @secdnso = @secdns;
 		}
             }
-            $rc = $dri->domain_create_only(
+            $rc = $dri->domain_create(
                 $ace,
                 {   auth     => { pw => $p{pw} },
                     duration => $du,
                     contact  => $cs,
                     ns       => $nso,
-                    secdns   => [ @secdnso ]
+                    secdns   => [ @secdnso ],
+                    pure_create => 1,
                 }
             );
             print_result($dri);
@@ -1084,7 +1109,6 @@ sub do_command {
 
                     # array or not
                     if ( ref($a) eq 'ARRAY' ) {
-print "Here: ", Dumper \$a;
                         foreach my $m (@$a) {
                             $toc->$op( 'ns',
                                 $dri->local_object('hosts')->add($m) );
@@ -1121,12 +1145,12 @@ print "Here: ", Dumper \$a;
                 "Cannot delete domain, rejected by DRI:domain_status_allows_delete()"
                 unless ( $dri->domain_status_allows_delete($ace) );
 
-            my %a;
+            my %a=(pure_delete => 1);
             $a{deletefromdns} = $p{deletefromdns} if $p{deletefromdns};
             $a{deletefromregistry} = $p{deletefromregistry}
                 if $p{deletefromregistry};
 
-            $rc = $dri->domain_delete_only( $ace, \%a );
+            $rc = $dri->domain_delete( $ace, \%a );
 
             print_result($dri);
             die($rc) unless $rc->is_success();
@@ -1179,8 +1203,8 @@ print "Here: ", Dumper \$a;
 # Standardized EPP elements
 my @epp = (
 	   'id',
-	   'qdate', 
-           'msg', 
+	   'qdate',
+           'msg',
 	   'content',
 	   'lang',
 	   'object_type',
@@ -1260,7 +1284,6 @@ sub dump_conditions {
   #
     my $cd = $dri->get_info('conditions');
 
-    #print "cd: ", Dumper $cd;
     foreach my $c (@$cd) {
         foreach my $i ( 'code', 'severity', 'msg', 'details' ) {
             my $v;
@@ -1282,12 +1305,12 @@ epp_client_se.pl - A command line client program using Net::DRI towards the
 
 =head1 DESCRIPTION
 
-The client supports creation and maintainance of host, contact and domain 
+The client supports creation and maintainance of host, contact and domain
 objects for .SE. It supports transfer operations, as well as poll operation
 for the message queue.
 
-It was developed for testing of the .SE extensions to Net::DRI, but can 
-probably be used by users who are comfortable with a simple command line 
+It was developed for testing of the .SE extensions to Net::DRI, but can
+probably be used by users who are comfortable with a simple command line
 interfaces.
 
 =head1 SYNOPSIS
@@ -1302,11 +1325,16 @@ B<perl epp_client_se.pl [Connect arguments] [Command arguments]>
 
 =item Mandatory connect arguments
 
- -C: Client ID, your EPP registrar account name, typical regxxx, 
+ -C: Client ID, your EPP registrar account name, typical regxxx,
      where xxx is a number
  -W: Account password, your EPP account password
  -S: Server name, the registry server
  -P: EPP server port
+ -F: Path to pem certificate client certificate
+ -w: Password for the pem file
+
+As of version v3 of the .SE EPP server client certificate is mandatory.
+
 
 =item Optional connect arguments
 
@@ -1319,10 +1347,10 @@ The command argument specify the EPP operation to perform:
 
  -o: EPP object.
      One of contact, host, domain, message
- -c: EPP command. 
+ -c: EPP command.
      One of hello, create, update, info, delete, transfer, count,
      waiting, retrieve
- -p: EPP parameter argument string, in a format that can be eval'ed into 
+ -p: EPP parameter argument string, in a format that can be eval'ed into
      a hash, se parameter string examples below.
 
 =back
@@ -1332,7 +1360,7 @@ The command argument specify the EPP operation to perform:
 Each command will be performed as follows:
 
  - Socket connect, session initiation, a greeting is returned
- - an EPP login, which will succeed if the connect arguments are correct, 
+ - an EPP login, which will succeed if the connect arguments are correct,
    otherwise fail,
    a greeting is returned if login is OK
  - an EPP command, according to the specified command arguments
@@ -1344,41 +1372,37 @@ Each command will be performed as follows:
 Basic connect to an EPP server should give you a greeting back if successful.
 A simple connect to an EPP server and port:
 
-Raw port (no SSL):
-
-   telnet <EPP server> <EPP port>
-
 Encrypted with SSL:
 
-   openssl s_client -host <EPP server> -port <EPP port>
+   openssl s_client -host <EPP server> -port <EPP port> -cert <Path to pem file> -key <Path to pem file>
 
 =head3 About logging and filtering of the log output
 
-Logging is useful for debugging purposes, 
+Logging is useful for debugging purposes,
 
 A client side log can be activated by -f option, like:
 
   '-f xx.log'
 
-Tail on the log-file in a separate window is nice then. Even nicer is to 
-filter the tail through the supplied xmlfilter.pl utility, which will wrap the 
+Tail on the log-file in a separate window is nice then. Even nicer is to
+filter the tail through the supplied xmlfilter.pl utility, which will wrap the
 raw XML to a pretty-printed dump.
 
-The filters '-s' option will skip all the login/logout and greetings which 
+The filters '-s' option will skip all the login/logout and greetings which
 otherwise will dominate the outpot.
 
   'tail -f xx.log | ./xmlfilter.pl -s'
 
 =head3 About authInfo
 
-Auth-info (pw) can be set and updated only for domain objects, and is 
+Auth-info (pw) can be set and updated only for domain objects, and is
 needed only for a transfer.
 
 =head1 EPP commands and arguments
 
 =head2 Hello command
 
-=over 
+=over
 
 =item Hello
 
@@ -1393,7 +1417,7 @@ A greeting shall be returned.
 =head3 Contact create
 
 A .SE contact can be one of two types, person, or organization.
-For each contact created, the type must be specified via the mandatory 
+For each contact created, the type must be specified via the mandatory
 type extension.
 
 =over
@@ -1425,7 +1449,7 @@ In this example, a role contact update is shown.
 The 'srid' returned on a create is  the same as the id when creating it.
 Lets do an info on this handle.
 
-=over 
+=over
 
 =item Info on an contact handle
 
@@ -1592,21 +1616,21 @@ It is possible to query hosts sponsored by other registrars.
 
 A lot of domain create methods are offered by Net::DRI.
 
-The client uses one specific create method, namely the domain_create_only().
+The client uses one specific create method, namely the domain_create() with pure_create=1
 
 =over
 
-=item * domain_create_only()
+=item * domain_create() with pure_create=1
 
-This method assumes that the contacts handles and the nameservers listed are 
-ALREADY created in the registry, and this is closest to .SE's datamodel. 
+This method assumes that the contacts handles and the nameservers listed are
+ALREADY created in the registry, and this is closest to .SE's datamodel.
 Hence, the client uses this method.
 
-=item * domain_create()
+=item * domain_create() without pure_create or with pure_create=0
 
 This is another method which is a very powerful Net::DRI method.
 
-This method will do the same as domain_create_only(), but will also accept and 
+This method will do the same as domain_create() with pure_create=1, but will also accept and
 handle full contacts and nameserver objects as parameters, meaning that it will
 check and create various objects as an integral part of the command.
 
@@ -1616,7 +1640,7 @@ Support for this variant is not added to the client.
 
 =item * on the duration syntax
 
-The duration parameter must specify one year to be accepted in create, due to 
+The duration parameter must specify one year to be accepted in create, due to
 the period definition in lib/Net/DRI/DRD/SE.pm
 
 Duration syntax: 'duration=>{years=>1}' or 'duration=>{months=>12}'
@@ -1625,38 +1649,38 @@ Duration syntax: 'duration=>{years=>1}' or 'duration=>{months=>12}'
 
 =item 1 Create a normal domain without nameservers
 
-Create a single domain with a a registrant, a contact set with one type each, 
+Create a single domain with a a registrant, a contact set with one type each,
 and and no name servers:
 
 -o domain -c create -p E<34>%p=(name=>'test.se', pw=>'', registrant=>'testse0810-0001', coset=>{tech=>'testse0810-0002', admin=>'testse0810-0002'}, duration=>{years=>1})E<34>
 
 =item 2 Create a normal domain with nameservers
 
-Create a single domain with a a registrant, a contact set with one type each, 
+Create a single domain with a a registrant, a contact set with one type each,
 and and two name servers:
 
 -o domain -c create -p E<34>%p=(name=>'test2.se', pw=>'', registrant=>'testse0810-0001', coset=>{tech=>'testse0810-0002', admin=>'testse0810-0002'}, duration=>{years=>1}, nsset=>['ns1.test.se', 'ns2.test.se'])E<34>
 
 =item 3 Create an IDN domain
 
-Create a single IDN-domain with a duration of 12 months, a registrant, a 
+Create a single IDN-domain with a duration of 12 months, a registrant, a
 contact set with one type each, and no name servers.
 
-IDN domains are converted to the ACE-form (xn--...) by the client, and the 
+IDN domains are converted to the ACE-form (xn--...) by the client, and the
 ACE-form is passed as the domain name to the registry.
 
--o domain -c create -p E<34>%p=(name=>'räksmörgås.se', pw=>'', registrant=>'testse0810-0001', coset=>{tech=>'testse0810-0002', admin=>'testse0810-0002'}, duration=>{years=>1})E<34>
+-o domain -c create -p E<34>%p=(name=>'rÃ¤ksmÃ¶rgÃ¥s.se', pw=>'', registrant=>'testse0810-0001', coset=>{tech=>'testse0810-0002', admin=>'testse0810-0002'}, duration=>{years=>1})E<34>
 
 =item 4 Create a domain with Secure DNS keys
 
-Create a single domain with a a registrant, a contact set with one type each, 
+Create a single domain with a a registrant, a contact set with one type each,
 and and two name servers and one Secure DNS Key:
 
 -o domain -c create -p E<34>%p=(name=>'test3.se', pw=>'', registrant=>'testse0810-0001', coset=>{tech=>'testse0810-0002', admin=>'testse0810-0002'}, duration=>{years=>1}, nsset=>['ns1.test.se', 'ns2.test.se'], secdns=>[{keyTag=>'12345',alg=>3,digestType=>2,digest=>'49FD46E6C4B45C55D4AC'}])E<34>
 
 =back
 
-=over 
+=over
 
 =back
 
@@ -1673,7 +1697,7 @@ The domain name cannot be changed, otherwise all parameters may be changed.
 =item 1 Update (change) some domain attributes
 
  - set authInfo to 'abc'
- - add and del on all the multiple objects, coset and nsset, which may be 
+ - add and del on all the multiple objects, coset and nsset, which may be
    arrays or scalars
  - delete all secude DNS keys
 
@@ -1750,24 +1774,24 @@ before its expiration date.
 =item 1 Renew with parameters.
 
 Duration has to be 12 months or 1 year for .SE.
-DRI requires curexpiry, which should match the expiry date of the domain being 
+DRI requires curexpiry, which should match the expiry date of the domain being
 renewed:
 
 -o domain -c renew -p E<34>%p=(name=>'test.se', curexpiry=>'2008-12-11', duration=>{months=>12})E<34>
 
 =head2 Domain transfer commands
 
-Domain transfers are used if the registrant wants to change his registrar. He 
+Domain transfers are used if the registrant wants to change his registrar. He
 must then ask the old registrar for the password and the old one has to set that.
 The the new registrars can do the transfer.
 
 =head3 Domain transfer request
 
-When the registrant knows the authInfo, he passes it to the new registrar, who 
-can do a transfer containing the authInfo, and the transfer will 
+When the registrant knows the authInfo, he passes it to the new registrar, who
+can do a transfer containing the authInfo, and the transfer will
 be performed.
 
-- The transfer must be authorized by the token. 
+- The transfer must be authorized by the token.
 
 -o domain -c transfer -p E<34>%p=(name=>'test.se', pw=>'abc')E<34>
 
@@ -1781,28 +1805,28 @@ If the password is correct, the domain should be transferred.
 
 =item 1 message_waiting()
 
-This method performs a poll request and returns true if one or more messages 
+This method performs a poll request and returns true if one or more messages
 are waiting in the queue.
 
 -o message -c waiting -p E<34>%p=()E<34>
 
 =item 2 message_count()
 
-This method performs a poll request and returns the 'msgQ count' value from 
+This method performs a poll request and returns the 'msgQ count' value from
 the response, if any.
 
 -o message -c count -p E<34>%p=()E<34>
 
 =item 3 message_retrieve()
 
-This method performs a poll request, and with get_info() you can grab all the 
+This method performs a poll request, and with get_info() you can grab all the
 message details.
 
 -o message -c retrieve -p E<34>%p=()E<34>
 
 =item 4 message_delete()
 
-This is the poll ack message, which will remove message (with id=12) from the 
+This is the poll ack message, which will remove message (with id=12) from the
 server message queue.
 
 -o message -c delete -p E<34>%p=(id=>12)E<34>
@@ -1811,7 +1835,7 @@ server message queue.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 .SE, E<lt>http://www.iis.se<gt>,
+Copyright (c) 2008,2011 .SE, E<lt>http://www.iis.se<gt>,
 Jan Saell E<lt>jan@yask.seE<gt>
 All rights reserved.
 

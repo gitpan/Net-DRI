@@ -10,9 +10,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::DRD::CIRA;
@@ -27,8 +24,6 @@ use Net::DRI::Exception;
 use Net::DRI::Data::Raw;
 use Net::DRI::Protocol::EPP::Message;
 
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
-
 __PACKAGE__->make_exception_for_unavailable_operations(qw/domain_transfer_stop domain_transfer_query domain_transfer_accept domain_transfer_refuse/);
 
 ####################################################################################################
@@ -39,7 +34,6 @@ sub new
  my $self=$class->SUPER::new(@_);
  $self->{info}->{host_as_attr}=0;
  $self->{info}->{contact_i18n}=1; ## LOC only
- bless($self,$class);
  return $self;
 }
 

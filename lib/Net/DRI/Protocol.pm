@@ -10,9 +10,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::Protocol;
@@ -35,8 +32,6 @@ use Net::DRI::Data::Contact;
 use Net::DRI::Data::ContactSet;
 use Net::DRI::Data::Hosts;
 use Net::DRI::Data::StatusList;
-
-our $VERSION=do { my @r=(q$Revision: 1.23 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 

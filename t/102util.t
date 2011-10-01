@@ -7,12 +7,12 @@ use Test::More tests => 340;
 
 use Net::DRI::Util;
 
-is(defined(%Net::DRI::Util::CCA2),1,'%CCA2 defined');
+ok(%Net::DRI::Util::CCA2,'%CCA2 defined');
 isa_ok(\%Net::DRI::Util::CCA2,'HASH','%CCA2 hash');
-is(keys(%Net::DRI::Util::CCA2),249,'%CCA2 number of elements');
+is(keys(%Net::DRI::Util::CCA2),250,'%CCA2 number of elements');
 is_deeply([grep { ! /^[A-Z]{2}$/ } keys(%Net::DRI::Util::CCA2)],[],'%CCA2 keys');
 is(exists($Net::DRI::Util::CCA2{'FR'}),1,'%CCA2 FR exists');
-is(!exists($Net::DRI::Util::CCA2{'ZZ'}),1,'%CCA2 ZZ not exists');                  
+is(!exists($Net::DRI::Util::CCA2{'ZZ'}),1,'%CCA2 ZZ not exists');
 
 is(Net::DRI::Util::all_valid(undef,1,'A'),0,'all_valid() with one undef');
 is(Net::DRI::Util::all_valid('B',undef,2,undef),0,'all_valid() with two undef');

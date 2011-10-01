@@ -1,6 +1,6 @@
 ## Domain Registry Interface, IRIS DCHK (RFC5144)
 ##
-## Copyright (c) 2008,2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2010-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -10,13 +10,11 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::Protocol::IRIS::DCHK::Domain;
 
+use utf8;
 use strict;
 use warnings;
 
@@ -25,8 +23,6 @@ use Carp;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 use Net::DRI::Protocol::IRIS::Core;
-
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -56,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008,2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2010-2011 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -89,7 +85,7 @@ sub build_command
   Net::DRI::Exception->die(1,'protocol/IRIS',10,'Invalid domain name: '.$d) unless Net::DRI::Util::is_hostname($d);
  }
 
- ## TODO: entityClass may also be IDN for Unicode domain names ## ง3.1.2
+ ## TODO: entityClass may also be IDN for Unicode domain names ## ยง3.1.2
  ##return [ map { { registryType => $ns, entityClass => 'domain-name', entityName => $_ } } @dom ] ;
  return [ map { { registryType => 'dchk1', entityClass => 'domain-name', entityName => $_ } } @dom ] ; ## Both registryType forms should work, but currently only this one works
 }
@@ -162,11 +158,11 @@ sub info_parse
 
   $rinfo->{domain}->{$domain}->{temporary}=$temp;
   $rinfo->{domain}->{$domain}->{status}=$po->create_local_object('status')->add(@s);
-  $rinfo->{domain}->{$domain}->{exist}=1 if $rinfo->{domain}->{$oname}->{result_status}->is_success();
+  $rinfo->{domain}->{$domain}->{exist}=1 if $rinfo->{domain}->{$oname}->{result_status}->is_success() && $rinfo->{domain}->{$domain}->{status}->has_any(qw/active inactive/);
  } ## end of foreach on each resultSet
 }
 
-sub parse_status ## ง3.1.1.1
+sub parse_status ## ยง3.1.1.1
 {
  my ($po,$node)=@_;
  my %tmp=(name => $node->localname() );
@@ -190,7 +186,7 @@ sub parse_status ## ง3.1.1.1
  }
 
  $c=$node->getChildrenByTagNameNS($ns,'subStatus'); ## 0..unbounded ; not defined by RFC5144
- $tmp{substatus}=[ map { { authority => $_->getAttribute('authority'), content => $_->toString(0) } } $c->get_nodelist() ] if $c->size();
+ $tmp{substatus}=[ map { { authority => $_->getAttribute('authority'), content => $_->textContent() } } $c->get_nodelist() ] if $c->size();
 
  foreach my $a (qw/actor disposition scope/)
  {

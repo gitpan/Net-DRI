@@ -1,7 +1,7 @@
 ## Domain Registry Interface, Handling of contact data for .AT
 ## Contributed by Michael Braunoeder from NIC.AT <mib@nic.at>
 ##
-## Copyright (c) 2006,2008-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2008-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -11,9 +11,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 #########################################################################################
 
 package Net::DRI::Data::Contact::AT;
@@ -24,8 +21,6 @@ use warnings;
 use base qw/Net::DRI::Data::Contact/;
 
 use Net::DRI::Util;
-
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 __PACKAGE__->register_attributes(qw(type));
 
@@ -112,7 +107,7 @@ sub validate
  push @errs,'cc'   if ($self->cc()   && grep { !exists($Net::DRI::Util::CCA2{uc($_)}) }                 ($self->cc()));
 
  push @errs,'voice' if ($self->voice() && (!Net::DRI::Util::xml_is_token($self->voice(),undef,17) || $self->voice()!~m/^\+[0-9]{1,3}\.[0-9]{1,14}(?:x\d+)?$/));
- push @errs,'fax'   if ($self->fax()   && (!Net::DRI::Util::xml_is_token($self->fax(),undef,16)   || $self->fax()!~m/^\+[0-9]{1,3}\.[0-9]{1,14}(?:x\d+)?$/));
+ push @errs,'fax'   if ($self->fax()   && (!Net::DRI::Util::xml_is_token($self->fax(),undef,17)   || $self->fax()!~m/^\+[0-9]{1,3}\.[0-9]{1,14}(?:x\d+)?$/));
  push @errs,'email' if ($self->email() && (!Net::DRI::Util::xml_is_token($self->email(),1,undef)  || !Email::Valid->rfc822($self->email())));
 
  my $ra=$self->auth();

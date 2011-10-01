@@ -10,9 +10,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::Protocol::AFNIC::Email;
@@ -27,8 +24,6 @@ use Email::Valid;
 use Net::DRI::Exception;
 use Net::DRI::Protocol::AFNIC::Email::Message;
 use Net::DRI::Data::Contact::AFNIC;
-
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -86,7 +81,7 @@ sub new
 
  my $self=$c->SUPER::new($ctx);
  $self->name('afnic_email');
- $self->version($VERSION);
+ $self->version('0.1');
 
  foreach my $o (qw/ns contact/) { $self->capabilities('domain_update',$o,['set']); } ## no registrant, as there is a separate trade() call
  

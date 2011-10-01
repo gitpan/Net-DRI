@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Handling of statuses list (order is irrelevant) (base class)
 ##
-## Copyright (c) 2005-2008,2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2008,2010,2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -10,9 +10,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::Data::StatusList;
@@ -21,8 +18,6 @@ use strict;
 use warnings;
 
 use Net::DRI::Exception;
-
-our $VERSION=do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -90,7 +85,10 @@ the purpose of the module is to give an abstract view of the underlying statuses
 
 =head2 list_status()
 
-to get only the statuses' names, as an array of sorted names
+to get only the statuses' names, as an array of sorted names;
+if passed a true value, will return an array of strings, each one
+being the status name, plus message & lang if available, plus short description
+of other information tied to this status name
 
 =head2 status_details()
 
@@ -122,7 +120,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005-2008,2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2008,2010,2011 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -189,8 +187,20 @@ sub rem
 
 sub list_status
 {
- my $self=shift;
- return sort(keys(%{$self->{sl}}));
+ my ($self,$full)=@_;
+ my @names=sort { $a cmp $b } keys %{$self->{sl}};
+ return @names if ! defined $full || ! $full;
+
+ my @r;
+ foreach my $name (@names)
+ {
+  my $r=$name;
+  $r.=sprintf(' (%s:%s)',$self->{sl}->{$name}->{lang},$self->{sl}->{$name}->{msg}) if exists $self->{sl}->{$name}->{lang} && $self->{sl}->{$name}->{msg};
+  my @ek=grep { ! /^(?:lang|msg)$/ } keys %{$self->{sl}->{$name}};
+  $r.=join('',map { '['.$_.']' } @ek) if @ek;
+  push @r,$r;
+ }
+ return @r;
 }
 
 sub status_details
@@ -233,7 +243,8 @@ sub has_not
 sub possible_no
 {
  my $self=shift;
- return sort(keys(%{$self->{possible_no}}));
+ my @r=sort { $a cmp $b } keys %{$self->{possible_no}};
+ return @r;
 }
 
 sub no

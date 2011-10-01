@@ -10,9 +10,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::Protocol::OpenSRS::XCP;
@@ -24,8 +21,6 @@ use base qw(Net::DRI::Protocol);
 
 use Net::DRI::Protocol::OpenSRS::XCP::Message;
 use Net::DRI::Data::Contact::OpenSRS;
-
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 

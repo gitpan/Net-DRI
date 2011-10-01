@@ -10,13 +10,11 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::Protocol::IRIS::LWZ;
 
+use utf8;
 use strict;
 use warnings;
 
@@ -29,8 +27,6 @@ use Net::DNS ();
 
 use IO::Uncompress::RawInflate (); ## RFC1951 per the LWZ RFC
 use IO::Compress::RawDeflate ();
-
-our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -74,7 +70,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 ####################################################################################################
 
-sub read_data # ง3.1.2
+sub read_data # ยง3.1.2
 {
  my ($class,$to,$sock)=@_;
 
@@ -82,14 +78,14 @@ sub read_data # ง3.1.2
  $sock->recv($data,4000) or die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED_CLOSING','Unable to read registry reply: '.$!,'en'));
  my $hdr=substr($data,0,1);
  die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED_CLOSING','Unable to read 1 byte header','en')) unless $hdr;
- # ง3.1.3
+ # ยง3.1.3
  $hdr=unpack('C',$hdr);
  my $ver=($hdr & (128+64)) >> 6;
  die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_SYNTAX_ERROR','Version unknown in header: '.$ver,'en')) unless $ver==0;
  my $rr=($hdr & 32) >> 5;
  die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_SYNTAX_ERROR','RR Flag is not response in header: '.$rr,'en')) unless $rr==1;
  my $deflate=($hdr & 16) >> 4; ## if 1, the payload is compressed with the deflate algorithm (RFC1951)
- my $type=($hdr & 3); ## ง3.1.4
+ my $type=($hdr & 3); ## ยง3.1.4
  die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_SYNTAX_ERROR','Unexpected response type in header: '.$type,'en')) unless $type==0; ## TODO : handle size info, version, etc.
 
  my $tid=substr($data,1,2);
@@ -111,7 +107,7 @@ sub write_message
 {
  my ($self,$to,$msg)=@_;
  my $m=Net::DRI::Util::encode_utf8($msg);
- my $hdr='00001000'; ## ง3.1.3 : V=0 RR=Request PD=no DS=yes Reserved PT=xml
+ my $hdr='00001000'; ## ยง3.1.3 : V=0 RR=Request PD=no DS=yes Reserved PT=xml
 
  ## If not specificed in DRD, other option is to try anyway & fallback based on reply (this will need multiple exchanges, so probably some changes in Net::DRI::Registry::process)
  my $deflate=$msg->options()->{request_deflate};
@@ -126,7 +122,7 @@ sub write_message
  my ($tid)=($msg->tid()=~m/(\d{6})$/); ## 16 digits, we need to convert to a 16-bit value, we take the microsecond part modulo 65535 (since 0xFFFF is reserved)
  $tid%=65535;
  my $auth=$msg->authority();
- return pack('B8',$hdr).pack('n',$tid).pack('n',4000).pack('C',length($auth)).$auth.$m; ## ง3.1.1
+ return pack('B8',$hdr).pack('n',$tid).pack('n',4000).pack('C',length($auth)).$auth.$m; ## ยง3.1.1
 }
 
 ## TODO: move that someway into IRIS/Core probably (as needed for all transports)
@@ -135,13 +131,13 @@ sub find_remote_server
  my ($class,$to,$rd)=@_;
  my ($authority,$service)=@$rd;
 
- my $res=Net::DNS::Resolver->new(domain=>'', search=>''); ## make sure to start from clean state (otherwise we inherit the system defaults !)
+ my $res=Net::DNS::Resolver->new(domain=>'', search=>''); ##ย make sure to start from clean state (otherwise we inherit the system defaults !)
  my $query=$res->send($authority,'NAPTR');
  Net::DRI::Exception->die(1,'transport/socket',8,'No remote endpoint given, and unable to perform NAPTR DNS query for '.$authority.': '.$res->errorstring()) unless $query;
 
- my @r=sort { $a->order() <=> $b->order() || $a->preference() <=> $b->preference() } grep { $_->type() eq 'NAPTR' } $query->answer(); ## RFC3958 ง2.2.1
- @r=grep { $_->service() eq $service } @r; ## RFC3958 ง2.2.2
- @r=grep { $_->flags() eq 's' } @r; ## RFC3958 ง2.2.3
+ my @r=sort { $a->order() <=> $b->order() || $a->preference() <=> $b->preference() } grep { $_->type() eq 'NAPTR' } $query->answer(); ## RFC3958 ยง2.2.1
+ @r=grep { $_->service() eq $service } @r; ## RFC3958 ยง2.2.2
+ @r=grep { $_->flags() eq 's' } @r; ## RFC3958 ยง2.2.3
  Net::DRI::Exception->die(1,'transport/socket',8,'No remote endpoint given, and unable to retrieve NAPTR records with service='.$service.' and flags=s for authority='.$authority) unless @r;
 
  my $srv=$r[0]->replacement();

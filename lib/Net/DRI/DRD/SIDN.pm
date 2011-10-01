@@ -1,6 +1,6 @@
 ## Domain Registry Interface, SIDN (.NL) Registry Driver
 ##
-## Copyright (c) 2009,2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2009-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -10,9 +10,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 #########################################################################################
 
 package Net::DRI::DRD::SIDN;
@@ -22,9 +19,7 @@ use warnings;
 
 use base qw/Net::DRI::DRD/;
 
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
-
-__PACKAGE__->make_exception_for_unavailable_operations(qw/domain_renew domain_transfer_stop domain_update_status domain_update_status_add domain_update_status_del domain_update_status_set contact_update_status contact_update_status_add contact_update_status_del contact_update_status_set host_update_status host_update_status_add host_update_status_del host_update_status_set host_update_name_set/);
+__PACKAGE__->make_exception_for_unavailable_operations(qw/domain_renew domain_transfer_stop domain_update_status domain_update_status_add domain_update_status_del domain_update_status_set contact_transfer contact_transfer_start contact_transfer_stop contact_transfer_query contact_transfer_accept contact_transfer_refuse contact_update_status contact_update_status_add contact_update_status_del contact_update_status_set host_update_status host_update_status_add host_update_status_del host_update_status_set host_update_name_set/);
 
 ####################################################################################################
 
@@ -34,7 +29,6 @@ sub new
  my $self=$class->SUPER::new(@_);
  $self->{info}->{host_as_attr}=0;
  $self->{info}->{contact_i18n}=1; ## LOC only
- bless($self,$class);
  return $self;
 }
 
@@ -102,7 +96,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2009,2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2009-2011 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

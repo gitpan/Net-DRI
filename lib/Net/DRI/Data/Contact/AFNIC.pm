@@ -10,13 +10,11 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 #########################################################################################
 
 package Net::DRI::Data::Contact::AFNIC;
 
+use utf8;
 use strict;
 use warnings;
 
@@ -26,8 +24,6 @@ use Email::Valid;
 
 use Net::DRI::Exception;
 use Net::DRI::Util;
-
-our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 __PACKAGE__->register_attributes(qw(firstname legal_form legal_form_other legal_id jo trademark key birth vat id_status));
 
@@ -65,7 +61,7 @@ French SIREN/SIRET of organization
 
 =head2 jo()
 
-reference to an hash with 4 keys storing details about «Journal Officiel» :
+reference to an hash with 4 keys storing details about Â«Journal OfficielÂ» :
 date_declaration (Declaration date), date_publication (Publication date),
 number (Announce number) and page (Announce page)
 

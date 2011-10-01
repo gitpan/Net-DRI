@@ -1,5 +1,5 @@
 ## Domain Registry Interface, AFNIC (.FR/.RE) EPP extensions
-## From http://www.afnic.fr/data/divers/public/afnic-epp-rc1.pdf (2008-06-30)
+## From http://www.afnic.fr/medias/documents/afnic-guide-integration-technique.pdf (v1.55 2011-03-03)
 ##
 ## Copyright (c) 2008,2009,2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
@@ -11,9 +11,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::Protocol::EPP::Extensions::AFNIC;
@@ -24,8 +21,6 @@ use base qw/Net::DRI::Protocol::EPP/;
 
 use Net::DRI::Data::Contact::AFNIC;
 use Net::DRI::Protocol::EPP::Extensions::AFNIC::Status;
-
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -72,10 +67,12 @@ See the LICENSE file that comes with this distribution for more details.
 sub setup
 {
  my ($self,$rp)=@_;
- $self->ns({frnic=>['http://www.afnic.fr/xml/epp/frnic-1.0','frnic-1.0.xsd']});
+ $self->ns({frnic=>['http://www.afnic.fr/xml/epp/frnic-1.1','frnic-1.1.xsd']});
  $self->capabilities('domain_update','registrant',undef); ## a trade is required
  $self->capabilities('contact_update','status',undef); ## No changes in status possible for .FR contacts
  $self->capabilities('contact_update','disclose',['add','del']);
+ $self->capabilities('domain_update','secdns',['add','del']); ## no chg allowed for maxSigLife
+ $self->capabilities('domain_update','secdns_urgent',undef); ## no urgent attribute allowed
  $self->factories('contact',sub { return Net::DRI::Data::Contact::AFNIC->new(); });
  $self->factories('status',sub { return Net::DRI::Protocol::EPP::Extensions::AFNIC::Status->new(); });
  $self->default_parameters({domain_create => { ns => undef } }); ## No nameservers allowed during domain create
@@ -83,7 +80,7 @@ sub setup
 }
 
 sub core_contact_types { return ('admin','tech'); } ## No billing contact in .FR
-sub default_extensions { return qw/AFNIC::Domain AFNIC::Contact AFNIC::Notifications GracePeriod SecDNS/; }
+sub default_extensions { return qw/AFNIC::Session AFNIC::Domain AFNIC::Contact AFNIC::Notifications GracePeriod SecDNS/; }
 
 ####################################################################################################
 1;

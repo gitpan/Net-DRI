@@ -4,6 +4,7 @@
 # A Net::DRI example
 # See also t/606eurid_epp.t
 
+use utf8;
 use strict;
 use warnings;
 

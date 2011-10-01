@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Handling of contact data for .NO
 ##
-## Copyright (c) 2008-2010 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
+## Copyright (c) 2008-2011 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
 ##                    Trond Haugen E<lt>info@norid.noE<gt>.
 ##                    All rights reserved.
 ##
@@ -12,21 +12,17 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ###############################################################################
 
 package Net::DRI::Data::Contact::NO;
 
+use utf8;
 use strict;
 use warnings;
 use base qw/Net::DRI::Data::Contact/;
 use Email::Valid;
 use Net::DRI::Util;
 use Net::DRI::Exception;
-
-our $VERSION = do { my @r = ( q$Revision: 1.6 $ =~ /\d+/gmx ); sprintf( "%d" . ".%02d" x $#r, @r ); };
 
 __PACKAGE__->register_attributes(qw(type identity mobilephone organization rolecontact xemail xdisclose facets));
 
@@ -56,7 +52,7 @@ Example: $co->type('organization')
 =head2 identity()
 
 Currently valid for type='organization' only.
-Must then be set to specify the organization number in Brønnøysund,
+Must then be set to specify the organization number in BrÃ¸nnÃ¸ysund,
 the Norwegian Business Register.
 
 Example: $co->identity({type=>'organizationNumber', value=>'987654321'});
@@ -253,7 +249,7 @@ sub validate {
         push @errs, 'identity type'
             if ( $ty
             && $ty
-            !~ m/^(?:organizationNumber|localIdentity|nationalIdentityNumber)$/mx
+            !~ m/^(?:organizationNumber|localIdentity|nationalIdentityNumber|anonymousPersonIdentifier)$/mx
             );
 
         # let the server handle further validation of what identity syntax

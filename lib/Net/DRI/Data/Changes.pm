@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Handle bundle of changes
 ##
-## Copyright (c) 2005,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2008,2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -10,16 +10,11 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 #########################################################################################
 
 package Net::DRI::Data::Changes;
 
 use strict;
-
-our $VERSION=do { my @r=(q$Revision: 1.8 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -49,7 +44,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2008,2011 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -61,13 +56,11 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
-
 ##############################################################################################################################
 
 sub new
 {
- my ($proto,$type,$op,$el)=@_;
- my $class=ref($proto) || $proto;
+ my ($class,$type,$op,$el)=@_;
 
  my $self={}; ## { 'type' => [ toadd, todel, toset ] }   type=host,ip,status,contact,etc...
  bless($self,$class);
@@ -90,7 +83,11 @@ sub new_set { return shift->new(shift,'set',shift); }
 sub types
 {
  my ($self,$type)=@_;
- return sort(keys(%$self)) unless defined($type);
+ if (! defined $type)
+ {
+  my @r=sort { $a cmp $b } keys %$self;
+  return @r;
+ }
  my @r;
  return @r unless (exists($self->{$type}) && defined($self->{$type}));
  push @r,'add' if (defined($self->{$type}->[0]));

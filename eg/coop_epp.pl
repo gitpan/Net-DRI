@@ -3,6 +3,7 @@
 #
 # A Net::DRI example for .COOP : creation of contacts, hosts, domains, and deleting domain
 
+use utf8;
 use strict;
 use warnings;
 

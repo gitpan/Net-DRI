@@ -1,6 +1,6 @@
 ## Domain Registry Interface, SIDN EPP Domain extensions
 ##
-## Copyright (c) 2009,2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2009-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -10,9 +10,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::Protocol::EPP::Extensions::SIDN::Domain;
@@ -23,17 +20,16 @@ use warnings;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
-
 ####################################################################################################
 
 sub register_commands
 {
  my ($class,$version)=@_;
  my %tmp=(
-           info  => [ undef, \&info_parse],
-	   create => [ \&create, undef ],
-	   delete_cancel => [ \&delete_cancel, undef ],
+           info             => [ undef, \&info_parse],
+           create           => [ \&create, undef ],
+           delete_cancel    => [ \&delete_cancel, undef ],
+           transfer_request => [ undef, \&transfer_parse ],
          );
 
  return { 'domain' => \%tmp };
@@ -97,6 +93,23 @@ sub delete_cancel
  $mes->command_extension($eid,[['sidn:domainCancelDelete',['sidn:name',$domain]],['sidn:clTRID',$mes->cltrid()]]);
 }
 
+sub transfer_parse
+{
+ my ($po,$otype,$oaction,$oname,$rinfo)=@_;
+ my $mes=$po->message();
+ return unless $mes->is_success();
+
+ my $trndata=$mes->get_response('sidn','ext');
+ return unless defined $trndata;
+
+ my $ns=$mes->ns('sidn');
+ my $pw=Net::DRI::Util::xml_traverse($trndata,$ns,'trnData','pw');
+ return unless defined $pw;
+
+ $rinfo->{domain}->{$oname}->{transfer_new_token}=$pw->textContent();
+}
+
+
 ####################################################################################################
 1;
 
@@ -130,7 +143,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2009,2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2009-2011 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

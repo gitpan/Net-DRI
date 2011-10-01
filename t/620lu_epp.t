@@ -1,5 +1,7 @@
 #!/usr/bin/perl
 
+use encoding "iso-8859-15";
+
 use strict;
 use warnings;
 
@@ -9,7 +11,7 @@ use Net::DRI::Protocol::EPP::Connection;
 use DateTime;
 use Test::More tests => 65;
 eval { no warnings; require Test::LongString; Test::LongString->import(max => 100); $Test::LongString::Context=50; };
-*{'main::is_string'}=\&main::is if $@;
+if ( $@ ) { no strict 'refs'; *{'main::is_string'}=\&main::is; }
 
 our $E1='<?xml version="1.0" encoding="UTF-8" standalone="no"?><epp xmlns="urn:ietf:params:xml:ns:epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="urn:ietf:params:xml:ns:epp-1.0 epp-1.0.xsd">';
 our $E2='</epp>';

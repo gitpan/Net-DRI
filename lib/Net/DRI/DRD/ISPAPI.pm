@@ -1,8 +1,7 @@
 ## Domain Registry Interface, ISPAPI (aka HEXONET) Registry Driver
 ##
-## Copyright (c) 2010-2011 HEXONET GmbH, http://www.hexonet.net,
-##                    Jens Wagner <info@hexonet.net>
-## All rights reserved.
+## Copyright (c) 2010-2011 HEXONET GmbH, http://www.hexonet.net, Jens Wagner <info@hexonet.net>. All rights reserved.
+##           (c) 2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -12,9 +11,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 #########################################################################################
 
 package Net::DRI::DRD::ISPAPI;
@@ -25,8 +21,6 @@ use warnings;
 use base qw/Net::DRI::DRD/;
 
 use DateTime::Duration;
-
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -89,8 +83,6 @@ sub new
  my $class=shift;
  my $self=$class->SUPER::new(@_);
  $self->{info}->{host_as_attr}=0;
-
- bless($self,$class);
  return $self;
 }
 

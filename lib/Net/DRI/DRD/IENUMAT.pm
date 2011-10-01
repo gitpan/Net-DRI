@@ -1,7 +1,7 @@
 ## Domain Registry Interface, Infrastructure ENUM.AT policy on reserved names
 ## Contributed by Michael Braunoeder from ENUM.AT <michael.braunoeder@enum.at>
 ##
-## Copyright (c) 2006,2008-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2008-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -11,9 +11,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::DRD::IENUMAT;
@@ -25,8 +22,6 @@ use base qw/Net::DRI::DRD/;
 
 use Net::DRI::Util;
 use DateTime::Duration;
-
-our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 ## The domain renew command are not implemented at the ienum43 EPP server, domains are renewed automatically
 __PACKAGE__->make_exception_for_unavailable_operations(qw/domain_renew/);
@@ -59,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2008-2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2008-2011 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -78,8 +73,6 @@ sub new
  my $class=shift;
  my $self=$class->SUPER::new(@_);
  $self->{info}->{host_as_attr}=0;
-
- bless($self,$class);
  return $self;
 }
 

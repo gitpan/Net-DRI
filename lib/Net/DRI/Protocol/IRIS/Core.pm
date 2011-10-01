@@ -10,21 +10,17 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::Protocol::IRIS::Core;
 
+use utf8;
 use strict;
 use warnings;
 
 use Carp;
 use Net::DRI::Protocol::ResultStatus;
 use Net::DRI::Util;
-
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -108,7 +104,7 @@ sub parse_error
  return Net::DRI::Protocol::ResultStatus->new_success();
 }
 
-## RFC4991 ง6 ง7
+## RFC4991 ยง6 ยง7
 sub parse_authentication
 {
  my ($node)=@_; ## $node should be a topmost <resultSet> to be able to catch all errors type

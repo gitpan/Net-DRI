@@ -1,7 +1,7 @@
 ## Domain Registry Interface, .AT policy
 ## Contributed by Michael Braunoeder from NIC.AT <mib@nic.at>
 ##
-## Copyright (c) 2006-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -11,9 +11,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::DRD::AT;
@@ -26,8 +23,6 @@ use base qw/Net::DRI::DRD/;
 use DateTime::Duration;
 use Net::DRI::Data::Contact::AT;
 use Net::DRI::Util;
-
-our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 __PACKAGE__->make_exception_for_unavailable_operations(qw/domain_transfer_accept domain_transfer_refuse domain_renew contact_transfer_stop contact_transfer_query contact_transfer_accept contact_transfer_refuse contact_check/);
 
@@ -79,7 +74,6 @@ sub new
  my $self=$class->SUPER::new(@_);
  $self->{info}->{host_as_attr}=2; ## this means we want IPs in all cases (even for nameservers in domain name)
  $self->{info}->{contact_i18n}=2; ## INT only
- bless($self,$class);
  return $self;
 }
 

@@ -10,9 +10,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::Logging;
@@ -23,8 +20,6 @@ use warnings;
 use base qw/Net::DRI::BaseClass/;
 use Net::DRI::Util;
 use Net::DRI::Exception;
-
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf '%d'.('.%02d' x $#r), @r; };
 
 __PACKAGE__->make_exception_if_not_implemented(qw/name setup_channel output/);
 
@@ -147,10 +142,6 @@ __END__
 =head1 NAME
 
 Net::DRI::Logging - Logging Operations for Net::DRI
-
-=head1 VERSION
-
-This documentation refers to Net::DRI::Logging version 1.02
 
 =head1 SYNOPSIS
 

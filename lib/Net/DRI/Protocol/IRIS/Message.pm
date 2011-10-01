@@ -10,13 +10,11 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::Protocol::IRIS::Message;
 
+use utf8;
 use strict;
 use warnings;
 
@@ -28,8 +26,6 @@ use Net::DRI::Util;
 
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw/version tid authority options search results/);
-
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -134,7 +130,7 @@ sub as_string
  return join('',@d);
 }
 
-# RFC3981 ง4.2
+# RFC3981 ยง4.2
 sub parse
 {
  my ($self,$dc,$rinfo)=@_;
@@ -145,7 +141,7 @@ sub parse
  ## TODO: handle RFC4991 other types of responses
  Net::DRI::Exception->die(0,'protocol/IRIS',1,'Unsuccessfull parse, root element is not response') unless ($root->localname() eq 'response');
 
- ## We currently do not parse the <reaction> node (in reply to a <control> which we do never send for now, see ง4.3.8) and <bags> (see ง4.4)
+ ## We currently do not parse the <reaction> node (in reply to a <control> which we do never send for now, see ยง4.3.8) and <bags> (see ยง4.4)
  ## We take care only of the <resultSet> nodes
  $self->results(scalar($root->getChildrenByTagNameNS($self->ns('iris1'),'resultSet')));
 }

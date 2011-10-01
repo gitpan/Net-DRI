@@ -9,7 +9,7 @@ use DateTime::Duration;
 use DateTime;
 use Test::More tests => 45;
 eval { no warnings; require Test::LongString; Test::LongString->import(max => 100); $Test::LongString::Context=50; };
-*{'main::is_string'}=\&main::is if $@;
+if ( $@ ) { no strict 'refs'; *{'main::is_string'}=\&main::is; }
 
 
 our (@R1,@R2);

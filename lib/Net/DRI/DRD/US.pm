@@ -1,7 +1,7 @@
 ## Domain Registry Interface, .US policies
 ##
-## Copyright (c) 2007,2008,2009 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>,
-##                    All rights reserved.
+## Copyright (c) 2007,2008,2009 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
+##           (c) 2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -11,9 +11,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::DRD::US;
@@ -25,8 +22,6 @@ use base qw/Net::DRI::DRD/;
 
 use DateTime::Duration;
 use Net::DRI::Data::Contact::US;
-
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -56,7 +51,8 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007,2008,2009 Tonnerre Lombard E<lt>tonnerre.lombard@sygroup.chE<gt>,
+Copyright (c) 2007,2008,2009 Tonnerre Lombard E<lt>tonnerre.lombard@sygroup.chE<gt>.
+          (c) 2011 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -76,7 +72,6 @@ sub new
  my $self=$class->SUPER::new(@_);
  $self->{info}->{host_as_attr}=0;
  $self->{info}->{contact_i18n}=6; ## INT only or INT+LOC (but not LOC only)
- bless($self,$class);
  return $self;
 }
 

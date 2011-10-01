@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .PL Contact EPP extension commands
 ##
-## Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2008,2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -10,9 +10,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 #########################################################################################
 
 package Net::DRI::Protocol::EPP::Extensions::PL::Contact;
@@ -20,8 +17,6 @@ package Net::DRI::Protocol::EPP::Extensions::PL::Contact;
 use strict;
 
 use Net::DRI::Util;
-
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -51,7 +46,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2008,2011 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -70,7 +65,7 @@ sub register_commands
  my ($class,$version)=@_;
  my %tmp=( 
           create => [ \&create, undef ],
-          info   => [ \&info, undef ],
+          info   => [ \&info, \&info_parse ],
           update => [ \&update, undef ],
          );
 
@@ -103,13 +98,13 @@ sub add_individual_and_consent
  $mes->command_extension($eid,\@e);
 }
 
-sub create 
+sub create
 {
  my ($epp,$contact)=@_;
- return add_individual_and_consent($epp,$contact,'create'); 
+ return add_individual_and_consent($epp,$contact,'create');
 }
 
-sub update 
+sub update
 {
  my ($epp,$contact,$todo)=@_;
  my $newc=$todo->set('info');
@@ -122,10 +117,39 @@ sub info
  my ($epp,$contact,$ep)=@_;
  my $mes=$epp->message();
 
- return unless (Net::DRI::Util::has_auth($ep) && exists($ep->{auth}->{pw}));
+ return unless (Net::DRI::Util::has_auth($ep) && exists $ep->{auth}->{pw});
 
  my $eid=build_command_extension($mes,$epp,'extcon:info');
- $mes->command_extension($eid,[['extcon:authInfo',['extcon:pw',$ep->{auth}->{pw}]]]);
+ if (Net::DRI::Util::has_key($ep->{auth},'roid'))
+ {
+  $mes->command_extension($eid,[['extcon:authInfo',['extcon:pw',{roid=>$ep->{auth}->{roid}},$ep->{auth}->{pw}]]]);
+ } else {
+  $mes->command_extension($eid,[['extcon:authInfo',['extcon:pw',$ep->{auth}->{pw}]]]);
+ }
+}
+
+sub info_parse
+{
+ my ($po,$otype,$oaction,$oname,$rinfo)=@_;
+ my $mes=$po->message();
+ return unless $mes->is_success();
+
+ my $infdata=$mes->get_extension('pl_contact','infData');
+ return unless defined $infdata;
+
+ my $contact=$rinfo->{contact}->{$oname}->{self};
+
+ foreach my $el (Net::DRI::Util::xml_list_children($infdata))
+ {
+  my ($name,$c)=@$el;
+  if ($name eq 'individual')
+  {
+   $contact->individual(Net::DRI::Util::xml_parse_boolean($c->textContent()));
+  } elsif ($name eq 'consentForPublishing')
+  {
+   $contact->consent_for_publishing(Net::DRI::Util::xml_parse_boolean($c->textContent()));
+  }
+ }
 }
 
 ####################################################################################################

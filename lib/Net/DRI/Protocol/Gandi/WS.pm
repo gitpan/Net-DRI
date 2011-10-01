@@ -11,9 +11,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::Protocol::Gandi::WS;
@@ -23,8 +20,6 @@ use warnings;
 
 use base qw(Net::DRI::Protocol);
 use Net::DRI::Protocol::Gandi::WS::Message;
-
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -73,8 +68,8 @@ sub new
  my ($c,$ctx,$rp)=@_;
  my $self=$c->SUPER::new($ctx);
  $self->name('gandi_ws');
- $self->version($VERSION);
- $self->factories('message',sub { my $m=Net::DRI::Protocol::Gandi::WS::Message->new(); $m->version($VERSION); return $m; });
+ $self->version('0.1');
+ $self->factories('message',sub { my $m=Net::DRI::Protocol::Gandi::WS::Message->new(); $m->version('0.1'); return $m; });
  $self->_load($rp);
  return $self;
 }

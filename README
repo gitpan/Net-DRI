@@ -11,6 +11,7 @@ for domain name registries/registrars/resellers
 what Perl DBI is for databases.
 
 Net::DRI offers a uniform API to access services.
+It can be used by registries to test their systems.
 It can be used by registrars to access registries.
 It can be used by clients to access registrars and/or resellers.
 It can be used by anonyone to do whois, DAS or IRIS DCHK queries.
@@ -39,15 +40,18 @@ Currently Net::DRI ships with:
   * GracePeriod (RFC 3915)
   * E164 for ENUM (RFC 4114)
   * Enum Validation (RFC 5076)
-  * SecDNS for DNSSEC both version 1.0 (RFC 4310) and version 1.1 (RFC 5910)
+  * SecDNS for DNSSEC in EPP, both version 1.0 (RFC 4310) and version 1.1 (RFC 5910)
   * Infrastructure ENUM in Austria
   * NSgroup and Keygroup (used by .BE and .EU)
-  * Sync, WhoisInfo, WhoWas, PremiumDomain, Suggestion (used by VeriSign)
-  * CentralNic extensions: Release, TTL, WebForwarding
+  * VeriSign extensions: Sync, WhoisInfo, WhoWas, PremiumDomain, Suggestion, ClientAttributes
+  * CentralNic extensions: Release, TTL, WebForwarding, Pricing
+  * CloudRegistry extension: LaunchPhase
+  * CoCCA extension: IPVerification
   * Domain/Contact/Host and other extensions needed for extra services in various TLD:
     .EU .COM .NET .MOBI .AERO .CAT .US .PL .SE .BE .AT .COOP .LU .ASIA .AU .NAME .ORG .UK
     .DE .CH .LI .HN .SC .VC .AG .BZ .LC .MN .ME .CZ .TRAVEL .NO .BR .JOBS .PRO .FR .PT
-    .CX .GS .TL .KI .MS .MU .NF .HT .IM .SI .NG .NA .IT .NL .CA
+    .CX .GS .TL .KI .MS .MU .NF .HT .IM .SI .NG .NA .IT .NL .CA .CO.ZA
+    .RU .SU .РФ
 - a full DAS (Domain Availability Service) implementation for .BE .EU .NL .AU
 - a full Whois implementation (RFC 3912) for thin and thick registries :
      support included for domain names in .COM .NET .ORG .BIZ .INFO .AERO
@@ -64,15 +68,16 @@ Currently Net::DRI ships with:
   (see Net::DRI::Shell module documentation for all details)
 - Net::DRI::DRD::* modules for:
   COM NET CC BZ TV JOBS
-  AdamsNames AERO AG ARNES ASIA AT AU
-  BE BIZ BR BZ
-  CAT CentralNic CIRA COOP CZ CO.CZ
+  AdamsNames AERO AG ASIA AT AU
+  BE BH BIZ BR BZ
+  CAT CentralNic CIRA COOP CZ CO.CZ CO.ZA
   CX GS TL KI MU NF HT NA NG CC CM SB MG
   DE EU GL HN FR
   IENUMAT IM INFO IT
   LC LU ME MN MOBI NAME NO NU NL
-  ORG PL PRO PT SC SE CH LI SI
-  TRAVEL UK US VC WS
+  ORG PL PRO PT SC SE CH LI
+  RU SU РФ
+  SI SO TRAVEL UK US VC WS
 - Net::DRI::DRD::* modules to use registrars API for Gandi, OVH, BookMyName, OpenSRS
 - Net::DRI::DRD::ISPAPI : the ISPAPI Registry driver for Net::DRI enables you to connect HEXONET's
   EPP server and gives you the possibility to manage a wide range of gTLDs
@@ -92,6 +97,8 @@ this framework to your clients (see license file).
 If you are already using Net::DRI or planning to do so, please let us also know.
 Do not hesitate to let others know and if you want, you are welcome to make a link
 back to our website at <http://www.dotandco.com/services/software/Net-DRI/index.en>
+
+If you find this software useful, we would welcome any kind of support to continue working on it.
 
 Perl modules needed
 -------------------
@@ -115,30 +122,36 @@ IO::Socket::INET (*)
 IO::Socket::SSL (>=0.90)
 XML::LibXML (>=1.61)
 UNIVERSAL::require
-SOAP::Lite (needed only for AFNIC, BookMyName, OVH, Gandi webservices)
+SOAP::Lite (needed only for BookMyName, OVH, Gandi webservices)
 SOAP::WSDL (needed only for OVH webservices)
 MIME::Entity (needed only for AFNIC emails)
 Net::SMTP (needed only for AFNIC emails)
-LWP::UserAgent (needed only for OpenSRS, .PL and .IT)
+LWP::UserAgent (>=6.02) (needed only for OpenSRS, .PL and .IT)
 Digest::MD5 (needed only for OpenSRS)
 Net::DNS (needed only for .DE IRIS DCHK queries)
 IO::Uncompress::RawInflate (needed only for .DE IRIS DCHK queries) (*)
+
+Modules marked (*) are core Perl modules.
 
 
 All dates and durations exchanged with Net::DRI should be
 DateTime and DateTime::Duration objects
 
-Modules marked (*) are core Perl modules.
-
 Install
 -------
 
 Use the standard procedure:
-perl Makefile.PL ; make ; make test ; make install
-Or just copy the content of the lib/ directory somewhere in your path.
-You can use tests available in t/ to make sure everything is well.
-(all tests are done locally and do not require a network connection;
-those who require a network connection are not enabled by default)
+
+perl Makefile.PL
+make
+make test
+
+and then only if you have no errors:
+
+make install
+
+All tests are done locally and do not require a network connection;
+those who require a network connection are not enabled by default.
 
 LICENSE INFORMATION
 -------------------
@@ -161,9 +174,11 @@ and are copyrighted to them. See each specific module documentation.
 How to use
 ----------
 
+As a binary, a script called drish is installed, and is a wrapper
+around the Net::DRI shell, see its documentation inside Net::DRI::Shell
+
 You can find examples in the eg subdirectory:
 
-afnic_ws.pl : as AFNIC member, to use AFNIC web services
 afnic_email.pl : as AFNIC member, to use the email robot
 ws_rrp.pl    : as registrar, to connect to .WS using RRP
 eurid_epp.pl : as registrar, connect to EURid test systems
@@ -255,7 +270,7 @@ described above and the test files):
 
 - after registries and profiles have been created (others can be added at any time),
  you can apply many methods (see below) to the $dri object
- You can change the current registry and/or current profile at any time using $dri->target(...,...)
+ You can change the current registry and/or current profile at any time using $dri->target(X,Y)
 
  You get back for most of the calls an object representing the status.
  It is an instance of Net::DRI::Protocol::ResultStatus, please see its documentation.
@@ -265,9 +280,14 @@ described above and the test files):
  in cache (and accessed through $dri->get_info()) will be deleted after its time to live
  has elapsed.
 
- You can also always use:
- result_is_success() result_code() result_native_code() result_message() result_lang() 
- result_is_pending() result_trid() methods
+ You can also always use the following methods:
+ result_is_success()
+ result_code()
+ result_native_code()
+ result_message()
+ result_lang()
+ result_is_pending()
+ result_trid()
  to get back the same information (if not given by the methods or if you want to discard output)
 
  Information that has been sent by registry will also be available through $dri->get_info(...)

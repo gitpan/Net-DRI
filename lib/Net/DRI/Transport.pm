@@ -10,9 +10,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::Transport;
@@ -24,8 +21,6 @@ use base qw(Class::Accessor::Chained::Fast Net::DRI::BaseClass);
 __PACKAGE__->mk_accessors(qw/name version retry pause trace timeout defer current_state has_state is_sync time_creation time_open time_used trid_factory logging/);
 
 use Net::DRI::Exception;
-
-our $VERSION=do { my @r=(q$Revision: 1.22 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -99,7 +94,7 @@ sub new
  my $pname=$ctx->{profile};
 
  my $self={
- 	   is_sync   => exists($ropts->{is_sync})? $ropts->{is_sync} : 1, ## do we need to wait for reply as soon as command sent ?
+           is_sync   => exists($ropts->{is_sync})? $ropts->{is_sync} : 1, ## do we need to wait for reply as soon as command sent ?
            retry     => exists($ropts->{retry})?   $ropts->{retry}   : 2,  ## by default, we will try once only
            pause     => exists($ropts->{pause})?   $ropts->{pause}   : 10, ## time in seconds to wait between two retries
            timeout   => exists($ropts->{timeout})? $ropts->{timeout} : 60,
@@ -127,6 +122,30 @@ sub log_output
  return $self->logging()->output($level,$type,$data1) unless defined $data2;
  $self->{logging_ctx}->{transport}=$self->name().'/'.$self->version() unless exists $self->{logging_ctx}->{transport};
  return $self->logging()->output($level,$type,{ %{$self->{logging_ctx}}, %$data1, %$data2 });
+}
+
+sub parse_ssl_options
+{
+ my ($self,$ropts)=@_;
+
+ require IO::Socket::SSL;
+ $IO::Socket::SSL::DEBUG=$ropts->{ssl_debug} if exists $ropts->{ssl_debug};
+
+ my %s=();
+ $s{SSL_verify_mode}=exists $ropts->{ssl_verify} ? $ropts->{ssl_verify} : 0x00; ## by default, no authentication whatsoever
+ $s{SSL_verify_callback}=sub { my $r=$ropts->{ssl_verify_callback}->($self,@_); Net::DRI::Exception->die(1,'transport',6,'SSL certificate user verification failed, aborting connection') unless $r; 1; } if (exists $ropts->{ssl_verify_callback} && defined $ropts->{ssl_verify_callback});
+
+ foreach my $s (qw/key_file cert_file ca_file ca_path version passwd_cb/)
+ {
+  next unless exists $ropts->{'ssl_'.$s};
+  $s{'SSL_'.$s}=$ropts->{'ssl_'.$s};
+  Net::DRI::Exception::usererr_invalid_parameters('File "'.$ropts->{'ssl_'.$s}.'" does not exist or is unreadable by current UID') if ($s=~m/_file$/ && ! -r $ropts->{'ssl_'.$s});
+  Net::DRI::Exception::usererr_invalid_parameters('Directory "'.$ropts->{'ssl_'.$s}.'" does not exist')                            if ($s=~m/_path$/ && ! -d $ropts->{'ssl_'.$s});
+ }
+
+ $s{SSL_cipher_list}=exists $ropts->{ssl_cipher_list} ? $ropts->{ssl_cipher_list} : 'SSLv3:TLSv1:!aNULL:!eNULL';
+
+ return \%s;
 }
 
 ## WARNING : this is a preliminary implementation of this new feature, it WILL change

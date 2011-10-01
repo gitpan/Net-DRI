@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Message for SIDN
 ##
-## Copyright (c) 2009,2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2009-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -10,17 +10,12 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::Protocol::EPP::Extensions::SIDN::Message;
 
 use strict;
 use warnings;
-
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 ####################################################################################################
 
@@ -46,7 +41,7 @@ sub parse
  foreach my $el ($result->get_node(1)->getChildrenByTagNameNS($ns,'msg'))
  {
   ## code is mandatory, as well as text probably, field is optional
-  $mes->add_to_extra_info({from => 'sidn', type => 'text', code => $el->getAttribute('code'),field => $el->getAttribute('field'), message => $el->textContent()});
+  $mes->add_to_extra_info({from => 'sidn', type => 'text', code => $el->getAttribute('code'),field => $el->getAttribute('field') || '', message => $el->textContent()});
  }
 }
 
@@ -83,7 +78,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2009,2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2009,2011 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

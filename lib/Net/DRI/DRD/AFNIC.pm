@@ -10,9 +10,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::DRD::AFNIC;
@@ -24,8 +21,6 @@ use base qw/Net::DRI::DRD/;
 
 use DateTime::Duration;
 use Net::DRI::Util;
-
-our $VERSION=do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 __PACKAGE__->make_exception_for_unavailable_operations(qw/host_update host_current_status host_check host_exist host_delete host_create host_info contact_delete contact_check/);
 
@@ -39,7 +34,7 @@ Net::DRI::DRD::AFNIC - AFNIC (.FR/.RE) Registry Driver for Net::DRI
 
 Please see the README file for details.
 
-This driver enables email, web services and EPP operations with AFNIC.
+This driver enables email and EPP operations with AFNIC.
 
 =head1 SUPPORT
 
@@ -80,7 +75,6 @@ sub new
  $self->{info}->{host_as_attr}=1;
  $self->{info}->{contact_i18n}=1; ## LOC only
  $self->{info}->{check_limit}=7;
- bless($self,$class);
  return $self;
 }
 
@@ -88,17 +82,15 @@ sub periods      { return map { DateTime::Duration->new(years => $_) } (1); }
 sub name         { return 'AFNIC'; }
 sub tlds         { return (qw/fr re tf wf pm yt asso.fr com.fr tm.fr gouv.fr/); } ## see http://www.afnic.fr/doc/autres-nic/dom-tom
 sub object_types { return ('domain','contact'); }
-sub profile_types { return qw/email ws epp/; }
+sub profile_types { return qw/email epp/; }
 
 sub transport_protocol_default
 {
  my ($self,$type)=@_;
 
- return ('Net::DRI::Transport::SMTP',{},'Net::DRI::Protocol::AFNIC::Email',{})                                             if $type eq 'email';
- return ('Net::DRI::Transport::SOAP',{},'Net::DRI::Protocol::AFNIC::WS',{})                                                if $type eq 'ws';
- return ('Net::DRI::Transport::Socket',{remote_host => 'epp.test.nic.fr'},'Net::DRI::Protocol::EPP::Extensions::AFNIC',{}) if $type eq 'epp';
- #return ('Net::DRI::Transport::Socket',{find_remote_server => ['fr.','DCHK1:iris.lwz']},'Net::DRI::Protocol::IRIS',{version=>'1.0',authority=>'fr'}) if $type eq 'dchk';
- return ('Net::DRI::Transport::Socket',{remote_host=>'das.nic.fr',remote_port=>715},'Net::DRI::Protocol::IRIS',{version=>'1.0',authority=>'fr',request_deflate=>1}) if $type eq 'dchk';
+ return ('Net::DRI::Transport::SMTP',{},'Net::DRI::Protocol::AFNIC::Email',{})                                                                                          if $type eq 'email';
+ return ('Net::DRI::Transport::Socket',{remote_host => 'epp.test.nic.fr'},'Net::DRI::Protocol::EPP::Extensions::AFNIC',{})                                              if $type eq 'epp';
+ return ('Net::DRI::Transport::Socket',{find_remote_server => ['fr.','DCHK1:iris.lwz']},'Net::DRI::Protocol::IRIS',{version=>'1.0',authority=>'fr',request_deflate=>1}) if $type eq 'dchk';
  return;
 }
 

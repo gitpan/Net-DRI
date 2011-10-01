@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Status for AFNIC (.FR/.RE)
 ##
-## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -10,9 +10,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::Protocol::EPP::Extensions::AFNIC::Status;
@@ -20,8 +17,6 @@ package Net::DRI::Protocol::EPP::Extensions::AFNIC::Status;
 use base qw/Net::DRI::Protocol::EPP::Core::Status/;
 
 use strict;
-
-our $VERSION=do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -51,7 +46,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2011 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -71,15 +66,15 @@ sub new
  my $self=$class->SUPER::new(shift);
 
  ## Overwrite, as only clientHold is available
-  my %s=(
+ my %s=(
         'publish'  => 'clientHold',
-        );
+       );
  $self->_register_pno(\%s);
 
  return $self;
 }
 
-sub is_pending  { return shift->has_any('pendingCreate','pendingDelete','pendingRenew','pendingTransfer','pendingUpdate','pendingRestore'); }
+sub is_pending  { return shift->has_any(qw/pendingCreate pendingDelete pendingRenew pendingTransfer pendingUpdate pendingRestore pendingTrade pendingRecover/); }
 sub can_trade   { return shift->has_not('serverTradeProhibited'); }
 sub can_recover { return shift->has_not('serverRecoverProhibited'); }
 

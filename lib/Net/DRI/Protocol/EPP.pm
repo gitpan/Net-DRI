@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Protocol (STD 69)
 ##
-## Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -10,13 +10,11 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::Protocol::EPP;
 
+use utf8;
 use strict;
 use warnings;
 
@@ -25,8 +23,6 @@ use base qw(Net::DRI::Protocol);
 use Net::DRI::Util;
 use Net::DRI::Protocol::EPP::Message;
 use Net::DRI::Protocol::EPP::Core::Status;
-
-our $VERSION=do { my @r=(q$Revision: 1.15 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -56,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2011 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -89,7 +85,7 @@ sub new
  $self->{hostasattr}=$drd->info('host_as_attr') || 0;
  $self->{contacti18n}=$drd->info('contact_i18n') || 7; ## bitwise OR with 1=LOC only, 2=INT only, 4=LOC+INT only
  $self->{defaulti18ntype}=undef; ## only needed for registries not following truely EPP standard, like .CZ
- $self->{usenullauth}=$drd->info('use_null_auth') || 0; ## See RFC4931 ง3.2.5
+ $self->{usenullauth}=$drd->info('use_null_auth') || 0; ## See RFC4931 ยง3.2.5
  $self->ns({ _main   => ['urn:ietf:params:xml:ns:epp-1.0','epp-1.0.xsd'],
              domain  => ['urn:ietf:params:xml:ns:domain-1.0','domain-1.0.xsd'],
              contact => ['urn:ietf:params:xml:ns:contact-1.0','contact-1.0.xsd'],
@@ -133,8 +129,33 @@ sub core_contact_types { return qw/admin tech billing/; }
 sub ns
 {
  my ($self,$add)=@_;
- $self->{ns}={ ref($self->{ns})? %{$self->{ns}} : (), %$add } if defined $add && ref $add eq 'HASH';
+ $self->{ns}={ ref $self->{ns} ? %{$self->{ns}} : (), %$add } if defined $add && ref $add eq 'HASH';
  return $self->{ns};
+}
+
+## Called during server greeting parse
+sub switch_to_highest_namespace_version
+{
+ my ($self,$nsalias)=@_;
+
+ my ($basens)=($self->message()->ns($nsalias)=~m/^(\S+)-[\d.]+$/);
+ my $rs=$self->default_parameters()->{server};
+ my @ns=grep { m/^${basens}-\S+$/ } @{$rs->{extensions_selected}};
+ Net::DRI::Exception::err_invalid_parameters("No extension found under namespace ${basens}-*") unless @ns;
+
+ my $version;
+ foreach my $ns (@ns)
+ {
+  my ($v)=($ns=~m/^\S+-([\d.]+)$/);
+  $version=$v if ! defined $version || $v > $version;
+ }
+
+ my $xsd=($self->message()->nsattrs($nsalias))[2];
+ $xsd=~s/-([\d.]+)\.xsd$/-${version}.xsd/;
+ $self->ns({ $nsalias => [ $basens.'-'.$version, $xsd ]});
+ $self->message()->ns($self->ns()); ## not necessary, just to make sure
+ ## remove all other versions of same namespace
+ $rs->{extensions_selected}=[ grep { ! m/^${basens}-([\d.]+)$/ || $1 eq $version } @{$rs->{extensions_selected}} ];
 }
 
 sub transport_default

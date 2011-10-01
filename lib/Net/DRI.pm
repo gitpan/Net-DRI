@@ -10,9 +10,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI;
@@ -31,8 +28,7 @@ use base qw(Class::Accessor::Chained::Fast Net::DRI::BaseClass);
 __PACKAGE__->mk_ro_accessors(qw/trid_factory logging cache/);
 
 our $AUTOLOAD;
-our $VERSION='0.96_01';
-our $CVS_REVISION=do { my @r=(q$Revision: 1.39 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+our $VERSION='0.96_02';
 our $RUNNING_POE=(exists($INC{'POE.pm'}))? $POE::Kernel::poe_kernel : undef;
 
 =pod
@@ -43,7 +39,7 @@ Net::DRI - Interface to Domain Name Registries/Registrars/Resellers
 
 =head1 VERSION
 
-This documentation refers to Net::DRI version 0.96_01
+This documentation refers to Net::DRI version 0.96_02
 
 =head1 SYNOPSIS
 
@@ -184,7 +180,7 @@ sub new
  {
   $logname='null';
  }
- if ($logname !~ m/^\+/) { $logname='Net::DRI::Logging::'.ucfirst($logname); }
+ if ($logname !~ s/^\+//) { $logname='Net::DRI::Logging::'.ucfirst($logname); }
  $logname->require() or Net::DRI::Exception::err_failed_load_module('DRI',$logname,$@);
  $self->{logging}=$logname->new(@logdata);
 
@@ -258,7 +254,7 @@ sub err_registry_name_does_not_exist { Net::DRI::Exception->die(0,'DRI',2,'Regis
 ####################################################################################################
 ## Accessor functions
 
-sub available_registries { return sort(keys(%{shift->{registries}})); }
+sub available_registries { my ($self)=@_; my @r=sort { $a cmp $b } keys %{$self->{registries}}; return @r; }
 sub available_registries_profiles
 {
  my ($self,$full)=@_;
@@ -294,7 +290,7 @@ sub tld2reg
 
 sub installed_registries
 {
- return qw/AdamsNames AERO AFNIC AG ARNES ASIA AT AU BE BIZ BookMyName BR BZ CAT CentralNic CIRA CoCCA COOP CZ DENIC EURid Gandi GL HN IENUMAT IM INFO IRegistry ISPAPI IT LC LU ME MN MOBI NAME Nominet NO NU OpenSRS ORG OVH PL PRO PT SC SE SIDN SWITCH TRAVEL US VC VNDS WS/;
+ return qw/AdamsNames AERO AFNIC AG ARNES ASIA AT AU BE BIZ BookMyName BR BZ CAT CentralNic CIRA CoCCA COOP COZA CZ DENIC EURid Gandi GL HN IENUMAT IM INFO IRegistry ISPAPI IT LC LU ME MN MOBI NAME Nominet NO NU OpenSRS ORG OVH PL PRO PT SC SE SIDN SO SWITCH TCI TRAVEL US VC VNDS WS/;
 }
 
 ####################################################################################################

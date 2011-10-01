@@ -10,9 +10,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::Transport::Socket;
@@ -30,8 +27,6 @@ use IO::Socket::SSL 0.90;
 use Net::DRI::Exception;
 use Net::DRI::Util;
 use Net::DRI::Data::Raw;
-
-our $VERSION=do { my @r=(q$Revision: 1.34 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -146,7 +141,7 @@ sub new
  $self->has_state(exists $opts{has_state}? $opts{has_state} : 1);
  $self->is_sync(1);
  $self->name('socket_inet');
- $self->version('0.5');
+ $self->version('0.6');
  ##delete($ctx->{protocol}); ## TODO : double check it is ok
  delete($ctx->{registry});
  delete($ctx->{profile});
@@ -178,28 +173,12 @@ sub new
 
  if ($t{socktype} eq 'ssl')
  {
-  $IO::Socket::SSL::DEBUG=$opts{ssl_debug} if exists($opts{ssl_debug});
-
-  my %s=(SSL_use_cert => 0);
-  $s{SSL_verify_mode}=(exists($opts{ssl_verify}))? $opts{ssl_verify} : 0x00; ## by default, no authentication whatsoever
-  $s{SSL_verify_callback}=sub { my $r=$opts{ssl_verify_callback}->($self,@_); Net::DRI::Exception->die(1,'transport/socket',6,'SSL certificate user verification failed, aborting connection') unless $r; 1; } if (exists $opts{ssl_verify_callback} && defined $opts{ssl_verify_callback});
-  foreach my $s (qw/key_file cert_file ca_file ca_path version passwd_cb/)
-  {
-   next unless exists($opts{'ssl_'.$s});
-   $s{'SSL_'.$s}=$opts{'ssl_'.$s};
-   Net::DRI::Exception::usererr_invalid_parameters('File "'.$opts{'ssl_'.$s}.'" does not exist or is unreadable by current UID') if ($s=~m/_file$/ && ! -r $opts{'ssl_'.$s});
-   Net::DRI::Exception::usererr_invalid_parameters('Directory "'.$opts{'ssl_'.$s}.'" does not exist')                            if ($s=~m/_path$/ && ! -d $opts{'ssl_'.$s});
-  }
-  $s{SSL_use_cert}=1 if exists $s{SSL_cert_file};
-  $s{SSL_cipher_list}=exists $opts{ssl_cipher_list} ? $opts{ssl_cipher_list} : 'SSLv3:TLSv1:!aNULL:!eNULL';
-
-  $t{ssl_context}=\%s;
+  $t{ssl_context}=$self->parse_ssl_options(\%opts);
  }
 
  $t{local_host}=$opts{local_host} if (exists($opts{local_host}) && $opts{local_host});
- $t{remote_uri}=sprintf('%s://%s:%d',$t{socktype},$t{remote_host},$t{remote_port}); ## handy shortcust only used for error messages
+ $t{remote_uri}=sprintf('%s://%s:%d',$t{socktype},$t{remote_host},$t{remote_port}); ## handy shortcut only used for error messages
  $self->{transport}=\%t;
- bless($self,$class); ## rebless in my class
 
  my $rc;
  if ($self->defer()) ## we will open, but later
@@ -363,7 +342,11 @@ sub ping
  if (! $ok)
  {
   $self->current_state(0);
-  $self->open_connection({}) if $autorecon; ## TODO
+  if ($autorecon)
+  {
+   ##$self->log_output('notice','transport',{otype=>'session',oaction=>'keepalive'},{trid=>$cltrid,phase=>'keepalive',direction=>'out',message=>$noop});
+   $self->open_connection({}); ## TODO
+  }
  } else
  {
   $self->current_state(1);

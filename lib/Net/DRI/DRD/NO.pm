@@ -1,8 +1,7 @@
 ## Domain Registry Interface, .NO policies for Net::DRI
 ##
-## Copyright (c) 2008-2010 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
-##                    Trond Haugen E<lt>info@norid.noE<gt>
-##                    All rights reserved.
+## Copyright (c) 2008-2010 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>, Trond Haugen E<lt>info@norid.noE<gt>. All rights reserved.
+##           (c) 2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -12,9 +11,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 #########################################################################################
 
 package Net::DRI::DRD::NO;
@@ -27,8 +23,6 @@ use base qw/Net::DRI::DRD/;
 use DateTime::Duration;
 use Net::DRI::Util;
 use Net::DRI::Exception;
-
-our $VERSION = do { my @r = ( q$Revision: 1.6 $ =~ /\d+/gxm ); sprintf( "%d" . ".%02d" x $#r, @r ); };
 
 # let contact check support be decided by the server policy
 __PACKAGE__->make_exception_for_unavailable_operations(qw/domain_transfer_accept domain_transfer_refuse contact_transfer_stop contact_transfer_query contact_transfer_accept contact_transfer_refuse/);
@@ -61,8 +55,8 @@ Trond Haugen E<lt>info@norid.noE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008-2010 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
-Trond Haugen E<lt>info@norid.noE<gt>
+Copyright (c) 2008-2010 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>, Trond Haugen E<lt>info@norid.noE<gt>
+          (c) 2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -81,8 +75,6 @@ sub new {
     my $self = $class->SUPER::new(@_);
     $self->{info}->{host_as_attr} = 0;    # means make host objects
     $self->{info}->{use_null_auth}= 1;    # means using domain:null for empty authinfo password
-
-    bless( $self, $class );
     return $self;
 }
 

@@ -10,9 +10,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::Registry;
@@ -31,8 +28,6 @@ use Net::DRI::Protocol::ResultStatus;
 use Net::DRI::Data::RegistryObject;
 
 our $AUTOLOAD;
-
-our $VERSION=do { my @r=(q$Revision: 1.34 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -111,7 +106,8 @@ sub available_profiles
 {
  my ($self,$full)=@_;
  $full||=0;
- return sort($full ? map { $_->{fullname} } values(%{$self->{profiles}}) : keys(%{$self->{profiles}}));
+ my @r=sort { $a cmp $b } ($full ? map { $_->{fullname} } values(%{$self->{profiles}}) : keys(%{$self->{profiles}}));
+ return @r;
 }
 
 sub exist_profile
@@ -282,7 +278,8 @@ sub get_info_keys
 {
  my ($self,$type,$key)=@_;
  my $rh=$self->get_info_all($type,$key);
- return sort { $a cmp $b } keys(%$rh);
+ my @r=sort { $a cmp $b } keys %$rh;
+ return @r;
 }
 
 ####################################################################################################

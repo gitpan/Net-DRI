@@ -10,21 +10,19 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::DRD::ICANN;
 
+use utf8;
 use strict;
 use warnings;
 
-our $VERSION=do { my @r=(q$Revision: 1.15 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+use Net::DRI::Util;
 
 ## See http://www.icann.org/registries/rsep/submitted_app.html for changes
-our %ALLOW1=map { $_ => 1 } qw/mobi coop biz pro cat info travel tel/; ## Pending ICANN review: (none)
-our %ALLOW2=map { $_ => 1 } qw/mobi coop name jobs biz pro cat info travel tel/; ## Pending ICANN review: (none)
+our %ALLOW1=map { $_ => 1 } qw/mobi coop biz pro cat info travel tel asia/; ## Pending ICANN review: (none)
+our %ALLOW2=map { $_ => 1 } qw/mobi coop name jobs biz pro cat info travel tel asia/; ## Pending ICANN review: (none)
 
 ## See http://www.icann.org/en/registries/agreements.htm
 sub is_reserved_name
@@ -38,26 +36,36 @@ sub is_reserved_name
  ## Tests at all levels
  foreach my $d (@d)
  {
-  ## §A (ICANN+IANA reserved)
+  ## Â§A (ICANN+IANA reserved)
   return 'NAME_RESERVED_PER_ICANN_RULE_A' if ($d=~m/^(?:aso|gnso|icann|internic|ccnso|afrinic|apnic|arin|example|gtld-servers|iab|iana|iana-servers|iesg|ietf|irtf|istf|lacnic|latnic|rfc-editor|ripe|root-servers)$/o);
 
-  ## §C (tagged domain names)
+  ## Â§C (tagged domain names)
   return 'NAME_RESERVED_PER_ICANN_RULE_C' if (length($d)>3 && (substr($d,2,2) eq '--') && ($d!~/^xn--/));
  }
 
- ## §B.1 (additional second level)
+ ## .TEL specific rules
+ ## per RSEP #2010012
+ ## and http://telnic.org/downloads/GAShortNumericDomains.pdf (2011-06-13)
+ ## (the latter being quite contradictory with RSEP #201008, hence this block must be here not later)
+ if ($d[-1] eq 'tel')
+ {
+  return 'NAME_RESERVED_PER_ICANN_RULE_TEL_1CHAR'          if length $d[-2]==1;
+  return 'NAME_RESERVED_PER_ICANN_RULE_TEL_2CHARS_CC'      if length $d[-2]==2 && exists $Net::DRI::Util::CCA2{$d[-2]};
+  return 'NAME_RESERVED_PER_ICANN_RULE_TEL_DIGITS_HYPHENS' if $d[-2]=~m/^[\d-]+$/ && length $d[-2] > 7;
+ }
+
+ ## Â§B.1 (additional second level)
  return 'NAME_RESERVED_PER_ICANN_RULE_B1' if (length($d[-2])==1 && ! exists($ALLOW1{$d[-1]}));
 
- ## §B.2
+ ## Â§B.2
  return 'NAME_RESERVED_PER_ICANN_RULE_B2' if (length($d[-2])==2 && ! exists($ALLOW2{$d[-1]}));
 
- ## §D (reserved for Registry operations)
+ ## Â§D (reserved for Registry operations)
  return 'NAME_RESERVED_PER_ICANN_RULE_D' if ($d[-2]=~m/^(?:nic|whois|www)$/o);
 
  ## .NAME specific rules
  if ($d[-1] eq 'name')
  {
-  return 'NAME_RESERVED_PER_ICANN_RULE_NAME_B3' if $d[-2]=~m/^[\d-]+$/; ## Under ICANN review (#201010)
   return 'NAME_RESERVED_PER_ICANN_RULE_NAME_J'  if (@d==2 && $d[-2]=~m/-(?:familie|family|perhe|famille|parivaar|keluarga|famiglia|angkan|rodzina|familia|mischpoche|umdeni)$/);
  }
 
@@ -74,10 +82,6 @@ __END__
 =head1 NAME
 
 Net::DRI::DRD::ICANN - ICANN policies for Net::DRI
-
-=head1 VERSION
-
-This documentation refers to Net::DRI::DRD::ICANN version 1.15
 
 =head1 SYNOPSIS
 

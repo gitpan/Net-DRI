@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Encapsulating result status, standardized on EPP codes
 ##
-## Copyright (c) 2005,2006,2008-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2008-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -10,9 +10,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::Protocol::ResultStatus;
@@ -25,8 +22,6 @@ __PACKAGE__->mk_ro_accessors(qw(native_code code message lang next count));
 
 use Net::DRI::Exception;
 use Net::DRI::Util;
-
-our $VERSION=do { my @r=(q$Revision: 1.26 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -199,7 +194,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2008-2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2008-2011 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -441,7 +436,7 @@ sub local_as_string
  if (defined $withinfo && $withinfo)
  {
   my @i=$self->local_get_extended_results();
-  $b.="\n".join("\n",map { my $rh=$_; "\t".(join(' ',map { $_.'='.$rh->{$_} } sort(keys(%$rh)))) } @i) if @i;
+  $b.="\n".join("\n",map { my $rh=$_; "\t".(join(' ',map { $_.'='.(defined $rh->{$_} ? $rh->{$_} : '<undef>') } sort keys %$rh)) } @i) if @i;
  }
  return $b;
 }

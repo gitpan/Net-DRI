@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .NAME policies
 ##
-## Copyright (c) 2007,2008,2009 HEXONET Support GmbH, www.hexonet.com,
+## Copyright (c) 2007-2009,2011 HEXONET Support GmbH, www.hexonet.com,
 ##                    Alexander Biehl <info@hexonet.com>
 ##			and Patrick Mevzek <netdri@dotandco.com>.
 ##                    All rights reserved.
@@ -13,9 +13,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::DRD::NAME;
@@ -28,8 +25,6 @@ use base qw/Net::DRI::DRD/;
 use Net::DRI::Exception;
 use Net::DRI::Util;
 use DateTime::Duration;
-
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -59,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007,2008,2009 HEXONET Support GmbH, E<lt>http://www.hexonet.comE<gt>,
+Copyright (c) 2007-2009,2011 HEXONET Support GmbH, E<lt>http://www.hexonet.comE<gt>,
 Alexander Biehl <info@hexonet.com>
 and Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
@@ -81,8 +76,6 @@ sub new
  my $self=$class->SUPER::new(@_);
  $self->{info}->{host_as_attr}=0;
  $self->{info}->{contact_i18n}=2;	## INT only
-
- bless($self,$class);
  return $self;
 }
 

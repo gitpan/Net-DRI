@@ -10,9 +10,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::BaseClass;
@@ -21,8 +18,6 @@ use strict;
 use warnings;
 
 use Net::DRI::Exception;
-
-our $VERSION=do { my @r=(q$Revision: 1.2 $=~/\d+/gxm); sprintf '%d'.('.%02d' x $#r), @r; };
 
 ####################################################################################################
 ## CLASS METHODS
@@ -77,10 +72,6 @@ __END__
 =head1 NAME
 
 Net::DRI::BaseClass - Superclass of various classes inside Net::DRI
-
-=head1 VERSION
-
-This documentation refers to Net::DRI::BaseClass version 1.2
 
 =head1 SYNOPSIS
 

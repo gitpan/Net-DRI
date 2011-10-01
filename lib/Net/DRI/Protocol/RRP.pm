@@ -10,9 +10,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 #########################################################################################
 
 package Net::DRI::Protocol::RRP;
@@ -31,8 +28,6 @@ use Net::DRI::Protocol::RRP::Core::Status;
 use DateTime;
 use DateTime::TimeZone;
 use DateTime::Format::Strptime;
-
-our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 

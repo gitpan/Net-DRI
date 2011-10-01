@@ -10,9 +10,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::Protocol::EPP::Extensions::AFNIC::Contact;
@@ -22,8 +19,6 @@ use warnings;
 
 use Net::DRI::Util;
 use Net::DRI::Exception;
-
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -116,22 +111,27 @@ sub create
   push @n,['frnic:legalEntityInfos',@d];
  } else # PP
  {
-  push @n,['frnic:list','restrictedPublication'] if (defined $contact->disclose() && $contact->disclose() eq 'N');
   my @d;
   my $b=$contact->birth();
-  Net::DRI::Exception::usererr_insufficient_parameters('birth data mandatory') unless ($b && (ref($b) eq 'HASH') && exists($b->{date}) && exists($b->{place}));
-  push @d,['frnic:birthDate',(ref($b->{date}))? $b->{date}->strftime('%Y-%m-%d') : $b->{date}];
-  if ($b->{place}=~m/^[A-Z]{2}$/i) ## country not France
+  if (Net::DRI::Util::has_key($b,'date') && Net::DRI::Util::has_key($b,'place'))
   {
-   push @d,['frnic:birthCc',$b->{place}];
-  } else
-  {
-   my @p=($b->{place}=~m/^\s*(\S.*\S)\s*,\s*(\S.+\S)\s*$/);
-   push @d,['frnic:birthCity',$p[1]];
-   push @d,['frnic:birthPc',$p[0]];
-   push @d,['frnic:birthCc','FR'];
+   push @d,['frnic:birthDate',ref $b->{date} ? $b->{date}->strftime('%Y-%m-%d') : $b->{date}];
+   if ($b->{place}=~m/^[A-Z]{2}$/i) ## country not France
+   {
+    push @d,['frnic:birthCc',$b->{place}];
+   } else
+   {
+    my @p=($b->{place}=~m/^\s*(\S.*\S)\s*,\s*(\S.+\S)\s*$/);
+    push @d,['frnic:birthCity',$p[1]];
+    push @d,['frnic:birthPc',$p[0]];
+    push @d,['frnic:birthCc','FR'];
+   }
   }
-  push @n,['frnic:individualInfos',@d];
+  if (@d)
+  {
+   push @n,['frnic:list','restrictedPublication'] if (defined $contact->disclose() && $contact->disclose() eq 'N');
+   push @n,['frnic:individualInfos',@d];
+  }
   push @n,['frnic:firstName',$contact->firstname()];
  }
 

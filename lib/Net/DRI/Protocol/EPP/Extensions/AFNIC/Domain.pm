@@ -10,9 +10,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::Protocol::EPP::Extensions::AFNIC::Domain;
@@ -22,8 +19,6 @@ use warnings;
 
 use Net::DRI::Util;
 use Net::DRI::Exception;
-
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -162,6 +157,15 @@ sub update
  Net::DRI::Exception::usererr_invalid_parameters('RGP op can only be request for AFNIC') unless ($op eq 'request');
 }
 
+sub add_keepds
+{
+ my ($op,$rd)=@_;
+ Net::DRI::Exception::usererr_insufficient_parameters('Domain "'.$op.'" operation needs a keep_ds attribute') unless Net::DRI::Util::has_key($rd,'keep_ds');
+ Net::DRI::Exception::usererr_invalid_parameters('keep_ds attribute must be boolean, not '.$rd->{keep_ds}) unless Net::DRI::Util::xml_is_boolean($rd->{keep_ds});
+
+ return { 'keepDS' => $rd->{keep_ds} };
+}
+
 sub transfer_request
 {
  my ($epp,$domain,$rd)=@_;
@@ -169,7 +173,7 @@ sub transfer_request
 
  verify_contacts($rd);
  my $eid=build_command_extension($mes,$epp,'frnic:ext');
- $mes->command_extension($eid,['frnic:transfer',['frnic:domain',build_contacts($rd)]]);
+ $mes->command_extension($eid,['frnic:transfer',['frnic:domain',add_keepds('transfer',$rd),build_contacts($rd)]]);
 }
 
 sub parse_trade_recover
@@ -216,7 +220,7 @@ sub trade_request
  verify_contacts($rd);
  push @n,build_registrant($rd);
  push @n,build_contacts($rd);
- $mes->command_extension($eid,['frnic:command',['frnic:trade',{op=>'request'},['frnic:domain',@n]],build_cltrid($mes)]);
+ $mes->command_extension($eid,['frnic:command',['frnic:trade',{op=>'request'},['frnic:domain',add_keepds('trade',$rd),@n]],build_cltrid($mes)]);
 }
 
 sub trade_query
@@ -259,7 +263,7 @@ sub recover_request
  push @n,['frnic:authInfo',['domain:pw',{'xmlns:domain'=>($mes->nsattrs('domain'))[0]},$rd->{auth}->{pw}]];
  push @n,build_registrant($rd);
  push @n,build_contacts($rd);
- $mes->command_extension($eid,['frnic:command',['frnic:recover',{op=>'request'},['frnic:domain',@n]],build_cltrid($mes)]);
+ $mes->command_extension($eid,['frnic:command',['frnic:recover',{op=>'request'},['frnic:domain',add_keepds('recover',$rd),@n]],build_cltrid($mes)]);
 }
 
 sub recover_parse

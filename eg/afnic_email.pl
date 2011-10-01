@@ -1,5 +1,6 @@
 #!/usr/bin/perl
 
+use encoding "iso-8859-15";
 use strict;
 use warnings;
 

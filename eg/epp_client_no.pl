@@ -194,7 +194,7 @@ sub parse_params {
     if ($@) {
 
         # eval has failed, $@ tells us why
-        pexit(    "Eval failed, specify a valid parameter string, msg: " 
+        pexit(    "Eval failed, specify a valid parameter string, msg: "
                 . $@
                 . "\n" );
     }
@@ -1305,12 +1305,12 @@ epp_client_no.pl - A command line client program using Net::DRI towards the
 
 =head1 DESCRIPTION
 
-The client supports creation and maintainance of host, contact and domain 
-objects for .NO. It supports various transfer operations, as well as poll 
+The client supports creation and maintainance of host, contact and domain
+objects for .NO. It supports various transfer operations, as well as poll
 operation for the message queue.
 
-It was developed for testing of the .NO extensions to Net::DRI, but can 
-probably be used by users who are comfortable with a simple command line 
+It was developed for testing of the .NO extensions to Net::DRI, but can
+probably be used by users who are comfortable with a simple command line
 interfaces.
 
 =head1 SYNOPSIS
@@ -1325,7 +1325,7 @@ B<perl epp_client_no.pl [Connect arguments] [Command arguments]>
 
 =item Mandatory connect arguments
 
- -C: Client ID, your EPP registrar account name, typical regxxx, 
+ -C: Client ID, your EPP registrar account name, typical regxxx,
      where xxx is a number
  -W: Account password, your EPP account password
  -S: Server name, the registry server
@@ -1343,10 +1343,10 @@ The command argument specify the EPP operation to perform:
 
  -o: EPP object.
      One of contact, host, domain, message
- -c: EPP command. 
-     One of hello, create, update, info, delete, transfer, transfer_cancel, 
+ -c: EPP command.
+     One of hello, create, update, info, delete, transfer, transfer_cancel,
      transfer_execute, count, waiting, retrieve
- -p: EPP parameter argument string, in a format that can be eval'ed into 
+ -p: EPP parameter argument string, in a format that can be eval'ed into
      a hash, se parameter string examples below.
 
 =back
@@ -1356,7 +1356,7 @@ The command argument specify the EPP operation to perform:
 Each command will be performed as follows:
 
  - Socket connect, session initiation, a greeting is returned
- - an EPP login, which will succeed if the connect arguments are correct, 
+ - an EPP login, which will succeed if the connect arguments are correct,
    otherwise fail,
    a greeting is returned if login is OK
  - an EPP command, according to the specified command arguments
@@ -1384,18 +1384,18 @@ A client side log can be activated by -f option, like:
 
   '-f xx.log'
 
-Tail on the log-file in a separate window is nice then. Even nicer is to 
-filter the tail through the supplied xmlfilter.pl utility, which will wrap the 
+Tail on the log-file in a separate window is nice then. Even nicer is to
+filter the tail through the supplied xmlfilter.pl utility, which will wrap the
 raw XML to a pretty-printed dump.
 
-The filters '-s' option will skip all the login/logout and greetings which 
+The filters '-s' option will skip all the login/logout and greetings which
 otherwise will dominate the outpot.
 
   'tail -f xx.log | ./xmlfilter.pl -s'
 
 =head3 About authInfo
 
-Auth-info (pw) can be set and updated only for domain objects, and is 
+Auth-info (pw) can be set and updated only for domain objects, and is
 needed only for a transfer-execute.
 
 =head1 EPP commands and arguments
@@ -1417,7 +1417,7 @@ A greeting shall be returned, with the menu!
 =head3 Contact create
 
 A .NO contact can be one of three types, person, organization or role.
-For each contact created, the type must be specified via the mandatory 
+For each contact created, the type must be specified via the mandatory
 type extension.
 
 =over
@@ -1448,9 +1448,9 @@ In this example, a role contact update is shown.
 
 =item Role contact update
 
-Update a role and add an org. affiliation and a new person affiliation, also 
+Update a role and add an org. affiliation and a new person affiliation, also
 remove one of the existing person affiliations.
-Also change some of the address information and the mobile phone number. Keep 
+Also change some of the address information and the mobile phone number. Keep
 the rest of the info.
 
 -o contact -c update -p E<34>%p=(srid=>'TOH12R', name=>'New name on Hostmaster', street=>['Changed example building','Changed Example st. 23', '5 floor'],  city=>'Trondheim', pc=>'7465', cc=>'NO', mobilephone=>'+47.123433389', organization=>{add=>['TOH1O']}, rolecontact=>{add=>['TOH1P'], del=>['TOH1P']})E<34>
@@ -1536,7 +1536,7 @@ External name servers must be registered without any IP-addresses.
 
 =item 2 info on a host object sponsored (owned) by another registrar
 
-It is possible to query hosts sponsored by other registrars, but you need to 
+It is possible to query hosts sponsored by other registrars, but you need to
 specify his registrar id by the 'sponsoringClientID'.
 
 -o host -c info -p E<34>%p=(name=>'ns1.suniswanted.no', sponsoringclientid=>'reg9998')E<34>
@@ -1578,7 +1578,7 @@ specify his registrar id by the 'sponsoringClientID'.
 =item 3 Now, change/update it
 
  - The name is changed to a new name specified in key nname
- - 3 new ip-addresses are added, one of the existing is removed, thus 4 
+ - 3 new ip-addresses are added, one of the existing is removed, thus 4
    ip-addresses shall be the final result
  - The contact is deleted and changed to another one.
 
@@ -1626,15 +1626,15 @@ The client uses one specific create method, namely the domain_create_only().
 
 =item * domain_create_only()
 
-This method assumes that the contacts handles and the nameservers listed are 
-ALREADY created in the registry, and this is closest to Norid's datamodel. 
+This method assumes that the contacts handles and the nameservers listed are
+ALREADY created in the registry, and this is closest to Norid's datamodel.
 Hence, the client uses this method.
 
 =item * domain_create()
 
 This is another method which is a very powerful Net::DRI method.
 
-This method will do the same as domain_create_only(), but will also accept and 
+This method will do the same as domain_create_only(), but will also accept and
 handle full contacts and nameserver objects as parameters, meaning that it will
 check and create various objects as an integral part of the command.
 
@@ -1644,7 +1644,7 @@ Support for this variant is not added to the client.
 
 =item * on the duration syntax
 
-The duration parameter must specify one year to be accepted in create, due to 
+The duration parameter must specify one year to be accepted in create, due to
 the period definition in lib/Net/DRI/DRD/NO.pm
 
 Duration syntax: 'duration=>{years=>1}' or 'duration=>{months=>12}'
@@ -1653,23 +1653,23 @@ Duration syntax: 'duration=>{years=>1}' or 'duration=>{months=>12}'
 
 =item 1 Create a normal domain
 
-Create a single domain with a a registrant, a contact set with one type each, 
+Create a single domain with a a registrant, a contact set with one type each,
 and two existing name servers, which is the minimum for .no:
 
 -o domain -c create -p E<34>%p=(name=>'test.no', pw=>'', registrant=>'THO12O', coset=>{tech=>'THO23P', admin=>'TH2345P'}, nsset=>['ns1.sol.no', 'ns2.sol.no'])E<34>
 
 =item 2 Create an IDN domain
 
-Create a single IDN-domain with a duration of 12 months, a registrant, a 
+Create a single IDN-domain with a duration of 12 months, a registrant, a
 contact set with one type each, and two existing name servers, which is the
 minimum for .NO.
 
-IDN domains are converted to the ACE-form (xn--...) by the client, and the 
+IDN domains are converted to the ACE-form (xn--...) by the client, and the
 ACE-form is passed as the domain name to the registry.
 
--o domain -c create -p E<34>%p=(name=>'test-ÆØÅ.no', pw=>'', duration=>{months=>12}, registrant=>'THO12O', coset=>{tech=>'THO23P', admin=>'TH2345P'}, nsset=>['ns1.sol.no', 'ns2.sol.no'])E<34>
+-o domain -c create -p E<34>%p=(name=>'test-Ã†Ã˜Ã….no', pw=>'', duration=>{months=>12}, registrant=>'THO12O', coset=>{tech=>'THO23P', admin=>'TH2345P'}, nsset=>['ns1.sol.no', 'ns2.sol.no'])E<34>
 
-This should be accepted if the handles and name servers exist and the domain 
+This should be accepted if the handles and name servers exist and the domain
 don't.
 
 =back
@@ -1678,7 +1678,7 @@ don't.
 
 =item Some domain create variants supported by Net::DRI but rejected by .NO registry policy.
 
-A lot of variants will pass the DRI, but should be rejected by the registry 
+A lot of variants will pass the DRI, but should be rejected by the registry
 because of local policy.
 
 =over
@@ -1705,7 +1705,7 @@ because of local policy.
 
 =head3 Domain delete
 
-Delete domain, optionally specify the two optional Norid dates for removal 
+Delete domain, optionally specify the two optional Norid dates for removal
 from DNS and registry:
 
 -o domain -c delete -p E<34>%p=(name=>'test.no', deletefromregistry=>'2008-02-27', deletefromdns=>'2008-01-15')E<34>
@@ -1720,7 +1720,7 @@ The domain name cannot be changed, otherwise all parameters may be changed.
 
  - registrant is changed
  - set authInfo to 'abc'
- - add and del on all the multiple objects, coset and nsset, which may be 
+ - add and del on all the multiple objects, coset and nsset, which may be
    arrays or scalars
 
 -o domain -c update -p E<34>%p=(name=>'test.no', pw=>'abc', duration=>{months=>12}, registrant=>'TOH191O', coset=>{add=>{tech=>['TOH1P'], admin=>['TOH2P']}, del=>{tech=>['TOH1P'], admin=>['TOH2P', 'TOH3P']}}, nsset=>{add=>['ns1.sol.no', 'ns2.sol.no'], del=>'ns4.sol.no'})E<34>
@@ -1748,21 +1748,21 @@ Example update when a couple of flags are set, and two already set are removed:
 Rule from DRD.pm: we must have : curexp+duration < now + maxdelta
 maxdelta = the permitted period which is 1 year (set in NO.pm).
 
-So basicly curexpiry must have a value between today (=now) and up to one year 
+So basicly curexpiry must have a value between today (=now) and up to one year
 ahead in time. Values outside that generates a DRI-error.
 
 =over
 
 =item 1 Renew with minimum parameters
 
-DRI requires curexpiry, which should match the expiry date of the domain being 
+DRI requires curexpiry, which should match the expiry date of the domain being
 renewed:
 
--o domain -c renew -p E<34>%p=(name=>'ÆRE-pw-abc.no', curexpiry=>'2007-12-11')E<34>
+-o domain -c renew -p E<34>%p=(name=>'Ã†RE-pw-abc.no', curexpiry=>'2007-12-11')E<34>
 
 =item 2 Renew with max. parameters. We specify duration as well to two months
 
--o domain -c renew -p E<34>%p=(name=>'ÆRE-pw-abc.no', curexpiry=>'2007-12-11', duration=>{months=>2})E<34>
+-o domain -c renew -p E<34>%p=(name=>'Ã†RE-pw-abc.no', curexpiry=>'2007-12-11', duration=>{months=>2})E<34>
 
 =back
 
@@ -1770,27 +1770,27 @@ renewed:
 
 This is a .NO specific extension command.
 
-Withdraw will transfer the domain to REG0, thus a registrar can push the 
+Withdraw will transfer the domain to REG0, thus a registrar can push the
 responsibility for a domain into the bucket.
  
 -o domain -c withdraw -p E<34>%p=(name=>'test.no')E<34>
 
-If the sponsor for a domain is REG0, any registrar can do a transfer on it to 
+If the sponsor for a domain is REG0, any registrar can do a transfer on it to
 take over the responsibility.
 
 =head2 Domain transfer commands
 
-Domain transfers are used if the registrant wants to change his registrar. He 
-must then ask a new registrar to transfer his domains from the current 
+Domain transfers are used if the registrant wants to change his registrar. He
+must then ask a new registrar to transfer his domains from the current
 registrar to the new one.
 
 =head3 authInfo is known, can use it in a direct 'transfer execute'
 
-If the registrant knows the authInfo, he passes it to the new registrar, who 
-can do a transfer 'op=execute' containing the authInfo, and the transfer will 
+If the registrant knows the authInfo, he passes it to the new registrar, who
+can do a transfer 'op=execute' containing the authInfo, and the transfer will
 be performed.
 
- - The execute must be authorized by the token. 
+ - The execute must be authorized by the token.
  - An optional duration can specify a renew period for the domain (1-12 months).
 
 -o domain -c transfer_execute -p E<34>%p=(name=>'test.no', pw=>'abc', duration=>{months=>'6'})E<34>
@@ -1800,23 +1800,23 @@ If the password is correct, the domain should be transferred.
 =head3 authInfo not known, must request one-time token
 
 If the registrant does not know the authInfo, the new registrar must initiate a
-transfer by sending a transfer request without authInfo. This will trig the 
-registry to generate a one-time password (a token) and send it to the 
-registrant, which in turn must pass the token to his new registrar. The new 
-registrar can then send a transfer execute containing the token, and then the 
+transfer by sending a transfer request without authInfo. This will trig the
+registry to generate a one-time password (a token) and send it to the
+registrant, which in turn must pass the token to his new registrar. The new
+registrar can then send a transfer execute containing the token, and then the
 transfer will be performed.
 
 =over
 
 =item 1 Domain transfer request
 
-Initate a transfer request to ask for a token. The DRI-method used is 
-domain_transfer_start(). The token will be sent to the primary email address 
+Initate a transfer request to ask for a token. The DRI-method used is
+domain_transfer_start(). The token will be sent to the primary email address
 registered on the registrant unless a special alternative address is selected.
 
 -o domain -c transfer -p E<34>%p=(name=>'test.no')E<34>
 
-Optionally, use the notify address to specify that the token shall be sent to 
+Optionally, use the notify address to specify that the token shall be sent to
 another email address. It must match one of the registered email addresses:
 
 -o domain -c transfer -p E<34>%p=(name=>'test.no', notify=>{email=>'xml@example.no'})E<34>
@@ -1828,7 +1828,7 @@ as notify address. It must match the registered mobilePhone number.
 
 =item 2 Domain transfer query
 
-After a transfer request is received, the token is sent to the registrant. 
+After a transfer request is received, the token is sent to the registrant.
 Until a transfer execute is received the domain will remain in a pending state.
 
 The status of pending transfers can be queried.
@@ -1837,7 +1837,7 @@ The status of pending transfers can be queried.
 
 =item 3 Cancel a pending transfer
 
-A pending transfer can be cancelled. The token will be deleted and the pending 
+A pending transfer can be cancelled. The token will be deleted and the pending
 state information will be restored to the normal state.
 
 -o domain -c transfer_cancel -p E<34>%p=(name=>'test.no')
@@ -1862,28 +1862,28 @@ If the token is correct, the domain should be transferred.
 
 =item 1 message_waiting()
 
-This method performs a poll request and returns true if one or more messages 
+This method performs a poll request and returns true if one or more messages
 are waiting in the queue.
 
 -o message -c waiting -p E<34>%p=()E<34>
 
 =item 2 message_count()
 
-This method performs a poll request and returns the 'msgQ count' value from 
+This method performs a poll request and returns the 'msgQ count' value from
 the response, if any.
 
 -o message -c count -p E<34>%p=()E<34>
 
 =item 3 message_retrieve()
 
-This method performs a poll request, and with get_info() you can grab all the 
+This method performs a poll request, and with get_info() you can grab all the
 message details.
 
 -o message -c retrieve -p E<34>%p=()E<34>
 
 =item 4 message_delete()
 
-This is the poll ack message, which will remove message (with id=12) from the 
+This is the poll ack message, which will remove message (with id=12) from the
 server message queue.
 
 -o message -c delete -p E<34>%p=(id=>12)E<34>

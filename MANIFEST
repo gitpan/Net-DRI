@@ -1,3 +1,4 @@
+bin/drish
 Changes
 eg/afnic_email.pl
 eg/afnic_ws.pl
@@ -29,6 +30,7 @@ lib/Net/DRI/Data/Contact/BR.pm
 lib/Net/DRI/Data/Contact/CAT.pm
 lib/Net/DRI/Data/Contact/CIRA.pm
 lib/Net/DRI/Data/Contact/COOP.pm
+lib/Net/DRI/Data/Contact/COZA.pm
 lib/Net/DRI/Data/Contact/DENIC.pm
 lib/Net/DRI/Data/Contact/EURid.pm
 lib/Net/DRI/Data/Contact/FCCN.pm
@@ -42,6 +44,7 @@ lib/Net/DRI/Data/Contact/PL.pm
 lib/Net/DRI/Data/Contact/SE.pm
 lib/Net/DRI/Data/Contact/SIDN.pm
 lib/Net/DRI/Data/Contact/SWITCH.pm
+lib/Net/DRI/Data/Contact/TCI.pm
 lib/Net/DRI/Data/Contact/US.pm
 lib/Net/DRI/Data/ContactSet.pm
 lib/Net/DRI/Data/Hosts.pm
@@ -58,6 +61,7 @@ lib/Net/DRI/DRD/ASIA.pm
 lib/Net/DRI/DRD/AT.pm
 lib/Net/DRI/DRD/AU.pm
 lib/Net/DRI/DRD/BE.pm
+lib/Net/DRI/DRD/BH.pm
 lib/Net/DRI/DRD/BIZ.pm
 lib/Net/DRI/DRD/BookMyName.pm
 lib/Net/DRI/DRD/BR.pm
@@ -67,6 +71,7 @@ lib/Net/DRI/DRD/CentralNic.pm
 lib/Net/DRI/DRD/CIRA.pm
 lib/Net/DRI/DRD/CoCCA.pm
 lib/Net/DRI/DRD/COOP.pm
+lib/Net/DRI/DRD/COZA.pm
 lib/Net/DRI/DRD/CZ.pm
 lib/Net/DRI/DRD/DENIC.pm
 lib/Net/DRI/DRD/EURid.pm
@@ -98,7 +103,9 @@ lib/Net/DRI/DRD/PT.pm
 lib/Net/DRI/DRD/SC.pm
 lib/Net/DRI/DRD/SE.pm
 lib/Net/DRI/DRD/SIDN.pm
+lib/Net/DRI/DRD/SO.pm
 lib/Net/DRI/DRD/SWITCH.pm
+lib/Net/DRI/DRD/TCI.pm
 lib/Net/DRI/DRD/TRAVEL.pm
 lib/Net/DRI/DRD/US.pm
 lib/Net/DRI/DRD/VC.pm
@@ -163,6 +170,7 @@ lib/Net/DRI/Protocol/EPP/Extensions/AFNIC.pm
 lib/Net/DRI/Protocol/EPP/Extensions/AFNIC/Contact.pm
 lib/Net/DRI/Protocol/EPP/Extensions/AFNIC/Domain.pm
 lib/Net/DRI/Protocol/EPP/Extensions/AFNIC/Notifications.pm
+lib/Net/DRI/Protocol/EPP/Extensions/AFNIC/Session.pm
 lib/Net/DRI/Protocol/EPP/Extensions/AFNIC/Status.pm
 lib/Net/DRI/Protocol/EPP/Extensions/ARNES.pm
 lib/Net/DRI/Protocol/EPP/Extensions/ARNES/Contact.pm
@@ -187,6 +195,7 @@ lib/Net/DRI/Protocol/EPP/Extensions/CAT/Contact.pm
 lib/Net/DRI/Protocol/EPP/Extensions/CAT/DefensiveRegistration.pm
 lib/Net/DRI/Protocol/EPP/Extensions/CAT/Domain.pm
 lib/Net/DRI/Protocol/EPP/Extensions/CentralNic.pm
+lib/Net/DRI/Protocol/EPP/Extensions/CentralNic/Pricing.pm
 lib/Net/DRI/Protocol/EPP/Extensions/CentralNic/Release.pm
 lib/Net/DRI/Protocol/EPP/Extensions/CentralNic/TTL.pm
 lib/Net/DRI/Protocol/EPP/Extensions/CentralNic/WebForwarding.pm
@@ -195,8 +204,14 @@ lib/Net/DRI/Protocol/EPP/Extensions/CIRA/Agreement.pm
 lib/Net/DRI/Protocol/EPP/Extensions/CIRA/Contact.pm
 lib/Net/DRI/Protocol/EPP/Extensions/CIRA/Domain.pm
 lib/Net/DRI/Protocol/EPP/Extensions/CIRA/Notifications.pm
+lib/Net/DRI/Protocol/EPP/Extensions/CloudRegistry.pm
+lib/Net/DRI/Protocol/EPP/Extensions/CloudRegistry/LaunchPhase.pm
+lib/Net/DRI/Protocol/EPP/Extensions/CoCCA/IPVerification.pm
 lib/Net/DRI/Protocol/EPP/Extensions/COOP.pm
 lib/Net/DRI/Protocol/EPP/Extensions/COOP/Contact.pm
+lib/Net/DRI/Protocol/EPP/Extensions/COZA.pm
+lib/Net/DRI/Protocol/EPP/Extensions/COZA/Contact.pm
+lib/Net/DRI/Protocol/EPP/Extensions/COZA/Domain.pm
 lib/Net/DRI/Protocol/EPP/Extensions/CZ.pm
 lib/Net/DRI/Protocol/EPP/Extensions/CZ/Contact.pm
 lib/Net/DRI/Protocol/EPP/Extensions/CZ/Domain.pm
@@ -219,6 +234,7 @@ lib/Net/DRI/Protocol/EPP/Extensions/EURid/Sunrise.pm
 lib/Net/DRI/Protocol/EPP/Extensions/FCCN.pm
 lib/Net/DRI/Protocol/EPP/Extensions/FCCN/Contact.pm
 lib/Net/DRI/Protocol/EPP/Extensions/FCCN/Domain.pm
+lib/Net/DRI/Protocol/EPP/Extensions/GL.pm
 lib/Net/DRI/Protocol/EPP/Extensions/GracePeriod.pm
 lib/Net/DRI/Protocol/EPP/Extensions/HTTP.pm
 lib/Net/DRI/Protocol/EPP/Extensions/IENUMAT.pm
@@ -272,9 +288,15 @@ lib/Net/DRI/Protocol/EPP/Extensions/SIDN/Host.pm
 lib/Net/DRI/Protocol/EPP/Extensions/SIDN/Message.pm
 lib/Net/DRI/Protocol/EPP/Extensions/SIDN/Notifications.pm
 lib/Net/DRI/Protocol/EPP/Extensions/SWITCH.pm
+lib/Net/DRI/Protocol/EPP/Extensions/TCI.pm
+lib/Net/DRI/Protocol/EPP/Extensions/TCI/Contact.pm
+lib/Net/DRI/Protocol/EPP/Extensions/TCI/Domain.pm
+lib/Net/DRI/Protocol/EPP/Extensions/TCI/Message.pm
+lib/Net/DRI/Protocol/EPP/Extensions/TCI/Registrar.pm
 lib/Net/DRI/Protocol/EPP/Extensions/US.pm
 lib/Net/DRI/Protocol/EPP/Extensions/US/Contact.pm
 lib/Net/DRI/Protocol/EPP/Extensions/VeriSign.pm
+lib/Net/DRI/Protocol/EPP/Extensions/VeriSign/ClientAttributes.pm
 lib/Net/DRI/Protocol/EPP/Extensions/VeriSign/IDNLanguage.pm
 lib/Net/DRI/Protocol/EPP/Extensions/VeriSign/JobsContact.pm
 lib/Net/DRI/Protocol/EPP/Extensions/VeriSign/NameStore.pm
@@ -366,9 +388,6 @@ README
 SUPPORT
 t/001load_mandatory.t
 t/001load_optional.t
-t/002pod.t
-t/003critic.t
-t/004kwalitee.t
 t/101exception.t
 t/102util.t
 t/103cache.t
@@ -433,10 +452,17 @@ t/643vnds_epp_whowas.t
 t/644vnds_epp_premiumdomain.t
 t/645vnds_epp_suggestion.t
 t/646afilias_oxrs.t
+t/647cocca_epp_ipvalidation.t
+t/648coza_epp.t
+t/649vnds_epp_coa.t
 t/701ovh_ws_live.t
 t/702bookmyname_ws_live.t
 t/703gandi_ws_live.t
 t/704opensrs_xcp_live.t
 t/705adamsnames_ws_live.t
 TODO
+xt/002pod.t
+xt/003critic.t
+xt/004kwalitee.t
+xt/005perl_minimum_version.t
 META.yml                                 Module meta-data (added by MakeMaker)

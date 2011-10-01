@@ -10,21 +10,17 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::Protocol::EPP::Core::Contact;
 
+use utf8;
 use strict;
 use warnings;
 
 use Net::DRI::Util;
 use Net::DRI::Exception;
 use Net::DRI::Protocol::EPP::Util;
-
-our $VERSION=do { my @r=(q$Revision: 1.19 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -275,7 +271,7 @@ sub parse_postalinfo
  }
 }
 
-sub parse_disclose ## RFC 4933 ง2.9
+sub parse_disclose ## RFC 4933 ยง2.9
 {
  my $c=shift;
  my $flag=Net::DRI::Util::xml_parse_boolean($c->getAttribute('flag'));
@@ -516,7 +512,7 @@ sub update
 }
 
 ####################################################################################################
-## RFC4933 ง3.3 Offline Review of Requested Actions
+## RFC4933 ยง3.3 Offline Review of Requested Actions
 
 sub pandata_parse
 {

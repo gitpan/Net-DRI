@@ -10,20 +10,16 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::Protocol::EPP::Util;
 
+use utf8;
 use strict;
 use warnings;
 
 use Net::DRI::Util;
 use Net::DRI::Exception;
-
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 ####################################################################################################
 
@@ -181,7 +177,7 @@ sub build_ns
  return [$xmlns.':ns',@d];
 }
 
-sub parse_ns ## RFC 4931 ง1.1
+sub parse_ns ## RFC 4931 ยง1.1
 {
  my ($po,$node)=@_;
  my $ns=$po->create_local_object('hosts');

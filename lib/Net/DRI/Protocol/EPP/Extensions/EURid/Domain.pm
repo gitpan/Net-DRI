@@ -1,7 +1,7 @@
 ## Domain Registry Interface, EURid Domain EPP extension commands
 ## (based on EURid registration_guidelines_v1_0E-epp.pdf)
 ##
-## Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -11,9 +11,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::Protocol::EPP::Extensions::EURid::Domain;
@@ -24,8 +21,6 @@ use warnings;
 use Net::DRI::Util;
 use Net::DRI::Exception;
 use Net::DRI::Protocol::EPP::Util;
-
-our $VERSION=do { my @r=(q$Revision: 1.16 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -55,7 +50,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2011 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -72,11 +67,11 @@ See the LICENSE file that comes with this distribution for more details.
 sub register_commands
 {
  my ($class,$version)=@_;
- my %tmp=( 
+ my %tmp=(
           create            => [ \&create, undef ],
           update            => [ \&update, undef ],
-          info              => [ \&info, \&info_parse ],
-	  check             => [ \&check, \&check_parse ],
+          info              => [ undef, \&info_parse ],
+          check             => [ undef, \&check_parse ],
           delete            => [ \&delete, undef ],
           transfer_request  => [ \&transfer_request, undef ],
           transfer_cancel   => [ \&transfer_cancel, undef ],
@@ -88,6 +83,7 @@ sub register_commands
           reactivate        => [ \&reactivate, undef ],
           check_contact_for_transfer => [ \&checkcontact, \&checkcontact_parse ],
           remind            => [ \&remind, undef ],
+          renew             => [ undef, \&renew_parse ],
          );
 
  return { 'domain' => \%tmp };
@@ -138,14 +134,6 @@ sub update
  $mes->command_extension($eid,['eurid:update',['eurid:domain',@n]]);
 }
 
-sub info
-{
- my ($epp,$domain,$rd)=@_;
- my $mes=$epp->message();
- my $eid=build_command_extension($mes,$epp,'eurid:ext');
- $mes->command_extension($eid,['eurid:info',['eurid:domain',{version=>'2.0'}]]);
-}
-
 sub info_parse
 {
  my ($po,$otype,$oaction,$oname,$rinfo)=@_;
@@ -153,87 +141,115 @@ sub info_parse
  return unless $mes->is_success();
 
  my $infdata=$mes->get_extension('eurid','ext');
- return unless defined $infdata;
+ _parse_info_euridext($infdata,$mes->ns('eurid'),$po,$rinfo,$oname) if defined $infdata;
 
- my $ns=$mes->ns('eurid');
- $infdata=Net::DRI::Util::xml_traverse($infdata,$ns,'infData','domain');
- return unless defined $infdata;
+ $infdata=$mes->get_extension('extendedInfo','infData');
+ _parse_info_extendedinfo($infdata,$mes->ns('extendedInfo'),$po,$rinfo,$oname) if defined $infdata;
 
+ $infdata=$mes->get_extension('pendingTransaction','infData');
+ _parse_info_pendingtransaction($infdata,$mes->ns('pendingTransaction'),$po,$rinfo,$oname) if defined $infdata;
+}
+
+sub _parse_nsgroup
+{
+ my ($node,$ns,$po)=@_;
  my @c;
- foreach my $el ($infdata->getChildrenByTagNameNS($ns,'nsgroup'))
+ foreach my $el ($node->getChildrenByTagNameNS($ns,'nsgroup'))
  {
   push @c,$po->create_local_object('hosts')->name($el->textContent());
  }
+ return @c;
+}
 
- $rinfo->{domain}->{$oname}->{nsgroup}=\@c;
+sub _parse_keygroup
+{
+ my ($node,$ns)=@_;
+ return Net::DRI::Util::xml_child_content($node,$ns,'keygroup');
+}
 
- my $tmp=Net::DRI::Util::xml_child_content($infdata,$ns,'keygroup');
+sub _parse_info_euridext
+{
+ my ($infdata,$ns,$po,$rinfo,$oname)=@_;
+
+ $infdata=Net::DRI::Util::xml_traverse($infdata,$ns,'infData','domain');
+ return unless defined $infdata;
+
+ my @c=_parse_nsgroup($infdata,$ns,$po);
+ $rinfo->{domain}->{$oname}->{nsgroup}=\@c if @c;
+
+ my $tmp=_parse_keygroup($infdata,$ns);
  $rinfo->{domain}->{$oname}->{keygroup}=$tmp if defined $tmp;
+}
+
+sub _parse_info_extendedinfo
+{
+ my ($infdata,$ns,$po,$rinfo,$oname)=@_;
 
  my $cs=$rinfo->{domain}->{$oname}->{status};
  foreach my $s (qw/onhold quarantined/) ## onhold here has nothing to do with EPP client|serverHold, unfortunately
  {
-  my @s=$infdata->getChildrenByTagNameNS($ns,$s);
-  next unless @s;
-  $cs->add($s) if Net::DRI::Util::xml_parse_boolean($s[0]->textContent()); ## should we also remove 'ok' status then ?
+  my $tmp=Net::DRI::Util::xml_child_content($infdata,$ns,$s);
+  next unless defined $tmp && Net::DRI::Util::xml_parse_boolean($tmp);
+  $cs->add($s); ## should we also remove 'ok' status then ?
  }
  foreach my $d (qw/availableDate deletionDate/)
  {
-  my @d=$infdata->getChildrenByTagNameNS($ns,$d);
-  next unless @d;
-  $rinfo->{domain}->{$oname}->{$d}=$po->parse_iso8601($d[0]->textContent());
- }
-
- my $pt=$infdata->getChildrenByTagNameNS($ns,'pendingTransaction');
- if ($pt->size())
- {
-  $pt=$pt->shift();
-  my %p;
-  foreach my $t (qw/trade transfer transferq/)
-  {
-   my $r=$pt->getChildrenByTagNameNS($ns,$t);
-   next unless $r->size();
-   $p{type}=$t;
-   $cs->add(($t eq 'trade')? 'pendingUpdate' : 'pendingTransfer');
-
-   foreach my $el (Net::DRI::Util::xml_list_children($r->get_node(1)))
-   {
-    my ($name,$c)=@$el;
-    if ($name eq 'domain')
-    {
-     my $cs2=$po->create_local_object('contactset');
-     foreach my $sel (Net::DRI::Util::xml_list_children($c))
-     {
-      my ($name2,$cc)=@$sel;
-      if ($name2=~m/^(registrant|tech|billing)$/)
-      {
-       $cs2->set($po->create_local_object('contact')->srid($cc->textContent()),$name2);
-      } elsif ($name2=~m/^(trDate)$/)
-      {
-       $p{$1}=$po->parse_iso8601($cc->textContent());
-      }
-     }
-     $p{contact}=$cs2;
-    } elsif ($name=~m/^(initiationDate|unscreenedFax)$/)
-    {
-     $p{$1}=$po->parse_iso8601($c->textContent());
-    } elsif ($name=~m/^(status|replySeller|replyBuyer|replyOwner)$/)
-    {
-     $p{$1}=$c->textContent();
-    }
-   }
-   last;
-  }
-  $rinfo->{domain}->{$oname}->{pending_transaction}=\%p;
+  my $tmp=Net::DRI::Util::xml_child_content($infdata,$ns,$d);
+  next unless defined $tmp;
+  $rinfo->{domain}->{$oname}->{$d}=$po->parse_iso8601($tmp);
  }
 }
 
-sub check
+sub _parse_info_pendingtransaction
 {
- my ($epp,$domain,$rd)=@_;
- my $mes=$epp->message();
- my $eid=build_command_extension($mes,$epp,'eurid:ext');
- $mes->command_extension($eid,['eurid:check',['eurid:domain',{version=>'2.0'}]]);
+ my ($infdata,$ns,$po,$rinfo,$oname)=@_;
+
+ my %p;
+ foreach my $t (qw/trade transfer transferq/)
+ {
+  my $r=$infdata->getChildrenByTagNameNS($ns,$t);
+  next unless $r->size();
+  $p{type}=$t;
+  my $cs=$rinfo->{domain}->{$oname}->{status};
+  $cs->add(($t eq 'trade')? 'pendingUpdate' : 'pendingTransfer');
+  foreach my $el (Net::DRI::Util::xml_list_children($r->get_node(1)))
+  {
+   my ($name,$c)=@$el;
+   if ($name eq 'domain')
+   {
+    my $cs2=$po->create_local_object('contactset');
+    foreach my $sel (Net::DRI::Util::xml_list_children($c))
+    {
+     my ($name2,$cc)=@$sel;
+     if ($name2=~m/^(registrant|tech|billing|onsite)$/)
+     {
+      $cs2->set($po->create_local_object('contact')->srid($cc->textContent()),$name2);
+     } elsif ($name2=~m/^(trDate)$/)
+     {
+      $p{$1}=$po->parse_iso8601($cc->textContent());
+     } elsif ($name2 eq 'ns')
+     {
+      $p{ns}=Net::DRI::Protocol::EPP::Util::parse_ns($po,$cc);
+     } elsif ($name2 eq 'nsgroup')
+     {
+      $p{nsgroup}=[ _parse_nsgroup($c,$ns,$po) ];
+     } elsif ($name2 eq 'keygroup')
+     {
+      $p{keygroup}=_parse_keygroup($c,$ns);
+     }
+    }
+    $p{contact}=$cs2;
+   } elsif ($name=~m/^(initiationDate|unscreenedFax)$/)
+   {
+    $p{$1}=$po->parse_iso8601($c->textContent());
+   } elsif ($name=~m/^(status|replySeller|replyBuyer|replyOwner)$/)
+   {
+    $p{$1}=$c->textContent();
+   }
+  }
+  last;
+ }
+ $rinfo->{domain}->{$oname}->{pending_transaction}=\%p;
 }
 
 sub check_parse
@@ -282,7 +298,6 @@ sub delete
 
  my $eid=build_command_extension($mes,$epp,'eurid:ext');
  my @n=(['eurid:deleteDate',$rd->{deleteDate}->set_time_zone('UTC')->strftime('%Y-%m-%dT%T.%NZ')]);
- push @n,['eurid:overwriteDeleteDate','true'] if Net::DRI::Util::has_key($rd,'overwrite') && $rd->{overwrite};
  $mes->command_extension($eid,['eurid:delete',['eurid:domain',@n]]);
 }
 
@@ -488,6 +503,29 @@ sub remind
 
  my $eid=build_command_extension($mes,$epp,'eurid:ext');
  $mes->command_extension($eid,['eurid:command',['eurid:transferRemind',['eurid:domainname',$domain],['eurid:destination',$rd->{destination}]],['eurid:clTRID',$mes->cltrid()]]);
+}
+
+sub renew_parse
+{
+ my ($po,$otype,$oaction,$oname,$rinfo)=@_;
+ my $mes=$po->message();
+ return unless $mes->is_success();
+
+ my $rendata=$mes->get_extension('eurid','ext');
+ return unless defined $rendata;
+
+ my $ns=$mes->ns('eurid');
+ $rendata=Net::DRI::Util::xml_traverse($rendata,$ns,'renew');
+ return unless defined $rendata;
+
+ foreach my $el (Net::DRI::Util::xml_list_children($rendata))
+ {
+  my ($name,$c)=@$el;
+  if ($name=~m/^(removedDeletionDate)$/)
+  {
+   $rinfo->{domain}->{$oname}->{$1}=Net::DRI::Util::xml_parse_boolean($c->textContent());
+  }
+ }
 }
 
 ####################################################################################################

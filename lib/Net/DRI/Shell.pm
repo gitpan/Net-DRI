@@ -10,9 +10,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::Shell;
@@ -29,8 +26,6 @@ use Net::DRI::Protocol::ResultStatus;
 use Term::ReadLine; ## see also Term::Shell
 use Time::HiRes ();
 use IO::Handle ();
-
-our $VERSION=do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 exit __PACKAGE__->run(@ARGV) if (!caller() || caller() eq 'PAR'); ## This is a modulino :-)
 
@@ -499,7 +494,7 @@ sub run
  $ctx->{term_attribs}->{completion_function}=sub { return complete($ctx,@_); };
  $ctx->{prompt}=$ctx->{dprompt};
 
- output($ctx,"Welcome to Net::DRI shell, pid $$, version $VERSION\n");
+ output($ctx,"Welcome to Net::DRI ${Net::DRI::VERSION} shell, pid $$\n");
 
  $ctx->{dri}=Net::DRI->new({cache_ttl => 10,logging=>['files',{level => 'info'}]});
  output($ctx,"Net::DRI object created with a cache TTL of 10 seconds and logging into files in current directory\n\n");
@@ -589,7 +584,7 @@ sub handle_line
   my @r;
   if (defined($rc))
   {
-   push @r,$rc->as_string(1),"\n";
+   push @r,scalar $rc->as_string(1),"\n";
   }
   push @r,$msg if (defined($msg));
   if (defined($rc) && $rc->is_closing() && $ctx->{dri}->transport()->has_state())
@@ -612,14 +607,15 @@ sub complete
  ## Command completion
  if ($start==0) ## command completion
  {
-  return sort { $a cmp $b } grep { /^$text/ } qw/quit exit help run record message_retrieve message_delete domain_create domain_renew domain_delete domain_check domain_info domain_transfer_start domain_transfer_stop domain_transfer_query domain_transfer_accept domain_transfer_refuse domain_update_ns_set domain_update_ns_add domain_update_ns_del domain_update_status_set domain_update_status_add domain_update_status_del domain_update_contact_set domain_update_contact_add domain_update_contact_del domain_update host_create host_delete host_info host_check host_update_ip_set host_update_ip_add host_update_ip_del host_update_status_set host_update_status_add host_update_status_del host_update_name_set host_update contact_create contact_info contact_check contact_delete contact_update contact_update_status_set contact_update_status_add contact_update_status_del contact_transfer_start contact_transfer_stop contact_transfer_query contact_transfer_accept contact_transfer_refuse set add add_registry target add_current_profile add_profile show get_info get_info_all message_waiting message_count domain_exist/;
+  my @r=sort { $a cmp $b } grep { /^$text/ } qw/quit exit help run record message_retrieve message_delete domain_create domain_renew domain_delete domain_check domain_info domain_transfer_start domain_transfer_stop domain_transfer_query domain_transfer_accept domain_transfer_refuse domain_update_ns_set domain_update_ns_add domain_update_ns_del domain_update_status_set domain_update_status_add domain_update_status_del domain_update_contact_set domain_update_contact_add domain_update_contact_del domain_update host_create host_delete host_info host_check host_update_ip_set host_update_ip_add host_update_ip_del host_update_status_set host_update_status_add host_update_status_del host_update_name_set host_update contact_create contact_info contact_check contact_delete contact_update contact_update_status_set contact_update_status_add contact_update_status_del contact_transfer_start contact_transfer_stop contact_transfer_query contact_transfer_accept contact_transfer_refuse set add add_registry target add_current_profile add_profile show get_info get_info_all message_waiting message_count domain_exist/;
+  return @r;
  }
 
  ## Parameter completion
  my ($cmd)=($line=~m/^(\S+)\s/);
- if ($cmd eq 'show') { return sort { $a cmp $b } grep { /^$text/ } qw/profiles tlds periods objects types status config/; }
+ if ($cmd eq 'show') { my @r=sort { $a cmp $b } grep { /^$text/ } qw/profiles tlds periods objects types status config/; return @r; }
  if ($cmd eq 'set')  { return map { $_.'=' } sort { $a cmp $b } grep { /^$text/ } keys(%{$ctx->{config}}); }
- if ($cmd eq 'run' || $cmd eq 'record') { return sort { $ctx->{completion}->{files}->{$b} <=> $ctx->{completion}->{files}->{$a} || $a cmp $b } grep { /^$text/ } keys(%{$ctx->{completion}->{files}}); }
+ if ($cmd eq 'run' || $cmd eq 'record') { my @r=sort { $ctx->{completion}->{files}->{$b} <=> $ctx->{completion}->{files}->{$a} || $a cmp $b } grep { /^$text/ } keys(%{$ctx->{completion}->{files}}); return @r; }
 
  if ($cmd eq 'add' || $cmd eq 'add_registry' || $cmd eq 'add_current_profile' || $cmd eq 'add_profile')
  {
@@ -627,12 +623,14 @@ sub complete
   {
    my ($reg)=($text=~m/registry=(\S*)/);
    $reg||='';
-   return sort { $a cmp $b } grep { /^$reg/ } $ctx->{dri}->installed_registries();
+   my @r=sort { $a cmp $b } grep { /^$reg/ } $ctx->{dri}->installed_registries();
+   return @r;
   } elsif (substr($line,$start-5,5) eq 'type=')
   {
    my ($type)=($text=~m/type=(\S*)/);
    $type||='';
-   return sort { $a cmp $b } grep { /^$type/ } (defined $ctx->{dri}->registry_name()? $ctx->{dri}->registry()->driver()->profile_types() : qw/epp rrp rri dchk whois das ws email/);
+   my @r=sort { $a cmp $b } grep { /^$type/ } (defined $ctx->{dri}->registry_name()? $ctx->{dri}->registry()->driver()->profile_types() : qw/epp rrp rri dchk whois das ws email/);
+   return @r;
   } else
   {
    my @p;
@@ -648,10 +646,12 @@ sub complete
   my $regs=$ctx->{dri}->available_registries_profiles(0);
   if (my ($reg)=($line=~m/^target\s+(\S+)\s+\S*$/))
   {
-   return sort { $a cmp $b } grep { /^$text/ } (exists $regs->{$reg} ? @{$regs->{$reg}} : ());
+   my @r=sort { $a cmp $b } grep { /^$text/ } (exists $regs->{$reg} ? @{$regs->{$reg}} : ());
+   return @r;
   } elsif ($line=~m/^target\s+\S*$/)
   {
-   return sort { $a cmp $b } grep { /^$text/ } keys(%$regs);
+   my @r=sort { $a cmp $b } grep { /^$text/ } keys(%$regs);
+   return @r;
   }
  }
 
@@ -668,7 +668,8 @@ sub complete
    $d=$pd->in_units('months');
    if ($d > 0) { $p{$d.'M'}=$d; next; }
   }
-  return sort { $p{$a} <=> $p{$b} } grep { /^$p/ } keys(%p); ## this is the correct ascending order, but it seems something else upstream is reordering it differently
+  my @r=sort { $p{$a} <=> $p{$b} } grep { /^$p/ } keys(%p); ## this is the correct ascending order, but it seems something else upstream is reordering it differently
+  return @r;
  }
 
  if ($line=~m/^domain_\S+\s+\S*$/)
@@ -686,7 +687,8 @@ sub complete
     push @p,map { $base.'.'.$_ } @tlds;
    }
   }
-  return sort { ( $ctx->{completion}->{domains}->{$b} || 0) <=> ( $ctx->{completion}->{domains}->{$a} || 0 ) || $a cmp $b } @p;
+  my @r=sort { ( $ctx->{completion}->{domains}->{$b} || 0) <=> ( $ctx->{completion}->{domains}->{$a} || 0 ) || $a cmp $b } @p;
+  return @r;
  }
 
  my @ct=qw/registrant admin tech billing/; ## How to retrieve non core contact types ?
@@ -734,7 +736,8 @@ sub complete
    if (! defined $o) { return (); }
    my ($s)=($text=~m/status=(\S*)/);
    $s||='';
-   return sort { $a cmp $b } grep { /^$s/ } map { 'no'.$_ } $o->possible_no();
+   my @r=sort { $a cmp $b } grep { /^$s/ } map { 'no'.$_ } $o->possible_no();
+   return @r;
   } else
   {
    $text=~s/\+/[+]/g;
@@ -748,7 +751,8 @@ sub complete
  {
   my $o=$ctx->{dri}->local_object('status');
   if (! defined $o) { return (); }
-  return sort { $a cmp $b } grep { /^$text/ } map { 'no'.$_ } $o->possible_no();
+  my @r=sort { $a cmp $b } grep { /^$text/ } map { 'no'.$_ } $o->possible_no();
+  return @r;
  }
 
  if ($line=~m/^domain_update_contact_\S+\s+\S+\s+\S*/) { return _complete_contacts($ctx,$text); }
@@ -793,7 +797,8 @@ sub complete
    if (! defined $o) { return (); }
    my ($s)=($text=~m/status=(\S*)/);
    $s||='';
-   return sort { $a cmp $b } grep { /^$s/ } map { 'no'.$_ } $o->possible_no();
+   my @r=sort { $a cmp $b } grep { /^$s/ } map { 'no'.$_ } $o->possible_no();
+   return @r;
   } else
   {
    $text=~s/\+/[+]/g;
@@ -819,14 +824,15 @@ sub _complete_capa2list
  return @r;
 }
 
-sub _complete_hosts    { my ($ctx,$text)=@_; return sort { $ctx->{completion}->{hosts}->{$b} <=> $ctx->{completion}->{hosts}->{$a} || $a cmp $b } grep { /^$text/ } keys(%{$ctx->{completion}->{hosts}}); }
+sub _complete_hosts    { my ($ctx,$text)=@_; my @r=sort { $ctx->{completion}->{hosts}->{$b} <=> $ctx->{completion}->{hosts}->{$a} || $a cmp $b } grep { /^$text/ } keys(%{$ctx->{completion}->{hosts}}); return @r; }
 sub _complete_contacts
 {
  my ($ctx,$text)=@_;
  my @c=grep { /^$text/ } keys(%{$ctx->{completion}->{contacts}});
  my $creg=$ctx->{dri}->registry_name();
  if (defined $creg) { @c=grep { defined $ctx->{completion}->{contacts}->{$_}->[1] && $ctx->{completion}->{contacts}->{$_}->[1] eq $creg } @c; } ## Filtering per registry
- return sort { $ctx->{completion}->{contacts}->{$b}->[0] <=> $ctx->{completion}->{contacts}->{$a}->[0] || $a cmp $b } @c;
+ my @r=sort { $ctx->{completion}->{contacts}->{$b}->[0] <=> $ctx->{completion}->{contacts}->{$a}->[0] || $a cmp $b } @c;
+ return @r;
 }
 
 sub process
@@ -865,7 +871,7 @@ sub process
  return help($ctx,$cmd,\@p,\%p) if ($cmd eq 'help');
  return handle_file($ctx,$p[0]) if ($cmd eq 'run');
  return record($ctx,$p[0])      if ($cmd eq 'record');
- return do_dri($ctx,$cmd,\@p,\%p) if ($cmd=~m/^message_(?:retrieve|delete)$/);
+ return do_dri($ctx,$cmd,\@p,\%p) if ($cmd=~m/^message_(?:retrieve|delete)$/ || $cmd eq 'ping');
  return do_domain($ctx,$cmd,\@p,\%p) if ($cmd=~m/^domain_(?:check)$/);
  return do_domain_transfer($ctx,$cmd,\@p,\%p) if ($cmd=~m/^domain_transfer_(?:start|stop|query|accept|refuse)$/);
  return do_domain_update($ctx,$cmd,\@p,\%p) if ($cmd eq 'domain_update');
@@ -1005,6 +1011,7 @@ message_retrieve [ID]
 message_delete [ID]
 message_waiting
 message_count
+ping
 EOF
  return (undef,$m);
 }
@@ -1615,7 +1622,7 @@ sub pretty_string
   }
   return ($full? "ContactSet:\n" : '').join(' ',@v);
  }
- return ($full? "Status:\n" : '').join(' ',$v->list_status()) if ($v->isa('Net::DRI::Data::StatusList'));
+ return ($full? "Status:\n" : '').join(' + ',$v->list_status(1)) if ($v->isa('Net::DRI::Data::StatusList'));
  return ($full? "Command result:\n" : '').$v->as_string(1) if ($v->isa('Net::DRI::Protocol::ResultStatus'));
  return ($full? "Date:\n" : '').$v->set_time_zone('UTC')->strftime('%Y-%m-%d %T').' UTC' if ($v->isa('DateTime'));
  return ($full? "Duration:\n" : '').sprintf('P%dY%dM%dDT%dH%dM%dS',$v->in_units(qw/years months days hours minutes seconds/)) if ($v->isa('DateTime::Duration')); ## ISO8601

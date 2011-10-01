@@ -10,21 +10,17 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::Protocol::EPP::Core::Host;
 
+use utf8;
 use strict;
 use warnings;
 
 use Net::DRI::Util;
 use Net::DRI::Exception;
 use Net::DRI::Protocol::EPP::Util;
-
-our $VERSION=do { my @r=(q$Revision: 1.16 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -283,7 +279,7 @@ sub add_ip
 }
 
 ####################################################################################################
-## RFC4932 ง3.3  Offline Review of Requested Actions
+## RFC4932 ยง3.3  Offline Review of Requested Actions
 
 sub pandata_parse
 {

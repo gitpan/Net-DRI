@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .BE (DNSBE) policies for Net::DRI
 ##
-## Copyright (c) 2006-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -10,13 +10,11 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 #########################################################################################
 
 package Net::DRI::DRD::BE;
 
+use utf8;
 use strict;
 use warnings;
 
@@ -24,9 +22,7 @@ use base qw/Net::DRI::DRD/;
 
 use DateTime::Duration;
 
-our $VERSION=do { my @r=(q$Revision: 1.11 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
-
-__PACKAGE__->make_exception_for_unavailable_operations(qw/domain_transfer_stop domain_transfer_query domain_transfer_accept domain_transfer_refuse domain_renew contact_check contact_check_multi contact_transfer message_retrieve message_delete message_waiting message_count/);
+__PACKAGE__->make_exception_for_unavailable_operations(qw/domain_transfer_stop domain_transfer_query domain_transfer_accept domain_transfer_refuse domain_renew contact_check contact_transfer message_retrieve message_delete message_waiting message_count/);
 
 =pod
 
@@ -56,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006-2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006-2011 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -76,7 +72,6 @@ sub new
  my $self=$class->SUPER::new(@_);
  $self->{info}->{host_as_attr}=1;
  $self->{info}->{contact_i18n}=1; ## LOC only
- bless($self,$class);
  return $self;
 }
 
@@ -96,7 +91,7 @@ sub transport_protocol_default
 }
 
 ######################################################################################
-## From ง2 of Enduser_Terms_And_Conditions_fr_v3.1.pdf
+## From ยง2 of Enduser_Terms_And_Conditions_fr_v3.1.pdf
 sub verify_name_domain
 {
  my ($self,$ndr,$domain,$op)=@_;

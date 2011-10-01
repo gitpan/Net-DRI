@@ -3,6 +3,8 @@
 use strict;
 use warnings;
 
+use encoding "iso-8859-15";
+
 use Net::DRI::Data::Contact;
 
 use Test::More tests => 17;

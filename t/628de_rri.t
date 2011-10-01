@@ -9,7 +9,7 @@ use Net::DRI::Data::Raw;
 use Test::More tests => 77;
 
 eval { no warnings; require Test::LongString; Test::LongString->import(max => 100); $Test::LongString::Context=50; };
-*{'main::is_string'}=\&main::is if $@;
+if ( $@ ) { no strict 'refs'; *{'main::is_string'}=\&main::is; }
 
 our $E1='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><registry-response xmlns="http://registry.denic.de/global/1.0" xmlns:tr="http://registry.denic.de/transaction/1.0" xmlns:domain="http://registry.denic.de/domain/1.0" xmlns:contact="http://registry.denic.de/contact/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dnsentry="http://registry.denic.de/dnsentry/1.0">';
 our $E2='</registry-response>';

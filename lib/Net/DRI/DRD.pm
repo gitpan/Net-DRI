@@ -10,9 +10,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::DRD;
@@ -30,8 +27,7 @@ use Net::DRI::Exception;
 use Net::DRI::Util;
 use Net::DRI::DRD::ICANN;
 use Net::DRI::Data::Raw;
-
-our $VERSION=do { my @r=(q$Revision: 1.34 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+use Net::DRI::Protocol::ResultStatus;
 
 =pod
 
@@ -355,7 +351,7 @@ sub domain_create
  {
   my $rs=$self->domain_check($ndr,$domain,$rd);
   push @rs,$rs;
-  return Net::DRI::Util::link_rs(@rs) unless ($rs->is_success() && $rs->local_get_data('domain',$domain,'exist')==0);
+  return Net::DRI::Util::link_rs(@rs) unless ($rs->is_success() && defined $rs->local_get_data('domain',$domain,'exist') && $rs->local_get_data('domain',$domain,'exist')==0);
  }
 
  my $nsin=$ndr->local_object('hosts');
@@ -1387,6 +1383,16 @@ sub account_list_domains
 ####################################################################################################
 # Misc
 ####################################################################################################
+
+# sub ping
+# {
+#  my ($self,$ndr)=@_;
+#  my ($po,$to)=$ndr->protocol_transport();
+# 
+#  my $r;
+#  eval { $r=$to->ping(1); };
+#  return ( $@ || $r==0 ) ? Net::DRI::Protocol::ResultStatus->new_error() : Net::DRI::Protocol::ResultStatus->new_success();
+# }
 
 sub raw_command
 {

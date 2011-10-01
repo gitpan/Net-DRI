@@ -10,13 +10,11 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::Protocol::EPP::Message;
 
+use utf8;
 use strict;
 use warnings;
 
@@ -32,8 +30,6 @@ use Net::DRI::Util;
 
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version command command_body cltrid svtrid msg_id node_resdata node_extension node_msg node_greeting));
-
-our $VERSION=do { my @r=(q$Revision: 1.26 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -148,10 +144,17 @@ sub result_status
 
 sub command_extension_register
 {
- my ($self,$ocmd,$ons)=@_;
+ my ($self,$ocmd,$ons,$otherattrs)=@_;
 
  $self->{extension}=[] unless exists $self->{extension};
  my $eid=1+$#{$self->{extension}};
+ if (defined $ons && $ons!~m/xmlns/) ## new interface, everything should switch to that (TODO)
+ {
+  my ($nsalias,$command)=($ocmd,$ons);
+  $ocmd=$nsalias.':'.$command;
+  $ons=sprintf('xmlns:%s="%s" xsi:schemaLocation="%s %s"',$nsalias,$self->nsattrs($nsalias));
+  $ons.=' '.join(' ',map { sprintf('%s="%s"',$_,$otherattrs->{$_}) } keys %$otherattrs) if defined $otherattrs && ref $otherattrs;
+ }
  $self->{extension}->[$eid]=[$ocmd,$ons,[]];
  return $eid;
 }
@@ -215,9 +218,15 @@ sub as_string
    my ($ecmd,$ens,$rdata)=@$e;
    if ($ecmd && $ens)
    {
-    push @d,'<'.$ecmd.' '.$ens.'>';
-    push @d,ref($rdata)? Net::DRI::Util::xml_write($rdata) : Net::DRI::Util::xml_escape($rdata);
-    push @d,'</'.$ecmd.'>';
+    if ((ref $rdata && @$rdata) || (! ref $rdata && $rdata ne ''))
+    {
+     push @d,'<'.$ecmd.' '.$ens.'>';
+     push @d,ref($rdata)? Net::DRI::Util::xml_write($rdata) : Net::DRI::Util::xml_escape($rdata);
+     push @d,'</'.$ecmd.'>';
+    } else
+    {
+     push @d,'<'.$ecmd.' '.$ens.'/>';
+    }
    } else
    {
     push @d,Net::DRI::Util::xml_escape(@$rdata);
@@ -260,7 +269,7 @@ sub parse
  my $parser=XML::LibXML->new();
  my $doc=$parser->parse_string($dc->as_string());
  my $root=$doc->getDocumentElement();
- Net::DRI::Exception->die(0,'protocol/EPP',1,'Unsuccessfull parse, root element is not epp') unless ($root->getName() eq 'epp');
+ Net::DRI::Exception->die(0,'protocol/EPP',1,'Unsuccessfull parse, root element is not epp') unless ($root->localname() eq 'epp');
 
  if (my $g=$root->getChildrenByTagNameNS($NS,'greeting'))
  {
@@ -274,7 +283,7 @@ sub parse
 
  ## result block(s)
  my $res=$c->get_node(1);
- foreach my $result ($res->getChildrenByTagNameNS($NS,'result')) ## one element if success, multiple elements if failure RFC5730 §2.6
+ foreach my $result ($res->getChildrenByTagNameNS($NS,'result')) ## one element if success, multiple elements if failure RFC5730 Â§2.6
  {
   push @{$self->{results}},Net::DRI::Protocol::EPP::Util::parse_node_result($result,$NS);
  }
@@ -284,7 +293,7 @@ sub parse
  if ($c->size()) ## OPTIONAL
  {
   my $msgq=$c->get_node(1);
-  my $id=$msgq->getAttribute('id'); ## id of the message that has just been retrieved and dequeued (RFC5730/RFC4930) OR id of *next* available message (RFC3730)
+  my $id=$msgq->getAttribute('id'); ## id of the message that has just been retrieved and dequeued (RFC5730/RFC4930) OR id of *next* available message (RFC3730)
   $rinfo->{message}->{info}->{id}=$id;
   $rinfo->{message}->{info}->{count}=$msgq->getAttribute('count');
   if ($msgq->hasChildNodes()) ## We will have childs only as a result of a poll request

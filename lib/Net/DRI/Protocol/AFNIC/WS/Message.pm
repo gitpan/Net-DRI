@@ -10,13 +10,11 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 #########################################################################################
 
 package Net::DRI::Protocol::AFNIC::WS::Message;
 
+use utf8;
 use strict;
 use warnings;
 
@@ -24,8 +22,6 @@ use Net::DRI::Protocol::ResultStatus;
 
 use base qw(Class::Accessor::Chained::Fast Net::DRI::Protocol::Message);
 __PACKAGE__->mk_accessors(qw(version service method params result errcode));
-
-our $VERSION=do { my @r=(q$Revision: 1.9 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -130,12 +126,12 @@ sub result_status
 
  return Net::DRI::Protocol::ResultStatus->new_success($r->{message}) if $r->{free};
 
- my %codes=( 0   => 2400, # problème de connexion à la base de données => Command failed
-             1   => 2302, # le nom de domaine est déjà enregistré => Object exists
-             2   => 2308, # un nom de domaine est déjà enregistré à l'identique dans l'une des extensions du domaine public => Data management policy violation
-             4   => 2304, # une opération est en cours pour ce nom de domaine => Object status prohibits operation
+ my %codes=( 0   => 2400, # problÃ¨me de connexion Ã  la base de donnÃ©es => Command failed
+             1   => 2302, # le nom de domaine est dÃ©jÃ  enregistrÃ© => Object exists
+             2   => 2308, # un nom de domaine est dÃ©jÃ  enregistrÃ© Ã  l'identique dans l'une des extensions du domaine public => Data management policy violation
+             4   => 2304, # une opÃ©ration est en cours pour ce nom de domaine => Object status prohibits operation
              5   => 2308, # nom de domaine interdit (termes fondamentaux) => Data management policy violation
-             51  => 2308, # nom de domaine réservé pour les communes => Data management policy violation
+             51  => 2308, # nom de domaine rÃ©servÃ© pour les communes => Data management policy violation
              100 => 2005, # mauvaise syntaxe du nom de domaine => Parameter value syntax error
            );
 

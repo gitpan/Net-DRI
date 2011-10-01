@@ -10,9 +10,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::DRD::Nominet;
@@ -26,8 +23,6 @@ use Net::DRI::Util;
 use Net::DRI::Exception;
 
 use DateTime::Duration;
-
-our $VERSION=do { my @r=(q$Revision: 1.10 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 ## No status at all with Nominet
 ## Only domain:check is available
@@ -83,14 +78,12 @@ sub new
  my $class=shift;
  my $self=$class->SUPER::new(@_);
  $self->{info}->{host_as_attr}=1;
-
- bless($self,$class);
  return $self;
 }
 
 sub periods  { return map { DateTime::Duration->new(years => $_) } (2); }
 sub name     { return 'Nominet'; }
-sub tlds     { return qw/co.uk ltd.uk me.uk net.uk org.uk plc.uk sch.uk/; } ## See http://www.nominet.org.uk/registrants/aboutdomainnames/rules/
+sub tlds     { return qw/co.uk ltd.uk me.uk net.uk org.uk plc.uk sch.uk/; } ## See http://www.nominet.org.uk/registrants/aboutdomainnames/rules/
 sub object_types { return ('domain','contact','ns','account'); }
 sub profile_types { return qw/epp epp_nominet epp_standard/; }
 

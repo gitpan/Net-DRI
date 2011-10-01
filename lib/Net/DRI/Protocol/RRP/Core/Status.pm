@@ -1,6 +1,6 @@
 ## Domain Registry Interface, RRP Status
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -10,19 +10,16 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 #########################################################################################
 
 package Net::DRI::Protocol::RRP::Core::Status;
 
 use base qw!Net::DRI::Data::StatusList!;
 
-use Net::DRI::Exception;
 use strict;
+use warnings;
 
-our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+use Net::DRI::Exception;
 
 =pod
 
@@ -52,7 +49,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2011 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -64,16 +61,12 @@ See the LICENSE file that comes with this distribution for more details.
 
 =cut
 
-
 #######################################################################################
 
 sub new
 {
- my $proto=shift;
- my $class=ref($proto) || $proto;
-
+ my ($class,$msg)=@_;
  my $self=$class->SUPER::new('rrp','2.0');
- bless($self,$class);
 
  my %s=('delete'   => 'REGISTRAR-LOCK',
         'update'   => 'REGISTRAR-LOCK',
@@ -82,18 +75,11 @@ sub new
        );
  $self->_register_pno(\%s);
 
- my $msg=shift;
- return $self unless defined($msg);
+ return $self unless defined $msg;
+ Net::DRI::Exception::err_invalid_parameters() unless ref $msg eq 'Net::DRI::Protocol::RRP::Message';
 
- if (ref($msg) eq 'Net::DRI::Protocol::RRP::Message')
- {
-  my @s=$msg->entities('status');
-  $self->add(@s) if (@s);
- } else
- {
-  Net::DRI::Exception::err_invalid_parameters();
- }
-
+ my @s=$msg->entities('status');
+ $self->add(@s) if @s;
  return $self;
 }
 

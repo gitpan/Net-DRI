@@ -1,6 +1,6 @@
 ## Domain Registry Interface, SOAP Transport
 ##
-## Copyright (c) 2008-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -10,9 +10,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::Transport::HTTP::SOAPLite;
@@ -26,8 +23,6 @@ use Net::DRI::Exception;
 use Net::DRI::Data::Raw;
 use Net::DRI::Util;
 use SOAP::Lite;
-
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -57,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008-2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008-2011 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -91,7 +86,7 @@ sub new
  my $self=$class->SUPER::new($ctx,\%opts); ## We are now officially a Net::DRI::Transport instance
  $self->is_sync(1);
  $self->name('soaplite');
- $self->version($VERSION);
+ $self->version('0.1');
 
  $t{has_login}=(exists($opts{has_login}) && defined($opts{has_login}))? $opts{has_login} : 0;
  $t{has_logout}=(exists($opts{has_logout}) && defined($opts{has_logout}))? $opts{has_logout} : 0;
@@ -133,7 +128,6 @@ sub new
  }
 
  $self->{transport}=\%t;
- bless($self,$class);
 
  if ($self->has_state())
  {
@@ -161,7 +155,7 @@ sub init
  my ($self)=@_;
  return if defined($self->soap());
  my $soap=SOAP::Lite->new()->uri($self->{transport}->{uri})->proxy($self->{transport}->{proxy_uri});
- $soap->transport()->agent(sprintf('Net::DRI/%s Net::DRI::Transport::HTTP::SOAPLite/%s ',$Net::DRI::VERSION,$VERSION).$soap->transport()->agent());
+ $soap->transport()->agent(sprintf('Net::DRI/%s ',$Net::DRI::VERSION).$soap->transport()->agent());
  $self->soap($soap);
 }
 

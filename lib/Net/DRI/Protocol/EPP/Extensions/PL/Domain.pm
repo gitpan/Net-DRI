@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .PL Domain EPP extension commands
 ##
-## Copyright (c) 2006,2008,2009,2010 Patrick Mevzek <netdri@dotandco.com> and Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. 
+## Copyright (c) 2006,2008-2011 Patrick Mevzek <netdri@dotandco.com> and Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. 
 ## All rights reserved.
 ##
 ## This file is part of Net::DRI
@@ -11,9 +11,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::Protocol::EPP::Extensions::PL::Domain;
@@ -25,8 +22,6 @@ use Net::DRI::Exception;
 use Net::DRI::Util;
 use Net::DRI::Data::Hosts;
 use Net::DRI::Protocol::EPP::Util;
-
-our $VERSION=do { my @r=(q$Revision: 1.3 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -57,7 +52,7 @@ Tonnerre Lombard <tonnerre.lombard@sygroup.ch>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2008,2009,2010 Patrick Mevzek <netdri@dotandco.com> and Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+Copyright (c) 2006,2008-2011 Patrick Mevzek <netdri@dotandco.com> and Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -178,7 +173,7 @@ sub update
  my @chg;
  push @chg,['domain:registrant',$chg->srid()] if Net::DRI::Util::isa_contact($chg,'Net::DRI::Data::Contact::PL');
  $chg=$todo->set('auth');
- push @chg,Net::DRI::Protocol::EPP::Util::domain_build_authinfo($chg) if ($chg && ref($chg));
+ push @chg,Net::DRI::Protocol::EPP::Util::domain_build_authinfo($epp,$chg,1) if ($chg && (ref $chg eq 'HASH') && exists $chg->{pw});
  push @d,['domain:chg',@chg] if @chg;
  $mes->command_body(\@d);
 }

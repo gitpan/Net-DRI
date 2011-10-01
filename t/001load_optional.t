@@ -1,8 +1,11 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 #
 # Here we test the presence of optional modules,
 # needed for some registries in Net::DRI but not all of them,
 # and we warn the user if they are not present
+
+use strict;
+use warnings;
 
 use Test::More tests => 11;
 
@@ -28,7 +31,7 @@ SKIP: {
 
 SKIP: {
 	eval { require SOAP::Lite; };
-	skip 'Module SOAP::Lite is not installed, you need it if you want to use Net::DRI for: AFNIC (WebServices), BookMyName (WebServices)',1 if $@;
+	skip 'Module SOAP::Lite is not installed, you need it if you want to use Net::DRI for: BookMyName (WebServices)',1 if $@;
 	require_ok('Net::DRI::Transport::HTTP::SOAPLite');
 }
 
@@ -39,14 +42,14 @@ SKIP: {
 }
 
 SKIP: {
-	eval { require LWP::UserAgent; };
-	skip('Module LWP::UserAgent is not installed, you need it if you want to use Net::DRI for: OpenSRS (XCP), .PL (EPP over HTTPS)',1) if $@;
+	eval { require LWP::UserAgent; LWP::UserAgent->VERSION('6.02'); };
+	skip('Module LWP::UserAgent is not installed or not at least version 6.02, you need it if you want to use Net::DRI for: OpenSRS (XCP), .PL (EPP over HTTPS), .IT (EPP over HTTPS)',1) if $@;
 	require_ok('Net::DRI::Transport::HTTP');
 }
 
 SKIP: {
 	eval { require HTTP::Request; };
-	skip('Module HTTP::Request is not installed, you need it if you want to use Net::DRI for: .PL (EPP over HTTPS) .IT (EPP over HTTPS)',1) if $@;
+	skip('Module HTTP::Request is not installed, you need it if you want to use Net::DRI for: .PL (EPP over HTTPS), .IT (EPP over HTTPS)',1) if $@;
 	require_ok('Net::DRI::Protocol::EPP::Extensions::HTTP');
 }
 

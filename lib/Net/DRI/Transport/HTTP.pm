@@ -1,6 +1,6 @@
 ## Domain Registry Interface, HTTP/HTTPS Transport
 ##
-## Copyright (c) 2008-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -10,9 +10,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::Transport::HTTP;
@@ -25,9 +22,7 @@ use base qw(Net::DRI::Transport);
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-use LWP::UserAgent;
-
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
+use LWP::UserAgent 6.02;
 
 =pod
 
@@ -47,9 +42,19 @@ At creation (see Net::DRI C<new_profile>) you pass a reference to an hash, with 
 
 time to wait (in seconds) for server reply
 
-=head2 https_debug https_version https_cert_file https_key_file https_ca_file https_ca_dir
+=head2 ssl_key_file ssl_cert_file ssl_ca_file ssl_ca_path ssl_cipher_list ssl_version ssl_passwd_cb
 
-all key materials for https access, if needed
+if C<remote_url> begins with https://, all key materials, see IO::Socket::SSL documentation for corresponding options
+
+=head2 ssl_verify
+
+see IO::Socket::SSL documentation about verify_mode (by default 0x00 here)
+
+=head2 ssl_verify_callback
+
+see IO::Socket::SSL documentation about verify_callback, it gets here as first parameter the transport object
+then all parameter given by IO::Socket::SSL; it is explicitly verified that the subroutine returns a true value,
+and if not the connection is aborted.
 
 =head2 remote_url
 
@@ -102,7 +107,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008-2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008-2011 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -115,10 +120,6 @@ See the LICENSE file that comes with this distribution for more details.
 =cut
 
 ####################################################################################################
-
-## These ENV keys will be set each time just before doing HTTP stuff, making sure to remove pre-existing ones beforehand
-## This should enable us to deal with multiple endpoints with various parameters at the same time (BUT this should be really tested)
-our @HTTPS_ENV=qw/HTTPS_DEBUG HTTPS_VERSION HTTPS_CERT_FILE HTTPS_KEY_FILE HTTPS_CA_FILE HTTPS_CA_DIR/;
 
 sub new
 {
@@ -141,7 +142,7 @@ sub new
  $self->has_state(1); ## some registries need login (like .PL) some not (like .ES) ; see end of method & call to open_connection()
  $self->is_sync(1);
  $self->name('http');
- $self->version($VERSION);
+ $self->version('0.2');
 
  foreach my $k (qw/client_login client_password client_newpassword protocol_data/)
  {
@@ -157,24 +158,25 @@ sub new
  $t{remote_uri}=$t{remote_url}; ## only used for error messages
 
  my $ua=LWP::UserAgent->new();
- $ua->agent(sprintf('Net::DRI/%s Net::DRI::Transport::HTTP/%s ',$Net::DRI::VERSION,$VERSION)); ## the final space triggers LWP::UserAgent to add its own string
+ $ua->agent(sprintf('Net::DRI/%s ',$Net::DRI::VERSION)); ## the final space triggers LWP::UserAgent to add its own string
  $ua->cookie_jar({}); ## Cookies needed by some registries, like .PL (how strange !)
  ## Now some security settings
  $ua->max_redirect(0);
  $ua->parse_head(0);
  $ua->protocols_allowed(['http','https']);
  $ua->timeout($self->timeout()) if $self->timeout(); ## problem with our own alarm ?
- $t{ua}=$ua;
+ $ua->local_address($opts{local_host}) if exists $opts{local_host} && defined $opts{local_host};
 
- $t{local_host}=$opts{local_host} if (exists($opts{local_host}) && $opts{local_host});
- $t{setenv}=0;
- foreach my $k (map { lc } @HTTPS_ENV) ## Backport this stuff to other Transport modules in order to handle multiple differents sets of env values ?
+ if ($t{remote_url}=~m!^https://!)
  {
-  next unless (exists($opts{$k}) && defined($opts{$k}));
-  $t{setenv}=1;
-  $t{$k}=$opts{$k};
+  my %ssl=%{$self->parse_ssl_options(\%opts)};
+  while(my ($k,$v)=each %ssl)
+  {
+   $ua->ssl_opts($k,$v);
+  }
  }
 
+ $t{ua}=$ua;
  $t{verify_response}=$opts{verify_response} if (exists($opts{verify_response}) && defined($opts{verify_response}) && (ref($opts{verify_response}) eq 'CODE'));
  $self->{transport}=\%t;
  $t{pc}->init($self) if $t{pc}->can('init');
@@ -283,19 +285,6 @@ sub _http_send
  my ($self,$count,$tosend,$phase)=@_;
  $phase=2 unless defined($phase); ## Phase 2 = normal operations (1=greeting+login, 3=logout)
  my $t=$self->transport_data();
-
- ## Having two lines put the warnings away. This module is loaded by LWP::UserAgent anyway.
- @LWP::Protocol::http::EXTRA_SOCK_OPTS=();
- @LWP::Protocol::http::EXTRA_SOCK_OPTS=( LocalAddr => $t->{local_host} ) if exists($t->{local_host});
- if ($t->{setenv})
- {
-  foreach my $k (map { lc } @HTTPS_ENV)
-  {
-   delete($ENV{uc($k)});
-   next unless exists($t->{$k});
-   $ENV{uc($k)}=$t->{$k};
-  }
- }
 
  ## Content-Length is automatically computed and added during the request() call, no need to do it before
  my $req=$t->{pc}->write_message($self,$tosend); ## gives back an HTTP::Request object

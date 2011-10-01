@@ -10,21 +10,17 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 #########################################################################################
 
 package Net::DRI::Util;
 
+use utf8;
 use strict;
 use warnings;
 
 use Time::HiRes ();
 use Encode ();
 use Net::DRI::Exception;
-
-our $VERSION=do { my @r=(q$Revision: 1.22 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -69,8 +65,9 @@ See the LICENSE file that comes with this distribution for more details.
 
 ####################################################################################################
 
-## See http://www.iso.org/iso/country_codes/check_what_s_new.htm for updates
-our %CCA2=map { $_ => 1 } qw/AF AX AL DZ AS AD AO AI AQ AG AR AM AW AU AT AZ BS BH BD BB BY BE BZ BJ BL BM BT BO BQ BA BW BV BR IO BN BG BF BI KH CM CA CV CW KY CF TD CL CN CX CC CO KM CG CD CK CR CI HR CU CY CZ DK DJ DM DO EC EG SV SX GQ ER EE ET FK FO FJ FI FR GF PF TF GA GM GE DE GH GI GR GL GD GP GU GT GG GN GW GY HT HM HN HK HU IS IN ID IR IQ IE IM IL IT JM JP JE JO KZ KE KI KP KR KW KG LA LV LB LS LR LY LI LT LU MO MK MG MW MY MV ML MT MH MQ MR MU YT MX FM MD ME MF MC MN MS MA MZ MM NA NR NP NL NC NZ NI NE NG NU NF MP NO OM PK PW PS PA PG PY PE PH PN PL PT PR QA RE RO RS RU RW SH KN LC PM VC WS SM ST SA SN CS SC SL SG SK SI SB SO ZA GS ES LK SD SR SJ SZ SE CH SY TW TJ TZ TH TL TG TK TO TT TN TR TM TC TV UG UA AE GB US UM UY UZ VU VA VE VN VG VI WF EH YE ZM ZW/;
+## See http://www.iso.org/iso/country_codes/updates_on_iso_3166.htm for updates
+## Done up to & including VI-10 (2011-08-09)
+our %CCA2=map { $_ => 1 } qw/AF AX AL DZ AS AD AO AI AQ AG AR AM AW AU AT AZ BS BH BD BB BY BE BZ BJ BL BM BT BO BQ BA BW BV BR IO BN BG BF BI KH CM CA CV CW KY CF TD CL CN CX CC CO KM CG CD CK CR CI HR CU CY CZ DK DJ DM DO EC EG SV SX GQ ER EE ET FK FO FJ FI FR GF PF TF GA GM GE DE GH GI GR GL GD GP GU GT GG GN GW GY HT HM HN HK HU IS IN ID IR IQ IE IM IL IT JM JP JE JO KZ KE KI KP KR KW KG LA LV LB LS LR LY LI LT LU MO MK MG MW MY MV ML MT MH MQ MR MU YT MX FM MD ME MF MC MN MS MA MZ MM NA NR NP NL NC NZ NI NE NG NU NF MP NO OM PK PW PS PA PG PY PE PH PN PL PT PR QA RE RO RS RU RW SH KN LC PM VC WS SM ST SA SN CS SC SL SG SK SI SB SO ZA GS SS ES LK SD SR SJ SZ SE CH SY TW TJ TZ TH TL TG TK TO TT TN TR TM TC TV UG UA AE GB US UM UY UZ VU VA VE VN VG VI WF EH YE ZM ZW/;
 
 sub all_valid
 {
@@ -351,11 +348,11 @@ sub is_ipv6
  my $wip=$ip1.('0' x (32-length($ip1)-length($ip2))).$ip2; ## 32 chars
  my $bip=unpack('B128',pack('H32',$wip)); ## 128-bit array
 
- ## RFC 3513 ง2.4
+ ## RFC 3513 ยง2.4
  return 0 if ($bip=~m/^0{127}/); ## unspecified + loopback
  return 0 if ($bip=~m/^1{7}/); ## multicast + link-local unicast + site-local unicast
  ## everything else is global unicast,
- ## but see ง4 and http://www.iana.org/assignments/ipv6-address-space
+ ## but see ยง4 and http://www.iana.org/assignments/ipv6-address-space
  return 0 if ($bip=~m/^000/); ## unassigned + reserved (first 6 lines)
  return 1 if ($bip=~m/^001/); ## global unicast (2000::/3)
  return 0; ## everything else is unassigned

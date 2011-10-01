@@ -10,13 +10,11 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 #########################################################################################
 
 package Net::DRI::Data::Contact;
 
+use utf8;
 use strict;
 use warnings;
 
@@ -30,8 +28,6 @@ use Net::DRI::Util;
 
 use Email::Valid;
 use Encode (); ## we need here direct use of Encode, not through Net::DRI::Util::encode_* as we need the default substitution for unknown data
-
-our $VERSION=do { my @r=(q$Revision: 1.15 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -269,7 +265,7 @@ sub _has
  return (grep { defined } @d)? 1 : 0;
 }
 
-sub validate ## See RFC4933,ง4
+sub validate ## See RFC4933,ยง4
 {
  my ($self,$change)=@_;
  $change||=0;

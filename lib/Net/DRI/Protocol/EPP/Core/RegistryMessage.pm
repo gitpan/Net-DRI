@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Registry messages commands (RFC4930)
 ##
-## Copyright (c) 2006-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -10,9 +10,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::Protocol::EPP::Core::RegistryMessage;
@@ -22,8 +19,6 @@ use warnings;
 
 use Net::DRI::Exception;
 use Net::DRI::Util;
-
-our $VERSION=do { my @r=(q$Revision: 1.14 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -53,7 +48,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006-2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006-2011 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -64,7 +59,6 @@ the Free Software Foundation; either version 2 of the License, or
 See the LICENSE file that comes with this distribution for more details.
 
 =cut
-
 
 ####################################################################################################
 
@@ -127,9 +121,9 @@ sub parse_poll
     $info{_processing_parse_poll}=1;
     $pf->($po,$totype,$toaction,$toname,\%info);
     delete $info{_processing_parse_poll};
-    next unless keys(%info);
+    my @tmp=grep { $_ ne '_internal' } keys %info;
+    next unless @tmp;
     next if defined($toname); ## this must be there and not optimised as a last call further below as there can be multiple information to parse for a given $toname
-    my @tmp=keys %info;
     Net::DRI::Exception::err_assert('EPP::parse_poll can not handle multiple types !') unless @tmp==1;
     $totype=$tmp[0];
     @tmp=keys %{$info{$totype}};

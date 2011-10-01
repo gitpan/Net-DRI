@@ -10,9 +10,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 #########################################################################################
 
 package Net::DRI::Logging::Files;
@@ -25,8 +22,6 @@ use base qw/Net::DRI::Logging/;
 use Net::DRI::Exception;
 
 use IO::Handle; ## needed for the autoflush method on any lexical $fh
-
-our $VERSION=do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf('%d'.'.%02d' x $#r, @r); };
 
 ####################################################################################################
 
@@ -105,10 +100,6 @@ __END__
 =head1 NAME
 
 Net::DRI::Logging::Files - Logging to Files for Net::DRI
-
-=head1 VERSION
-
-This documentation refers to Net::DRI::Logging::Files version 1.01
 
 =head1 SYNOPSIS
 

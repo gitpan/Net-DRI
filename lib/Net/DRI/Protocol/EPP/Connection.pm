@@ -10,13 +10,11 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::Protocol::EPP::Connection;
 
+use utf8;
 use strict;
 use warnings;
 
@@ -25,8 +23,6 @@ use Net::DRI::Data::Raw;
 use Net::DRI::Protocol::ResultStatus;
 
 use Net::SSLeay;
-
-our $VERSION=do { my @r=(q$Revision: 1.20 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -141,7 +137,7 @@ sub write_message
  my ($self,$to,$msg)=@_;
 
  my $m=Net::DRI::Util::encode_utf8($msg);
- my $l=pack('N',4+length($m)); ## RFC 4934 ง4
+ my $l=pack('N',4+length($m)); ## RFC 4934 ยง4
  return $l.$m; ## We do not support EPP "0.4" at all (which lacks length before data)
 }
 
@@ -223,7 +219,7 @@ sub transport_default
 ##
 ## See also IO::Socket::SSL verify_hostname()
 
-## TODO: implement TLS checkings as defined in RFC5734 ง9 (test that $po->name() eq 'EPP' !)
+## TODO: implement TLS checkings as defined in RFC5734 ยง9 (test that $po->name() eq 'EPP' !)
 sub tls_verifications
 {
  my ($to,$status,$store,$certowner,$errors)=@_;

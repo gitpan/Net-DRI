@@ -10,21 +10,17 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::Protocol::EPP::Core::Status;
 
 use base qw!Net::DRI::Data::StatusList!;
 
+use utf8;
 use strict;
 use warnings;
 
 use Net::DRI::Exception;
-
-our $VERSION=do { my @r=(q$Revision: 1.7 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -119,7 +115,7 @@ sub is_active    { return shift->has_any('ok'); }
 sub is_published { return shift->has_not(qw/clientHold serverHold inactive/); }
 sub is_pending   { return shift->has_any(qw/pendingCreate pendingDelete pendingRenew pendingTransfer pendingUpdate/); }
 sub is_linked    { return shift->has_any('linked'); }
-sub is_grace     { return shift->has_any(qw/addPeriod autoRenewPeriod renewPeriod transferPeriod redemptionPeriod pendingRestore pendingDelete/); } ## defined in RFC3915 ง3.1
+sub is_grace     { return shift->has_any(qw/addPeriod autoRenewPeriod renewPeriod transferPeriod redemptionPeriod pendingRestore pendingDelete/); } ## defined in RFC3915 ยง3.1
 
 sub can_delete   { my $self=shift; return (!$self->is_linked() && !$self->is_pending() && $self->has_not(qw/clientDeleteProhibited serverDeleteProhibited/))? 1 : 0; }
 sub can_renew    { my $self=shift; return (!$self->is_pending() && $self->has_not(qw/clientRenewProhibited serverRenewProhibited/))? 1 : 0; }

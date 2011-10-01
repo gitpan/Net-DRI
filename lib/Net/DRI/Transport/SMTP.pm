@@ -1,6 +1,6 @@
 ## Domain Registry Interface, SMTP Transport
 ##
-## Copyright (c) 2006,2007,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2007,2009,2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -10,9 +10,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::Transport::SMTP;
@@ -20,14 +17,12 @@ package Net::DRI::Transport::SMTP;
 use strict;
 use warnings;
 
-use base qw/Net::DRI::Transport/; ## we are a subclass
+use base qw/Net::DRI::Transport/;
 
 use Net::SMTP;
 use Email::Valid;
 
 use Net::DRI::Exception;
-
-our $VERSION=do { my @r=(q$Revision: 1.6 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -57,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2007,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2007,2009,2011 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -90,8 +85,6 @@ sub new
 
  $self->{transport}=\%t;
 
- ## Bless again, but now in this package
- bless($self,$class);
  return $self;
 }
 

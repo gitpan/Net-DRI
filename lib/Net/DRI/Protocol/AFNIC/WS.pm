@@ -10,9 +10,6 @@
 ## (at your option) any later version.
 ##
 ## See the LICENSE file that comes with this distribution for more details.
-#
-# 
-#
 ####################################################################################################
 
 package Net::DRI::Protocol::AFNIC::WS;
@@ -26,8 +23,6 @@ use Net::DRI::Exception;
 use Net::DRI::Util;
 
 use Net::DRI::Protocol::AFNIC::WS::Message;
-
-our $VERSION=do { my @r=(q$Revision: 1.5 $=~/\d+/g); sprintf("%d".".%02d" x $#r, @r); };
 
 =pod
 
@@ -76,8 +71,8 @@ sub new
  my ($c,$ctx,$rp)=@_;
  my $self=$c->SUPER::new($ctx);
  $self->name('afnic_ws');
- $self->version($VERSION);
- $self->factories('message',sub { my $m=Net::DRI::Protocol::AFNIC::WS::Message->new(); $m->version($VERSION); return $m; });
+ $self->version('0.1');
+ $self->factories('message',sub { my $m=Net::DRI::Protocol::AFNIC::WS::Message->new(); $m->version('0.1'); return $m; });
  $self->_load($rp);
  return $self;
 }
