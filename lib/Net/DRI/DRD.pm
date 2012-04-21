@@ -1,6 +1,6 @@
 ## Domain Registry Interface, virtual superclass for all DRD modules
 ##
-## Copyright (c) 2005-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -75,7 +75,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2012 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -93,19 +93,14 @@ sub new
 {
  my ($class,@r)=@_;
  my $self={ info => defined $r[0] ? $r[0] : {} };
- if (exists $self->{info}->{clid})
- {
-  $self->{info}->{client_id}=$self->{info}->{clid};
-  delete $self->{info}->{clid};
- }
- bless($self,$class);
+ bless $self,$class;
  return $self;
 }
 
 sub info
 {
  my ($self,$ndr,$key)=@_;
- $key=$ndr unless (defined $ndr && $ndr && (ref $ndr  eq 'Net::DRI::Registry'));
+ $key=$ndr unless (defined $ndr && $ndr && (ref $ndr eq 'Net::DRI::Registry'));
  return unless defined $self->{info};
  return unless defined $key && exists $self->{info}->{$key};
  return $self->{info}->{$key};
@@ -1369,7 +1364,6 @@ sub keygroup_update
  return $ndr->process('keygroup','update',[$kg,$tochange,$rd]);
 }
 
-
 # For BookMyName Gandi OVH
 
 sub account_list_domains
@@ -1384,15 +1378,14 @@ sub account_list_domains
 # Misc
 ####################################################################################################
 
-# sub ping
-# {
-#  my ($self,$ndr)=@_;
-#  my ($po,$to)=$ndr->protocol_transport();
-# 
-#  my $r;
-#  eval { $r=$to->ping(1); };
-#  return ( $@ || $r==0 ) ? Net::DRI::Protocol::ResultStatus->new_error() : Net::DRI::Protocol::ResultStatus->new_success();
-# }
+sub ping
+{
+ my ($self,$ndr,$reconnect)=@_;
+ my ($po,$to)=$ndr->protocol_transport();
+
+ my $rc=$to->ping({protocol=>$po},$reconnect); ## this can die
+ return $rc;
+}
 
 sub raw_command
 {

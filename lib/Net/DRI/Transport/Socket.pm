@@ -1,6 +1,6 @@
 ## Domain Registry Interface, TCP/SSL Socket Transport
 ##
-## Copyright (c) 2005-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -27,6 +27,7 @@ use IO::Socket::SSL 0.90;
 use Net::DRI::Exception;
 use Net::DRI::Util;
 use Net::DRI::Data::Raw;
+
 
 =pod
 
@@ -108,7 +109,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005-2011 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2012 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -141,7 +142,7 @@ sub new
  $self->has_state(exists $opts{has_state}? $opts{has_state} : 1);
  $self->is_sync(1);
  $self->name('socket_inet');
- $self->version('0.6');
+ $self->version('0.8');
  ##delete($ctx->{protocol}); ## TODO : double check it is ok
  delete($ctx->{registry});
  delete($ctx->{profile});
@@ -210,7 +211,7 @@ sub open_socket
          PeerPort   => $t->{remote_port},
          Proto      => $t->{socktype} eq 'udp'? 'udp' : 'tcp',
          Blocking   => 1,
-	 MultiHomed => 1,
+         MultiHomed => 1,
        );
  $n{LocalAddr}=$t->{local_host} if exists($t->{local_host});
 
@@ -264,7 +265,7 @@ sub send_login
  my $login=$ctx->{protocol}->action('session','login',$cltrid,$t->{client_login},$t->{client_password},{ client_newpassword => $t->{client_newpassword}, %{$t->{protocol_data} || {}}}); ## TODO: fix last hash ref
  $self->log_output('notice','transport',$ctx,{otype=>'session',oaction=>'login',trid=>$cltrid,phase=>'opening',direction=>'out',message=>$login});
  my $t1=Time::HiRes::time();
- Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send login message to '.$t->{remote_uri}) unless ($sock->print($pc->write_message($self,$login)));
+ Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send login message to '.$t->{remote_uri}) unless ($sock->connected() && $sock->print($pc->write_message($self,$login)));
 
  ## Verify login successful
  $dr=$pc->read_data($self,$sock);
@@ -285,13 +286,14 @@ sub send_logout
  return unless $ctx->{protocol}->has_action('session','logout');
 
  my $cltrid=$self->generate_trid($self->{logging_ctx}->{registry});
-
  my $logout=$ctx->{protocol}->action('session','logout',$cltrid);
  $self->log_output('notice','transport',$ctx,{otype=>'session',oaction=>'logout',trid=>$cltrid,phase=>'closing',direction=>'out',message=>$logout});
  my $t1=Time::HiRes::time();
- Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send logout message to '.$t->{remote_uri}) unless ($sock->print($pc->write_message($self,$logout)));
+ Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send logout message to '.$t->{remote_uri}) unless ($sock->connected() && $sock->print($pc->write_message($self,$logout)));
  my $dr=$pc->read_data($self,$sock); ## We expect this to throw an exception, since the server will probably cut the connection
  my $t2=Time::HiRes::time();
+ $self->time_used(time());
+ $t->{exchanges_done}++;
  $self->log_output('notice','transport',$ctx,{otype=>'session',oaction=>'logout',trid=>$cltrid,phase=>'closing',direction=>'in',message=>$dr});
  my $rc1=$self->protocol_parse($ctx->{protocol},'session','logout',$dr,$cltrid,$t2-$t1,$logout);
  die $rc1 unless $rc1->is_success();
@@ -310,48 +312,55 @@ sub open_connection
  return $rc;
 }
 
-## TODO : convert to new framework, remove keepalive & parse_keepalive methods in Connection classes
 sub ping
 {
- my ($self,$autorecon)=@_;
+ my ($self,$ctx,$autorecon)=@_;
  $autorecon=0 unless defined $autorecon;
  my $t=$self->transport_data();
- my $sock=$self->sock();
  my $pc=$t->{pc};
- Net::DRI::Exception::method_not_implemented('keepalive',$pc) unless $pc->can('keepalive');
- Net::DRI::Exception::method_not_implemented('parse_keepalive',$pc) unless $pc->can('parse_keepalive');
+ my $sock=$self->sock();
 
+ return 0 unless $self->has_state();
+ return 0 unless $ctx->{protocol}->has_action('session','noop');
+
+ my $rc1;
  my $cltrid=$self->generate_trid($self->{logging_ctx}->{registry});
  my $ok=eval
  {
   local $SIG{ALRM}=sub { die 'timeout' };
-  alarm(10);
-  my $noop=$pc->keepalive($t->{message_factory},$cltrid);
-  $self->log_output('notice','transport',{otype=>'session',oaction=>'keepalive'},{trid=>$cltrid,phase=>'keepalive',direction=>'out',message=>$noop});
-  Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send ping message to '.$t->{remote_uri}) unless ($sock->print($pc->write_message($self,$noop)));
+  alarm 10;
+  my $noop=$ctx->{protocol}->action('session','noop',$cltrid);
+  $self->log_output('notice','transport',$ctx,{otype=>'session',oaction=>'keepalive',trid=>$cltrid,phase=>'keepalive',direction=>'out',message=>$noop});
+  my $t1=Time::HiRes::time();
+  Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send keepalive message to '.$t->{remote_uri}) unless ($sock->connected() && $sock->print($pc->write_message($self,$noop)));
+  my $dr=$pc->read_data($self,$sock);
+  my $t2=Time::HiRes::time();
   $self->time_used(time());
   $t->{exchanges_done}++;
-  my $dr=$pc->read_data($self,$sock);
-  $self->log_output('notice','transport',{otype=>'session',oaction=>'keepalive'},{trid=>$cltrid,phase=>'keepalive',direction=>'in',message=>$dr});
-  my $rc=$pc->parse_keepalive($dr);
-  die($rc) unless $rc->is_success();
+  $self->log_output('notice','transport',$ctx,{otype=>'session',oaction=>'keepalive',trid=>$cltrid,phase=>'keepalive',direction=>'in',message=>$dr});
+  $rc1=$self->protocol_parse($ctx->{protocol},'session','noop',$dr,$cltrid,$t2-$t1,$noop);
+  die $rc1 unless $rc1->is_success();
   1;
  };
- alarm(0);
+ my $err=$@;
 
- if (! $ok)
- {
-  $self->current_state(0);
-  if ($autorecon)
-  {
-   ##$self->log_output('notice','transport',{otype=>'session',oaction=>'keepalive'},{trid=>$cltrid,phase=>'keepalive',direction=>'out',message=>$noop});
-   $self->open_connection({}); ## TODO
-  }
- } else
+ alarm 0;
+ if (defined $ok && $ok==1)
  {
   $self->current_state(1);
+ } else
+ {
+  $self->current_state(0);
+  $rc1=$err if defined $err && Net::DRI::Util::is_class($err,'Net::DRI::Protocol::ResultStatus');
+  if ($autorecon)
+  {
+   $self->log_output('notice','transport',{},{phase=>'keepalive',message=>'Reopening connection to '.$t->{remote_uri}.' because ping failed and asked to auto-reconnect'});
+   my $rc2=$self->open_connection($ctx);
+   $rc1=defined $rc1 ? Net::DRI::Util::link_rs($rc1,$rc2) : $rc2;
+  }
  }
- return $self->current_state();
+
+ return defined $rc1 ? $rc1 : Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED_CLOSING','ping failed, no auto-reconnect');
 }
 
 sub close_socket
@@ -379,10 +388,10 @@ sub end
   eval
   {
    local $SIG{ALRM}=sub { die 'timeout' };
-   alarm(10);
+   alarm 10;
    $self->close_connection($ctx);
   };
-  alarm(0); ## since close_connection may die, this must be outside of eval to be executed in all cases
+  alarm 0; ## since close_connection may die, this must be outside of eval to be executed in all cases
  }
 }
 
@@ -402,7 +411,7 @@ sub _print ## here we are sure open_connection() was called before
  my $pc=$self->transport_data('pc');
  my $sock=$self->sock();
  my $m=($self->transport_data('socktype') eq 'udp')? 'send' : 'print';
- Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send message to '.$self->transport_data('remote_uri').' because of error: '.$!) unless ($sock->$m($pc->write_message($self,$tosend)));
+ Net::DRI::Exception->die(0,'transport/socket',4,'Unable to send message to '.$self->transport_data('remote_uri').' because of error: '.$!) unless (($m ne 'print' || $sock->connected()) && $sock->$m($pc->write_message($self,$tosend)));
  return 1; ## very important
 }
 

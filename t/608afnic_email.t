@@ -7,7 +7,7 @@ use warnings;
 
 use Net::DRI;
 
-use Test::More;
+use Test::More skip_all => 'Email handling is now obsolete at AFNIC';
 
 eval { require MIME::Entity; MIME::Entity->import(); };
 if ($@)
@@ -83,7 +83,7 @@ Content-Type: text/plain; charset="iso-8859-15"
 Content-Disposition: inline
 Content-Transfer-Encoding: 8bit
 MIME-Version: 1.0
-X-Mailer: Net::DRI/0.96_02 via MIME-tools 5.428 (Entity 5.428)
+X-Mailer: Net::DRI/0.96_03 via MIME-tools 5.428 (Entity 5.428)
 From: test@localhost
 To: domain@nic.fr
 Subject: CLIENTID domain_create [TRID-12345]
@@ -135,7 +135,7 @@ Content-Type: text/plain; charset="iso-8859-15"
 Content-Disposition: inline
 Content-Transfer-Encoding: 8bit
 MIME-Version: 1.0
-X-Mailer: Net::DRI/0.96_02 via MIME-tools 5.428 (Entity 5.428)
+X-Mailer: Net::DRI/0.96_03 via MIME-tools 5.428 (Entity 5.428)
 From: test@localhost
 To: domain@nic.fr
 Subject: CLIENTID domain_create [TRID-12345]

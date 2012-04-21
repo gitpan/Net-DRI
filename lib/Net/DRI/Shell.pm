@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Shell interface
 ##
-## Copyright (c) 2008-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008-2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -462,7 +462,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008-2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008-2012 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -544,7 +544,7 @@ sub handle_file
   chomp($l);
   next if ($l=~m/^\s*$/ || $l=~m/^#/);
   my $pl=$l;
-  $pl=~s/(clID|clid|client_id|client_login|client_password)=\S+/$1=********/g;
+  $pl=~s/(client_id|client_login|client_password)=\S+/$1=********/g;
   output($ctx,$pl."\n");
   if (handle_line($ctx,$l))
   {
@@ -629,7 +629,7 @@ sub complete
   {
    my ($type)=($text=~m/type=(\S*)/);
    $type||='';
-   my @r=sort { $a cmp $b } grep { /^$type/ } (defined $ctx->{dri}->registry_name()? $ctx->{dri}->registry()->driver()->profile_types() : qw/epp rrp rri dchk whois das ws email/);
+   my @r=sort { $a cmp $b } grep { /^$type/ } (defined $ctx->{dri}->registry_name()? $ctx->{dri}->registry()->driver()->profile_types() : qw/epp rrp rri dchk whois das ws/);
    return @r;
   } else
   {
@@ -1053,11 +1053,7 @@ sub do_add
 {
  my($ctx,$cmd,$ra,$rh)=@_;
  return (undef,'Usage: add registry=REGISTRYNAME type=PROTOCOLTYPE [client_id=ID] [name=PROFILENAME] [...]') unless (Net::DRI::Util::has_key($rh,'registry') && Net::DRI::Util::has_key($rh,'type'));
- my %r=(registry => $rh->{registry});
- foreach my $clid (qw/clID clid/)
- {
-  $r{client_id}=$rh->{$clid} if exists($rh->{$clid});
- }
+ my %r=(registry => $rh->{registry}, client_id => $rh->{client_id});
  my @r=do_add_registry($ctx,'add_registry',$ra,\%r);
  if (! defined $r[0] || ! $r[0]->is_success()) { return @r; }
  unless (exists($rh->{name}) && defined($rh->{name}))
@@ -1066,8 +1062,6 @@ sub do_add
   $rh->{name}=lc($rh->{registry}).(1+@p);
  }
  delete($rh->{registry});
- delete($rh->{clID});
- delete($rh->{clid});
  delete($rh->{client_id});
  return do_add_current_profile($ctx,'add_current_profile',$ra,$rh);
 }
@@ -1401,25 +1395,24 @@ sub wrap_command_domain
  my $ctx=shift;
  my $cmd=shift;
  my $dom=shift;
- return (undef,'Undefined domain name') unless (defined($dom) && $dom);
+ return (undef,'Undefined domain name') unless defined $dom && length $dom;
 
  my ($fin,$fout,$res);
-
- if ($dom=~m!/!) ## Local file
- {
-  return (undef,'Local file '.$dom.' does not exist or unreadable') unless (-e $dom && -r _);
-  $res=$dom.'.'.$$.'.'.time().'.results'; ## TODO choose a predictable filename ? if so, use an option
-  open($fin,'<',$dom)  or return (undef,'Unable to read local file '.$dom.' : '.$!);
-  open($fout,'>',$res) or return (undef,'Unable to write (for results) local file '.$res.' : '.$!);
- } elsif ($dom=~m/`.+`/) ## Local executable
+ if ($dom=~m/`.+`/) ## Local executable
  {
   $dom=~s/`(.+)`/$1/;
-  $res=$cmd.'.'.$$.'.'.time().'.results'; ## see above
+  $res=$cmd.'.'.$$.'.'.time().'.results'; ## TODO choose a predictable filename ? if so, use an option
   open($fin,'-|',$dom) or return (undef,'Unable to execute local command '.$dom.' : '.$!);
+  open($fout,'>',$res) or return (undef,'Unable to write (for results) local file '.$res.' : '.$!);
+ } elsif ($dom=~m!/!) ## Local file
+ {
+  return (undef,'Local file '.$dom.' does not exist or unreadable') unless (-e $dom && -r _);
+  $res=$dom.'.'.$$.'.'.time().'.results'; ## see above
+  open($fin,'<',$dom)  or return (undef,'Unable to read local file '.$dom.' : '.$!);
   open($fout,'>',$res) or return (undef,'Unable to write (for results) local file '.$res.' : '.$!);
  }
 
- unless (defined($fin) && defined($fout)) ## Pure unique domain name
+ unless (defined $fin && defined $fout) ## Pure unique domain name
  {
   $ctx->{completion}->{domains}->{$dom}=time();
   return (undef,'Invalid domain name: '.$dom) unless Net::DRI::Util::is_hostname($dom);
@@ -1454,26 +1447,27 @@ sub wrap_command_domain
  ## We write the whole file at the end for better performances (but we opened it right at the beginning to test its writability)
  foreach my $rc (@rc)
  {
-  my $l=shift(@$rc);
-  my $rcm=shift(@$rc);
-  $rcm=~s/\n/ /g;
+  my $l=shift @$rc;
+  my $rcm=shift @$rc;
+  my ($rcms)=($rcm=~m/^([^\n]+)/);
+  $rcm=~s/\n\t*/ /g;
   if ($cmd eq 'domain_check')
   {
-   my $rh=shift(@$rc);
+   my $rh=shift @$rc;
    $rcm.=' | exist='.(defined $rh->{exist} ? $rh->{exist} : '?').' exist_reason='.(defined $rh->{exist_reason} ? $rh->{exist_reason} : ''); ## exist should always be defined !
   } elsif ($cmd eq 'domain_info')
   {
-   my $rh=shift(@$rc);
+   my $rh=shift @$rc;
    $rcm.=' | '.join(' ',map { $_.'=['.pretty_string($rh->{$_},0).']' } qw/clID crDate exDate contact ns status auth/);
    if (exists $rh->{ns})      { foreach my $nsname ($rh->{ns}->get_names()) { $ctx->{completion}->{hosts}->{$nsname}=time(); } }
    if (exists $rh->{contact}) { foreach my $cid ($rh->{contact}->get_all()) { $ctx->{completion}->{contacts}->{$cid}=[time(),$ctx->{dri}->registry_name()]; } }
   }
   print { $fout } $l,' ',$rcm,"\n";
-  $r{$rcm}++;
+  $r{$rcms}++;
  }
  close($fout);
- my $t=@rc;
 
+ my $t=@rc;
  my $m=join("\n",map { sprintf('%d/%d (%.02f%%) : %s',$r{$_},$t,100*$r{$_}/$t,$_) } sort { $a cmp $b } keys(%r));
  $m.="\n".sprintf('%d operations in %d seconds, on average %.2f op/s = %.3f s/op',$t,$tstop-$tstart,$t/($tstop-$tstart),($tstop-$tstart)/$t); ## Warning, substring "on average" is used in handle_line(), do not change it
  $m.="\nResults in local file: $res";

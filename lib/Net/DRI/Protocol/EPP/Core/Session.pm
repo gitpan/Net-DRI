@@ -1,6 +1,6 @@
-## Domain Registry Interface, EPP Session commands (RFC4930)
+## Domain Registry Interface, EPP Session commands (RFC5730)
 ##
-## Copyright (c) 2005-2007,2010-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2007,2010-2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -24,7 +24,7 @@ use Net::DRI::Util;
 
 =head1 NAME
 
-Net::DRI::Protocol::EPP::Core::Session - EPP Session commands (RFC4930 obsoleting RFC3730) for Net::DRI
+Net::DRI::Protocol::EPP::Core::Session - EPP Session commands (RFC5730) for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -48,7 +48,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005-2007,2010-2011 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2007,2010-2012 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -66,9 +66,9 @@ sub register_commands
 {
  my ($class,$version)=@_;
  my %tmp=(
-	   'connect' => [ undef , \&parse_greeting ],
-	   login     => [ \&login ],
-	   logout    => [ \&logout ],
+           'connect' => [ undef , \&parse_greeting ],
+           login     => [ \&login ],
+           logout    => [ \&logout ],
            noop      => [ \&hello, \&parse_greeting ], ## for keepalives
          );
 
@@ -90,13 +90,13 @@ sub parse_greeting
  my $g=$mes->node_greeting();
  return unless $mes->is_success() && defined $g; ## make sure we are not called for all parsing operations (after poll), just after true greeting
 
- my %tmp;
+ my %tmp=(extensions_announced => []);
  foreach my $el (Net::DRI::Util::xml_list_children($g))
  {
   my ($n,$c)=@$el;
   if ($n eq 'svID')
   {
-   $tmp{id}=$c->textContent();
+   $tmp{server_id}=$c->textContent();
   } elsif ($n eq 'svDate')
   {
    $tmp{date}=$po->parse_iso8601($c->textContent());
@@ -105,9 +105,9 @@ sub parse_greeting
    foreach my $sel (Net::DRI::Util::xml_list_children($c))
    {
     my ($nn,$cc)=@$sel;
-    if ($nn=~m/^(version|lang)$/)
+    if ($nn=~m/^(?:version|lang)$/)
     {
-     push @{$tmp{$1}},$cc->textContent();
+     push @{$tmp{$nn}},$cc->textContent();
     } elsif ($nn eq 'objURI')
     {
      push @{$tmp{objects}},$cc->textContent();
@@ -140,7 +140,7 @@ sub parse_greeting
 
  ## By default, we will use all extensions announced by server;
  ## EPP extension modules are expected to tweak that depending on their own needs
- $tmp{extensions_announced}=[] unless exists $tmp{extensions_announced};
+ ## and users can do so too, with the extensions and extensions_filter attributes
  $tmp{extensions_selected}=$tmp{extensions_announced};
 
  $po->log_output('info','protocol',{%ctxlog,message=>'EPP extensions announced by server: '.join(' ',@{$tmp{extensions_announced}})});
@@ -200,6 +200,7 @@ sub login
  Net::DRI::Exception::usererr_invalid_parameters('version') unless $tmp=~m/^[1-9]+\.[0-9]+$/;
  push @o,['version',$tmp];
 
+ ## TODO: allow choice of language if multiple choices (like fr+en in .CA) ?
  $tmp=Net::DRI::Util::has_key($rdata,'lang') ? $rdata->{lang} : $sdata->{lang};
  Net::DRI::Exception::usererr_insufficient_parameters('lang') unless defined $tmp;
  $tmp=$tmp->[0] if ref $tmp eq 'ARRAY';
@@ -210,18 +211,60 @@ sub login
 
  my @s;
  push @s,map { ['objURI',$_] } @{$sdata->{objects}}; ## this part is not optional
- $tmp=Net::DRI::Util::has_key($rdata,'extensions') ? $rdata->{extensions} : $sdata->{extensions_selected};
 
- if (defined $tmp)
+ my @exts=@{$sdata->{extensions_selected}}; ## we start with what we have computed, and then tweak the list depending on user instructions
+
+ ## TODO : doing all the following do change what we send during login, but does not change really what modules are enabled or not,
+ ## which may later kick in during some build/parse phases !
+ if (Net::DRI::Util::has_key($rdata,'only_local_extensions') && $rdata->{only_local_extensions})
  {
-  Net::DRI::Exception::usererr_invalid_parameters('extensions') unless ref $tmp eq 'ARRAY';
-  push @s,['svcExtension',map {['extURI',$_]} @$tmp] if @$tmp; ## this is optional
+  $po->log_output('info','protocol',{action=>'login',direction=>'out',trid=>$mes->cltrid(),message=>'Before using only local extensions, EPP extensions selected during login: '.join(' ',@exts)});
+  my $rns=$po->ns();
+  @exts=grep { ! /^urn:ietf:params:xml:ns:(?:epp|domain|contact|host)-1\.0$/ } map { $_->[0] } values %$rns;
+  $po->log_output('info','protocol',{action=>'login',direction=>'out',trid=>$mes->cltrid(),message=>'After using only local extensions, EPP extensions selected during login: '.join(' ',@exts)});
  }
- $po->log_output('info','protocol',{action=>'login',direction=>'out',trid=>$mes->cltrid(),message=>'EPP extensions selected during login: '.join(' ',defined $tmp ? @$tmp : ())});
+ if (Net::DRI::Util::has_key($rdata,'extensions'))
+ {
+  $tmp=$rdata->{extensions};
+  Net::DRI::Exception::usererr_invalid_parameters('extensions') unless ref $tmp eq 'ARRAY';
+  $po->log_output('info','protocol',{action=>'login',direction=>'out',trid=>$mes->cltrid(),message=>'Before user setting, EPP extensions selected during login: '.join(' ',@exts)});
+  if (grep { /^[-+]/ } @$tmp) ## add or substract from current list
+  {
+   foreach (@$tmp)
+   {
+    my $ext=$_; ## make a copy because we will change it
+    if ($ext=~s/^-//)
+    {
+     @exts=grep { $ext ne $_ } @exts;
+    } else
+    {
+     $ext=~s/^\+//;
+     push @exts,$ext unless grep { $ext eq $_ } @exts;
+    }
+   }
+  } else ## just set the list absolutely
+  {
+   @exts=@$tmp;
+  }
+  $po->log_output('info','protocol',{action=>'login',direction=>'out',trid=>$mes->cltrid(),message=>'After user setting, EPP extensions selected during login: '.join(' ',@exts)});
+ }
 
-## TODO: we had this before in EPP/Connection :
-#  push @s,['svcExtension',map {['extURI',$_]} @{$rg->{svcext}}] if (exists($rg->{svcext}) && defined($rg->{svcext}) && (ref($rg->{svcext}) eq 'ARRAY'));
-#  @s=$pdata->{login_service_filter}->(@s) if (defined($pdata) && ref($pdata) eq 'HASH' && exists($pdata->{login_service_filter}) && ref($pdata->{login_service_filter}) eq 'CODE');
+ if (Net::DRI::Util::has_key($rdata,'extensions_filter'))
+ {
+  Net::DRI::Exception::usererr_invalid_parameters('extensions_filter') unless ref $rdata->{extensions_filter} eq 'CODE';
+  $po->log_output('info','protocol',{action=>'login',direction=>'out',trid=>$mes->cltrid(),message=>'Before user filtering, EPP extensions selected during login: '.join(' ',@exts)});
+  @exts=$rdata->{extensions_filter}->(@exts);
+  $po->log_output('info','protocol',{action=>'login',direction=>'out',trid=>$mes->cltrid(),message=>'After user filtering, EPP extensions selected during login: '.join(' ',@exts)});
+ }
+
+ if (@exts)
+ {
+  push @s,['svcExtension',map {['extURI',$_]} @exts];
+  $po->log_output('notice','protocol',{action=>'login',direction=>'out',trid=>$mes->cltrid(),message=>'EPP extensions selected during login: '.join(' ',@exts)});
+ } else
+ {
+  $po->log_output('notice','protocol',{action=>'login',direction=>'out',trid=>$mes->cltrid(),message=>'No EPP extensions selected during login'});
+ }
 
  push @d,['svcs',@s];
 

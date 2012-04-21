@@ -1,7 +1,7 @@
 ## Domain Registry Interface, .RU/.SU/.XN--P1AI EPP Extension for Net::DRI
 ##
 ## Copyright (c) 2010-2011 Dmitry Belyavsky <beldmit@gmail.com>
-##               2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+##               2011-2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -32,6 +32,7 @@ sub setup
              contact   => ['http://www.ripn.net/epp/ripn-contact-1.0','ripn-contact-1.0.xsd'],
              host      => ['http://www.ripn.net/epp/ripn-host-1.0',   'ripn-host-1.0.xsd'],
              registrar => ['http://www.ripn.net/epp/ripn-registrar-1.0', 'ripn-registrar-1.0.xsd'],
+             secdns    => ['urn:ietf:params:xml:ns:secDNS-1.1', 'secDNS-1.1.xsd'],
           });
  $self->factories('message',sub { my $m= Net::DRI::Protocol::EPP::Extensions::TCI::Message->new(@_); $m->ns($self->ns()); $m->version($self->version() ); return $m; });
  $self->factories('contact',sub { return Net::DRI::Data::Contact::TCI->new(); });
@@ -50,7 +51,7 @@ sub core_modules
  return @c;
 }
 
-sub default_extensions { return qw(TCI::Contact TCI::Domain TCI::Registrar); }
+sub default_extensions { return qw(TCI::Contact TCI::Domain TCI::Registrar SecDNS); }
 
 ####################################################################################################
 1;
@@ -85,7 +86,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 =head1 COPYRIGHT
 
 Copyright (c) 2010-2011 Dmitry Belyavsky <beldmit@gmail.com>
-Copyright (c) 2011 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2011-2012 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

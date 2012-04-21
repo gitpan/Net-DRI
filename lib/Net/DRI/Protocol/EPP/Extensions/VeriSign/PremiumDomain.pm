@@ -1,6 +1,6 @@
 ## Domain Registry Interface, VeriSign EPP Premium Domain Extension
 ##
-## Copyright (c) 2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2010,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -123,7 +123,7 @@ Net::DRI::Protocol::EPP::Extensions::VeriSign::PremiumDomain - VeriSign EPP Prem
 =head1 SYNOPSIS
 
         $dri=Net::DRI->new();
-        $dri->add_registry('VNDS',{clid=>'XXXXXX');
+        $dri->add_registry('VNDS',{client_id=>'XXXXXX');
         $dri->add_profile('p1','epp',{... transport ...},{extensions => [ 'VeriSign::DomainPremium' ]});
 
         $dri->protocol->default_parameters()->{premium_domain}=1;
@@ -158,7 +158,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2010,2012 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

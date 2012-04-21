@@ -147,12 +147,21 @@ sub switch_to_highest_namespace_version
  foreach my $ns (@ns)
  {
   my ($v)=($ns=~m/^\S+-([\d.]+)$/);
-  $version=$v if ! defined $version || $v > $version;
+  $version=0+$v if ! defined $version || 0+$v > $version;
+ }
+
+ my $fullns=$basens.'-'.$version;
+ if (@ns > 1)
+ {
+  $self->log_output('info','protocol',{action=>'greeting',direction=>'in',trid=>$self->message()->cltrid(),message=>sprintf('More than one "%s" extension announced by server, selecting "%s"',$nsalias,$fullns)});
+ } else
+ {
+  $self->log_output('info','protocol',{action=>'greeting',direction=>'in',trid=>$self->message()->cltrid(),message=>sprintf('For "%s" extension, using "%s"',$nsalias,$fullns)});
  }
 
  my $xsd=($self->message()->nsattrs($nsalias))[2];
  $xsd=~s/-([\d.]+)\.xsd$/-${version}.xsd/;
- $self->ns({ $nsalias => [ $basens.'-'.$version, $xsd ]});
+ $self->ns({ $nsalias => [ $fullns, $xsd ]});
  $self->message()->ns($self->ns()); ## not necessary, just to make sure
  ## remove all other versions of same namespace
  $rs->{extensions_selected}=[ grep { ! m/^${basens}-([\d.]+)$/ || $1 eq $version } @{$rs->{extensions_selected}} ];

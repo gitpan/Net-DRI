@@ -1,6 +1,6 @@
-## Domain Registry Interface, AFNIC EPP Session commands
+## Domain Registry Interface, EURid EPP Session commands
 ##
-## Copyright (c) 2011,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -12,7 +12,7 @@
 ## See the LICENSE file that comes with this distribution for more details.
 #########################################################################################
 
-package Net::DRI::Protocol::EPP::Extensions::AFNIC::Session;
+package Net::DRI::Protocol::EPP::Extensions::EURid::Session;
 
 use strict;
 use warnings;
@@ -24,7 +24,7 @@ use Net::DRI::Util;
 
 =head1 NAME
 
-Net::DRI::Protocol::EPP::Extensions::AFNIC::Session - AFNIC (.FR/.RE/.TF/.WF/.PM/.YT) EPP Session commands for Net::DRI
+Net::DRI::Protocol::EPP::Extensions::EURid::Session - EURid EPP Session commands for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -48,7 +48,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2011,2012 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2011 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -80,7 +80,16 @@ sub parse_greeting
  my $g=$mes->node_greeting();
  return unless $mes->is_success() && defined $g; ## make sure we are not called for all parsing operations (after poll), just after true greeting
 
- $po->switch_to_highest_namespace_version('frnic');
+ my $rserver=$rinfo->{session}->{server};
+
+ ## For now, we always remove the DSS extension (see release 8.2)
+ my $nsdss='http://www.eurid.eu/xml/epp/dss-1.0';
+ return unless grep { $_ eq $nsdss } @{$rserver->{extensions_selected}};
+
+ my %ctxlog=(action=>'greeting',direction=>'in',trid=>$mes->cltrid());
+ $po->log_output('info','protocol',{%ctxlog,message=>qq{Extension "$nsdss" is presented by server, we deselect it}});
+ $rserver->{extensions_selected}=[ grep { $_ ne $nsdss } @{$rserver->{extensions_selected}} ];
+
  return;
 }
 

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Stores ordered list of contacts + type (registrant, admin, tech, bill, etc...)
 ##
-## Copyright (c) 2005,2006,2007,2008,2009,2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2009,2011-2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -16,6 +16,10 @@ package Net::DRI::Data::ContactSet;
 
 use strict;
 use warnings;
+
+use Net::DRI::Exception;
+use Net::DRI::Data::Contact;
+use Net::DRI::Util;
 
 =pod
 
@@ -92,7 +96,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007,2008,2011 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2009,2011-2012 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -106,11 +110,26 @@ See the LICENSE file that comes with this distribution for more details.
 
 ################################################################################################################
 
+our $AUTOLOAD;
+
 sub new
 {
- my $class=shift;
+ my ($class,@r)=@_;
  my $self={ c => {} };
- bless($self,$class);
+ bless $self,$class;
+ if (@r)
+ {
+  @r=%{$r[0]} if defined $r[0] && ref $r[0] eq 'HASH';
+  Net::DRI::Exception::usererr_invalid_parameters('Invalid number of parameters passed') unless @r%2==0;
+  while(my ($ctype,$ids)=splice(@r,0,2))
+  {
+   foreach my $id (ref $ids eq 'ARRAY' ? @$ids : ($ids))
+   {
+    my $o=Net::DRI::Util::isa_contact($id) ? $id : Net::DRI::Data::Contact->new()->srid($id);
+    $self->add($o,$ctype);
+   }
+  }
+ }
  return $self;
 }
 
@@ -124,8 +143,8 @@ sub types
 sub has_type
 {
  my ($self,$ctype)=@_;
- return 0 unless defined($ctype);
- return exists($self->{c}->{$ctype});
+ return 0 unless defined $ctype;
+ return exists $self->{c}->{$ctype} && @{$self->{c}->{$ctype}} ? 1 : 0;
 }
 
 sub is_empty
@@ -212,10 +231,10 @@ sub set
 sub get
 {
  my ($self,$ctype)=@_;
- return unless defined($ctype);
+ return unless defined $ctype;
  my $c=$self->{c};
- return unless exists($c->{$ctype});
- return wantarray()? @{$c->{$ctype}} : $c->{$ctype}->[0];
+ return unless exists $c->{$ctype};
+ return wantarray ? @{$c->{$ctype}} : $c->{$ctype}->[0];
 }
 
 sub get_all
@@ -259,6 +278,18 @@ sub has_contact
   return 1 if defined($self->_pos($k,$id));
  }
  return 0;
+}
+
+sub AUTOLOAD
+{
+ my $self=shift;
+ my $attr=$AUTOLOAD;
+ $attr=~s/.*:://;
+ return unless $attr=~m/[^A-Z]/; ## skip DESTROY and all-cap methods
+
+ my $ctype;
+ Net::DRI::Exception::method_not_implemented($attr,__PACKAGE__) unless ($ctype)=($attr=~m/^contact_(\S+)$/);
+ return $self->get($ctype);
 }
 
 ##############################################################################

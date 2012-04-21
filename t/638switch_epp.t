@@ -46,7 +46,7 @@ $R2 = $E1 . '<greeting><svID>SWITCH_EPP_Server</svID><svDate>2008-07-04T16:06:23
 $rc = $dri->process('session', 'noop', []);
 is($R1, $E1 . '<hello/>' . $E2, 'session noop build (hello command)');
 is($rc->is_success(), 1, 'session noop is_success');
-is($rc->get_data('session','server','id'),'SWITCH_EPP_Server','session noop get_data(session,server,id)');
+is($rc->get_data('session','server','server_id'),'SWITCH_EPP_Server','session noop get_data(session,server,server_id)');
 is($rc->get_data('session','server','date')->strftime('%FT%T%z'),'2008-07-04T16:06:23+0200','session noop get_data(session,server,date)');
 is_deeply($rc->get_data('session','server','version'),['1.0'],'session noop get_data(session,server,version)');
 is_deeply($rc->get_data('session','server','lang'),['en'],'session noop get_data(session,server,lang)');

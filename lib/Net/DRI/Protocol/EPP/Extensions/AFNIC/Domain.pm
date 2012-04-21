@@ -1,6 +1,6 @@
 ## Domain Registry Interface, AFNIC EPP Domain extensions
 ##
-## Copyright (c) 2008-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008-2010,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -24,7 +24,7 @@ use Net::DRI::Exception;
 
 =head1 NAME
 
-Net::DRI::Protocol::EPP::Extensions::AFNIC::Domain - AFNIC (.FR/.RE) EPP Domain extensions for Net::DRI
+Net::DRI::Protocol::EPP::Extensions::AFNIC::Domain - AFNIC (.FR/.RE/.TF/.WF/.PM/.YT) EPP Domain extensions for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -48,7 +48,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008-2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008-2010,2012 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -143,7 +143,6 @@ sub create
  verify_contacts($rd);
  build_registrant($rd);
 }
-
 
 sub update
 {

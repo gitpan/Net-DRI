@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .PL policies
 ##
-## Copyright (c) 2006,2008-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2008-2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -52,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2008-2011 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2008-2012 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -96,6 +96,13 @@ sub message_retrieve
 {
  my ($self,$ndr,$id)=@_;
  my $rc=$ndr->process('message','plretrieve',[$id]);
+ return $rc;
+}
+
+sub report_create
+{
+ my ($self,$ndr,$id,$rp)=@_;
+ my $rc=$ndr->process('report','create',[$id,$rp]);
  return $rc;
 }
 

@@ -230,6 +230,7 @@ lib/Net/DRI/Protocol/EPP/Extensions/EURid/IDN.pm
 lib/Net/DRI/Protocol/EPP/Extensions/EURid/Message.pm
 lib/Net/DRI/Protocol/EPP/Extensions/EURid/Notifications.pm
 lib/Net/DRI/Protocol/EPP/Extensions/EURid/Registrar.pm
+lib/Net/DRI/Protocol/EPP/Extensions/EURid/Session.pm
 lib/Net/DRI/Protocol/EPP/Extensions/EURid/Sunrise.pm
 lib/Net/DRI/Protocol/EPP/Extensions/FCCN.pm
 lib/Net/DRI/Protocol/EPP/Extensions/FCCN/Contact.pm
@@ -275,6 +276,7 @@ lib/Net/DRI/Protocol/EPP/Extensions/PL.pm
 lib/Net/DRI/Protocol/EPP/Extensions/PL/Contact.pm
 lib/Net/DRI/Protocol/EPP/Extensions/PL/Domain.pm
 lib/Net/DRI/Protocol/EPP/Extensions/PL/Message.pm
+lib/Net/DRI/Protocol/EPP/Extensions/PL/Report.pm
 lib/Net/DRI/Protocol/EPP/Extensions/PRO.pm
 lib/Net/DRI/Protocol/EPP/Extensions/PRO/AV.pm
 lib/Net/DRI/Protocol/EPP/Extensions/PRO/Domain.pm

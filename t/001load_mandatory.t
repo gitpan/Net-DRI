@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 353;
+use Test::More tests => 355;
 
 BEGIN {
 use_ok('Net::DRI');
@@ -152,12 +152,14 @@ use_ok('Net::DRI::Protocol::EPP::Extensions::EURid::Message');
 use_ok('Net::DRI::Protocol::EPP::Extensions::EURid::Registrar');
 use_ok('Net::DRI::Protocol::EPP::Extensions::EURid::Notifications');
 use_ok('Net::DRI::Protocol::EPP::Extensions::EURid::IDN');
+use_ok('Net::DRI::Protocol::EPP::Extensions::EURid::Session');
 use_ok('Net::DRI::Protocol::EPP::Extensions::SE');
 use_ok('Net::DRI::Protocol::EPP::Extensions::SE::Extensions');
 use_ok('Net::DRI::Protocol::EPP::Extensions::PL');
 use_ok('Net::DRI::Protocol::EPP::Extensions::PL::Domain');
 use_ok('Net::DRI::Protocol::EPP::Extensions::PL::Contact');
 use_ok('Net::DRI::Protocol::EPP::Extensions::PL::Message');
+use_ok('Net::DRI::Protocol::EPP::Extensions::PL::Report');
 use_ok('Net::DRI::Protocol::EPP::Extensions::US');
 use_ok('Net::DRI::Protocol::EPP::Extensions::US::Contact');
 use_ok('Net::DRI::Protocol::EPP::Extensions::VeriSign');

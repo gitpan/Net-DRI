@@ -1,7 +1,7 @@
 ## Domain Registry Interface, EURid Registrar EPP extension notifications
 ## (introduced in release 5.6 october 2008)
 ##
-## Copyright (c) 2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2009,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -48,7 +48,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2009,2012 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -65,7 +65,7 @@ See the LICENSE file that comes with this distribution for more details.
 sub register_commands
 {
  my ($class,$version)=@_;
- my %tmp=( 
+ my %tmp=(
           notification => [ undef, \&parse ],
          );
 
@@ -83,28 +83,38 @@ sub parse
  my $poll=$mes->get_response('eurid','pollRes');
  return unless defined $poll;
 
- my $action;
+ my ($action,$returncode,$level);
  foreach my $el (Net::DRI::Util::xml_list_children($poll))
  {
   my ($name,$c)=@$el;
   if ($name eq 'action')
   {
-   $action=lc($c->textContent());
-  } elsif ($name eq 'domainname')
+   $action=lc $c->textContent();
+  } elsif ($name eq 'domainname') ## not always provided by registry !
   {
    $oname=$c->textContent();
   } elsif ($name eq 'returncode')
   {
-   $rinfo->{domain}->{$oname}->{return_code}=$c->textContent();
+   $returncode=$c->textContent();
   } elsif ($name eq 'type')
   {
    $action.='_'.lc($c->textContent());
+  } elsif ($name eq 'level') ## what is it ?
+  {
+   $level=$c->textContent();
   }
  }
 
- $rinfo->{domain}->{$oname}->{action}=$action;
- $rinfo->{domain}->{$oname}->{exist}=1;
- $rinfo->{domain}->{$oname}->{result}=($action=~m/^confirm_/)? 1 : 0; ## TODO: is this a good test ?
+ if (defined $oname)
+ {
+  $rinfo->{domain}->{$oname}->{return_code}=$returncode;
+  $rinfo->{domain}->{$oname}->{action}=$action;
+  $rinfo->{domain}->{$oname}->{exist}=1;
+  $rinfo->{domain}->{$oname}->{result}=($action=~m/^confirm_/i)? 1 : 0; ## TODO: is this a good test ?
+ } else
+ {
+  $rinfo->{session}->{notification}={ action => $action, level => $level, return_code => $returncode };
+ }
 }
 
 ####################################################################################################

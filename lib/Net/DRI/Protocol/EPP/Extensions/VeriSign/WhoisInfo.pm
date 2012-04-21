@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Whois Info (EPP-Whois-Info-Ext.pdf)
 ##
-## Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006-2008,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -15,6 +15,7 @@
 package Net::DRI::Protocol::EPP::Extensions::VeriSign::WhoisInfo;
 
 use strict;
+use warnings;
 
 use Net::DRI::Util;
 use Net::DRI::Exception;
@@ -47,7 +48,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006-2008,2012 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -77,6 +78,8 @@ sub info
 {
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
+ my $defprod=$epp->default_parameters()->{subproductid};
+ return if ($defprod eq '_auto_' && $domain=~m/\.(?:cc|tv)$/i);
 
  my $wi;
  if (Net::DRI::Util::has_key($rd,'whois_info'))
@@ -109,26 +112,14 @@ sub info_parse
  return unless $infdata;
 
  my %w;
- my $c=$infdata->getFirstChild();
- while ($c)
+ foreach my $el (Net::DRI::Util::xml_list_children($infdata))
  {
-  next unless ($c->nodeType() == 1); ## only for element nodes
-  my $name=$c->localname() || $c->nodeName();
-  next unless $name;
-  if ($name eq 'registrar')
+  my ($name,$c)=@$el;
+  if ($name=~m/^(?:registrar|whoisServer|url|irisServer)$/)
   {
-   $w{registrar}=$c->getFirstChild()->getData();
-  } elsif ($name eq 'whoisServer')
-  {
-   $w{whois_server}=$c->getFirstChild()->getData();
-  } elsif ($name eq 'url')
-  {
-   $w{url}=$c->getFirstChild()->getData();
-  } elsif ($name eq 'irisServer')
-  {
-   $w{iris_server}=$c->getFirstChild()->getData();
+   $w{Net::DRI::Util::remcam($name)}=$c->textContent();
   }
- } continue { $c=$c->getNextSibling(); }
+ }
 
  $rinfo->{domain}->{$oname}->{whois_info}=\%w;
 }

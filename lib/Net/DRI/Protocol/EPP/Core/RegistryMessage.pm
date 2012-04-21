@@ -1,6 +1,6 @@
-## Domain Registry Interface, EPP Registry messages commands (RFC4930)
+## Domain Registry Interface, EPP Registry messages commands (RFC5730)
 ##
-## Copyright (c) 2006-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006-2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -24,7 +24,7 @@ use Net::DRI::Util;
 
 =head1 NAME
 
-Net::DRI::Protocol::EPP::Core::RegistryMessage - EPP Registry messages commands (RFC4930 obsoleting RFC3730) for Net::DRI
+Net::DRI::Protocol::EPP::Core::RegistryMessage - EPP Registry messages commands (RFC5730) for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -48,7 +48,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006-2011 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006-2012 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

@@ -8,7 +8,7 @@ use Net::DRI::Data::Raw;
 use DateTime;
 use DateTime::Duration;
 
-use Test::More tests => 268;
+use Test::More tests => 276;
 eval { no warnings; require Test::LongString; Test::LongString->import(max => 100); $Test::LongString::Context=50; };
 if ( $@ ) { no strict 'refs'; *{'main::is_string'}=\&main::is; }
 
@@ -19,6 +19,7 @@ our $TRID='<trID><clTRID>ABC-12345</clTRID><svTRID>54322-XYZ</svTRID></trID>';
 our ($R1,$R2);
 sub mysend { my ($transport,$count,$msg)=@_; $R1=$msg->as_string(); return 1; }
 sub myrecv { return Net::DRI::Data::Raw->new_from_string($R2? $R2 : $E1.'<response>'.r().$TRID.'</response>'.$E2); }
+sub r      { my ($c,$m)=@_; return '<result code="'.($c || 1000).'"><msg>'.($m || 'Command completed successfully').'</msg></result>'; }
 
 my $dri=Net::DRI::TrapExceptions->new({cache_ttl => 10, trid_factory => sub { return 'ABC-12345'}, logging => 'null' });
 $dri->add_registry('VNDS');
@@ -450,7 +451,7 @@ $R2=$E1.'<greeting><svID>Example EPP server epp.example.com</svID><svDate>2000-0
 $rc=$dri->process('session','noop',[]);
 is($R1,$E1.'<hello/>'.$E2,'session noop build (hello command)');
 is($rc->is_success(),1,'session noop is_success');
-is($rc->get_data('session','server','id'),'Example EPP server epp.example.com','session noop get_data(session,server,id)');
+is($rc->get_data('session','server','server_id'),'Example EPP server epp.example.com','session noop get_data(session,server,server_id)');
 is($rc->get_data('session','server','date'),'2000-06-08T22:00:00','session noop get_data(session,server,date)');
 is_deeply($rc->get_data('session','server','version'),['1.0'],'session noop get_data(session,server,version)');
 is_deeply($rc->get_data('session','server','lang'),['en','fr'],'session noop get_data(session,server,lang)');
@@ -490,6 +491,14 @@ is($dri->get_info('result','message','12345'),1,'message get_info result');
 is($dri->get_info('trid','message','12345'),'ABC-12345','message get_info trid');
 is($dri->get_info('svtrid','message','12345'),'54321-XYZ','message get_info svtrid');
 is(''.$dri->get_info('date','message','12345'),'1999-04-04T22:00:00','message get_info date');
+
+my $result=$dri->get_info('result_status');
+my $domaindata=$result->get_data_collection('domain');
+is_deeply([keys %$domaindata],['example.com'],'get_data_collection keys');
+$domaindata=$domaindata->{'example.com'};
+is($domaindata->{svtrid},'54321-XYZ','get_data_collection svtrid');
+is(''.$domaindata->{date},'1999-04-04T22:00:00','get_data_collection date');
+is(''.$domaindata->{qdate},'1999-04-04T22:01:00','get_data_collection qdate');
 
 is($dri->message_waiting(),1,'message_waiting');
 is($dri->message_count(),5,'message_count');
@@ -535,10 +544,38 @@ while(@ul)
  is($dri->get_info('roid','domain',uc($cmd)),"EXAMPLE$c-REP","UL case $c get_data long uc");
 }
 
+####################################################################################################
+## New extensions selection mechanism
+
+$dri->target('VNDS')->add_current_profile('only_local_extensions','epp',{f_send=>\&mysend,f_recv=>\&myrecv});
+$R2=$E1.'<greeting><svID>Example EPP server epp.example.com</svID><svDate>2000-06-08T22:00:00.0Z</svDate><svcMenu><version>1.0</version><lang>en</lang><lang>fr</lang><objURI>urn:ietf:params:xml:ns:obj1</objURI><objURI>urn:ietf:params:xml:ns:obj2</objURI><objURI>urn:ietf:params:xml:ns:obj3</objURI><svcExtension><extURI>http://custom/obj1ext-1.0</extURI></svcExtension></svcMenu><dcp><access><all/></access><statement><purpose><admin/><prov/></purpose><recipient><ours/><public/></recipient><retention><stated/></retention></statement></dcp></greeting>'.$E2;
+$rc=$dri->process('session','noop',[]);
+$R2='';
+$rc=$dri->process('session','login',['ClientX','foo-BAR2',{only_local_extensions => 1}]);
+is_string($R1,$E1.'<command><login><clID>ClientX</clID><pw>foo-BAR2</pw><options><version>1.0</version><lang>en</lang></options><svcs><objURI>urn:ietf:params:xml:ns:obj1</objURI><objURI>urn:ietf:params:xml:ns:obj2</objURI><objURI>urn:ietf:params:xml:ns:obj3</objURI><svcExtension><extURI>urn:ietf:params:xml:ns:rgp-1.0</extURI><extURI>http://www.verisign-grs.com/epp/suggestion-1.1</extURI><extURI>urn:ietf:params:xml:ns:secDNS-1.0</extURI><extURI>http://www.verisign.com/epp/whowas-1.0</extURI><extURI>urn:ietf:params:xml:ns:coa-1.0</extURI></svcExtension></svcs></login><clTRID>ABC-12345</clTRID></command>'.$E2,'session login build only_local_extensions');
+
+$dri->target('VNDS')->add_current_profile('extensions_addrem','epp',{f_send=>\&mysend,f_recv=>\&myrecv});
+$R2=$E1.'<greeting><svID>Example EPP server epp.example.com</svID><svDate>2000-06-08T22:00:00.0Z</svDate><svcMenu><version>1.0</version><lang>en</lang><lang>fr</lang><objURI>urn:ietf:params:xml:ns:obj1</objURI><objURI>urn:ietf:params:xml:ns:obj2</objURI><objURI>urn:ietf:params:xml:ns:obj3</objURI><svcExtension><extURI>http://custom/obj1ext-1.0</extURI></svcExtension></svcMenu><dcp><access><all/></access><statement><purpose><admin/><prov/></purpose><recipient><ours/><public/></recipient><retention><stated/></retention></statement></dcp></greeting>'.$E2;
+$rc=$dri->process('session','noop',[]);
+$R2='';
+$rc=$dri->process('session','login',['ClientX','foo-BAR2',{extensions => ['+ADD1','-http://custom/obj1ext-1.0','ADD2']}]);
+is_string($R1,$E1.'<command><login><clID>ClientX</clID><pw>foo-BAR2</pw><options><version>1.0</version><lang>en</lang></options><svcs><objURI>urn:ietf:params:xml:ns:obj1</objURI><objURI>urn:ietf:params:xml:ns:obj2</objURI><objURI>urn:ietf:params:xml:ns:obj3</objURI><svcExtension><extURI>ADD1</extURI><extURI>ADD2</extURI></svcExtension></svcs></login><clTRID>ABC-12345</clTRID></command>'.$E2,'session login build extensions=+-');
+
+$dri->target('VNDS')->add_current_profile('extensions_absolute','epp',{f_send=>\&mysend,f_recv=>\&myrecv});
+$R2=$E1.'<greeting><svID>Example EPP server epp.example.com</svID><svDate>2000-06-08T22:00:00.0Z</svDate><svcMenu><version>1.0</version><lang>en</lang><lang>fr</lang><objURI>urn:ietf:params:xml:ns:obj1</objURI><objURI>urn:ietf:params:xml:ns:obj2</objURI><objURI>urn:ietf:params:xml:ns:obj3</objURI><svcExtension><extURI>http://custom/obj1ext-1.0</extURI></svcExtension></svcMenu><dcp><access><all/></access><statement><purpose><admin/><prov/></purpose><recipient><ours/><public/></recipient><retention><stated/></retention></statement></dcp></greeting>'.$E2;
+$rc=$dri->process('session','noop',[]);
+$R2='';
+$rc=$dri->process('session','login',['ClientX','foo-BAR2',{extensions => ['ABS1','ABS2']}]);
+is_string($R1,$E1.'<command><login><clID>ClientX</clID><pw>foo-BAR2</pw><options><version>1.0</version><lang>en</lang></options><svcs><objURI>urn:ietf:params:xml:ns:obj1</objURI><objURI>urn:ietf:params:xml:ns:obj2</objURI><objURI>urn:ietf:params:xml:ns:obj3</objURI><svcExtension><extURI>ABS1</extURI><extURI>ABS2</extURI></svcExtension></svcs></login><clTRID>ABC-12345</clTRID></command>'.$E2,'session login build extensions=absolute');
+
+$dri->target('VNDS')->add_current_profile('extensions_filter','epp',{f_send=>\&mysend,f_recv=>\&myrecv});
+$R2=$E1.'<greeting><svID>Example EPP server epp.example.com</svID><svDate>2000-06-08T22:00:00.0Z</svDate><svcMenu><version>1.0</version><lang>en</lang><lang>fr</lang><objURI>urn:ietf:params:xml:ns:obj1</objURI><objURI>urn:ietf:params:xml:ns:obj2</objURI><objURI>urn:ietf:params:xml:ns:obj3</objURI><svcExtension><extURI>http://custom/obj1ext-1.0</extURI></svcExtension></svcMenu><dcp><access><all/></access><statement><purpose><admin/><prov/></purpose><recipient><ours/><public/></recipient><retention><stated/></retention></statement></dcp></greeting>'.$E2;
+$rc=$dri->process('session','noop',[]);
+$R2='';
+$rc=$dri->process('session','login',['ClientX','foo-BAR2',{extensions_filter => \&extfilter}]);
+is_string($R1,$E1.'<command><login><clID>ClientX</clID><pw>foo-BAR2</pw><options><version>1.0</version><lang>en</lang></options><svcs><objURI>urn:ietf:params:xml:ns:obj1</objURI><objURI>urn:ietf:params:xml:ns:obj2</objURI><objURI>urn:ietf:params:xml:ns:obj3</objURI><svcExtension><extURI>http://custom/obj1ext-2.0</extURI></svcExtension></svcs></login><clTRID>ABC-12345</clTRID></command>'.$E2,'session login build extensions_filter');
+
+
 exit 0;
 
-sub r
-{
- my ($c,$m)=@_;
- return '<result code="'.($c || 1000).'"><msg>'.($m || 'Command completed successfully').'</msg></result>';
-}
+sub extfilter { my (@exts)=@_; return map { s/1\.0/2.0/; $_; } @exts; }

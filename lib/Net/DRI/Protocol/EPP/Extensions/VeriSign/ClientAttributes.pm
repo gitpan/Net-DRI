@@ -1,7 +1,7 @@
 ## Domain Registry Interface, VeriSign EPP Client Object Attribute Extension
 ## From epp-client-object-attribute.pdf
 ##
-## Copyright (c) 2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2011,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -140,7 +140,7 @@ Net::DRI::Protocol::EPP::Extensions::VeriSign::ClientAttributes - VeriSign EPP C
 =head1 SYNOPSIS
 
         $dri=Net::DRI->new();
-        $dri->add_registry('VNDS',{clid=>'XXXXXX');
+        $dri->add_registry('VNDS',{client_id=>'XXXXXX');
 
         $rc=$dri->domain_info('whatever.com');
         $rh=$rc->get_data('client_attributes');
@@ -169,7 +169,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2011 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2011,2012 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

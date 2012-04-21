@@ -1,5 +1,38 @@
 Net::DRI changelog from newest to oldest changes
 
+0.96_03 2012-04-15 DEVELOPMENT RELEASE
+
+See warning in 0.96_01: this version enables only EPP over TCP/TLS and IRIS DCHK over UDP,
+other protocols (Whois,DAS,RRI,RRP) or transports (EPP over HTTPS) will not work in this version.
+
++ .FR/.RE/.YT/.TF/.WF/.PM various updates : updates to frnic-1.2, handling qualification process, new legal form ids, change of EPP test server hostname, DCHK support, etc.
++ TCI updates submitted by Dmitry Belyavsky
++ .PL extreport EPP extension
++ .CAT registrant disclosure extension
++ .EU : remove DSS extension at login by default
++ EPP new way to specify extensions 1/3 : "only_local_extensions" to announce to server only what we enabled locally as extensions
++ EPP new way to specify extensions 2/3 : "extensions" with ref array to add, remove or specify absolutely what extensions we want
++ EPP new way to specify extensions 3/3 : "extensions_filter" to pass a coderef getting all extensions and returning back the list we want to use
+= IO::Socket::SSL is required to be at least at version 1.31 (previously we required only version 0.90 or more)
+= DRI : use client_id when creating new instance, not clID anymore, from warning by Gerben Versluis
+= Exception : take into account little change in Carp output introduced in Carp 1.25 (perl 5.15.8)
+= Transport/Socket : test $sock->connected() before $sock->print(), from bugreport & suggestion by Joris van de Sande
+= Shell : in batch commands, test local executable before local file
+= Shell : better output in batch commands (more aggregation, less empty spaces)
+= Protocol/EPP/Core/Session : server id is in server_id not anymore in id
+= Protocol/Whois/Domain/common : contact ID is put in srid, not in roid + add contact only if it really exists (not empty)
+= ContactSet : new can be called with an hash or ref hash with keys being contact types and value being a ref array of items or only one item, with items being contact ids or contact objects
+= ContactSet new methods : contact_admin contact_tech contact_billing etc. automatically created for all contact types existing
+= .FR/.RE/.YT/.TF/.WF/.PM : remove all email support, as not supported anymore by registry
+- Registry : correct transport handling (really send EPP <logout/>), from bugreport by Gerben Versluis
+- Transport : make a working ping method directly through the $dri object, from bugreport by Gerben Versluis
+- ResultStatus : incorrect call to normalize_name, from bugreport by Michael Kefeder
+- Util : use initial empty value not undef in xml_indent, from bugreport by Dmitry Belyavsky
+- ContactSet : has_type returns 1 only if they really are some contacts for that type
+- Protocol/EPP/Extensions/VeriSign/WhoisInfo : handle case of .CC/.TV domains, from bugreport by Michael Kefeder
+- Protocol/EPP/Extensions/EURid/Notifications : handle EPP notifications without domain names, from bugreport from Gerben Versluis
+- Protocol/ResultStatus : error 2004 is PARAMETER_VALUE_RANGE_ERROR and not PARAMETER_VAMUE_RANGE_ERROR !
+
 0.96_02 2011-10-01 DEVELOPMENT RELEASE
 
 See warning in 0.96_01: this version enables only EPP over TCP/TLS and IRIS DCHK over UDP,

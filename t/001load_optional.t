@@ -7,7 +7,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 11;
+use Test::More tests => 9;
 
 SKIP: {
 	eval { require Net::SMTP; };
@@ -15,12 +15,12 @@ SKIP: {
 	require_ok('Net::DRI::Transport::SMTP');
 }
 
-SKIP: {
-	eval { require MIME::Entity; };
-	skip 'Module MIME::Entity is not installed, you need it if you want to use Net::DRI for: AFNIC (emails)',2 if $@;
-	require_ok('Net::DRI::Protocol::AFNIC::Email::Message');
-	require_ok('Net::DRI::Protocol::AFNIC::Email'); ## depends on Message
-}
+# SKIP: {
+# 	eval { require MIME::Entity; };
+# 	skip 'Module MIME::Entity is not installed, you need it if you want to use Net::DRI for: AFNIC (emails)',2 if $@;
+# 	require_ok('Net::DRI::Protocol::AFNIC::Email::Message');
+# 	require_ok('Net::DRI::Protocol::AFNIC::Email'); ## depends on Message
+# }
 
 SKIP: {
 	eval { require XMLRPC::Lite; };
@@ -67,7 +67,7 @@ SKIP: {
 	eval { require IO::Compress::RawDeflate; };
 	skip('Module IO::Compress::RawDeflate is not installed, you need it if you want to use Net::DRI for: .DE (IRIS DCHK over LWZ) .FR (IRIS DCHK over LWZ)',1) if $@;
 	eval { require Net::DNS; };
-	skip('Module Net::DNS is not installed, you need it if you want to use Net::DRI for: .DE (IRIS DCHK over LWZ)',1) if $@;
+	skip('Module Net::DNS is not installed, you need it if you want to use Net::DRI for: .DE (IRIS DCHK over LWZ) .FR (IRIS DCHK over LWZ)',1) if $@;
 	require_ok('Net::DRI::Protocol::IRIS::LWZ');
 }
 

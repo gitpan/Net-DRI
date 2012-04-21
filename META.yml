@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Net-DRI
-version:            0.96_02
+version:            0.96_03
 abstract:           Interface to Domain Name Registries/Registrars/Resellers
 author:
     - Patrick Mevzek <netdri@dotandco.com>
@@ -20,7 +20,7 @@ requires:
     DateTime::Format::Strptime:  0
     DateTime::TimeZone:   0
     Email::Valid:         0
-    IO::Socket::SSL:      0.90
+    IO::Socket::SSL:      1.31
     perl:                 5.008000
     Test::LongString:     0
     Test::More:           0
@@ -55,11 +55,6 @@ optional_features:
         description:  Support of MD5 digest for OpenSRS
         requires:
             Digest::MD5:  0
-    email:
-        description:  Support of email handling for .FR
-        requires:
-            MIME::Entity:  0
-            Net::SMTP:     0
     http:
         description:  Support of HTTP(S) transport for OpenSRS, .IT and .PL
         requires:

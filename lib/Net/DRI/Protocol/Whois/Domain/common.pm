@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Whois common parse subroutines
 ##
-## Copyright (c) 2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2007-2009,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -66,9 +66,9 @@ sub epp_parse_registrars
  my ($po,$domain,$rr,$rinfo)=@_;
  my %t=('Sponsoring Registrar' => 'cl',
         'Created By'           => 'cr',
-	'Created by Registrar' => 'cr',
+        'Created by Registrar' => 'cr',
         'Updated By'           => 'up',
-	'Last Updated by Registrar' => 'up',
+        'Last Updated by Registrar' => 'up',
        );
 
  while(my ($whois,$epp)=each(%t))
@@ -124,25 +124,25 @@ sub epp_parse_contacts
 {
  my ($po,$domain,$rr,$rinfo,$rh)=@_;
  my $cs=$po->create_local_object('contactset');
- while(my ($type,$whois)=each(%$rh))
+ while(my ($type,$whois)=each %$rh)
  {
   my $c=$po->create_local_object('contact');
-  $c->roid($rr->{$whois.' ID'}->[0]) if (exists($rr->{$whois.' ID'}) && $rr->{$whois.' ID'}->[0]);
-  $c->name($rr->{$whois.' Name'}->[0]) if (exists($rr->{$whois.' Name'}) && $rr->{$whois.' Name'}->[0]);
-  $c->org($rr->{$whois.' Organization'}->[0]) if (exists($rr->{$whois.' Organization'}) && $rr->{$whois.' Organization'}->[0]);
+  $c->srid($rr->{$whois.' ID'}->[0]) if (exists $rr->{$whois.' ID'} && length $rr->{$whois.' ID'}->[0]);
+  $c->name($rr->{$whois.' Name'}->[0]) if (exists $rr->{$whois.' Name'} && length $rr->{$whois.' Name'}->[0]);
+  $c->org($rr->{$whois.' Organization'}->[0]) if (exists $rr->{$whois.' Organization'} && length $rr->{$whois.' Organization'}->[0]);
   my @s;
   foreach my $st (qw/Street Address/) ## 2nd form needed for .BIZ
   {
    my $k=$whois.' '.$st;
-   @s=map { $rr->{$k.$_}->[0] } grep { exists($rr->{$k.$_}) && $rr->{$k.$_}->[0] } (1..3);
+   @s=map { $rr->{$k.$_}->[0] } grep { exists $rr->{$k.$_} && length $rr->{$k.$_}->[0] } (1..3);
    next unless @s;
    $c->street(\@s);
    last;
   }
-  $c->city($rr->{$whois.' City'}->[0]) if (exists($rr->{$whois.' City'}) && $rr->{$whois.' City'}->[0]);
-  $c->sp($rr->{$whois.' State/Province'}->[0]) if (exists($rr->{$whois.' State/Province'}) && $rr->{$whois.' State/Province'}->[0]);
-  $c->pc($rr->{$whois.' Postal Code'}->[0]) if (exists($rr->{$whois.' Postal Code'}) && $rr->{$whois.' Postal Code'}->[0]);
-  $c->cc($rr->{$whois.' Country'}->[0]) if (exists($rr->{$whois.' Country'}) && $rr->{$whois.' Country'}->[0]);
+  $c->city($rr->{$whois.' City'}->[0]) if (exists $rr->{$whois.' City'} && length $rr->{$whois.' City'}->[0]);
+  $c->sp($rr->{$whois.' State/Province'}->[0]) if (exists $rr->{$whois.' State/Province'} && length $rr->{$whois.' State/Province'}->[0]);
+  $c->pc($rr->{$whois.' Postal Code'}->[0]) if (exists $rr->{$whois.' Postal Code'} && length $rr->{$whois.' Postal Code'}->[0]);
+  $c->cc($rr->{$whois.' Country'}->[0]) if (exists $rr->{$whois.' Country'} && length $rr->{$whois.' Country'}->[0]);
   my $t;
   foreach my $st ('Phone','Phone Number') ## 2nd form needed for .BIZ
   {
@@ -158,8 +158,8 @@ sub epp_parse_contacts
    $c->fax($t);
    last;
   }
-  $c->email($rr->{$whois.' Email'}->[0]) if (exists($rr->{$whois.' Email'}) && $rr->{$whois.' Email'}->[0]);
-  $cs->add($c,$type);
+  $c->email($rr->{$whois.' Email'}->[0]) if (exists $rr->{$whois.' Email'} && length $rr->{$whois.' Email'}->[0]);
+  $cs->add($c,$type) if grep { length } ($c->srid(),$c->name(),$c->city(),$c->cc(),$c->email());
  }
  $rinfo->{domain}->{$domain}->{contact}=$cs;
 }

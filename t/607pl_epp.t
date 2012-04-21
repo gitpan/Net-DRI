@@ -7,7 +7,9 @@ use warnings;
 use Net::DRI;
 use Net::DRI::Data::Raw;
 
-use Test::More tests => 33;
+use Test::More tests => 93;
+eval { no warnings; require Test::LongString; Test::LongString->import(max => 100); $Test::LongString::Context=50; };
+if ( $@ ) { no strict 'refs'; *{'main::is_string'}=\&main::is; }
 
 our $E1='<?xml version="1.0" encoding="UTF-8" standalone="no"?><epp xmlns="urn:ietf:params:xml:ns:epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="urn:ietf:params:xml:ns:epp-1.0 epp-1.0.xsd">';
 our $E2='</epp>';
@@ -153,5 +155,103 @@ is_deeply($c1,$c2,'contact_info get_info(self)=get_info(self,contact,id)');
 is_deeply($c1,$c3,'contact_info get_info(self)=get_data(contact,id,self)');
 is($c1->individual(),0,'get_info(self)->is_individual()');
 is($c1->consent_for_publishing(),1,'get_info(self)->consent_for_publishing()');
+
+####################################################################################################
+## Reports
+
+$R2=$E1.'<response><result code="1000"><msg lang="en">Command completed successfully</msg></result><extension><extreport:reportData xmlns:extreport="urn:ietf:params:xml:ns:extreport-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:extreport-1.0 extreport-1.0.xsd"><extreport:domDataRsp><extreport:domData><extreport:name>example1.pl</extreport:name><extreport:roid>1234-NASK</extreport:roid><extreport:exDate>2007-03-18T23:00:00.0Z</extreport:exDate><extreport:statuses><extreport:status>serverHold</extreport:status></extreport:statuses></extreport:domData><extreport:domData><extreport:name>example2.pl</extreport:name><extreport:roid>1235-NASK</extreport:roid><extreport:exDate>2007-04-19T15:25:31.0Z</extreport:exDate><extreport:statuses><extreport:status>serverHold</extreport:status></extreport:statuses></extreport:domData></extreport:domDataRsp><extreport:offset>0</extreport:offset><extreport:limit>50</extreport:limit><extreport:size>2</extreport:size></extreport:reportData></extension>'.$TRID.'</response>'.$E2;
+$rc=$dri->report_create(1234,{type=>'domain',state=>'registered',exDate=>$dri->local_object('datetime',year=>2007,month=>5,day=>7,hour=>11,minute=>23),status=>$dri->local_object('status')->add('serverHold'),status_in=>1,offset=>0,limit=>50});
+is_string($R1,'<?xml version="1.0" encoding="UTF-8" standalone="no"?><epp xmlns="urn:ietf:params:xml:ns:epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="urn:ietf:params:xml:ns:epp-1.0 epp-1.0.xsd"><extension><extreport:report xmlns:extreport="urn:ietf:params:xml:ns:extreport-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:extreport-1.0 extreport-1.0.xsd"><extreport:domain><extreport:state>STATE_REGISTERED</extreport:state><extreport:exDate>2007-05-07T11:23:00Z</extreport:exDate><extreport:statuses statusesIn="true"><extreport:status>serverHold</extreport:status></extreport:statuses></extreport:domain><extreport:offset>0</extreport:offset><extreport:limit>50</extreport:limit></extreport:report></extension></epp>','report domain build');
+is($rc->get_data('offset'),0,'report domain get_data(offset)');
+is($rc->get_data('limit'),50,'report domain get_data(limit)');
+is($rc->get_data('size'),2,'report domain get_data(size)');
+is($rc->get_data('type'),'domain','report domain get_data(type)');
+my $report=$rc->get_data('results');
+is(scalar @$report,2,'report domain get_data(results) size');
+my $det=$report->[0];
+is($det->{name},'example1.pl','report domain get_data(results) 1 name');
+is($det->{roid},'1234-NASK','report domain get_data(results) 1 roid');
+is(''.$det->{exDate},'2007-03-18T23:00:00','report domain get_data(results) 1 exDate');
+is_deeply([$det->{status}->list_status()],['serverHold'],'report domain get_data(results) 1 status');
+$det=$report->[1];
+is($det->{name},'example2.pl','report domain get_data(results) 2 name');
+is($det->{roid},'1235-NASK','report domain get_data(results) 2 roid');
+is(''.$det->{exDate},'2007-04-19T15:25:31','report domain get_data(results) 2 exDate');
+is_deeply([$det->{status}->list_status()],['serverHold'],'report domain get_data(results) 2 status');
+
+
+$R2=$E1.'<response><result code="1000"><msg lang="en">Command completed successfully</msg></result><extension><extreport:reportData xmlns:extreport="urn:ietf:params:xml:ns:extreport-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:extreport-1.0 extreport-1.0.xsd"><extreport:conDataRsp><extreport:conData><extreport:conId>k13</extreport:conId><extreport:roid>654321-NASK</extreport:roid></extreport:conData></extreport:conDataRsp><extreport:offset>0</extreport:offset><extreport:limit>50</extreport:limit><extreport:size>1</extreport:size></extreport:reportData></extension>'.$TRID.'</response>'.$E2;
+$rc=$dri->report_create(1235,{type=>'contact',id=>'k13',offset=>0,limit=>50});
+is_string($R1,'<?xml version="1.0" encoding="UTF-8" standalone="no"?><epp xmlns="urn:ietf:params:xml:ns:epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="urn:ietf:params:xml:ns:epp-1.0 epp-1.0.xsd"><extension><extreport:report xmlns:extreport="urn:ietf:params:xml:ns:extreport-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:extreport-1.0 extreport-1.0.xsd"><extreport:contact><extreport:conId>k13</extreport:conId></extreport:contact><extreport:offset>0</extreport:offset><extreport:limit>50</extreport:limit></extreport:report></extension></epp>','report contact build');
+is($rc->get_data('offset'),0,'report contact get_data(offset)');
+is($rc->get_data('limit'),50,'report contact get_data(limit)');
+is($rc->get_data('size'),1,'report contact get_data(size)');
+is($rc->get_data('type'),'contact','report contact get_data(type)');
+$report=$rc->get_data('results');
+is(scalar @$report,1,'report contact get_data(results) size');
+$det=$report->[0];
+isa_ok($det,'Net::DRI::Data::Contact');
+is($det->srid(),'k13','report contact get_data(results) 1 srid');
+is($det->roid(),'654321-NASK','report contact get_data(results) 1 roid');
+
+
+
+$R2=$E1.'<response><result code="1000"><msg lang="en">Command completed successfully</msg></result><extension><extreport:reportData xmlns:extreport="urn:ietf:params:xml:ns:extreport-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:extreport-1.0 extreport-1.0.xsd"><extreport:hosDataRsp><extreport:hosData><extreport:name>ns1.temp.pl</extreport:name><extreport:roid>632381-NASK</extreport:roid></extreport:hosData></extreport:hosDataRsp><extreport:offset>0</extreport:offset><extreport:limit>50</extreport:limit><extreport:size>1</extreport:size></extreport:reportData></extension>'.$TRID.'</response>'.$E2;
+$rc=$dri->report_create(1236,{type=>'host',name=>'ns1.temp.pl',offset=>0,limit=>50});
+is_string($R1,'<?xml version="1.0" encoding="UTF-8" standalone="no"?><epp xmlns="urn:ietf:params:xml:ns:epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="urn:ietf:params:xml:ns:epp-1.0 epp-1.0.xsd"><extension><extreport:report xmlns:extreport="urn:ietf:params:xml:ns:extreport-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:extreport-1.0 extreport-1.0.xsd"><extreport:host><extreport:name>ns1.temp.pl</extreport:name></extreport:host><extreport:offset>0</extreport:offset><extreport:limit>50</extreport:limit></extreport:report></extension></epp>','report host build');
+is($rc->get_data('offset'),0,'report host get_data(offset)');
+is($rc->get_data('limit'),50,'report host get_data(limit)');
+is($rc->get_data('size'),1,'report host get_data(size)');
+is($rc->get_data('type'),'host','report host get_data(type)');
+$report=$rc->get_data('results');
+$det=$report;
+isa_ok($det,'Net::DRI::Data::Hosts');
+is($det->count(),1,'report host get_data(results) 1 count');
+is_deeply($det->as_string(),'ns1.temp.pl {roid=632381-NASK}','report host get_data(results) 1 as_string');
+
+
+$R2=$E1.'<response><result code="1000"><msg lang="en">Command completed successfully</msg></result><extension><extreport:reportData xmlns:extreport="urn:ietf:params:xml:ns:extreport-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:extreport-1.0extreport-1.0.xsd"><extreport:futDataRsp><extreport:futData><extreport:name>ns1.temp.pl</extreport:name><extreport:roid>632381-NASK</extreport:roid><extreport:exDate>2007-04-19T15:25:31.0Z</extreport:exDate></extreport:futData></extreport:futDataRsp><extreport:offset>0</extreport:offset><extreport:limit>50</extreport:limit><extreport:size>1</extreport:size></extreport:reportData></extension>'.$TRID.'</response>'.$E2;
+$rc=$dri->report_create(1237,{type=>'future',exDate=>$dri->local_object('datetime',year=>2007,month=>4,day=>23,hour=>15,minute=>22,second=>34),offset=>0,limit=>50});
+is_string($R1,'<?xml version="1.0" encoding="UTF-8" standalone="no"?><epp xmlns="urn:ietf:params:xml:ns:epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="urn:ietf:params:xml:ns:epp-1.0 epp-1.0.xsd"><extension><extreport:report xmlns:extreport="urn:ietf:params:xml:ns:extreport-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:extreport-1.0 extreport-1.0.xsd"><extreport:future><extreport:exDate>2007-04-23T15:22:34Z</extreport:exDate></extreport:future><extreport:offset>0</extreport:offset><extreport:limit>50</extreport:limit></extreport:report></extension></epp>','report future build');
+is($rc->get_data('offset'),0,'report future get_data(offset)');
+is($rc->get_data('limit'),50,'report future get_data(limit)');
+is($rc->get_data('size'),1,'report future get_data(size)');
+is($rc->get_data('type'),'future','report future get_data(type)');
+$report=$rc->get_data('results');
+is(scalar @$report,1,'report future get_data(results) size');
+$det=$report->[0];
+is($det->{name},'ns1.temp.pl','report future get_data(results) 1 name');
+is($det->{roid},'632381-NASK','report future get_data(results) 1 roid');
+is(''.$det->{exDate},'2007-04-19T15:25:31','report future get_data(results) 1 exDate');
+
+
+$R2=$E1.'<response><result code="1000"><msg lang="en">Command completed successfully</msg></result><extension><extreport:reportData xmlns:extreport="urn:ietf:params:xml:ns:extreport-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:extreport-1.0 extreport-1.0.xsd"><extreport:paymentDataRsp><extreport:paymentData><extreport:roid>14-NASK</extreport:roid><extreport:crDate>2009-06-17T08:08:40.0Z</extreport:crDate><extreport:grossValue>1220.0</extreport:grossValue><extreport:vatPercent>22</extreport:vatPercent><extreport:vatValue>220.0</extreport:vatValue><extreport:initialFunds>1000.0</extreport:initialFunds><extreport:currentFunds>1000.0</extreport:currentFunds></extreport:paymentData></extreport:paymentDataRsp><extreport:offset>0</extreport:offset><extreport:limit>50</extreport:limit><extreport:size>1</extreport:size></extreport:reportData></extension>'.$TRID.'</response>'.$E2;
+$rc=$dri->report_create(1238,{type=>'payment',account_type=>'domain',offset=>0,limit=>50});
+is_string($R1,'<?xml version="1.0" encoding="UTF-8" standalone="no"?><epp xmlns="urn:ietf:params:xml:ns:epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="urn:ietf:params:xml:ns:epp-1.0 epp-1.0.xsd"><extension><extreport:report xmlns:extreport="urn:ietf:params:xml:ns:extreport-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:extreport-1.0 extreport-1.0.xsd"><extreport:prepaid><extreport:payment><extreport:accountType>domain</extreport:accountType></extreport:payment></extreport:prepaid><extreport:offset>0</extreport:offset><extreport:limit>50</extreport:limit></extreport:report></extension></epp>','report payment build');
+is($rc->get_data('offset'),0,'report payment get_data(offset)');
+is($rc->get_data('limit'),50,'report payment get_data(limit)');
+is($rc->get_data('size'),1,'report payment get_data(size)');
+is($rc->get_data('type'),'payment','report payment get_data(type)');
+$report=$rc->get_data('results');
+is(scalar @$report,1,'report payment get_data(results) size');
+$det=$report->[0];
+is($det->{roid},'14-NASK','report payment get_data(results) roid');
+is(''.$det->{crDate},'2009-06-17T08:08:40','report payment get_data(results) 1 exDate');
+is($det->{gross_value},1220,'report payment get_data(results) gross_value');
+is($det->{vat_percent},22,'report payment get_data(results) vat_percent');
+is($det->{vat_value},220,'report payment get_data(results) vat_value');
+is($det->{initial_funds},1000,'report payment get_data(results) initial_funds');
+is($det->{current_funds},1000,'report payment get_data(results) current_funds');
+
+$R2=$E1.'<response><result code="1000"><msg lang="en">Command completed successfully</msg></result><extension><extreport:reportData xmlns:extreport="urn:ietf:params:xml:ns:extreport-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:extreport-1.0 extreport-1.0.xsd"><extreport:paymentFundsDataRsp><extreport:paymentFundsData><extreport:currentBalance>803.86</extreport:currentBalance></extreport:paymentFundsData></extreport:paymentFundsDataRsp><extreport:offset>0</extreport:offset><extreport:limit>50</extreport:limit><extreport:size>1</extreport:size></extreport:reportData></extension>'.$TRID.'</response>'.$E2;
+$rc=$dri->report_create(1238,{type=>'funds',account_type=>'domain',offset=>0,limit=>50});
+is_string($R1,'<?xml version="1.0" encoding="UTF-8" standalone="no"?><epp xmlns="urn:ietf:params:xml:ns:epp-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="urn:ietf:params:xml:ns:epp-1.0 epp-1.0.xsd"><extension><extreport:report xmlns:extreport="urn:ietf:params:xml:ns:extreport-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:extreport-1.0 extreport-1.0.xsd"><extreport:prepaid><extreport:paymentFunds><extreport:accountType>domain</extreport:accountType></extreport:paymentFunds></extreport:prepaid><extreport:offset>0</extreport:offset><extreport:limit>50</extreport:limit></extreport:report></extension></epp>','report funds build');
+is($rc->get_data('offset'),0,'report funds get_data(offset)');
+is($rc->get_data('limit'),50,'report funds get_data(limit)');
+is($rc->get_data('size'),1,'report funds get_data(size)');
+is($rc->get_data('type'),'funds','report funds get_data(type)');
+$report=$rc->get_data('results');
+isa_ok($report,'HASH','report funds get_data(results)');
+is_deeply($report,{current_balance=>803.86},'report funds get_data(results) current_balance');
 
 exit 0;

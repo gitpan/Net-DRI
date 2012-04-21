@@ -425,8 +425,8 @@ sub end
  foreach my $name (keys %{$self->{profiles}})
  {
   my $p=$self->{profiles}->{$name};
-  $p->{protocol}->end()                                       if ref $p->{protocol}  && $p->{protocol}->can('end');
-  $p->{transport}->end({registry => $self, profile => $name}) if ref $p->{transport} && $p->{transport}->can('end');
+  $p->{transport}->end({protocol => $p->{protocol}}) if ref $p->{transport} && $p->{transport}->can('end');
+  $p->{protocol}->end()                              if ref $p->{protocol}  && $p->{protocol}->can('end');
   delete $self->{profiles}->{$name}
  }
 

@@ -79,7 +79,7 @@ sub setup
 }
 
 sub core_contact_types { return ('admin','tech','billing','onsite'); }
-sub default_extensions { return qw/EURid::Sunrise EURid::Message EURid::Domain EURid::Contact EURid::Registrar EURid::Notifications EURid::IDN Keygroup NSgroup SecDNS/; }
+sub default_extensions { return qw/EURid::Session EURid::Sunrise EURid::Message EURid::Domain EURid::Contact EURid::Registrar EURid::Notifications EURid::IDN Keygroup NSgroup SecDNS/; }
 
 ####################################################################################################
 1;

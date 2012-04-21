@@ -1,6 +1,6 @@
 ## Domain Registry Interface, AFNIC EPP Notifications
 ##
-## Copyright (c) 2008-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008-2010,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -19,12 +19,13 @@ use warnings;
 
 use Net::DRI::Util;
 use Net::DRI::Protocol::EPP::Util;
+use Net::DRI::Protocol::EPP::Extensions::AFNIC::Contact;
 
 =pod
 
 =head1 NAME
 
-Net::DRI::Protocol::EPP::Extensions::AFNIC::Notifications - AFNIC (.FR/.RE) EPP Notifications for Net::DRI
+Net::DRI::Protocol::EPP::Extensions::AFNIC::Notifications - AFNIC (.FR/.RE/.TF/.WF/.PM/.YT) EPP Notifications for Net::DRI
 
 =head1 DESCRIPTION
 
@@ -48,7 +49,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008-2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008-2010,2012 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -66,8 +67,9 @@ sub register_commands
 {
  my ($class,$version)=@_;
  my %tmp=(
-           review_zonecheck => [ undef, \&parse_zonecheck ],
+           review_zonecheck      => [ undef, \&parse_zonecheck ],
            review_identification => [ undef, \&parse_identification ],
+           review_qualification  => [ undef, \&parse_qualification ],
          );
 
  return { 'message' => \%tmp };
@@ -108,59 +110,68 @@ sub parse_identification
  $idt=Net::DRI::Util::xml_traverse($idt,$ns,'resData','idtData');
  return unless defined $idt;
 
- my $c;
- if (defined($c=Net::DRI::Util::xml_traverse($idt,$ns,'contact')))
+ my $c=Net::DRI::Util::xml_traverse($idt,$ns,'domain');
+ return unless defined $c;
+
+ $oname=lc Net::DRI::Util::xml_child_content($c,$ns,'name');
+ $rinfo->{domain}->{$oname}->{action}='review_identification';
+ $rinfo->{domain}->{$oname}->{exist}=1;
+ $rinfo->{domain}->{$oname}->{status}=$po->create_local_object('status')->add(Net::DRI::Protocol::EPP::Util::parse_node_status(Net::DRI::Util::xml_traverse($c,$ns,'status')));
+ $rinfo->{domain}->{$oname}->{contact}=$po->create_local_object('contactset')->set($po->create_local_object('contact')->srid(Net::DRI::Util::xml_child_content($c,$ns,'registrant')),'registrant');
+
+ return;
+}
+
+sub parse_qualification
+{
+ my ($po,$otype,$oaction,$oname,$rinfo)=@_;
+ my $mes=$po->message();
+ return unless $mes->is_success();
+ my $qua=$mes->get_extension('frnic','ext');
+ return unless defined $qua;
+
+ my $ns=$mes->ns('frnic');
+ $qua=Net::DRI::Util::xml_traverse($qua,$ns,'resData','quaData');
+ return unless defined $qua;
+
+ my $c=Net::DRI::Util::xml_traverse($qua,$ns,'contact');
+ return unless defined $c;
+
+ my ($co,@reasons);
+ my %q;
+ foreach my $el (Net::DRI::Util::xml_list_children($c))
  {
-  my ($co,$oname,@reasons);
-  foreach my $el (Net::DRI::Util::xml_list_children($c))
+  my ($name,$node)=@$el;
+  if ($name eq 'id')
   {
-   my ($name,$node)=@$el;
-   if ($name eq 'id')
+   $oname=$node->textContent();
+   $rinfo->{contact}->{$oname}->{action}='review_qualification';
+   $rinfo->{contact}->{$oname}->{exist}=1;
+   $co=$po->create_local_object('contact')->srid($oname);
+   $rinfo->{contact}->{$oname}->{self}=$co;
+  } elsif ($name eq 'qualificationProcess')
+  {
+   $rinfo->{contact}->{$oname}->{qualification_process_status}=$q{'process_status'}=$node->getAttribute('s');
+  } elsif ($name eq 'legalEntityInfos')
+  {
+   Net::DRI::Protocol::EPP::Extensions::AFNIC::Contact::parse_legalentityinfos($po,$otype,$oaction,$oname,$rinfo,$node,$co,$mes,\%q);
+  } elsif ($name eq 'individualInfos')
+  {
+   Net::DRI::Protocol::EPP::Extensions::AFNIC::Contact::parse_individualinfos($po,$otype,$oaction,$oname,$rinfo,$node,$co,$mes,\%q);
+  } elsif ($name eq 'reachability')
+  {
+   my %r;
+   $r{status}=Net::DRI::Util::xml_child_content($node,$ns,'reStatus');
+   foreach my $v (qw/voice email/)
    {
-    $oname=$node->textContent();
-    $rinfo->{contact}->{$oname}->{action}='review_identification';
-    $rinfo->{contact}->{$oname}->{exist}=1;
-    $co=$po->create_local_object('contact')->srid($oname);
-    $rinfo->{contact}->{$oname}->{self}=$co;
-   } elsif ($name eq 'identificationProcess')
-   {
-    $rinfo->{contact}->{$oname}->{process}=$node->getAttribute('s');
-   } elsif ($name eq 'legalEntityInfos')
-   {
-    foreach my $subel (Net::DRI::Util::xml_list_children($node))
-    {
-     my ($subname,$subnode)=@$subel;
-     if ($subname eq 'idStatus')
-     {
-      $co->id_status($subnode->textContent());
-     } elsif ($subname eq 'legalStatus')
-     {
-      $co->legal_form($subnode->getAttribute('s'));
-     } elsif ($subname=~m/^(?:siren|VAT|trademark)$/)
-     {
-      $subname='legal_id' if $subname eq 'siren';
-      $subname=lc($subname);
-      $co->$subname($subnode->textContent());
-     }
-    }
-   } elsif ($name eq 'idtReason')
-   {
-    push @{$rinfo->{contact}->{$oname}->{reasons}},$node->textContent();
+    my $tmp=Net::DRI::Util::xml_child_content($node,$ns,$v);
+    next unless defined $tmp;
+    $r{$v}=$tmp;
    }
+   $q{reachable}=\%r;
   }
-
-  return;
  }
-
- if (defined($c=Net::DRI::Util::xml_traverse($idt,$ns,'domain')))
- {
-  my $oname=lc(Net::DRI::Util::xml_child_content($c,$ns,'name'));
-  $rinfo->{domain}->{$oname}->{action}='review_identification';
-  $rinfo->{domain}->{$oname}->{exist}=1;
-  $rinfo->{domain}->{$oname}->{status}=$po->create_local_object('status')->add(Net::DRI::Protocol::EPP::Util::parse_node_status(Net::DRI::Util::xml_traverse($c,$ns,'status')));
-  $rinfo->{domain}->{$oname}->{contact}=$po->create_local_object('contactset')->set($po->create_local_object('contact')->srid(Net::DRI::Util::xml_child_content($c,$ns,'registrant')),'registrant');
-  return;
- }
+ $co->qualification(\%q);
 
  return;
 }

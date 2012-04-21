@@ -1,6 +1,6 @@
 ## Domain Registry Interface, OpenSRS Registry Driver
 ##
-## Copyright (c) 2008-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008-2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -54,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008-2011 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008-2012 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -150,7 +150,7 @@ sub domain_update
 sub domain_is_mine
 {
  my ($self,$ndr,$domain,$rd)=@_;
- my $clid=$self->info('clid');
+ my $clid=$self->info('client_id');
  return unless defined $clid;
  my $rc=$ndr->process('domain','is_mine',[$domain,$rd]);
  return unless $rc->is_success();

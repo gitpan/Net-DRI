@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Encapsulatng errors (fatal or not) as exceptions in an OO way
 ##
-## Copyright (c) 2005,2007-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2007-2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -15,6 +15,7 @@
 package Net::DRI::Exception;
 
 use strict;
+use warnings;
 
 use Carp;
 
@@ -60,7 +61,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2007-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+Copyright (c) 2005,2007-2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -75,10 +76,8 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $proto=shift;
- my $class=ref($proto) || $proto;
- my ($error,$area,$code,$msg)=@_;
- my $self={ is_error => (defined($error)? $error : 1 ),
+ my ($class,$error,$area,$code,$msg)=@_;
+ my $self={ is_error => (defined $error ? $error : 1 ),
             area     => $area || '?',
             code     => $code || 0,
             msg      => $msg || '',
@@ -86,7 +85,7 @@ sub new
 
  $self->{bt}=Carp::longmess();
 
- bless($self,$class);
+ bless $self,$class;
  return $self;
 }
 
@@ -108,10 +107,10 @@ sub backtrace
  my ($f,$l);
  if (@bt1)
  {
-  ($f,$l)=(pop(@bt1)=~m/ called at (\S+) line (\d+)\s*$/);
+  ($f,$l)=(pop(@bt1)=~m/ called at (\S+) line (\d+)\.?\s*$/);
  } else
  {
-  ($f,$l)=(shift(@bt2)=~m/ at (\S+) line (\d+)\s*$/);
+  ($f,$l)=(shift(@bt2)=~m/ at (\S+) line (\d+)\.?\s*$/);
  }
  my @b;
  push @b,sprintf('EXCEPTION %d@%s from line %d of file %s:',$self->code(),$self->area(),$l,$f);
@@ -120,16 +119,8 @@ sub backtrace
 }
 
 ## Do not parse result of this call. If needed, use accessors above (is_error(), area(), code(), msg())
-sub as_string
-{
- my $self=shift;
- return join("\n",$self->backtrace())."\n";
-}
-
-sub print
-{
- print shift->as_string();
-}
+sub as_string { return join("\n",shift->backtrace())."\n"; }
+sub print     { print shift->as_string(); }
 
 ####################################################################################################
 
@@ -141,7 +132,6 @@ sub usererr_insufficient_parameters { Net::DRI::Exception->die(0,'internal',2,'I
 sub usererr_invalid_parameters      { Net::DRI::Exception->die(0,'internal',3,'Invalid parameters'.($_[0]? ': '.$_[0] : '')); }
 
 sub err_assert { Net::DRI::Exception->die(1,'internal',4,'Assert failed'.($_[0]? ': '.$_[0] : '')); }
-
 
 sub method_not_implemented
 {

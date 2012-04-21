@@ -1,7 +1,7 @@
 ## Domain Registry Interface, .RU/.SU/.XN--P1AI EPP Domain Extension for Net::DRI
 ##
 ## Copyright (c) 2010-2011 Dmitry Belyavsky <beldmit@gmail.com>
-##               2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+##               2011-2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -111,8 +111,10 @@ sub update
 
  my (@add,@del);
  push @add,Net::DRI::Protocol::EPP::Util::build_ns($epp,$nsadd,$domain)         if Net::DRI::Util::isa_hosts($nsadd);
+ push @add,$sadd->build_xml('domain:status','')                                 if $sadd;
  push @add,$sadd->build_xml('domain:status','core')                             if $sadd;
  push @del,Net::DRI::Protocol::EPP::Util::build_ns($epp,$nsdel,$domain,undef,1) if Net::DRI::Util::isa_hosts($nsdel);
+ push @del,$sdel->build_xml('domain:status','')                                 if $sdel;
  push @del,$sdel->build_xml('domain:status','core')                             if $sdel;
  my @d=Net::DRI::Protocol::EPP::Util::domain_build_command($mes,'update',$domain);
  push @d,['domain:add',@add] if @add;
@@ -187,7 +189,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 =head1 COPYRIGHT
 
 Copyright (c) 2010-2011 Dmitry Belyavsky <beldmit@gmail.com>
-Copyright (c) 2011 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2011-2012 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

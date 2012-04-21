@@ -1,6 +1,6 @@
 ## Domain Registry Interface, CO.ZA policy on reserved names
 ##
-## Copyright (c) 2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2011,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -53,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2011 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2011,2012 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -96,7 +96,7 @@ sub transport_protocol_default
 sub registrar_balance
 {
  my ($self,$ndr)=@_;
- my $clid=$self->{info}->{client_id};
+ my $clid=$self->info('client_id');
  my $rc=$ndr->try_restore_from_cache('registrar',$clid,'balance');
  if (! defined $rc) { $rc=$ndr->process('contact','info',[$ndr->local_object('contact')->srid($clid),{balance=>1}]); }
  return $rc;

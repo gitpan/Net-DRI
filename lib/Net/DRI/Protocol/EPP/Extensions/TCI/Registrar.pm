@@ -1,7 +1,7 @@
 ## Domain Registry Interface, .RU/.SU/.XN--P1AI EPP REgistrar Extension for Net::DRI
 ##
 ## Copyright (c) 2010-2011 Dmitry Belyavsky <beldmit@gmail.com>
-##               2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+##               2011-2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -46,6 +46,7 @@ sub update
 
 	my $ip_add=$todo->add('ip');
 	my $ip_del=$todo->del('ip');
+
 	my $email_add=$todo->add('email');
 	my $email_del=$todo->del('email');
 
@@ -71,7 +72,6 @@ sub update
 			push @add, ['registrar:addr', $ip, {"ip" => "v4"}];
 		}
 	}
-
 
 	if ($email_del)
 	{
@@ -100,10 +100,22 @@ sub update
 	push @d,['registrar:add',@add] if @add;
 	push @d,['registrar:rem',@del] if @del;
 
-	my $chg=$todo->set('www');
-
 	my @chg;
+	my $chg =  $todo->set('voice');
+	for my $str (@$chg)
+	{
+	 push @chg,['registrar:voice',$str];
+	}
+	
+	$chg =  $todo->set('fax');
+	for my $str (@$chg)
+	{
+	 push @chg,['registrar:fax',$str];
+	}
+
+	$chg=$todo->set('www');
 	push @chg,['registrar:www',$chg] if $chg;
+	
 	$chg =  $todo->set('whois');
 	push @chg,['registrar:whois',$chg] if $chg;
 
@@ -238,7 +250,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 =head1 COPYRIGHT
 
 Copyright (c) 2010-2011 Dmitry Belyavsky <beldmit@gmail.com>
-Copyright (c) 2011 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2011-2012 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

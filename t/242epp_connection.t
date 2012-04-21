@@ -8,10 +8,10 @@ use Encode ();
 
 use Test::More tests => 5;
 
-can_ok('Net::DRI::Protocol::EPP::Connection',qw(keepalive read_data write_message));
+can_ok('Net::DRI::Protocol::EPP::Connection',qw(read_data write_message));
 
 TODO: {
-        local $TODO="tests on keepalive() read_data() write_message()";
+        local $TODO="tests on read_data() write_message()";
         ok(0);
 }
 

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .CAT Domain EPP extension commands
 ##
-## Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006-2008,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -15,6 +15,7 @@
 package Net::DRI::Protocol::EPP::Extensions::CAT::Domain;
 
 use strict;
+use warnings;
 
 use Email::Valid;
 use Net::DRI::Util;
@@ -48,7 +49,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006-2008,2012 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -65,7 +66,7 @@ See the LICENSE file that comes with this distribution for more details.
 sub register_commands
 {
  my ($class,$version)=@_;
- my %tmp=( 
+ my %tmp=(
           create            => [ \&create, undef ],
           update            => [ \&update, undef ],
           info              => [ undef, \&info_parse ],
@@ -113,41 +114,57 @@ sub add_maintainer
 sub add_intended_use
 {
  my ($d)=@_;
- Net::DRI::Exception::usererr_invalid_parameters('intended_use must be a string between 1 and 1000 chars long') unless (''.$d && (length($d) <= 1000));
+ Net::DRI::Exception::usererr_invalid_parameters('intended_use must be a string between 1 and 1000 chars long') unless (''.$d && (length $d <= 1000));
  return ['dx:intendedUse',$d];
+}
+
+sub add_disclose
+{
+ my ($rd)=@_;
+ Net::DRI::Exception::usererr_invalid_parameters('registrant_disclosure must be a ref hash') unless ref $rd eq 'HASH';
+ Net::DRI::Exception::usererr_invalid_parameters('registrant_disclosure must have a type key') unless exists $rd->{type};
+ Net::DRI::Exception::usererr_invalid_parameters('registrant_disclosure type key must have value "natural" or "legal"') unless $rd->{type}=~m/^(?:natural|legal)$/;
+ if ($rd->{type} eq 'natural')
+ {
+  Net::DRI::Exception::usererr_invalid_parameters('registrant_disclosure must have a disclose key when type=natural') unless exists $rd->{disclose};
+  return ['dx:disclosure',['dx:natural',{disclose => $rd->{disclose} ? 'true' : 'false' }]];
+ } else
+ {
+  return ['dx:disclosure',['dx:legal']];
+ }
 }
 
 sub add_puntcat_extension
 {
  my ($rd)=@_;
  my @n;
- return @n unless (defined($rd) && (ref($rd) eq 'HASH') && keys(%$rd));
+ return @n unless (defined $rd && (ref $rd eq 'HASH') && keys %$rd);
 
- if (exists($rd->{name_variant}) && defined($rd->{name_variant}))
+ if (exists $rd->{name_variant} && defined $rd->{name_variant})
  {
   push @n,add_name_variant($rd->{name_variant});
  }
 
- push @n,add_lang($rd->{lang})             if (exists($rd->{lang}) && defined($rd->{lang}));
- push @n,add_maintainer($rd->{maintainer}) if (exists($rd->{maintainer}) && defined($rd->{maintainer}));
+ push @n,add_lang($rd->{lang})             if (exists $rd->{lang} && defined $rd->{lang});
+ push @n,add_maintainer($rd->{maintainer}) if (exists $rd->{maintainer} && defined $rd->{maintainer});
 
- Net::DRI::Exception::usererr_insufficient_parameters('ens block is mandatory, since intendeduse are mandatory') unless (exists($rd->{ens}) && defined($rd->{ens}) && (ref(($rd->{ens})) eq 'HASH'));
+ Net::DRI::Exception::usererr_insufficient_parameters('ens block is mandatory, since intendeduse are mandatory') unless (exists $rd->{ens} && defined $rd->{ens} && (ref $rd->{ens} eq 'HASH'));
  my %ens=%{$rd->{ens}};
  my @ens;
 
- if (exists($ens{auth}) && defined($ens{auth}))
+ if (exists $ens{auth} && defined $ens{auth})
  {
-  my %auth=(ref($ens{auth}) eq 'HASH')? (key => $ens{auth}->{key}, id => $ens{auth}->{id} ) : (id => $ens{auth});
-  Net::DRI::Exception::usererr_insufficient_parameters('in ens auth block, id is mandatory') unless (exists($auth{id}) && defined($auth{id}));
+  my %auth=(ref $ens{auth} eq 'HASH')? (key => $ens{auth}->{key}, id => $ens{auth}->{id} ) : (id => $ens{auth});
+  Net::DRI::Exception::usererr_insufficient_parameters('in ens auth block, id is mandatory') unless (exists $auth{id} && defined $auth{id});
   Net::DRI::Exception::usererr_invalid_parameters('id in ens auth block must be XML token between 1 and 20 chars long') if !Net::DRI::Util::xml_is_token($auth{id},1,20);
-  Net::DRI::Exception::usererr_invalid_parameters('key in ens auth block must be XML token between 1 and 20 chars long') if (exists($auth{key}) && !Net::DRI::Util::xml_is_token($auth{key},1,20));
+  Net::DRI::Exception::usererr_invalid_parameters('key in ens auth block must be XML token between 1 and 20 chars long') if (exists $auth{key} && !Net::DRI::Util::xml_is_token($auth{key},1,20));
   push @ens,['dx:auth',\%auth];
  }
 
- if (exists($ens{sponsor}) && defined($ens{sponsor}))
+ if (exists $ens{sponsor} && defined $ens{sponsor})
  {
   my @e;
-  foreach my $e ((ref($ens{sponsor}) eq 'ARRAY')? @{$ens{sponsor}} : ($ens{sponsor}))
+  foreach my $e ((ref $ens{sponsor} eq 'ARRAY')? @{$ens{sponsor}} : ($ens{sponsor}))
   {
    Net::DRI::Exception::usererr_invalid_parameters("sponsor value $e in ens block must be a valid email address") unless (defined($e) && Net::DRI::Util::xml_is_token($e,1,undef) && Email::Valid->rfc822($e));
    push @e,['dx:sponsor',$e];
@@ -155,23 +172,25 @@ sub add_puntcat_extension
   Net::DRI::Exception::usererr_invalid_parameters('there must be either 1 or 3 sponsors') unless (@e==1 || @e==3);
   push @ens,['dx:sponsoring',@e];
  }
- 
- if (exists($ens{ref_url}) && defined($ens{ref_url}))
+
+ if (exists $ens{ref_url} && defined $ens{ref_url})
  {
   Net::DRI::Exception::usererr_invalid_parameters('ref_url in ens auth block must be XML token between 1 and 255 chars long') unless Net::DRI::Util::xml_is_token($ens{ref_url},1,255);
   push @ens,['dx:refURL',$ens{ref_url}];
  }
 
- if (exists($ens{registration_type}) && defined($ens{registration_type}))
+ if (exists $ens{registration_type} && defined $ens{registration_type})
  {
   Net::DRI::Exception::usererr_invalid_parameters('registration_type in ens auth block must be XML token between 1 and 128 chars long') unless Net::DRI::Util::xml_is_token($ens{registration_type},1,128);
   push @ens,['dx:registrationType',$ens{registration_type}];
  }
 
- Net::DRI::Exception::usererr_insufficient_parameters('intended_use in ens auth block is mandatory') unless (exists($ens{intended_use}) && defined($ens{intended_use}));
+ Net::DRI::Exception::usererr_insufficient_parameters('intended_use in ens auth block is mandatory') unless (exists $ens{intended_use} && defined $ens{intended_use});
  push @ens,add_intended_use($ens{intended_use});
 
  push @n,['dx:ens',@ens] if @ens;
+
+ push @n,add_disclose($rd->{registrant_disclosure}) if Net::DRI::Util::has_key($rd,'registrant_disclosure');
  return @n;
 }
 
@@ -220,7 +239,11 @@ sub update
   Net::DRI::Exception->die(0,'protocol/EPP',11,'Only intended_use set available for domain') if grep { $_ ne 'set' } $todo->types('intended_use');
   push @tmp,add_intended_use($todo->set('intended_use'));
  }
-
+ if ($todo->types('registrant_disclosure'))
+ {
+  Net::DRI::Exception->die(0,'protocol/EPP',11,'Only registrant_disclosure set available for domain') if grep { $_ ne 'set' } $todo->types('registrant_disclosure');
+  push @tmp,add_disclose($todo->set('registrant_disclosure'));
+ }
  push @n,['dx:chg',@tmp] if @tmp;
 
  return unless @n;
@@ -237,51 +260,51 @@ sub info_parse
  my $infdata=$mes->get_extension('puntcat_domain','infData');
  return unless $infdata;
 
- my $c=$infdata->getFirstChild();
- while($c)
+ foreach my $el (Net::DRI::Util::xml_list_children($infdata))
  {
-  next unless ($c->nodeType() == 1); ## only for element nodes
-  my $name=$c->localname() || $c->nodeName();
-  next unless $name;
-
+  my ($name,$c)=@$el;
   if ($name eq 'nameVariant')
   {
-   push @{$rinfo->{domain}->{$oname}->{name_variant}},$c->getFirstChild()->getData();
+   push @{$rinfo->{domain}->{$oname}->{name_variant}},$c->textContent();
   } elsif ($name eq 'language')
   {
-   $rinfo->{domain}->{$oname}->{lang}=$c->getFirstChild()->getData();
+   $rinfo->{domain}->{$oname}->{lang}=$c->textContent();
   } elsif ($name eq 'maintainer')
   {
-   $rinfo->{domain}->{$oname}->{maintainer}=$c->getFirstChild()->getData();
+   $rinfo->{domain}->{$oname}->{maintainer}=$c->textContent();
   } elsif ($name eq 'ens')
   {
    my %ens;
-   my $cc=$c->getFirstChild();
-   while($cc)
+   foreach my $ell (Net::DRI::Util::xml_list_children($c))
    {
-    next unless ($cc->nodeType() == 1); ## only for element nodes
-    my $name2=$cc->localname() || $cc->nodeName();
-    next unless $name2;
+    my ($name2,$cc)=@$ell;
     if ($name2 eq 'auth')
     {
      $ens{auth}={ id => $cc->getAttribute('id') };
     } elsif ($name2 eq 'sponsoring')
     {
-     $ens{sponsor}=[ map { $_->getFirstChild()->getData() } $cc->getChildrenByTagNameNS($mes->ns('puntcat_domain'),'sponsor') ]; 
+     $ens{sponsor}=[ map { $_->textContent() } $cc->getChildrenByTagNameNS($mes->ns('puntcat_domain'),'sponsor') ];
     } elsif ($name2 eq 'refURL')
     {
-     $ens{ref_url}=$cc->getFirstChild()->getData();
+     $ens{ref_url}=$cc->textContent();
     } elsif ($name2 eq 'registrationType')
     {
-     $ens{registration_type}=$cc->getFirstChild()->getData();
+     $ens{registration_type}=$cc->textContent();
     } elsif ($name2 eq 'intendedUse')
     {
-     $ens{intended_use}=$cc->getFirstChild()->getData();
+     $ens{intended_use}=$cc->textContent();
     }
-   } continue { $cc=$cc->getNextSibling(); }
+   }
    $rinfo->{domain}->{$oname}->{ens}=\%ens;
+  } elsif ($name eq 'disclosure')
+  {
+   my @d=@{(Net::DRI::Util::xml_list_children($c))[0]};
+   my %e;
+   $e{type}=$d[0]; ## natural or legal
+   $e{disclose}=Net::DRI::Util::xml_parse_boolean($d[1]->getAttribute('disclose')) if ($e{type} eq 'natural');
+   $rinfo->{domain}->{$oname}->{registrant_disclosure}=\%e;
   }
- } continue { $c=$c->getNextSibling(); }
+ }
 }
 
 ####################################################################################################

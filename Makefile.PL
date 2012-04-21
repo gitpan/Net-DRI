@@ -17,7 +17,7 @@ WriteMakefile(
         'DateTime::Format::ISO8601' => '0.06', ## version 0.0403 is also ok, version 0.05 IS NOT OK !
         'Class::Accessor' => 0,
         'Class::Accessor::Chained' => 0,
-        'IO::Socket::SSL' => '0.90',
+        'IO::Socket::SSL' => '1.31',
         'Email::Valid' => 0,
         'XML::LibXML' => '1.61',
         'UNIVERSAL::require' => 0,
@@ -30,12 +30,6 @@ WriteMakefile(
     EXE_FILES => [ 'bin/drish' ],
     MIN_PERL_VERSION    => '5.8.0', ## as reported by perlver from Perl::MinimumVersion
     META_ADD            => { optional_features => {
-                                                   email => { description => 'Support of email handling for .FR',
-                                                              requires => {
-                                                                           'Net::SMTP' => 0,
-                                                                           'MIME::Entity' => 0,
-                                                                          },
-                                                            },
                                                    webservices => { description => 'Support of webservices for the following registry drivers: Gandi, BookMyName, OVH',
                                                                     requires => {
                                                                                  'XMLRPC::Lite' => 0,

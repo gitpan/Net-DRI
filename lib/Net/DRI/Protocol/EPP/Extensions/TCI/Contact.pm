@@ -1,7 +1,7 @@
 ## Domain Registry Interface, .RU/.SU/.XN--P1AI EPP Contact Extension for Net::DRI
 ##
 ## Copyright (c) 2010-2011 Dmitry Belyavsky <beldmit@gmail.com>
-##               2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+##               2011-2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -174,7 +174,7 @@ sub parse_contact_data
 	return $result;
 }
 
-sub parse_disclose 
+sub parse_disclose
 {
  my $c=shift;
  my $flag=Net::DRI::Util::xml_parse_boolean($c->getAttribute('flag'));
@@ -182,7 +182,7 @@ sub parse_disclose
  foreach my $el (Net::DRI::Util::xml_list_children($c))
  {
   my ($name,$n)=@$el;
-  if ($name=~m/^(intName|name|org|addr)$/)
+  if ($name=~m/^(intName|locName|birthday|passport|name|org|addr|intOrg|locOrg|intAddress|locAddress|legalAddress|taxpayerNumbers)$/)
   {
    my $t=$n->getAttribute('type');
    $tmp{$1}=$flag;
@@ -433,7 +433,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 =head1 COPYRIGHT
 
 Copyright (c) 2010-2011 Dmitry Belyavsky <beldmit@gmail.com>
-Copyright (c) 2011 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2011-2012 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

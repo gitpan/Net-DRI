@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Handling of contact data for AFNIC
 ##
-## Copyright (c) 2006,2008,2009,2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2008-2010,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -25,7 +25,7 @@ use Email::Valid;
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-__PACKAGE__->register_attributes(qw(firstname legal_form legal_form_other legal_id jo trademark key birth vat id_status));
+__PACKAGE__->register_attributes(qw(firstname legal_form legal_form_other legal_id legal_id_type jo trademark birth vat qualification obsoleted));
 
 =pod
 
@@ -75,18 +75,10 @@ for trademarks, its number
 
 vat number (not used by registry for now)
 
-=head2 key()
-
-registrant invariant key
-
 =head2 birth()
 
 reference to an hash with 2 keys storing details about birth of contact :
 date (Date of birth) and place (Place of birth)
-
-=head2 id_status()
-
-set by registry, the current identication status of the contact
 
 =head1 SUPPORT
 
@@ -106,7 +98,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2008,2009,2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2008-2010,2012 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -146,9 +138,13 @@ sub validate
  push @errs,'firstname' if ($self->firstname() && $self->firstname()!~m/^${NOM_PROPRE}$/);
  push @errs,'org'  if ($self->org()  && ! is_nom_libre($self->org()));
 
- push @errs,'legal_form'       if ($self->legal_form()       && $self->legal_form()!~m/^(?:A|S|company|association|other)$/); ## AS for email, the rest for EPP
+ push @errs,'legal_form'       if ($self->legal_form()       && $self->legal_form()!~m/^(?:company|association|other)$/);
  push @errs,'legal_form_other' if ($self->legal_form_other() && ! is_nom_libre($self->legal_form_other()));
- push @errs,'legal_id'         if ($self->legal_id()         && $self->legal_id()!~m/^[0-9]{9}(?:[0-9]{5})?$/);
+ if ($self->legal_id_type())
+ {
+  push @errs,'legal_id_type' if $self->legal_id_type()!~m/^(?:siren|duns|local)$/;
+  push @errs,'legal_id'      if ($self->legal_id() && $self->legal_id_type() eq 'sirent' && $self->legal_id()!~m/^[0-9]{9}(?:[0-9]{5})?$/);
+ }
 
  my $jo=$self->jo();
  if ($jo)
@@ -167,8 +163,6 @@ sub validate
 
  push @errs,'vat'       if ($self->vat()       && !Net::DRI::Util::xml_is_token($self->vat()));
  push @errs,'trademark' if ($self->trademark() && $self->trademark()!~m/^[0-9]*[A-Za-z]*[0-9]+$/);
-
- push @errs,'key' if ($self->key() && $self->key()!~m/^[A-Za-z]{8}-[1-9][0-9]{2}$/);
 
  my $birth=$self->birth();
  if ($birth)
@@ -201,6 +195,19 @@ sub validate
  ## Maintainer is not tied to contact
 
  push @errs,'disclose' if ($self->disclose() && $self->disclose()!~m/^[ONY]$/i);
+
+ my $q=$self->qualification();
+ if (defined $q)
+ {
+  if (ref $q eq 'HASH')
+  {
+   my @k=keys %$q;
+   push @errs,'qualification' if grep { ! /^(?:identification|reachable)$/ } @k;
+  } else
+  {
+   push @errs,'qualification';
+  }
+ }
 
  Net::DRI::Exception::usererr_invalid_parameters('Invalid contact information: '.join('/',@errs)) if @errs;
  return 1; ## everything ok.

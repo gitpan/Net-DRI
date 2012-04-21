@@ -11,7 +11,7 @@ use DateTime;
 use DateTime::Duration;
 use Encode;
 
-use Test::More tests => 265;
+use Test::More tests => 268;
 eval { no warnings; require Test::LongString; Test::LongString->import(max => 100); $Test::LongString::Context=50; };
 if ( $@ ) { no strict 'refs'; *{'main::is_string'}=\&main::is; }
 
@@ -619,6 +619,16 @@ is($rc->get_data('exist'),1,'notification get_data(exist)');
 is($rc->get_data('return_code'),1155,'notification get_data(return_code)');
 is($rc->get_data('action'),'confirm_transfer','notification get_data(action)');
 is($rc->get_data('id'),6830,'notification get_data(id)');
+
+## Another form found in the wild
+
+$R2=$E1.'<response>'.r(1301,'Command completed successfully; ack to dequeue').'<msgQ count="1" id="4682495"><qDate>2011-10-31T23:25:17.071Z</qDate><msg>Watermark Reached</msg></msgQ><resData><eurid:pollRes><eurid:action>REACHED</eurid:action><eurid:level>1000.00</eurid:level><eurid:returncode>1000</eurid:returncode><eurid:type>WATERMARK</eurid:type></eurid:pollRes></resData>'.$TRID.'</response>'.$E2;
+$rc=$dri->message_retrieve();
+$s=$rc->get_data('message','session','last_id');
+is($rc->get_data('message',$s,'action'),'reached_watermark','notification !domain get_data(action)');
+is($rc->get_data('message',$s,'return_code'),1000,'notification !domain get_data(return_code)');
+is($rc->get_data('message',$s,'level'),'1000.00','notification !domain get_data(level)');
+
 
 ################################################################################################################
 

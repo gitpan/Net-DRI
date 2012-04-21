@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Encapsulating result status, standardized on EPP codes
 ##
-## Copyright (c) 2005,2006,2008-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2008-2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -194,7 +194,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2008-2011 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2008-2012 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -210,40 +210,40 @@ See the LICENSE file that comes with this distribution for more details.
 
 our %EPP_CODES=(
                 COMMAND_SUCCESSFUL => 1000,
-		COMMAND_SUCCESSFUL_PENDING => 1001, ## needed for async registries when action done correctly on our side
-		COMMAND_SUCCESSFUL_QUEUE_EMPTY => 1300,
-		COMMAND_SUCCESSFUL_QUEUE_ACK => 1301,
+                COMMAND_SUCCESSFUL_PENDING => 1001, ## needed for async registries when action done correctly on our side
+                COMMAND_SUCCESSFUL_QUEUE_EMPTY => 1300,
+                COMMAND_SUCCESSFUL_QUEUE_ACK => 1301,
                 COMMAND_SUCCESSFUL_END => 1500, ## after logout
 
-		UNKNOWN_COMMAND => 2000,
+                UNKNOWN_COMMAND => 2000,
                 COMMAND_SYNTAX_ERROR => 2001,
-		COMMAND_USE_ERROR => 2002,
-		REQUIRED_PARAMETER_MISSING => 2003,
-		PARAMETER_VAMUE_RANGE_ERROR => 2004,
+                COMMAND_USE_ERROR => 2002,
+                REQUIRED_PARAMETER_MISSING => 2003,
+                PARAMETER_VALUE_RANGE_ERROR => 2004,
                 PARAMETER_VALUE_SYNTAX_ERROR => 2005,
-		UNIMPLEMENTED_PROTOCOL_VERSION => 2100,
-		UNIMPLEMENTED_COMMAND => 2101,
-		UNIMPLEMENTED_OPTION => 2102,
-		UNIMPLEMENTED_EXTENSION => 2103,
-		BILLING_FAILURE => 2104,
-		OBJECT_NOT_ELIGIBLE_FOR_RENEWAL => 2105,
-		OBJECT_NOT_ELIGIBLE_FOR_TRANSFER => 2106,
+                UNIMPLEMENTED_PROTOCOL_VERSION => 2100,
+                UNIMPLEMENTED_COMMAND => 2101,
+                UNIMPLEMENTED_OPTION => 2102,
+                UNIMPLEMENTED_EXTENSION => 2103,
+                BILLING_FAILURE => 2104,
+                OBJECT_NOT_ELIGIBLE_FOR_RENEWAL => 2105,
+                OBJECT_NOT_ELIGIBLE_FOR_TRANSFER => 2106,
                 AUTHENTICATION_ERROR => 2200,
                 AUTHORIZATION_ERROR => 2201,
-		INVALID_AUTHORIZATION_INFO => 2202,
-		OBJECT_PENDING_TRANSFER => 2300,
-		OBJECT_NOT_PENDING_TRANSFER => 2301,
+                INVALID_AUTHORIZATION_INFO => 2202,
+                OBJECT_PENDING_TRANSFER => 2300,
+                OBJECT_NOT_PENDING_TRANSFER => 2301,
                 OBJECT_EXISTS   => 2302,
                 OBJECT_DOES_NOT_EXIST => 2303,
-		OBJECT_STATUS_PROHIBITS_OPERATION => 2304,
-		OBJECT_ASSOCIATION_PROHIBITS_OPERATION => 2305,
-		PARAMETER_VALUE_POLICY_ERROR => 2306,
-		UNIMPLEMENTED_OBJECT_SERVICE => 2307,
-		DATA_MANAGEMENT_POLICY_VIOLATION => 2308,
+                OBJECT_STATUS_PROHIBITS_OPERATION => 2304,
+                OBJECT_ASSOCIATION_PROHIBITS_OPERATION => 2305,
+                PARAMETER_VALUE_POLICY_ERROR => 2306,
+                UNIMPLEMENTED_OBJECT_SERVICE => 2307,
+                DATA_MANAGEMENT_POLICY_VIOLATION => 2308,
                 COMMAND_FAILED => 2400, ## Internal server error not related to the protocol
                 COMMAND_FAILED_CLOSING => 2500, ## Same + connection dropped
-		AUTHENTICATION_ERROR_CLOSING => 2501,
-		SESSION_LIMIT_EXCEEDED_CLOSING => 2502,
+                AUTHENTICATION_ERROR_CLOSING => 2501,
+                SESSION_LIMIT_EXCEEDED_CLOSING => 2502,
                );
 
 sub new
@@ -255,9 +255,9 @@ sub new
         message     => $message || '',
         type        => $type, ## rrp/epp/afnic/etc...
         lang        => $lang || '?',
-	'next'	    => undef,
+       'next'	    => undef,
         data        => {},
-	count	    => 0,
+        count	    => 0,
        );
 
  $s{code}=_eppcode($type,$code,$eppcode,$s{is_success});
@@ -319,7 +319,7 @@ sub local_get_data_collection
  my $d=$self->{'data'};
 
  if (! defined $k1)             { return wantarray ? keys %$d : $d; }
- ($k1,undef)=Net::DRI::normalize_name($k1,'');
+ ($k1,undef)=Net::DRI::Util::normalize_name($k1,'');
  if (! exists $d->{$k1})        { return; }
  if (! defined $k2)             { return wantarray ? keys %{$d->{$k1}} : $d->{$k1}; }
  ($k1,$k2)=Net::DRI::Util::normalize_name($k1,$k2);
