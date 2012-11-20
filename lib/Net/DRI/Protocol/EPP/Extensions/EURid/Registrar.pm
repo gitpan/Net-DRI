@@ -1,7 +1,7 @@
 ## Domain Registry Interface, EURid Registrar EPP extension commands
 ## (introduced in release 5.6 october 2008)
 ##
-## Copyright (c) 2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2009,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -48,7 +48,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2009,2012 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -65,28 +65,26 @@ See the LICENSE file that comes with this distribution for more details.
 sub register_commands
 {
  my ($class,$version)=@_;
- my %tmp=( 
+ my %tmp=(
           info => [ \&info, \&info_parse ],
          );
 
  return { 'registrar' => \%tmp };
 }
 
-####################################################################################################
-
-sub build_command_extension
+sub setup
 {
- my ($mes,$epp,$tag)=@_;
- return $mes->command_extension_register($tag,sprintf('xmlns:eurid="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('eurid')));
+ my ($class,$po,$version)=@_;
+ $po->ns({ 'registrar' => [ 'http://www.eurid.eu/xml/epp/registrar-1.0','registrar-1.0.xsd' ] });
 }
+
+####################################################################################################
 
 sub info
 {
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
- $mes->command(['info','registrar:info',sprintf('xmlns:registrar="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('registrar'))]);
- my $eid=build_command_extension($mes,$epp,'eurid:ext');
- $mes->command_extension($eid,['eurid:info',['eurid:registrar',{version=>'1.0'}]]);
+ $mes->command('info','registrar:info',sprintf('xmlns:registrar="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('registrar')));
 }
 
 sub info_parse
@@ -95,17 +93,16 @@ sub info_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $infdata=$mes->get_extension('eurid','ext');
- return unless defined $infdata;
-
- my $ns=$mes->ns('eurid');
- $infdata=Net::DRI::Util::xml_traverse($infdata,$ns,'infData','registrar');
+ my $infdata=$mes->get_response('registrar','infData');
  return unless defined $infdata;
 
  foreach my $el (Net::DRI::Util::xml_list_children($infdata))
  {
   my ($name,$c)=@$el;
-  if ($name eq 'hitPoints')
+  if ($name eq 'amountAvailable')
+  {
+   $rinfo->{registrar}->{info}->{amount_available}=0+$c->textContent();
+  } elsif ($name eq 'hitPoints')
   {
    $rinfo->{registrar}->{info}->{hitpoints}={};
    foreach my $sel (Net::DRI::Util::xml_list_children($c))
@@ -122,15 +119,9 @@ sub info_parse
      $rinfo->{registrar}->{info}->{hitpoints}->{blocked_until}=$po->parse_iso8601($cc->textContent());
     }
    }
-  } elsif ($name eq 'amountAvailable')
+  } elsif ($name eq 'credits')
   {
-   $rinfo->{registrar}->{info}->{amount_available}=0+$c->textContent();
-  } elsif ($name eq 'nbrRenewalCreditsAvailable')
-  {
-   $rinfo->{registrar}->{info}->{credits}->{renewal}=($c->textContent() eq '')? undef : 0+$c->textContent();
-  } elsif ($name eq 'nbrPromoCreditsAvailable')
-  {
-   $rinfo->{registrar}->{info}->{credits}->{promo}=($c->textContent() eq '')? undef : 0+$c->textContent();
+   $rinfo->{registrar}->{info}->{credits}->{$c->getAttribute('type')}=($c->textContent() eq '')? undef : 0+$c->textContent();
   }
  }
 }

@@ -78,7 +78,7 @@ sub new
 sub periods      { return map { DateTime::Duration->new(years => $_) } (1..10); }
 sub name         { return 'OpenSRS'; }
 sub tlds         { return (qw/example com net org info biz mobi name asia at au be bz ca cc ch cn co de dk es eu fr in it li me com.mx mx nl tel tv co.uk org.uk uk us ws/); } ## see http://www.opensrs.com/services/domains/domains-pricing
-sub object_types { return ('domain'); }
+sub object_types { return ('domain','host'); }
 sub profile_types { return qw/xcp/; }
 
 sub transport_protocol_default
@@ -164,6 +164,20 @@ sub domain_send_authcode
  my ($self,$ndr,$domain)=@_;
  my $rc=$ndr->process('domain','send_authcode',[$domain]);
  return $rc;
+}
+
+sub host_registry_check
+{
+ my ($self,$ndr,$hostname,$registry)=@_;
+
+ return $ndr->process('nameserver', 'registry_check', [$hostname, $registry]);
+}
+
+sub host_registry_add
+{
+ my ($self,$ndr,$hostname,$rd)=@_;
+
+ return $ndr->process('nameserver', 'registry_add', [$hostname, $rd]);
 }
 
 ####################################################################################################

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, VeriSign EPP extensions
 ##
-## Copyright (c) 2006,2008-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2008-2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -48,7 +48,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2008-2011 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2008-2012 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -76,7 +76,7 @@ sub setup
 sub default_extensions
 {
  my ($self,$rp)=@_;
- my @c=qw/VeriSign::Sync VeriSign::PollLowBalance VeriSign::PollRGP VeriSign::IDNLanguage VeriSign::WhoWas VeriSign::Suggestion VeriSign::ClientAttributes GracePeriod SecDNS/;
+ my @c=qw/VeriSign::Sync VeriSign::PollLowBalance VeriSign::PollRGP VeriSign::IDNLanguage VeriSign::WhoWas VeriSign::Suggestion VeriSign::ClientAttributes VeriSign::TwoFactorAuth VeriSign::ZoneManagement GracePeriod SecDNS/;
  push @c,'VeriSign::WhoisInfo'   if !exists $rp->{default_product} || (defined $rp->{default_product} && $rp->{default_product} ne 'dotCC' && $rp->{default_product} ne 'dotTV' );
  push @c,'VeriSign::JobsContact' if exists $rp->{default_product} && defined $rp->{default_product} && $rp->{default_product} eq 'dotJOBS';
  return @c;

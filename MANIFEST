@@ -79,6 +79,7 @@ lib/Net/DRI/DRD/Gandi.pm
 lib/Net/DRI/DRD/GL.pm
 lib/Net/DRI/DRD/HN.pm
 lib/Net/DRI/DRD/ICANN.pm
+lib/Net/DRI/DRD/ID.pm
 lib/Net/DRI/DRD/IENUMAT.pm
 lib/Net/DRI/DRD/IM.pm
 lib/Net/DRI/DRD/INFO.pm
@@ -307,8 +308,10 @@ lib/Net/DRI/Protocol/EPP/Extensions/VeriSign/PollRGP.pm
 lib/Net/DRI/Protocol/EPP/Extensions/VeriSign/PremiumDomain.pm
 lib/Net/DRI/Protocol/EPP/Extensions/VeriSign/Suggestion.pm
 lib/Net/DRI/Protocol/EPP/Extensions/VeriSign/Sync.pm
+lib/Net/DRI/Protocol/EPP/Extensions/VeriSign/TwoFactorAuth.pm
 lib/Net/DRI/Protocol/EPP/Extensions/VeriSign/WhoisInfo.pm
 lib/Net/DRI/Protocol/EPP/Extensions/VeriSign/WhoWas.pm
+lib/Net/DRI/Protocol/EPP/Extensions/VeriSign/ZoneManagement.pm
 lib/Net/DRI/Protocol/EPP/Message.pm
 lib/Net/DRI/Protocol/EPP/Util.pm
 lib/Net/DRI/Protocol/Gandi/WS.pm
@@ -328,6 +331,7 @@ lib/Net/DRI/Protocol/OpenSRS/XCP.pm
 lib/Net/DRI/Protocol/OpenSRS/XCP/Account.pm
 lib/Net/DRI/Protocol/OpenSRS/XCP/Connection.pm
 lib/Net/DRI/Protocol/OpenSRS/XCP/Domain.pm
+lib/Net/DRI/Protocol/OpenSRS/XCP/Host.pm
 lib/Net/DRI/Protocol/OpenSRS/XCP/Message.pm
 lib/Net/DRI/Protocol/OpenSRS/XCP/Session.pm
 lib/Net/DRI/Protocol/OVH/WS.pm
@@ -457,6 +461,7 @@ t/646afilias_oxrs.t
 t/647cocca_epp_ipvalidation.t
 t/648coza_epp.t
 t/649vnds_epp_coa.t
+t/650vnds_epp_twofactorauth.t
 t/701ovh_ws_live.t
 t/702bookmyname_ws_live.t
 t/703gandi_ws_live.t

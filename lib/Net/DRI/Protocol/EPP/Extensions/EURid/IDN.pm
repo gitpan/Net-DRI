@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EURid IDN EPP extension commands
 ##
-## Copyright (c) 2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2010,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -26,11 +26,11 @@ use Net::DRI::Protocol::EPP::Util;
 sub register_commands
 {
  my ($class,$version)=@_;
- my %tmp=( 
-          create            => [ undef, \&create_parse ],
-          info              => [ undef, \&info_parse ],
-	  check             => [ undef, \&check_parse ],
-          check_multi       => [ undef, \&check_parse ],
+ my %tmp=(
+          create => [ undef, \&_parse ],
+          info   => [ undef, \&_parse ],
+          check  => [ undef, \&check_parse ],
+          renew  => [ undef, \&_parse ],
          );
 
  return { 'domain' => \%tmp };
@@ -57,28 +57,16 @@ sub get_names
  return @r;
 }
 
-sub create_parse
+sub _parse
 {
  my ($po,$otype,$oaction,$oname,$rinfo)=@_;
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $credata=$mes->get_extension('idn','mapping');
- return unless defined $credata;
+ my $data=$mes->get_extension('idn','mapping');
+ return unless defined $data;
 
- ($rinfo->{domain}->{$oname}->{ace},$rinfo->{domain}->{$oname}->{unicode})=@{(get_names($mes,$credata))[0]};
-}
-
-sub info_parse
-{
- my ($po,$otype,$oaction,$oname,$rinfo)=@_;
- my $mes=$po->message();
- return unless $mes->is_success();
-
- my $infdata=$mes->get_extension('idn','mapping');
- return unless defined $infdata;
-
- ($rinfo->{domain}->{$oname}->{ace},$rinfo->{domain}->{$oname}->{unicode})=@{(get_names($mes,$infdata))[0]};
+ ($rinfo->{domain}->{$oname}->{ace},$rinfo->{domain}->{$oname}->{unicode})=@{(get_names($mes,$data))[0]};
 }
 
 sub check_parse
@@ -133,7 +121,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+Copyright (c) 2010,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

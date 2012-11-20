@@ -6,7 +6,7 @@ use warnings;
 use Net::DRI;
 use Net::DRI::Data::Raw;
 
-use Test::More tests => 77;
+use Test::More tests => 89;
 
 eval { no warnings; require Test::LongString; Test::LongString->import(max => 100); $Test::LongString::Context=50; };
 if ( $@ ) { no strict 'refs'; *{'main::is_string'}=\&main::is; }
@@ -69,11 +69,13 @@ $c->voice('+49.123456');
 $c->fax('+49.123457');
 $c->email('email@denic.de');
 $c->sip('sip:benutzer@denic.de');
+$c->remarks('Interesting remark');
+$c->disclose({voice =>1});
 
 $rc = $dri->contact_create($c);
 isa_ok($rc, 'Net::DRI::Protocol::ResultStatus');
 is($rc->is_success(), 1, 'Contact successfully created');
-is($R1, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><registry-request xmlns="http://registry.denic.de/global/1.0" xmlns:contact="http://registry.denic.de/contact/1.0"><contact:create><contact:handle>DENIC-99990-10240-BSP</contact:handle><contact:type>PERSON</contact:type><contact:name>Theobald Tester</contact:name><contact:organisation>Test-Org</contact:organisation><contact:postal><contact:address>Kleiner Dienstweg 17</contact:address><contact:postalCode>09538</contact:postalCode><contact:city>Gipsnich</contact:city><contact:countryCode>DE</contact:countryCode></contact:postal><contact:phone>+49.123456</contact:phone><contact:fax>+49.123457</contact:fax><contact:email>email@denic.de</contact:email><contact:sip>sip:benutzer@denic.de</contact:sip></contact:create><ctid>ABC-12345</ctid></registry-request>', 'Create Contact XML correct');
+is($R1, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><registry-request xmlns="http://registry.denic.de/global/1.0" xmlns:contact="http://registry.denic.de/contact/1.0"><contact:create><contact:handle>DENIC-99990-10240-BSP</contact:handle><contact:type>PERSON</contact:type><contact:name>Theobald Tester</contact:name><contact:organisation>Test-Org</contact:organisation><contact:postal><contact:address>Kleiner Dienstweg 17</contact:address><contact:postalCode>09538</contact:postalCode><contact:city>Gipsnich</contact:city><contact:countryCode>DE</contact:countryCode></contact:postal><contact:phone disclose="true">+49.123456</contact:phone><contact:fax>+49.123457</contact:fax><contact:email>email@denic.de</contact:email><contact:sip>sip:benutzer@denic.de</contact:sip><contact:remarks>Interesting remark</contact:remarks></contact:create><ctid>ABC-12345</ctid></registry-request>', 'Create Contact XML correct');
 
 my $todo = $dri->local_object('changes');
 $todo->set('info', $c);
@@ -81,7 +83,7 @@ $todo->set('info', $c);
 $rc = $dri->contact_update($c, $todo);
 isa_ok($rc, 'Net::DRI::Protocol::ResultStatus');
 is($rc->is_success(), 1, 'Contact successfully updated');
-is($R1, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><registry-request xmlns="http://registry.denic.de/global/1.0" xmlns:contact="http://registry.denic.de/contact/1.0"><contact:update><contact:handle>DENIC-99990-10240-BSP</contact:handle><contact:type>PERSON</contact:type><contact:name>Theobald Tester</contact:name><contact:organisation>Test-Org</contact:organisation><contact:postal><contact:address>Kleiner Dienstweg 17</contact:address><contact:postalCode>09538</contact:postalCode><contact:city>Gipsnich</contact:city><contact:countryCode>DE</contact:countryCode></contact:postal><contact:phone>+49.123456</contact:phone><contact:fax>+49.123457</contact:fax><contact:email>email@denic.de</contact:email><contact:sip>sip:benutzer@denic.de</contact:sip></contact:update><ctid>ABC-12345</ctid></registry-request>', 'Update Contact XML correct');
+is($R1, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><registry-request xmlns="http://registry.denic.de/global/1.0" xmlns:contact="http://registry.denic.de/contact/1.0"><contact:update><contact:handle>DENIC-99990-10240-BSP</contact:handle><contact:type>PERSON</contact:type><contact:name>Theobald Tester</contact:name><contact:organisation>Test-Org</contact:organisation><contact:postal><contact:address>Kleiner Dienstweg 17</contact:address><contact:postalCode>09538</contact:postalCode><contact:city>Gipsnich</contact:city><contact:countryCode>DE</contact:countryCode></contact:postal><contact:phone disclose="true">+49.123456</contact:phone><contact:fax>+49.123457</contact:fax><contact:email>email@denic.de</contact:email><contact:sip>sip:benutzer@denic.de</contact:sip><contact:remarks>Interesting remark</contact:remarks></contact:update><ctid>ABC-12345</ctid></registry-request>', 'Update Contact XML correct');
 
 $R2 = $E1 . '<tr:transaction><tr:stid>' . $TRID .
 	'</tr:stid><tr:result>success</tr:result><tr:data><contact:checkData><contact:handle>DENIC-99990-10240-BSP</contact:handle><contact:status>failed</contact:status></contact:checkData></tr:data></tr:transaction>' . $E2;
@@ -153,16 +155,18 @@ $cs->add($dri->local_object('contact')->srid('DENIC-99990-10240-BSP'), 'registra
 $cs->add($dri->local_object('contact')->srid('DENIC-99990-10240-BSP1'), 'admin');
 $cs->add($dri->local_object('contact')->srid('DENIC-99990-10240-BSP2'), 'tech');
 
+my @secdns = ({key_flags=>257,key_protocol=>3,key_alg=>5,key_pubKey=>'AwEAAdDECajHaTjfSoNTY58WcBah1BxPKVIHBz4IfLjfqMvium4lgKtKZLe97DgJ5/NQrNEGGQmr6fKvUj67cfrZUojZ2cGRizVhgkOqZ9scaTVXNuXLM5Tw7VWOVIceeXAuuH2mPIiEV6MhJYUsW6dvmNsJ4XwCgNgroAmXhoMEiWEjBB+wjYZQ5GtZHBFKVXACSWTiCtddHcueOeSVPi5WH94VlubhHfiytNPZLrObhUCHT6k0tNE6phLoHnXWU+6vpsYpz6GhMw/R9BFxW5PdPFIWBgoWk2/XFVRSKG9Lr61b2z1R126xeUwvw46RVy3h anV3vNO7LM5H niqaYclBbhk='});
 $rc = $dri->domain_create('rritestdomain.de', {
 	pure_create =>  1,
 	contact =>	$cs,
 	ns =>		$dri->local_object('hosts')->
-	add('dns1.syhosting.ch',['193.219.115.46'])
+	add('dns1.syhosting.ch',['193.219.115.46']),
+	secdns => [ @secdns ],
 	});
 isa_ok($rc, 'Net::DRI::Protocol::ResultStatus');
 is($rc->is_success(), 1, 'Domain successfully created');
 
-is($R1, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><registry-request xmlns="http://registry.denic.de/global/1.0" xmlns:domain="http://registry.denic.de/domain/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dnsentry="http://registry.denic.de/dnsentry/1.0"><domain:create><domain:handle>rritestdomain.de</domain:handle><domain:ace>rritestdomain.de</domain:ace><domain:contact role="admin-c">DENIC-99990-10240-BSP1</domain:contact><domain:contact role="holder">DENIC-99990-10240-BSP</domain:contact><domain:contact role="tech-c">DENIC-99990-10240-BSP2</domain:contact><dnsentry:dnsentry xsi:type="dnsentry:NS"><dnsentry:owner>rritestdomain.de.</dnsentry:owner><dnsentry:rdata><dnsentry:nameserver>dns1.syhosting.ch.</dnsentry:nameserver><dnsentry:address>193.219.115.46</dnsentry:address></dnsentry:rdata></dnsentry:dnsentry></domain:create><ctid>ABC-12345</ctid></registry-request>', 'Create Domain XML correct');
+is($R1, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><registry-request xmlns="http://registry.denic.de/global/1.0" xmlns:domain="http://registry.denic.de/domain/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dnsentry="http://registry.denic.de/dnsentry/1.0"><domain:create><domain:handle>rritestdomain.de</domain:handle><domain:ace>rritestdomain.de</domain:ace><domain:contact role="admin-c">DENIC-99990-10240-BSP1</domain:contact><domain:contact role="holder">DENIC-99990-10240-BSP</domain:contact><domain:contact role="tech-c">DENIC-99990-10240-BSP2</domain:contact><dnsentry:dnsentry xsi:type="dnsentry:NS"><dnsentry:owner>rritestdomain.de.</dnsentry:owner><dnsentry:rdata><dnsentry:nameserver>dns1.syhosting.ch.</dnsentry:nameserver><dnsentry:address>193.219.115.46</dnsentry:address></dnsentry:rdata></dnsentry:dnsentry><dnsentry:dnsentry xsi:type="dnsentry:DNSKEY"><dnsentry:owner>rritestdomain.de.</dnsentry:owner><dnsentry:rdata><dnsentry:flags>257</dnsentry:flags><dnsentry:protocol>3</dnsentry:protocol><dnsentry:algorithm>5</dnsentry:algorithm><dnsentry:publicKey>AwEAAdDECajHaTjfSoNTY58WcBah1BxPKVIHBz4IfLjfqMvium4lgKtKZLe97DgJ5/NQrNEGGQmr6fKvUj67cfrZUojZ2cGRizVhgkOqZ9scaTVXNuXLM5Tw7VWOVIceeXAuuH2mPIiEV6MhJYUsW6dvmNsJ4XwCgNgroAmXhoMEiWEjBB+wjYZQ5GtZHBFKVXACSWTiCtddHcueOeSVPi5WH94VlubhHfiytNPZLrObhUCHT6k0tNE6phLoHnXWU+6vpsYpz6GhMw/R9BFxW5PdPFIWBgoWk2/XFVRSKG9Lr61b2z1R126xeUwvw46RVy3h anV3vNO7LM5H niqaYclBbhk=</dnsentry:publicKey></dnsentry:rdata></dnsentry:dnsentry></domain:create><ctid>ABC-12345</ctid></registry-request>', 'Create Domain XML correct');
 
 $R2 = $E1 . '<tr:transaction><tr:stid>' . $TRID .
 	'</tr:stid><tr:result>success</tr:result><tr:data><domain:checkData><domain:handle>denic.de</domain:handle><domain:ace>denic.de</domain:ace><domain:status>connect</domain:status></domain:checkData></tr:data></tr:transaction>' . $E2;
@@ -202,9 +206,9 @@ $R2 = $E1 . '<tr:transaction><tr:stid>' . $TRID .
 	'<domain:changed>2001-09-11T11:45:23-07:00</domain:changed>' .
 	'</domain:infoData></tr:data></tr:transaction>' . $E2;
 
-$rc = $dri->domain_info('rritestdomain.de');
+$rc = $dri->domain_info('rritestdomain.de',{withProvider=>1});
 isa_ok($rc, 'Net::DRI::Protocol::ResultStatus');
-is($rc->is_success(), 1, 'Domain successfully queried');
+is($rc->is_success(), 1, 'Domain successfully queried with withProvider');
 is($R1, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><registry-request xmlns="http://registry.denic.de/global/1.0" xmlns:domain="http://registry.denic.de/domain/1.0"><domain:info recursive="false" withProvider="true"><domain:handle>rritestdomain.de</domain:handle><domain:ace>rritestdomain.de</domain:ace></domain:info></registry-request>', 'Query Domain XML correct');
 
 $mod = $dri->get_info('upDate', 'domain', 'rritestdomain.de');
@@ -269,12 +273,13 @@ $R2 = $E1 . '<tr:transaction><tr:stid>' . $TRID .
 $rc = $dri->domain_transfer_start('sygroup.de', {
 	contact =>	$cs,
 	ns =>		$dri->local_object('hosts')->
-		add('dns1.syhosting.ch',['193.219.115.46'])
+		add('dns1.syhosting.ch',['193.219.115.46']),
+		auth => { pw => 'test-auth'},
 });
 isa_ok($rc, 'Net::DRI::Protocol::ResultStatus');
 is($rc->is_success(), 1, 'Domain successfully transferred');
 
-is($R1, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><registry-request xmlns="http://registry.denic.de/global/1.0" xmlns:domain="http://registry.denic.de/domain/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dnsentry="http://registry.denic.de/dnsentry/1.0"><domain:chprov><domain:handle>sygroup.de</domain:handle><domain:ace>sygroup.de</domain:ace><domain:contact role="admin-c">DENIC-99990-10240-BSP1</domain:contact><domain:contact role="holder">DENIC-99990-10240-BSP</domain:contact><domain:contact role="tech-c">DENIC-99990-10240-BSP2</domain:contact><dnsentry:dnsentry xsi:type="dnsentry:NS"><dnsentry:owner>sygroup.de.</dnsentry:owner><dnsentry:rdata><dnsentry:nameserver>dns1.syhosting.ch.</dnsentry:nameserver><dnsentry:address>193.219.115.46</dnsentry:address></dnsentry:rdata></dnsentry:dnsentry></domain:chprov><ctid>ABC-12345</ctid></registry-request>', 'Transfer Domain XML correct');
+is($R1, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><registry-request xmlns="http://registry.denic.de/global/1.0" xmlns:domain="http://registry.denic.de/domain/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dnsentry="http://registry.denic.de/dnsentry/1.0"><domain:chprov><domain:handle>sygroup.de</domain:handle><domain:ace>sygroup.de</domain:ace><domain:contact role="admin-c">DENIC-99990-10240-BSP1</domain:contact><domain:contact role="holder">DENIC-99990-10240-BSP</domain:contact><domain:contact role="tech-c">DENIC-99990-10240-BSP2</domain:contact><dnsentry:dnsentry xsi:type="dnsentry:NS"><dnsentry:owner>sygroup.de.</dnsentry:owner><dnsentry:rdata><dnsentry:nameserver>dns1.syhosting.ch.</dnsentry:nameserver><dnsentry:address>193.219.115.46</dnsentry:address></dnsentry:rdata></dnsentry:dnsentry><domain:authInfo>test-auth</domain:authInfo></domain:chprov><ctid>ABC-12345</ctid></registry-request>', 'Transfer Domain XML correct');
 
 $rc = $dri->domain_transfer_refuse('rritestdomain.de');
 isa_ok($rc, 'Net::DRI::Protocol::ResultStatus');
@@ -353,6 +358,28 @@ $rc = $dri->domain_update('rritestdomain.de', $changes);
 isa_ok($rc, 'Net::DRI::Protocol::ResultStatus');
 is($rc->is_success(), 1, 'Domain successfully updated');
 is($R1, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><registry-request xmlns="http://registry.denic.de/global/1.0" xmlns:domain="http://registry.denic.de/domain/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dnsentry="http://registry.denic.de/dnsentry/1.0"><domain:update><domain:handle>rritestdomain.de</domain:handle><domain:ace>rritestdomain.de</domain:ace><domain:contact role="admin-c">DENIC-1000006-SD</domain:contact><domain:contact role="holder">DENIC-1000006-1</domain:contact><domain:contact role="holder">DENIC-1000006-2</domain:contact><domain:contact role="tech-c">ALFRED-RIPE</domain:contact><domain:contact role="zone-c">DENIC-1000006-OPS</domain:contact><dnsentry:dnsentry xsi:type="dnsentry:NS"><dnsentry:owner>rritestdomain.de.</dnsentry:owner><dnsentry:rdata><dnsentry:nameserver>dns1.syhosting.ch.</dnsentry:nameserver><dnsentry:address>193.219.115.46</dnsentry:address></dnsentry:rdata></dnsentry:dnsentry></domain:update><ctid>ABC-12345</ctid></registry-request>', 'Update Domain XML correct');
+
+$rc = $dri->domain_transit('rritestdomain.de', {disconnect => 'true'});
+isa_ok($rc, 'Net::DRI::Protocol::ResultStatus');
+is($rc->is_success(), 1, 'Domain successfully transitted');
+is($R1, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><registry-request xmlns="http://registry.denic.de/global/1.0" xmlns:domain="http://registry.denic.de/domain/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dnsentry="http://registry.denic.de/dnsentry/1.0"><domain:transit disconnect="true"><domain:handle>rritestdomain.de</domain:handle><domain:ace>rritestdomain.de</domain:ace></domain:transit><ctid>ABC-12345</ctid></registry-request>', 'Transit Domain XML correct');
+
+$cs = $dri->local_object('contactset');
+$cs->add($dri->local_object('contact')->srid('DENIC-99990-10240-BSP5'), 'registrant');
+$rc = $dri->domain_migrate_descr('rritestdomain.de', {contact => $cs});
+isa_ok($rc, 'Net::DRI::Protocol::ResultStatus');
+is($rc->is_success(), 1, 'Domain successfully migrated');
+is($R1, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><registry-request xmlns="http://registry.denic.de/global/1.0" xmlns:domain="http://registry.denic.de/domain/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dnsentry="http://registry.denic.de/dnsentry/1.0"><domain:migrate-descr><domain:handle>rritestdomain.de</domain:handle><domain:ace>rritestdomain.de</domain:ace><domain:contact role="holder">DENIC-99990-10240-BSP5</domain:contact></domain:migrate-descr><ctid>ABC-12345</ctid></registry-request>', 'Migrate Domain XML correct');
+
+$rc = $dri->domain_create_authinfo('rritestdomain.de', {authinfohash => '444', authinfoexpire => '20121010'});
+isa_ok($rc, 'Net::DRI::Protocol::ResultStatus');
+is($rc->is_success(), 1, 'Domain successfully created authinfo');
+is($R1, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><registry-request xmlns="http://registry.denic.de/global/1.0" xmlns:domain="http://registry.denic.de/domain/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dnsentry="http://registry.denic.de/dnsentry/1.0"><domain:createAuthInfo1 hash="444" expire="20121010"><domain:handle>rritestdomain.de</domain:handle><domain:ace>rritestdomain.de</domain:ace></domain:createAuthInfo1><ctid>ABC-12345</ctid></registry-request>', 'Domain Create Authinfo XML correct');
+
+$rc = $dri->domain_delete_authinfo('rritestdomain.de');
+isa_ok($rc, 'Net::DRI::Protocol::ResultStatus');
+is($rc->is_success(), 1, 'Domain successfully deleted authinfo');
+is($R1, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><registry-request xmlns="http://registry.denic.de/global/1.0" xmlns:domain="http://registry.denic.de/domain/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dnsentry="http://registry.denic.de/dnsentry/1.0"><domain:deleteAuthInfo1><domain:handle>rritestdomain.de</domain:handle><domain:ace>rritestdomain.de</domain:ace></domain:deleteAuthInfo1><ctid>ABC-12345</ctid></registry-request>', 'Domain Delete Authinfo XML correct');
 
 ####################################################################################################
 

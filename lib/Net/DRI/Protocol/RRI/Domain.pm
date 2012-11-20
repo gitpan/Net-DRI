@@ -1,6 +1,7 @@
 ## Domain Registry Interface, RRI Domain commands (DENIC-11)
 ##
 ## Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
+##           (c) 2012 Michael Holloway <michael@thedarkwinter.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -53,6 +54,7 @@ Tonnerre Lombard, E<lt>tonnerre.lombard@sygroup.chE<gt>
 =head1 COPYRIGHT
 
 Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+          (c) 2012 Michael Holloway <michael@thedarkwinter.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -79,9 +81,12 @@ sub register_commands
            transfer_answer  => [ \&transfer_answer ],
            trade => [ \&trade ],
            update => [ \&update],
+           transit => [ \&transit],
+           migrate_descr => [ \&migrate_descr],
+           create_authinfo => [ \&create_authinfo],
+           delete_authinfo => [ \&delete_authinfo],
          );
 
- ##$tmp{check_multi} = $tmp{check};
  return { 'domain' => \%tmp };
 }
 
@@ -148,8 +153,9 @@ sub info
 {
  my ($rri, $domain, $rd)=@_;
  my $mes = $rri->message();
+ my $wp = (defined($rd->{'withProvider'} && $rd->{'withProvider'})) ? 'true' : 'false';
  my @d = build_command($mes, 'info', $domain,
-	{recursive => 'false', withProvider => 'true'});
+	{recursive => 'false', withProvider => $wp});
  $mes->command_body(\@d);
  $mes->cltrid(undef);
 }
@@ -191,7 +197,7 @@ sub info_parse
    my $hndl_tag = $hndl_tags[0];
    $role = $rmap{$role} if (defined($rmap{$role}));
    $cs->add($po->create_local_object('contact')->srid($hndl_tag->getFirstChild()->getData()), $role)
-	if (defined($hndl_tag));
+	if (defined($hndl_tag) && defined($hndl_tag->getFirstChild()));
   }
   elsif ($name eq 'dnsentry')
   {
@@ -352,6 +358,8 @@ sub create
  ## Nameservers, OPTIONAL
  push @d,build_ns($rri,$rd->{ns},$domain) if Net::DRI::Util::has_ns($rd);
 
+ push @d,build_secdns($rd->{secdns},$domain) if $rd->{secdns};
+
  $mes->command_body(\@d);
 }
 
@@ -386,8 +394,29 @@ sub build_ns
 	['dnsentry:owner', $domain . '.'],
 	['dnsentry:rdata', ['dnsentry:nameserver', $n . '.' ], @h ] ];
  }
-
  $xmlns='dnsentry' unless defined($xmlns);
+ return @d;
+}
+
+sub build_secdns
+{
+ my ($secdns,$domain)=@_;
+ return undef unless $secdns;
+ my @d;
+ foreach my $s (@{$secdns}) {
+  next unless $s->{key_flags};
+  Net::DRI::Exception::usererr_invalid_parameters('key_flags mut be a 16-bit unsigned integer: '.$s->{key_flags}) unless Net::DRI::Util::verify_ushort($s->{key_flags});
+  Net::DRI::Exception::usererr_invalid_parameters('key_protocol must be an unsigned byte: '.$s->{key_protocol}) unless Net::DRI::Util::verify_ubyte($s->{key_protocol});
+  Net::DRI::Exception::usererr_invalid_parameters('key_alg must be an unsigned byte: '.$s->{key_alg}) unless Net::DRI::Util::verify_ubyte($s->{key_alg});
+  Net::DRI::Exception::usererr_invalid_parameters('key_pubKey must be a non empty base64 string: '.$s->{key_pubKey}) unless Net::DRI::Util::verify_base64($s->{key_pubKey},1);
+  push @d, ['dnsentry:dnsentry', {'xsi:type' => 'dnsentry:DNSKEY'},
+       ['dnsentry:owner', $domain . '.'],
+    ['dnsentry:rdata',
+         ['dnsentry:flags', $s->{'key_flags'}],
+         ['dnsentry:protocol', $s->{'key_protocol'}],
+         ['dnsentry:algorithm', $s->{'key_alg'}],
+         ['dnsentry:publicKey', $s->{'key_pubKey'}] ] ];
+  }
  return @d;
 }
 
@@ -456,6 +485,8 @@ sub transfer_request
  ## Nameservers, OPTIONAL
  push @d, build_ns($rri, $rd->{ns}, $domain) if Net::DRI::Util::has_ns($rd);
 
+ push @d, ['domain:authInfo',$rd->{auth}->{pw}] if $rd->{auth};
+
  $mes->command_body(\@d);
 }
 
@@ -474,7 +505,7 @@ sub trade
  my $mes = $rri->message();
  my %ns = map { $_ => $mes->ns->{$_}->[0] } qw(domain dnsentry xsi);
  my @d = build_command($mes, 'chholder', $domain, undef, \%ns);
- 
+
  my $def = $rri->default_parameters();
  if ($def && (ref($def) eq 'HASH') && exists($def->{domain_create}) &&
 	(ref($def->{domain_create}) eq 'HASH'))
@@ -493,6 +524,47 @@ sub trade
  ## Nameservers, OPTIONAL
  push @d, build_ns($rri, $rd->{ns}, $domain) if Net::DRI::Util::has_ns($rd);
 
+ $mes->command_body(\@d);
+}
+
+sub transit {
+ my ($rri, $domain, $rd) = @_;
+ my $mes = $rri->message();
+ my $disconnect = ( exists($rd->{disconnect}) && $rd->{disconnect} eq 'true' ) ? { disconnect => 'true'} : undef;
+ my %ns = map { $_ => $mes->ns->{$_}->[0] } qw(domain dnsentry xsi);
+ my @d = build_command($mes, 'transit', $domain, $disconnect, \%ns);
+
+ $mes->command_body(\@d);
+}
+
+sub migrate_descr {
+ my ($rri, $domain, $rd) = @_;
+ my $mes = $rri->message();
+ my %ns = map { $_ => $mes->ns->{$_}->[0] } qw(domain dnsentry xsi);
+ my @d = build_command($mes, 'migrate-descr', $domain, undef, \%ns);
+
+ ## Contacts, Holder is required
+ push @d,build_contact($rd->{contact}) if Net::DRI::Util::has_contact($rd);
+
+ $mes->command_body(\@d);
+}
+
+sub create_authinfo {
+ my ($rri, $domain, $rd) = @_;
+ my $mes = $rri->message();
+ my %ns = map { $_ => $mes->ns->{$_}->[0] } qw(domain dnsentry xsi);
+ my $hash = exists($rd->{'authinfohash'}) ? { hash => $rd->{'authinfohash'}} : undef;
+ $hash->{'expire'} = $rd->{'authinfoexpire'} if ($hash && exists($rd->{'authinfoexpire'}));
+ my $cmd = ($hash) ? 'createAuthInfo1' : 'createAuthInfo2';
+ my @d = build_command($mes, $cmd, $domain, $hash, \%ns);
+ $mes->command_body(\@d);
+}
+
+sub delete_authinfo {
+ my ($rri, $domain, $rd) = @_;
+ my $mes = $rri->message();
+ my %ns = map { $_ => $mes->ns->{$_}->[0] } qw(domain dnsentry xsi);
+ my @d = build_command($mes, 'deleteAuthInfo1', $domain, undef, \%ns);
  $mes->command_body(\@d);
 }
 

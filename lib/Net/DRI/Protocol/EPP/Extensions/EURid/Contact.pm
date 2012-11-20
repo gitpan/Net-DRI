@@ -1,7 +1,7 @@
 ## Domain Registry Interface, EURid Contact EPP extension commands
 ## (based on EURid registration_guidelines_v1_0E-epp.pdf)
 ##
-## Copyright (c) 2005,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2008,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -16,6 +16,9 @@
 package Net::DRI::Protocol::EPP::Extensions::EURid::Contact;
 
 use strict;
+use warnings;
+
+use Net::DRI::Util;
 
 =pod
 
@@ -45,7 +48,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2008,2012 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -62,23 +65,26 @@ See the LICENSE file that comes with this distribution for more details.
 sub register_commands
 {
  my ($class,$version)=@_;
- my %tmp=( 
+ my %tmp=(
           create            => [ \&create, undef ],
           update            => [ \&update, undef ],
-          info              => [ \&info, \&info_parse ],
+          info              => [ undef, \&info_parse ],
          );
 
  return { 'contact' => \%tmp };
 }
 
-####################################################################################################
-
-sub build_command_extension
+sub setup
 {
- my ($mes,$epp,$tag)=@_;
- return $mes->command_extension_register($tag,sprintf('xmlns:eurid="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('eurid')));
+ my ($class,$po,$version)=@_;
+ foreach my $ns (qw/contact-ext/)
+ {
+  $po->ns({ $ns => [ 'http://www.eurid.eu/xml/epp/'.$ns.'-1.0',$ns.'-1.0.xsd' ] });
+ }
+ return;
 }
 
+####################################################################################################
 
 sub create
 {
@@ -87,12 +93,12 @@ sub create
 
  ## validate() has been called, we are sure that type & lang exists
  my @n;
- push @n,['eurid:type',$contact->type()];
- push @n,['eurid:vat',$contact->vat()] if $contact->vat();
- push @n,['eurid:lang',$contact->lang()];
+ push @n,['contact-ext:type',$contact->type()];
+ push @n,['contact-ext:vat',$contact->vat()] if $contact->vat();
+ push @n,['contact-ext:lang',$contact->lang()];
 
- my $eid=build_command_extension($mes,$epp,'eurid:ext');
- $mes->command_extension($eid,['eurid:create',['eurid:contact',@n]]);
+ my $eid=$mes->command_extension_register('contact-ext','create');
+ $mes->command_extension($eid,\@n);
 }
 
 sub update
@@ -104,19 +110,11 @@ sub update
  return unless ($newc && (defined($newc->vat()) || defined($newc->lang())));
 
  my @n;
- push @n,['eurid:vat',$newc->vat()]   if defined($newc->vat());
- push @n,['eurid:lang',$newc->lang()] if defined($newc->lang());
+ push @n,['contact-ext:vat',$newc->vat()]   if defined($newc->vat());
+ push @n,['contact-ext:lang',$newc->lang()] if defined($newc->lang());
 
- my $eid=build_command_extension($mes,$epp,'eurid:ext');
- $mes->command_extension($eid,['eurid:update',['eurid:contact',['eurid:chg',@n]]]);
-}
-
-sub info
-{
- my ($epp,$contact)=@_;
- my $mes=$epp->message();
- my $eid=build_command_extension($mes,$epp,'eurid:ext');
- $mes->command_extension($eid,['eurid:info',['eurid:contact',{version => '2.0'}]]);
+ my $eid=$mes->command_extension_register('contact-ext','update');
+ $mes->command_extension($eid,['contact-ext:chg',@n]);
 }
 
 sub info_parse
@@ -125,27 +123,18 @@ sub info_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $infdata=$mes->get_extension('eurid','ext');
+ my $infdata=$mes->get_extension('contact-ext','infData');
  return unless $infdata;
- my $ns=$mes->ns('eurid');
- $infdata=$infdata->getChildrenByTagNameNS($ns,'infData');
- return unless $infdata->size();
- $infdata=$infdata->shift();
- $infdata=$infdata->getChildrenByTagNameNS($ns,'contact');
- return unless $infdata->size();
- $infdata=$infdata->shift();
 
  my $s=$rinfo->{contact}->{$oname}->{self};
- my $el=$infdata->getChildrenByTagNameNS($ns,'type');
- $s->type($el->get_node(1)->getFirstChild()->getData());
- $el=$infdata->getChildrenByTagNameNS($ns,'vat');
- $s->vat($el->get_node(1)->getFirstChild()->getData()) if defined($el->get_node(1));
- $el=$infdata->getChildrenByTagNameNS($ns,'lang');
- $s->lang($el->get_node(1)->getFirstChild()->getData());
- $el=$infdata->getChildrenByTagNameNS($ns,'onhold');
- $s->onhold($el->get_node(1)->getFirstChild()->getData()) if defined($el->get_node(1));
- $el=$infdata->getChildrenByTagNameNS($ns,'monitoringStatus');
- $s->monitoring_status($el->get_node(1)->getFirstChild()->getData()) if defined($el->get_node(1));
+ foreach my $el (Net::DRI::Util::xml_list_children($infdata))
+ {
+  my ($name,$c)=@$el;
+  if ($name=~m/^(type|vat|lang)$/)
+  {
+   $s->$1($c->textContent());
+  }
+ }
 }
 
 ####################################################################################################

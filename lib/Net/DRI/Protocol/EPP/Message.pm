@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Message
 ##
-## Copyright (c) 2005-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -59,7 +59,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005-2011 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2012 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -120,9 +120,30 @@ sub ns
 sub nsattrs
 {
  my ($self,$what)=@_;
- return unless (defined $what && exists $self->{ns}->{$what});
- my @n=@{$self->{ns}->{$what}};
- return ($n[0],$n[0],$n[1]);
+ return unless defined $what;
+ my @d=sort { $a cmp $b } grep { defined $_ && exists $self->{ns}->{$_} } (ref $what eq 'ARRAY' ? @$what : ($what));
+ return unless @d;
+
+ if (wantarray)
+ {
+  my @r;
+  foreach my $rdd (@d)
+  {
+   my @dd=@{$self->{ns}->{$rdd}};
+   push @r,$dd[0],$dd[0],$dd[1];
+  }
+  return @r;
+ } else
+ {
+  my (@xns,@xsl);
+  foreach my $rdd (@d)
+  {
+   my @dd=@{$self->{ns}->{$rdd}};
+   push @xns,sprintf('xmlns:%s="%s"',$rdd,$dd[0]);
+   push @xsl,sprintf('%s %s',$dd[0],$dd[1]);
+  }
+  return join(' ',@xns).' xsi:schemaLocation="'.join(' ',@xsl).'"';
+ }
 }
 
 sub is_success { return _is_success(shift->result_code()); }
@@ -150,9 +171,10 @@ sub command_extension_register
  my $eid=1+$#{$self->{extension}};
  if (defined $ons && $ons!~m/xmlns/) ## new interface, everything should switch to that (TODO)
  {
-  my ($nsalias,$command)=($ocmd,$ons);
-  $ocmd=$nsalias.':'.$command;
-  $ons=sprintf('xmlns:%s="%s" xsi:schemaLocation="%s %s"',$nsalias,$self->nsattrs($nsalias));
+  my ($nss,$command)=($ocmd,$ons);
+  $ocmd=(ref $nss eq 'ARRAY' ? $nss->[0] : $nss).':'.$command;
+  $ons=$self->nsattrs($nss);
+  ## This is used for other *generic* attributes, not for xmlns: ones !
   $ons.=' '.join(' ',map { sprintf('%s="%s"',$_,$otherattrs->{$_}) } keys %$otherattrs) if defined $otherattrs && ref $otherattrs;
  }
  $self->{extension}->[$eid]=[$ocmd,$ons,[]];
@@ -174,7 +196,7 @@ sub command_extension
 
 sub as_string
 {
- my ($self)=@_;
+ my ($self,$protect)=@_;
  my @d;
  push @d,'<?xml version="1.0" encoding="UTF-8" standalone="no"?>';
  push @d,'<epp '.sprintf('xmlns="%s" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="%s %s"',$self->nsattrs('_main')).'>';
@@ -244,7 +266,18 @@ sub as_string
  }
  push @d,'</epp>';
 
- return join('',@d);
+ my $msg=join('',@d);
+
+ if (defined $protect && ref $protect eq 'HASH')
+ {
+  if (exists $protect->{session_password} && $protect->{session_password})
+  {
+   $msg=~s#(?<=</clID>)<pw>(\S+?)</pw>#'<pw>'.('*' x length $1).'</pw>'#e;
+   $msg=~s#(?<=</pw>)<newPW>(\S+?)</newPW>#'<newPW>'.('*' x length $1).'</newPW>'#e;
+  }
+ }
+
+ return $msg;
 }
 
 sub get_response  { my $self=shift; return $self->_get_content($self->node_resdata(),@_); }

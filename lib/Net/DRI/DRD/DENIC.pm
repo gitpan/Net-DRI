@@ -2,6 +2,7 @@
 ##
 ## Copyright (c) 2007,2008,2009 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
 ##           (c) 2010,2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+##           (c) 2012 Michael Holloway <michael@thedarkwinter.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -54,6 +55,7 @@ Tonnerre Lombard, E<lt>tonnerre.lombard@sygroup.chE<gt>
 
 Copyright (c) 2007,2008,2009 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
           (c) 2010,2011 Patrick Mevzek <netdri@dotandco.com>.
+          (c) 2012 Michael Holloway <michael@thedarkwinter.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -144,6 +146,30 @@ sub domain_trade
 {
  my ($self, $reg, $dom, $rd) = @_;
  return $reg->process('domain', 'trade', [$dom, $rd]);
+}
+
+sub domain_transit
+{
+ my ($self, $reg, $dom, $rd) = @_;
+ return $reg->process('domain', 'transit', [$dom, $rd]);
+}
+
+sub domain_migrate_descr
+{
+ my ($self, $reg, $dom, $rd) = @_;
+ return $reg->process('domain', 'migrate_descr', [$dom, $rd]);
+}
+
+sub domain_create_authinfo
+{
+ my ($self, $reg, $dom, $rd) = @_;
+ return $reg->process('domain', 'create_authinfo', [$dom, $rd]);
+}
+
+sub domain_delete_authinfo
+{
+ my ($self, $reg, $dom, $rd) = @_;
+ return $reg->process('domain', 'delete_authinfo', [$dom, $rd]);
 }
 
 ####################################################################################################

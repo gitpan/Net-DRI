@@ -72,6 +72,12 @@ sub register_commands
  return { 'message' => \%tmp };
 }
 
+sub setup
+{
+ my ($class,$po,$version)=@_;
+ $po->ns({ 'poll' => [ 'http://www.eurid.eu/xml/epp/poll-1.0','poll-1.0.xsd' ] });
+}
+
 ####################################################################################################
 
 sub parse
@@ -80,40 +86,28 @@ sub parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $poll=$mes->get_response('eurid','pollRes');
+ my $poll=$mes->get_response('poll','pollData');
  return unless defined $poll;
 
+ my %n;
  my ($action,$returncode,$level);
  foreach my $el (Net::DRI::Util::xml_list_children($poll))
  {
   my ($name,$c)=@$el;
-  if ($name eq 'action')
+  if ($name=~m/^(context|object|action|code|detail)$/)
   {
-   $action=lc $c->textContent();
-  } elsif ($name eq 'domainname') ## not always provided by registry !
-  {
-   $oname=$c->textContent();
-  } elsif ($name eq 'returncode')
-  {
-   $returncode=$c->textContent();
-  } elsif ($name eq 'type')
-  {
-   $action.='_'.lc($c->textContent());
-  } elsif ($name eq 'level') ## what is it ?
-  {
-   $level=$c->textContent();
+   $n{$1}=$c->textContent();
   }
  }
 
- if (defined $oname)
+ $rinfo->{session}->{notification}=\%n;
+ if ($n{context}=~m/^(?:DOMAIN|TRANSFER)$/)
  {
-  $rinfo->{domain}->{$oname}->{return_code}=$returncode;
-  $rinfo->{domain}->{$oname}->{action}=$action;
+  $oname=$n{object};
+  $rinfo->{domain}->{$oname}->{notification_code}=$n{code};
+  $rinfo->{domain}->{$oname}->{action}=$n{action};
+  $rinfo->{domain}->{$oname}->{detail}=$n{detail} if exists $n{detail};
   $rinfo->{domain}->{$oname}->{exist}=1;
-  $rinfo->{domain}->{$oname}->{result}=($action=~m/^confirm_/i)? 1 : 0; ## TODO: is this a good test ?
- } else
- {
-  $rinfo->{session}->{notification}={ action => $action, level => $level, return_code => $returncode };
  }
 }
 

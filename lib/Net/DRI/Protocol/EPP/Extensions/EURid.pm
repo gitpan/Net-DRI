@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EURid EPP extensions
 ##
-## Copyright (c) 2005,2007-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2007-2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -49,7 +49,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2007-2011 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2007-2012 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -68,8 +68,10 @@ sub setup
  my ($self,$rp)=@_;
  my $version=$self->version();
 
- $self->ns({_main => ['http://www.eurid.eu/xml/epp/epp-1.0','epp-1.0.xsd']});
- $self->ns({ map { $_ => ['http://www.eurid.eu/xml/epp/'.$_.'-1.0',$_.'-1.0.xsd'] } qw/sunrise domain contact eurid nsgroup registrar keygroup extendedInfo pendingTransaction/ });
+## NOT handled : dss, dynUpdate, euridcom
+# $self->ns({_main => ['http://www.eurid.eu/xml/epp/epp-1.0','epp-1.0.xsd']});
+# $self->ns({ map { $_ => ['http://www.eurid.eu/xml/epp/'.$_.'-1.0',$_.'-1.0.xsd'] } qw/extendedInfo pendingTransaction/ });
+ $self->ns({ map { $_ => ['http://www.eurid.eu/xml/epp/'.$_.'-1.0',$_.'-1.0.xsd'] } qw/nsgroup/ });
  $self->capabilities('contact_update','status',undef); ## No changes in status possible for .EU domains/contacts
  $self->capabilities('domain_update','status',undef);
  $self->capabilities('domain_update','nsgroup',[ 'add','del']);
@@ -78,8 +80,10 @@ sub setup
  return;
 }
 
-sub core_contact_types { return ('admin','tech','billing','onsite'); }
-sub default_extensions { return qw/EURid::Session EURid::Sunrise EURid::Message EURid::Domain EURid::Contact EURid::Registrar EURid::Notifications EURid::IDN Keygroup NSgroup SecDNS/; }
+## TODO Keygroup momentarily not used, in order to upgrade it to -1.1
+## TODO same for nsgroup, but -1.0 is still alowed
+## TODO EURid::Message removed for now
+sub default_extensions { return qw/EURid::Session EURid::Domain EURid::Contact EURid::Registrar EURid::Notifications EURid::IDN NSgroup SecDNS/; }
 
 ####################################################################################################
 1;

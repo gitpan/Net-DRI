@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Logging operations for Net::DRI
 ##
-## Copyright (c) 2009,2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2009-2010,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -39,6 +39,7 @@ sub new
  if (! exists $self->{format_header}    || ! defined $self->{format_header} )    { $self->{format_header}   ='%FULLTIME [%ULEVEL] <%TYPE>'; }
  if (! exists $self->{format_transport} || ! defined $self->{format_transport} ) { $self->{format_transport}='%TRID %UDIRECTION %MESSAGE'; }
  if (! exists $self->{format_protocol}  || ! defined $self->{format_protocol} )  { $self->{format_protocol} ='%TRID %UDIRECTION %MESSAGE'; }
+ if (! exists $self->{sanitize_data}    || ! defined $self->{sanitize_data} )    { $self->{sanitize_data}   = {}; }
  bless $self,$c;
  $self->level($self->{level}); ## convert the level token to a numerical value
  return $self;
@@ -85,7 +86,7 @@ sub string_data
   {
    if (! $msg->can('as_string')) { Net::DRI::Exception::method_not_implemented('as_string',ref $msg); }
   }
-  $msg=$msg->as_string();
+  $msg=$msg->as_string($self->{sanitize_data});
  }
 
  ## If this is deemed to be too brittle, a type() method could be added to Protocol/Message and correctly set to "xml" by Message classes in RRI,EPP,OpenSRS/XCP,IRIS/{XCP,LWZ}
@@ -187,6 +188,12 @@ It can be changed anytime later by using the level() method
 
 if needed, name of encoding to use to convert data stream ; default: UTF-8
 
+=item sanitize_data
+
+an optional ref hash to know which part of logged data should be replaced to ensure confidentiality;
+for now it works only for EPP, with the hash key "session_password" and a true value, then content
+of <pw> and <newPW> are replaced by a string of * in logging data
+
 =back
 
 =item name()
@@ -266,7 +273,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright (c) 2009,2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+Copyright (c) 2009-2010,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

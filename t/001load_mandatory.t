@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 355;
+use Test::More tests => 358;
 
 BEGIN {
 use_ok('Net::DRI');
@@ -19,7 +19,6 @@ use_ok('Net::DRI::Logging');
 use_ok('Net::DRI::Logging::Null');
 use_ok('Net::DRI::Logging::Files');
 use_ok('Net::DRI::Logging::Stderr');
-use_ok('Net::DRI::Logging::Syslog');
 use_ok('Net::DRI::DRD');
 use_ok('Net::DRI::DRD::ICANN');
 use_ok('Net::DRI::DRD::VNDS');
@@ -80,6 +79,7 @@ use_ok('Net::DRI::DRD::BH');
 use_ok('Net::DRI::DRD::COZA');
 use_ok('Net::DRI::DRD::TCI');
 use_ok('Net::DRI::DRD::SO');
+use_ok('Net::DRI::DRD::ID');
 use_ok('Net::DRI::Data::Raw');
 use_ok('Net::DRI::Data::Hosts');
 use_ok('Net::DRI::Data::Changes');
@@ -174,6 +174,8 @@ use_ok('Net::DRI::Protocol::EPP::Extensions::VeriSign::WhoWas');
 use_ok('Net::DRI::Protocol::EPP::Extensions::VeriSign::PremiumDomain');
 use_ok('Net::DRI::Protocol::EPP::Extensions::VeriSign::Suggestion');
 use_ok('Net::DRI::Protocol::EPP::Extensions::VeriSign::ClientAttributes');
+use_ok('Net::DRI::Protocol::EPP::Extensions::VeriSign::TwoFactorAuth');
+use_ok('Net::DRI::Protocol::EPP::Extensions::VeriSign::ZoneManagement');
 use_ok('Net::DRI::Protocol::EPP::Extensions::AT::Result');
 use_ok('Net::DRI::Protocol::EPP::Extensions::AT::IOptions');
 use_ok('Net::DRI::Protocol::EPP::Extensions::AT::Message');
@@ -351,6 +353,7 @@ use_ok('Net::DRI::Protocol::OpenSRS::XCP::Account');
 use_ok('Net::DRI::Protocol::OpenSRS::XCP::Domain');
 use_ok('Net::DRI::Protocol::OpenSRS::XCP::Session');
 use_ok('Net::DRI::Protocol::OpenSRS::XCP::Message');
+use_ok('Net::DRI::Protocol::OpenSRS::XCP::Host');
 use_ok('Net::DRI::Protocol::IRIS');
 use_ok('Net::DRI::Protocol::IRIS::Message');
 use_ok('Net::DRI::Protocol::IRIS::Core');

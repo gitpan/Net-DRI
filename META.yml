@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Net-DRI
-version:            0.96_03
+version:            0.96_04
 abstract:           Interface to Domain Name Registries/Registrars/Resellers
 author:
     - Patrick Mevzek <netdri@dotandco.com>

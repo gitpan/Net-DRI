@@ -1,5 +1,32 @@
 Net::DRI changelog from newest to oldest changes
 
+0.96_04 2012-11-20 DEVELOPMENT RELEASE
+
+See warning in 0.96_01: this version enables only EPP over TCP/TLS and IRIS DCHK over UDP,
+other protocols (Whois,DAS,RRI,RRP) or transports (EPP over HTTPS) will not work in this version.
+
++ EURid : preliminary upgrade to registry release 9.0; major changes everywhere specially around transfers (updates have not been extensively tested, please give feedback)
++ .ID basic support with EPP
++ EPP/VeriSign/ZoneManagement
++ EPP/VeriSign/TwoFactorAuth
++ Shell : implement history persistence across executions
++ Logging/Files : allow to specify the filename (output_filename parameter)
+= Enable SecDNS in .NL
+= OpenSRS/XCP : various updates (patch by Dmitry Belyavsky)
+= DENIC updates, various patches from Michael Holloway detailed below
+= DENIC updates : added remarks field
+= DENIC updates : Fixed Disclose (add disclose attributes to relevant elements instead of creating a a separate disclose element
+= DENIC updates : Added DNSSec support for Domains
+= DENIC updates : Added commands ( transit, migrate_descr, create_authinfo, delete_authinfo) for Domains
+= DENIC updates : tests updated
+= DENIC updates : validate secDNS date for Domains
+= DENIC updates : Make withProver disabled by default in domain_info as this is limited by the registry. $dri->domain_info('dom.de',{withProver=>1}) to get withProvider info
+= DENIC updates : Fixed bug parsing response on domain info withProvider (contact data not always returned caused a getData exception)
+= Logging + EPP/Message : option to allow removal of session passwords
+= (internal) EPP/Message : enhance nsattrs & command_extension_register (API simplification to be ported to all modules)
+- Sys::Syslog is not mandatory anymore (does not exist on Windows)
+- SecDNS : bugfix in keyData/dsData split (bugreport from Andreas Wittkemper)
+
 0.96_03 2012-04-15 DEVELOPMENT RELEASE
 
 See warning in 0.96_01: this version enables only EPP over TCP/TLS and IRIS DCHK over UDP,

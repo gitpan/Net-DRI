@@ -76,6 +76,7 @@ sub output
 sub generate_filename
 {
  my ($self,$type,$ctx)=@_;
+ return sprintf '%s/%s',$self->{output_directory},$self->{output_filename} if exists $self->{output_filename};
  my $name=(defined $ctx && ref $ctx eq 'HASH')? sprintf('%s-%s-%s',$ctx->{registry},$ctx->{profile},$type) : $type;
  return sprintf '%s/%d-%s.log',$self->{output_directory},$$,$name;
 }

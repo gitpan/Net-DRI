@@ -600,6 +600,14 @@ sub normalize_name
  return ($type,$key);
 }
 
+## DateTime object to Zulu time stringified
+sub dto2zstring
+{
+ my ($dt)=@_;
+ my $date=$dt->clone()->set_time_zone('UTC');
+ return $date->ymd('-').'T'.$date->hms(':').($date->microsecond() ? '.'.sprintf('%06s',$date->microsecond()) : '').'Z';
+}
+
 ####################################################################################################
 
 ## RFC2782

@@ -1,7 +1,7 @@
 ## Domain Registry Interface, EURid Sunrise EPP extension for Net::DRI
 ## (from registration_guidelines_v1_0F-appendix2-sunrise.pdf )
 ##
-## Copyright (c) 2005,2007,2008,2009,2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2007,2008,2009,2010,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -54,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2007,2008,2009,2010,2012 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -79,6 +79,11 @@ sub register_commands
  return { 'domain' => \%tmp };
 }
 
+sub setup
+{
+ my ($class,$po,$version)=@_;
+ $po->ns({ 'sunrise' => [ 'http://www.eurid.eu/xml/epp/sunrise-1.0','sunrise-1.0.xsd' ] });
+}
 
 ####################################################################################################
 

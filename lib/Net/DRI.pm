@@ -28,7 +28,7 @@ use base qw(Class::Accessor::Chained::Fast Net::DRI::BaseClass);
 __PACKAGE__->mk_ro_accessors(qw/trid_factory logging cache/);
 
 our $AUTOLOAD;
-our $VERSION='0.96_03';
+our $VERSION='0.96_04';
 our $RUNNING_POE=(exists($INC{'POE.pm'}))? $POE::Kernel::poe_kernel : undef;
 
 =pod
@@ -39,7 +39,7 @@ Net::DRI - Interface to Domain Name Registries/Registrars/Resellers
 
 =head1 VERSION
 
-This documentation refers to Net::DRI version 0.96_03
+This documentation refers to Net::DRI version 0.96_04
 
 =head1 SYNOPSIS
 
@@ -290,7 +290,7 @@ sub tld2reg
 
 sub installed_registries
 {
- return qw/AdamsNames AERO AFNIC AG ARNES ASIA AT AU BE BIZ BookMyName BR BZ CAT CentralNic CIRA CoCCA COOP COZA CZ DENIC EURid Gandi GL HN IENUMAT IM INFO IRegistry ISPAPI IT LC LU ME MN MOBI NAME Nominet NO NU OpenSRS ORG OVH PL PRO PT SC SE SIDN SO SWITCH TCI TRAVEL US VC VNDS WS/;
+ return qw/AdamsNames AERO AFNIC AG ARNES ASIA AT AU BE BIZ BookMyName BR BZ CAT CentralNic CIRA CoCCA COOP COZA CZ DENIC EURid Gandi GL HN ID IENUMAT IM INFO IRegistry ISPAPI IT LC LU ME MN MOBI NAME Nominet NO NU OpenSRS ORG OVH PL PRO PT SC SE SIDN SO SWITCH TCI TRAVEL US VC VNDS WS/;
 }
 
 ####################################################################################################

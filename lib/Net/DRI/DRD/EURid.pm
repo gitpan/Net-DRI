@@ -23,7 +23,7 @@ use Net::DRI::Util;
 use Net::DRI::Exception;
 use DateTime::Duration;
 
-__PACKAGE__->make_exception_for_unavailable_operations(qw/domain_transfer_query domain_transfer_accept domain_transfer_refuse contact_check contact_transfer contact_transfer_start contact_transfer_stop contact_transfer_query contact_transfer_accept contact_transfer_refuse/);
+__PACKAGE__->make_exception_for_unavailable_operations(qw/domain_transfer_query domain_transfer_accept domain_transfer_refuse domain_transfer_stop contact_check contact_transfer contact_transfer_start contact_transfer_stop contact_transfer_query contact_transfer_accept contact_transfer_refuse/);
 
 =pod
 
@@ -112,14 +112,14 @@ sub verify_name_domain
                                               });
 }
 
-sub domain_check_contact_for_transfer
-{
- my ($self,$ndr,$domain,$rd)=@_;
- $self->enforce_domain_name_constraints($ndr,$domain,'check_contact_for_transfer');
-
- my $rc=$ndr->process('domain','check_contact_for_transfer',[$domain,$rd]);
- return $rc;
-}
+# sub domain_check_contact_for_transfer
+# {
+#  my ($self,$ndr,$domain,$rd)=@_;
+#  $self->enforce_domain_name_constraints($ndr,$domain,'check_contact_for_transfer');
+# 
+#  my $rc=$ndr->process('domain','check_contact_for_transfer',[$domain,$rd]);
+#  return $rc;
+# }
 
 sub registrar_info
 {
@@ -128,14 +128,14 @@ sub registrar_info
  return $rc;
 }
 
-sub domain_remind
-{
- my ($self,$ndr,$domain,$rd)=@_;
- $self->enforce_domain_name_constraints($ndr,$domain,'remind');
-
- my $rc=$ndr->process('domain','remind',[$domain,$rd]);
- return $rc;
-}
+# sub domain_remind
+# {
+#  my ($self,$ndr,$domain,$rd)=@_;
+#  $self->enforce_domain_name_constraints($ndr,$domain,'remind');
+# 
+#  my $rc=$ndr->process('domain','remind',[$domain,$rd]);
+#  return $rc;
+# }
 
 #################################################################################################################
 1;

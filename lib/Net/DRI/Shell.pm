@@ -27,6 +27,8 @@ use Term::ReadLine; ## see also Term::Shell
 use Time::HiRes ();
 use IO::Handle ();
 
+our $HISTORY=$ENV{HOME}.'/.drish_history';
+
 exit __PACKAGE__->run(@ARGV) if (!caller() || caller() eq 'PAR'); ## This is a modulino :-)
 
 =pod
@@ -480,6 +482,7 @@ sub run
 {
  my (@args)=@_;
  my $term=Term::ReadLine->new('Net::DRI shell');
+ $term->MinLine(undef); # disable implicit add_history call()
  my $ctx={ term    => $term,
            term_features => $term->Features(),
            term_attribs => $term->Attribs(),
@@ -496,8 +499,13 @@ sub run
 
  output($ctx,"Welcome to Net::DRI ${Net::DRI::VERSION} shell, pid $$\n");
 
- $ctx->{dri}=Net::DRI->new({cache_ttl => 10,logging=>['files',{level => 'info'}]});
+ $ctx->{dri}=Net::DRI->new({cache_ttl => 10,logging=>['files',{level => 'info',sanitize_data => {session_password => 0}}]});
  output($ctx,"Net::DRI object created with a cache TTL of 10 seconds and logging into files in current directory\n\n");
+
+ if (exists $ctx->{term_features}->{readHistory})
+ {
+  $term->ReadHistory($HISTORY);
+ }
 
  $ctx->{file_quit}=0;
  shift(@args) if (@args && $args[0] eq 'Net::DRI::Shell');
@@ -510,6 +518,11 @@ sub run
   {
    last if handle_line($ctx,$l);
   }
+ }
+
+ if (exists $ctx->{term_features}->{writeHistory})
+ {
+  $term->WriteHistory($HISTORY);
  }
 
  $ctx->{dri}->end();

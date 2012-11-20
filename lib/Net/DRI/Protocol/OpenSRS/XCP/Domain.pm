@@ -1,6 +1,7 @@
 ## Domain Registry Interface, OpenSRS XCP Domain commands
 ##
 ## Copyright (c) 2008-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+##           (c) 2012 Dmitry Belyavsky <beldmit@gmail.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -49,6 +50,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 =head1 COPYRIGHT
 
 Copyright (c) 2008-2011 Patrick Mevzek <netdri@dotandco.com>.
+          (c) 2012 Dmitry Belyavsky <beldmit@gmail.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -66,11 +68,11 @@ sub register_commands
 {
  my ($class,$version)=@_;
  my %tmp=(
-	  info  => [\&info,  \&info_parse ],
+          info  => [\&info,  \&info_parse ],
           check => [\&check, \&check_parse ],
           create => [ \&create, \&create_parse ], ## TODO : parsing of return messages
           delete => [ \&delete, \&delete_parse ],
-	  renew => [ \&renew, \&renew_parse ],
+          renew => [ \&renew, \&renew_parse ],
           transfer_request => [ \&transfer_request, \&transfer_request_parse ],
           transfer_query => [ \&transfer_query, \&transfer_query_parse ],
           transfer_cancel => [ \&transfer_cancel, \&transfer_cancel_parse ],
@@ -96,8 +98,8 @@ sub info
  my $msg=$xcp->message();
  Net::DRI::Exception::usererr_insufficient_parameters('A cookie is needed for domain_info') unless Net::DRI::Util::has_key($rd,'cookie');
  build_msg_cookie($msg,'get',$rd->{cookie},$rd->{registrant_ip});
- $msg->command_attributes({type => 'all_info'});
-
+ my $info_type=exists $rd->{type} ? $rd->{type} : 'all_info';
+ $msg->command_attributes({type => $info_type});
 }
 
 sub info_parse
@@ -147,7 +149,12 @@ sub info_parse
   $rinfo->{domain}->{$oname}->{contact}=$cs;
  }
 
- ## No data about status ?
+ # Status data is available for the separate request
+ foreach my $opensrs_status (qw/parkp_status lock_state can_modify domain_supports transfer_away_in_progress auctionescrow/)
+ {
+  next unless exists $ra->{$opensrs_status};
+  $rinfo->{domain}->{$oname}->{$opensrs_status}=$ra->{$opensrs_status};
+ }
 }
 
 sub parse_contact
@@ -335,10 +342,11 @@ sub add_contact_info
  $contact{address1} = $s->[0];
  $contact{address2} = $s->[1] if $s->[1];
  $contact{address3} = $s->[2] if $s->[2];
- Net::DRI::Exception::usererr_insufficient_parameters('city, sp, pc & cc mandatory') unless ($co->city() && $co->sp() && $co->pc() && $co->cc());
+ Net::DRI::Exception::usererr_insufficient_parameters('city & cc mandatory') unless ($co->city() && $co->cc());
  $contact{city} = $co->city();
- $contact{state} = $co->sp();
- $contact{postal_code} = $co->pc();
+ #TODO state and postal_code are required for US/CA
+ $contact{state} = $co->sp() if $co->sp();
+ $contact{postal_code} = $co->pc() if $co->pc();
  $contact{country} = uc($co->cc());
  Net::DRI::Exception::usererr_insufficient_parameters('voice & email mandatory') unless ($co->voice() && $co->email());
  $contact{phone} = $co->voice();
@@ -449,6 +457,8 @@ sub renew
   $attr->{$_} = ($rd->{$_}) if Net::DRI::Util::has_key($rd, $_);
  }
 
+ $rd->{handle} ||= 'process';
+ $attr->{handle} = $rd->{handle};
  # TBD: handle, etc.
 
  $msg->command(\%r);

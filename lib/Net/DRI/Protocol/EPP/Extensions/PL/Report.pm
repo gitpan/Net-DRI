@@ -88,7 +88,7 @@ sub _create_domain
  if (Net::DRI::Util::has_key($rp,'exDate'))
  {
   my $date=$rp->{exDate};
-  $date=$date->set_time_zone('UTC')->iso8601() if Net::DRI::Util::is_class($date,'DateTime');
+  $date=Net::DRI::Util::dto2zstring($date) if Net::DRI::Util::is_class($date,'DateTime');
   Net::DRI::Exception::usererr_invalid_parameters('exDate must be in ISO8601 format') unless $date=~m/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?$/;
   $date.='Z' unless $date=~m/Z$/;
   push @n,['extreport:exDate',$date];
@@ -136,7 +136,7 @@ sub _create_future
  if (Net::DRI::Util::has_key($rp,'exDate'))
  {
   my $date=$rp->{exDate};
-  $date=$date->set_time_zone('UTC')->iso8601() if Net::DRI::Util::is_class($date,'DateTime');
+  $date=Net::DRI::Util::dto2zstring($date) if Net::DRI::Util::is_class($date,'DateTime');
   Net::DRI::Exception::usererr_invalid_parameters('exDate must be in ISO8601 format') unless $date=~m/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?$/;
   $date.='Z' unless $date=~m/Z$/;
   push @n,['extreport:exDate',$date];

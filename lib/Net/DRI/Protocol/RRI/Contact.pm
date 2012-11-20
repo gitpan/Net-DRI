@@ -1,6 +1,7 @@
 ## Domain Registry Interface, RRI Contact commands (DENIC-11)
 ##
 ## Copyright (c) 2007,2008,2009 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
+##           (c) 2012 Michael Holloway <michael@thedarkwinter.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -50,6 +51,7 @@ Tonnerre Lombard, E<lt>tonnerre.lombard@sygroup.chE<gt>
 =head1 COPYRIGHT
 
 Copyright (c) 2007,2008,2009 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+          (c) 2012 Michael Holloway <michael@thedarkwinter.com>. All rights reserved.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -198,6 +200,10 @@ sub info_parse
   {
    my $el = $c->getFirstChild();
    $contact->sip($el->getData()) if (defined($el));
+  } elsif ($name eq 'remarks')
+  {
+   my $el = $c->getFirstChild();
+   $contact->remarks($el->getData()) if (defined($el));
   } elsif ($name eq 'phone')
   {
    $contact->voice(parse_tel($c));
@@ -305,24 +311,16 @@ sub build_tel
 sub build_disclose
 {
  my $contact=shift;
- my $d=$contact->disclose();
- return () unless ($d && ref($d));
- my %v=map { $_ => 1 } values(%$d);
- return () unless (keys(%v)==1); ## 1 or 0 as values, not both at same time
- my @d;
- push @d,['contact:name',{type=>'int'}] if (exists($d->{name_int}) && !exists($d->{name}));
- push @d,['contact:name',{type=>'loc'}] if (exists($d->{name_loc}) && !exists($d->{name}));
- push @d,['contact:name',{type=>'int'}],['contact:name',{type=>'loc'}] if exists($d->{name});
- push @d,['contact:org',{type=>'int'}] if (exists($d->{org_int}) && !exists($d->{org}));
- push @d,['contact:org',{type=>'loc'}] if (exists($d->{org_loc}) && !exists($d->{org}));
- push @d,['contact:org',{type=>'int'}],['contact:org',{type=>'loc'}] if exists($d->{org});
- push @d,['contact:addr',{type=>'int'}] if (exists($d->{addr_int}) && !exists($d->{addr}));
- push @d,['contact:addr',{type=>'loc'}] if (exists($d->{addr_loc}) && !exists($d->{addr}));
- push @d,['contact:addr',{type=>'int'}],['contact:addr',{type=>'loc'}] if exists($d->{addr});
- push @d,['contact:voice'] if exists($d->{voice});
- push @d,['contact:fax']   if exists($d->{fax});
- push @d,['contact:email'] if exists($d->{email});
- return ['contact:disclose',@d,{flag=>(keys(%v))[0]}];
+ my $ref = shift;
+ my @d = @$ref;
+ my $ds=$contact->disclose();
+ return () unless ($ds && ref($ds));
+ foreach (@d) {
+  my ($c,$key) = split /:/, @{$_}[0];
+  $key = 'voice' if $key eq 'phone';
+  push @{$_}, { disclose => 'true'} if (defined($ds->{$key}) && $ds->{$key}==1);
+ }
+ return;
 }
 
 sub build_cdata
@@ -346,7 +344,9 @@ sub build_cdata
  push @d,build_tel('contact:fax',$contact->fax()) if defined($contact->fax());
  push @d,['contact:email',$contact->email()] if defined($contact->email());
  push @d,['contact:sip',$contact->sip()] if defined($contact->sip());
- push @d,build_disclose($contact);
+ push @d,['contact:remarks', $contact->remarks()] if defined($contact->remarks());
+ build_disclose($contact,\@d);
+
  return @d;
 }
 

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Handling of contact data for EURid
 ##
-## Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2009,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -23,7 +23,7 @@ use Net::DRI::DRD::EURid;
 use Net::DRI::Exception;
 use Net::DRI::Util;
 
-__PACKAGE__->register_attributes(qw(type vat lang onhold monitoring_status));
+__PACKAGE__->register_attributes(qw(type vat lang));
 
 =pod
 
@@ -40,25 +40,13 @@ EURid specific data.
 
 The following accessors/mutators can be called in chain, as they all return the object itself.
 
-=head2 type() 
+=head2 type()
 
 type of contact : billing, tech, registrant or onsite (mandatory)
 
 =head2 vat()
 
 vat number of contact
-
-=head2 lang()
-
-language of contact, must be in Europe (mandatory)
-
-=head2 onhold()
-
-returned by registry during a contact:info operation
-
-=head2 monitoring_status()
-
-returned by registry during a contact:info operation
 
 =head1 SUPPORT
 
@@ -78,7 +66,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2009,2012 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

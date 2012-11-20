@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP DNS Security Extensions (RFC4310 & RFC5910)
 ##
-## Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2010,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -48,7 +48,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2010,2012 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -279,7 +279,7 @@ sub add_interfaces
  my ($ra)=@_;
 
  my $cd=grep { exists $_->{keyTag} || exists $_->{alg} || exists $_->{digestType} || exists $_->{digest} } @$ra;
- my $ck=grep { (exists $_->{key_flags} || exists $_->{key_protocol} || exists $_->{key_alg} || exists $_->{key_pubKey}) && ! exists $_->{keyTag} || ! exists $_->{alg} || ! exists $_->{digestType} || ! exists $_->{digest} } @$ra;
+ my $ck=grep { (exists $_->{key_flags} || exists $_->{key_protocol} || exists $_->{key_alg} || exists $_->{key_pubKey}) && ! exists $_->{keyTag} && ! exists $_->{alg} && ! exists $_->{digestType} && ! exists $_->{digest} } @$ra;
  Net::DRI::Exception::usererr_invalid_parameters('Unknown secDNS data provided') unless $cd || $ck;
  Net::DRI::Exception::usererr_invalid_parameters('In secDNS-1.1 you can not mix dsData and keyData blocks') if $cd && $ck;
  return $cd ? map { ['secDNS:dsData',format_dsdata($_,1)] } @$ra : map { ['secDNS:keyData',format_keydata($_)] } @$ra;

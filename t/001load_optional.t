@@ -7,7 +7,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 9;
+use Test::More tests => 10;
 
 SKIP: {
 	eval { require Net::SMTP; };
@@ -70,5 +70,12 @@ SKIP: {
 	skip('Module Net::DNS is not installed, you need it if you want to use Net::DRI for: .DE (IRIS DCHK over LWZ) .FR (IRIS DCHK over LWZ)',1) if $@;
 	require_ok('Net::DRI::Protocol::IRIS::LWZ');
 }
+
+SKIP: {
+	eval { require Sys::Syslog; }; ## this is in Perl core, but necessarily here on Windows !
+	skip('Module Sys::Syslog is not installed, you need it if you want to use Net::DRI logging over syslog',1) if $@;
+	require_ok('Net::DRI::Logging::Syslog');
+}
+
 
 exit 0;

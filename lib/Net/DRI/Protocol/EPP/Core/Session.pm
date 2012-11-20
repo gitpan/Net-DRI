@@ -220,7 +220,7 @@ sub login
  {
   $po->log_output('info','protocol',{action=>'login',direction=>'out',trid=>$mes->cltrid(),message=>'Before using only local extensions, EPP extensions selected during login: '.join(' ',@exts)});
   my $rns=$po->ns();
-  @exts=grep { ! /^urn:ietf:params:xml:ns:(?:epp|domain|contact|host)-1\.0$/ } map { $_->[0] } values %$rns;
+  @exts=sort { $a cmp $b } grep { ! /^urn:ietf:params:xml:ns:(?:epp|domain|contact|host)-1\.0$/ } map { $_->[0] } values %$rns;
   $po->log_output('info','protocol',{action=>'login',direction=>'out',trid=>$mes->cltrid(),message=>'After using only local extensions, EPP extensions selected during login: '.join(' ',@exts)});
  }
  if (Net::DRI::Util::has_key($rdata,'extensions'))
