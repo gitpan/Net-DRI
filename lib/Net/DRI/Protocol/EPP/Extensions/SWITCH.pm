@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Switch .CH/.LI EPP extensions
 ##
-## Copyright (c) 2008-2010 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+## Copyright (c) 2008-2010,2013 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 ##                    All rights reserved.
 ##
 ## This file is part of Net::DRI
@@ -16,6 +16,7 @@
 package Net::DRI::Protocol::EPP::Extensions::SWITCH;
 
 use strict;
+use warnings;
 
 use base qw/Net::DRI::Protocol::EPP/;
 
@@ -50,7 +51,7 @@ Tonnerre Lombard, E<lt>tonnerre.lombard@sygroup.chE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008-2010 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+Copyright (c) 2008-2010,2013 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

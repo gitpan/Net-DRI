@@ -1,6 +1,7 @@
 ## Domain Registry Interface, RRI Session commands (DENIC-11)
 ##
-## Copyright (c) 2007 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
+## Copyright (c) 2007,2012 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
+##           (c) 2013 Michael Holloway <michael@thedarkwinter.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -15,6 +16,7 @@
 package Net::DRI::Protocol::RRI::Session;
 
 use strict;
+use warnings;
 
 use Net::DRI::Exception;
 use Net::DRI::Util;
@@ -47,7 +49,7 @@ Tonnerre Lombard, E<lt>tonnerre.lombard@sygroup.chE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+Copyright (c) 2007,2013 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -68,7 +70,6 @@ sub register_commands
            noop    => [ \&hello ],
            logout  => [ \&logout ],
            login   => [ \&login ],
-           connect => [ \&hello ],
          );
 
  return { 'session' => \%tmp };
@@ -79,6 +80,7 @@ sub hello ## should trigger a greeting from server, allowed at any time
  my ($rri)=@_;
  my $mes=$rri->message();
  $mes->command(['hello']);
+ return;
 }
 
 sub logout
@@ -86,6 +88,7 @@ sub logout
  my ($rri)=@_;
  my $mes=$rri->message();
  $mes->command(['logout']);
+ return;
 }
 
 sub login
@@ -93,16 +96,17 @@ sub login
  my ($rri,$id,$pass,$newpass,$opts)=@_;
  Net::DRI::Exception::usererr_insufficient_parameters('login & password') unless (defined($id) && $id && defined($pass) && $pass);
 
- Net::DRI::Exception::usererr_invalid_parameters('login')    unless Net::DRI::Util::xml_is_token($id,3,16);
- Net::DRI::Exception::usererr_invalid_parameters('password') unless Net::DRI::Util::xml_is_token($pass,6,16);
+ Net::DRI::Exception::usererr_invalid_parameters('login')    unless Net::DRI::Util::xml_is_token($id,3,32);
+ Net::DRI::Exception::usererr_invalid_parameters('password') unless Net::DRI::Util::xml_is_token($pass,6,32);
 
  my $mes=$rri->message();
  $mes->command(['login']);
  my @d;
  push @d,['user',$id];
  push @d,['password',$pass];
-
+ $mes->cltrid(undef); # login fails with this
  $mes->command_body(\@d);
+ return;
 }
 
 ####################################################################################################

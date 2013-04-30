@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Whois Info (EPP-Whois-Info-Ext.pdf)
 ##
-## Copyright (c) 2006-2008,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006-2008,2012,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -48,7 +48,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006-2008,2012 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006-2008,2012,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -100,6 +100,7 @@ sub info
 
  my $eid=$mes->command_extension_register('whoisInf:whoisInf','xmlns:whoisInf="http://www.verisign.com/epp/whoisInf-1.0" xsi:schemaLocation="http://www.verisign.com/epp/whoisInf-1.0 whoisInf-1.0.xsd"');
  $mes->command_extension($eid,['whoisInf:flag',$wi]);
+ return;
 }
 
 sub info_parse
@@ -122,6 +123,7 @@ sub info_parse
  }
 
  $rinfo->{domain}->{$oname}->{whois_info}=\%w;
+ return;
 }
 
 ####################################################################################################

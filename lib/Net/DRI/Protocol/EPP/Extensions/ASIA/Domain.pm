@@ -1,6 +1,6 @@
 ## Domain Registry Interface, ASIA domain extension
 ##
-## Copyright (c) 2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -56,6 +56,7 @@ sub create
  return unless @d;
  my $eid=$mes->command_extension_register('asia:create',sprintf('xmlns:asia="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('asia')));
  $mes->command_extension($eid,\@d);
+ return;
 }
 
 sub create_parse
@@ -68,6 +69,7 @@ sub create_parse
 
  my $c=Net::DRI::Util::xml_child_content($infdata,$mes->ns('asia'),'domainRoid');
  $rinfo->{$otype}->{$oname}->{roid}=$c if defined $c;
+ return;
 }
 
 ## TODO: from liberty-rtk-addon-0.5.1 it seems domainRoid can be in info and update commands, in the asia extension ?
@@ -92,6 +94,7 @@ sub update
  return unless @d;
  my $eid=$mes->command_extension_register('asia:update',sprintf('xmlns:asia="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('asia')));
  $mes->command_extension($eid,['asia:chg',@d]);
+ return;
 }
 
 sub info_parse
@@ -110,6 +113,7 @@ sub info_parse
  {
   $cs->add($po->create_local_object('contact')->srid($ct->textContent()),$ct->getAttribute('type'));
  }
+ return;
 }
 
 ####################################################################################################
@@ -145,7 +149,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+Copyright (c) 2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

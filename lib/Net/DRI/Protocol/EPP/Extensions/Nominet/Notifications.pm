@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .UK EPP Notifications
 ##
-## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -48,7 +48,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -110,6 +110,7 @@ sub registrar_change
 
  my $ainfo=$mes->get_response('account','infData');
  ## TODO : parse account info, see Account::parse_infdata
+ return;
 }
 
 sub parse_listdata
@@ -147,6 +148,7 @@ sub registrant_change
 
  my $ainfo=$mes->get_response('account','infData');
  ## TODO : parse account info, see Account::parse_infdata
+ return;
 }
 
 ## http://www.nominet.org.uk/registrars/systems/epp/accountdetails/
@@ -166,6 +168,7 @@ sub domain_cancelled
  $rinfo->{domain}->{$name}->{exist}=0;
  $rinfo->{domain}->{$name}->{action}='cancelled';
  $rinfo->{domain}->{$name}->{cancelled_orig}=Net::DRI::Util::xml_child_content($cancdata,$ns,'orig');
+ return;
 }
 
 ## http://www.nominet.org.uk/registrars/systems/epp/handshakerejected/
@@ -212,6 +215,7 @@ sub poor_quality
   push @d,$d->textContent();
  }
  $rinfo->{message}->{$msgid}->{domains}=\@d;
+ return;
 }
 
 ## http://www.nominet.org.uk/registrars/systems/epp/domainsreleased/
@@ -241,6 +245,7 @@ sub domains_released
   push @d,$d->textContent();
  }
  $rinfo->{message}->{$msgid}->{domains}=\@d;
+ return;
 }
 
 ####################################################################################################
@@ -259,6 +264,7 @@ sub faildata_parse
  $rinfo->{$otype}->{$name}->{fail_reason}=Net::DRI::Util::xml_child_content($faildata,$ns,'reason');
  $rinfo->{$otype}->{$name}->{action}='fail' unless exists $rinfo->{$otype}->{$name}->{action};
  $rinfo->{$otype}->{$name}->{exist}=0 unless exists $rinfo->{$otype}->{$name}->{exist};
+ return;
 }
 
 sub warning_parse
@@ -271,14 +277,15 @@ sub warning_parse
 
  ## No clear specification of the content
  $rinfo->{$otype}->{$oname}->{warning}=$warning->textContent();
+ return;
 }
 
 # http://www.nominet.org.uk/registrars/systems/epp/error/ (does not explain when this case can occur for domain operations)
 # http://www.nominet.org.uk/registrars/systems/epp/referralreject/
-sub domain_failwarning  { my ($po,$otype,$oaction,$oname,$rinfo)=@_; faildata_parse($po,'domain',$oaction,$oname,$rinfo); warning_parse($po,'domain',$oaction,$oname,$rinfo); }
-sub account_failwarning { my ($po,$otype,$oaction,$oname,$rinfo)=@_; faildata_parse($po,'account',$oaction,$oname,$rinfo); warning_parse($po,'account',$oaction,$oname,$rinfo); }
-sub contact_failwarning { my ($po,$otype,$oaction,$oname,$rinfo)=@_; faildata_parse($po,'contact',$oaction,$oname,$rinfo); warning_parse($po,'contact',$oaction,$oname,$rinfo); }
-sub host_failwarning    { my ($po,$otype,$oaction,$oname,$rinfo)=@_; faildata_parse($po,'ns',$oaction,$oname,$rinfo); warning_parse($po,'ns',$oaction,$oname,$rinfo); }
+sub domain_failwarning  { my ($po,$otype,$oaction,$oname,$rinfo)=@_; faildata_parse($po,'domain',$oaction,$oname,$rinfo); warning_parse($po,'domain',$oaction,$oname,$rinfo); return; }
+sub account_failwarning { my ($po,$otype,$oaction,$oname,$rinfo)=@_; faildata_parse($po,'account',$oaction,$oname,$rinfo); warning_parse($po,'account',$oaction,$oname,$rinfo); return; }
+sub contact_failwarning { my ($po,$otype,$oaction,$oname,$rinfo)=@_; faildata_parse($po,'contact',$oaction,$oname,$rinfo); warning_parse($po,'contact',$oaction,$oname,$rinfo); return; }
+sub host_failwarning    { my ($po,$otype,$oaction,$oname,$rinfo)=@_; faildata_parse($po,'ns',$oaction,$oname,$rinfo); warning_parse($po,'ns',$oaction,$oname,$rinfo); return; }
 
 ####################################################################################################
 1;

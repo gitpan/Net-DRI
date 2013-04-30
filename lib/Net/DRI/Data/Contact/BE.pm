@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Handling of contact data for .BE
 ##
-## Copyright (c) 2006,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2008,2009,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -71,7 +71,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2008,2009,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -123,6 +123,7 @@ sub init
   $self->auth({pw=>''}) unless ($a && (ref($a) eq 'HASH') && exists($a->{pw}));
   $self->srid('ABCD') unless defined $self->srid(); ## we can not choose the ID
  }
+ return;
 }
 
 sub type

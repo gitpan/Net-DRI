@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Whois commands for .COM/.NET (RFC3912)
 ##
-## Copyright (c) 2007,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2007,2009,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -49,7 +49,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2007,2009,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -75,6 +75,7 @@ sub info
  my $mes=$po->message();
  Net::DRI::Exception->die(1,'protocol/whois',10,'Invalid domain name: '.$domain) unless Net::DRI::Util::is_hostname($domain);
  $mes->command('domain '.lc($domain));
+ return;
 }
 
 sub info_parse
@@ -95,6 +96,7 @@ sub info_parse
  parse_dates($po,$domain,$rr,$rinfo);
  parse_status($po,$domain,$rr,$rinfo);
  parse_ns($po,$domain,$rr,$rinfo);
+ return;
 }
 
 sub parse_domain
@@ -120,6 +122,7 @@ sub parse_registrars
  $rinfo->{domain}->{$domain}->{clName}=$rr->{'Registrar'}->[0];
  $rinfo->{domain}->{$domain}->{clWhois}=$rr->{'Whois Server'}->[0];
  $rinfo->{domain}->{$domain}->{clWebsite}=$rr->{'Referral URL'}->[0];
+ return;
 }
 
 sub parse_dates
@@ -133,18 +136,21 @@ sub parse_dates
  my ($l)=($rr->{'>>> Last update of whois database'}->[0]=~m/^(.+) <<<$/);
  $strp=$po->build_strptime_parser(pattern => '%a, %d %b %Y %T UTC', locale => 'en_US', time_zone => 'UTC');
  $rinfo->{domain}->{$domain}->{wuDate}=$strp->parse_datetime($l);
+ return;
 }
 
 sub parse_status
 {
  my ($po,$domain,$rr,$rinfo)=@_;
  $rinfo->{domain}->{$domain}->{status}=Net::DRI::Protocol::EPP::Core::Status->new($rr->{'Status'}); #####
+ return;
 }
 
 sub parse_ns
 {
  my ($po,$domain,$rr,$rinfo)=@_;
  $rinfo->{domain}->{$domain}->{ns}=$po->create_local_object('hosts')->set(@{$rr->{'Name Server'}}) if exists($rr->{'Name Server'});
+ return;
 }
 
 ####################################################################################################

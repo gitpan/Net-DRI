@@ -1,6 +1,6 @@
 ## Domain Registry Interface, OpenSRS XCP Connection handling
 ##
-## Copyright (c) 2008-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008-2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -53,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008-2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008-2010,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -76,6 +76,7 @@ sub init
  {
   Net::DRI::Exception::usererr_insufficient_parameters($p.' must be defined') unless (exists($t->{$p}) && $t->{$p});
  }
+ return;
 }
 
 ## From Protocol Message object to something suitable for transport (various types)

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP IDN Language (EPP-IDN-Lang-Mapping.pdf)
 ##
-## Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2008,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -15,6 +15,7 @@
 package Net::DRI::Protocol::EPP::Extensions::VeriSign::IDNLanguage;
 
 use strict;
+use warnings;
 
 use Net::DRI::Util;
 use Net::DRI::Exception;
@@ -47,7 +48,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2008,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -88,6 +89,7 @@ sub create
 
  my $eid=$mes->command_extension_register('idnLang:tag','xmlns:idnLang="http://www.verisign.com/epp/idnLang-1.0" xsi:schemaLocation="http://www.verisign.com/epp/idnLang-1.0 idnLang-1.0.xsd"');
  $mes->command_extension($eid,$rd->{language});
+ return;
 }
 
 ####################################################################################################

@@ -1,7 +1,7 @@
 ## Domain Registry Interface, nic.at domain transactions extension
 ## Contributed by Michael Braunoeder from NIC.AT <mib@nic.at>
 ##
-## Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006-2008,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -16,6 +16,7 @@
 package Net::DRI::Protocol::EPP::Extensions::AT::Domain;
 
 use strict;
+use warnings;
 
 use Net::DRI::Util;
 use Net::DRI::Exception;
@@ -51,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006-2008,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -161,9 +162,10 @@ sub extonly {
                );
 
        }
+       return;
 }
 
-sub delete {
+sub delete { ## no critic (Subroutines::ProhibitBuiltinHomonyms)
 
        my ( $epp, $domain, $rd ) = @_;
        my $mes = $epp->message();
@@ -181,6 +183,7 @@ sub delete {
 
        $mes->command_extension( $eid,
                [ 'at-ext-domain:scheduledate', $scheduledate ] );
+       return;
 }
 
 sub transfer_request {
@@ -202,7 +205,7 @@ sub transfer_request {
        $entryname{name} = 'Registrarinfo';
        $mes->command_extension( $eid,
                [ 'at-ext-domain:entry', \%entryname, $registrarinfo ] );
-
+       return;
 }
 
 ####################################################################################################

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Host commands (RFC5732)
 ##
-## Copyright (c) 2005-2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -50,7 +50,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005-2012 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -106,6 +106,7 @@ sub check
  my $mes=$epp->message();
  my @d=build_command($mes,'check',$ns);
  $mes->command_body(\@d);
+ return;
 }
 
 sub check_parse
@@ -134,6 +135,7 @@ sub check_parse
    }
   }
  }
+ return;
 }
 
 sub info
@@ -142,6 +144,7 @@ sub info
  my $mes=$epp->message();
  my @d=build_command($mes,'info',$ns);
  $mes->command_body(\@d);
+ return;
 }
 
 sub info_parse
@@ -186,6 +189,7 @@ sub info_parse
 
  $rinfo->{host}->{$oname}->{status}=$po->create_local_object('status')->add(@s);
  $rinfo->{host}->{$oname}->{self}=$po->create_local_object('hosts',$oname,\@ip4,\@ip6,1);
+ return;
 }
 
 ############ Transform commands
@@ -197,6 +201,7 @@ sub create
  my @d=build_command($mes,'create',$ns);
  push @d,add_ip($ns) if Net::DRI::Util::isa_hosts($ns);
  $mes->command_body(\@d);
+ return;
 }
 
 sub create_parse
@@ -221,14 +226,16 @@ sub create_parse
    $rinfo->{host}->{$oname}->{$1}=$po->parse_iso8601($c->textContent());
   }
  }
+ return;
 }
 
-sub delete
+sub delete ## no critic (Subroutines::ProhibitBuiltinHomonyms)
 {
  my ($epp,$ns)=@_;
  my $mes=$epp->message();
  my @d=build_command($mes,'delete',$ns);
  $mes->command_body(\@d);
+ return;
 }
 
 sub update
@@ -266,6 +273,7 @@ sub update
   push @d,['host:chg',['host:name',$newname]];
  }
  $mes->command_body(\@d);
+ return;
 }
 
 sub add_ip
@@ -309,6 +317,7 @@ sub pandata_parse
    $rinfo->{host}->{$oname}->{date}=$po->parse_iso8601($c->textContent());
   }
  }
+ return;
 }
 
 ####################################################################################################

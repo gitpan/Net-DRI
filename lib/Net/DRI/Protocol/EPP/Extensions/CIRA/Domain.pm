@@ -1,6 +1,6 @@
 ## Domain Registry Interface, CIRA EPP Domain extensions
 ##
-## Copyright (c) 2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -62,6 +62,7 @@ sub info_parse
    $rinfo->{domain}->{$oname}->{stage_of_life_end}=$po->parse_iso8601($c->textContent());
   }
  }
+ return;
 }
 
 sub create
@@ -76,6 +77,7 @@ sub create
  @c=$cs->get('tech');
  return unless @c;
  Net::DRI::Exception::usererr_insufficient_parameters('only up to 3 tech contacts are possible in .CA for domain_create') if (scalar(@c)!=scalar(grep { Net::DRI::Util::isa_contact($_,'Net::DRI::Data::Contact::CIRA') && length $_->srid() && $_->validate(1) } @c) || @c>3);
+ return;
 }
 
 sub transfer_request
@@ -102,6 +104,7 @@ sub transfer_request
 
  my $eid=build_command_extension($mes,$epp,'cira:ciraTransfer');
  $mes->command_extension($eid,['cira:ciraChg',@n]);
+ return;
 }
 
 ####################################################################################################
@@ -137,7 +140,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2010,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

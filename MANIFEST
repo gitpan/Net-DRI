@@ -79,6 +79,7 @@ lib/Net/DRI/DRD/Gandi.pm
 lib/Net/DRI/DRD/GL.pm
 lib/Net/DRI/DRD/HN.pm
 lib/Net/DRI/DRD/ICANN.pm
+lib/Net/DRI/DRD/ICMRegistry.pm
 lib/Net/DRI/DRD/ID.pm
 lib/Net/DRI/DRD/IENUMAT.pm
 lib/Net/DRI/DRD/IM.pm
@@ -107,7 +108,9 @@ lib/Net/DRI/DRD/SIDN.pm
 lib/Net/DRI/DRD/SO.pm
 lib/Net/DRI/DRD/SWITCH.pm
 lib/Net/DRI/DRD/TCI.pm
+lib/Net/DRI/DRD/Telnic.pm
 lib/Net/DRI/DRD/TRAVEL.pm
+lib/Net/DRI/DRD/UPU.pm
 lib/Net/DRI/DRD/US.pm
 lib/Net/DRI/DRD/VC.pm
 lib/Net/DRI/DRD/VNDS.pm
@@ -161,6 +164,7 @@ lib/Net/DRI/Protocol/EPP/Extensions/AERO.pm
 lib/Net/DRI/Protocol/EPP/Extensions/AERO/Contact.pm
 lib/Net/DRI/Protocol/EPP/Extensions/AERO/Domain.pm
 lib/Net/DRI/Protocol/EPP/Extensions/Afilias.pm
+lib/Net/DRI/Protocol/EPP/Extensions/Afilias/Association.pm
 lib/Net/DRI/Protocol/EPP/Extensions/Afilias/IDNLanguage.pm
 lib/Net/DRI/Protocol/EPP/Extensions/Afilias/IPR.pm
 lib/Net/DRI/Protocol/EPP/Extensions/Afilias/MaintainerUrl.pm
@@ -188,6 +192,10 @@ lib/Net/DRI/Protocol/EPP/Extensions/AT/Message.pm
 lib/Net/DRI/Protocol/EPP/Extensions/AT/Result.pm
 lib/Net/DRI/Protocol/EPP/Extensions/AU.pm
 lib/Net/DRI/Protocol/EPP/Extensions/AU/Domain.pm
+lib/Net/DRI/Protocol/EPP/Extensions/AusRegistry/IDN.pm
+lib/Net/DRI/Protocol/EPP/Extensions/AusRegistry/KeyValue.pm
+lib/Net/DRI/Protocol/EPP/Extensions/AusRegistry/Variant.pm
+lib/Net/DRI/Protocol/EPP/Extensions/BIZ.pm
 lib/Net/DRI/Protocol/EPP/Extensions/BR.pm
 lib/Net/DRI/Protocol/EPP/Extensions/BR/Contact.pm
 lib/Net/DRI/Protocol/EPP/Extensions/BR/Domain.pm
@@ -221,6 +229,7 @@ lib/Net/DRI/Protocol/EPP/Extensions/DNSBE.pm
 lib/Net/DRI/Protocol/EPP/Extensions/DNSBE/Contact.pm
 lib/Net/DRI/Protocol/EPP/Extensions/DNSBE/Domain.pm
 lib/Net/DRI/Protocol/EPP/Extensions/DNSBE/Message.pm
+lib/Net/DRI/Protocol/EPP/Extensions/DNSBE/Notifications.pm
 lib/Net/DRI/Protocol/EPP/Extensions/E164.pm
 lib/Net/DRI/Protocol/EPP/Extensions/E164Validation.pm
 lib/Net/DRI/Protocol/EPP/Extensions/E164Validation/RFC5076.pm
@@ -239,6 +248,9 @@ lib/Net/DRI/Protocol/EPP/Extensions/FCCN/Domain.pm
 lib/Net/DRI/Protocol/EPP/Extensions/GL.pm
 lib/Net/DRI/Protocol/EPP/Extensions/GracePeriod.pm
 lib/Net/DRI/Protocol/EPP/Extensions/HTTP.pm
+lib/Net/DRI/Protocol/EPP/Extensions/ICANN/MarkSignedMark.pm
+lib/Net/DRI/Protocol/EPP/Extensions/ICMRegistry.pm
+lib/Net/DRI/Protocol/EPP/Extensions/IDN.pm
 lib/Net/DRI/Protocol/EPP/Extensions/IENUMAT.pm
 lib/Net/DRI/Protocol/EPP/Extensions/IRegistry.pm
 lib/Net/DRI/Protocol/EPP/Extensions/ISPAPI.pm
@@ -248,6 +260,7 @@ lib/Net/DRI/Protocol/EPP/Extensions/IT/Contact.pm
 lib/Net/DRI/Protocol/EPP/Extensions/IT/Domain.pm
 lib/Net/DRI/Protocol/EPP/Extensions/IT/Notifications.pm
 lib/Net/DRI/Protocol/EPP/Extensions/Keygroup.pm
+lib/Net/DRI/Protocol/EPP/Extensions/KeyRelay.pm
 lib/Net/DRI/Protocol/EPP/Extensions/LU.pm
 lib/Net/DRI/Protocol/EPP/Extensions/LU/Contact.pm
 lib/Net/DRI/Protocol/EPP/Extensions/LU/Domain.pm
@@ -260,6 +273,7 @@ lib/Net/DRI/Protocol/EPP/Extensions/NAME.pm
 lib/Net/DRI/Protocol/EPP/Extensions/NAME/EmailFwd.pm
 lib/Net/DRI/Protocol/EPP/Extensions/NeuLevel/IDNLanguage.pm
 lib/Net/DRI/Protocol/EPP/Extensions/NeuLevel/UIN.pm
+lib/Net/DRI/Protocol/EPP/Extensions/NeuLevel/WhoisType.pm
 lib/Net/DRI/Protocol/EPP/Extensions/NO.pm
 lib/Net/DRI/Protocol/EPP/Extensions/NO/Contact.pm
 lib/Net/DRI/Protocol/EPP/Extensions/NO/Domain.pm
@@ -296,9 +310,11 @@ lib/Net/DRI/Protocol/EPP/Extensions/TCI/Contact.pm
 lib/Net/DRI/Protocol/EPP/Extensions/TCI/Domain.pm
 lib/Net/DRI/Protocol/EPP/Extensions/TCI/Message.pm
 lib/Net/DRI/Protocol/EPP/Extensions/TCI/Registrar.pm
+lib/Net/DRI/Protocol/EPP/Extensions/Telnic.pm
 lib/Net/DRI/Protocol/EPP/Extensions/US.pm
 lib/Net/DRI/Protocol/EPP/Extensions/US/Contact.pm
 lib/Net/DRI/Protocol/EPP/Extensions/VeriSign.pm
+lib/Net/DRI/Protocol/EPP/Extensions/VeriSign/Balance.pm
 lib/Net/DRI/Protocol/EPP/Extensions/VeriSign/ClientAttributes.pm
 lib/Net/DRI/Protocol/EPP/Extensions/VeriSign/IDNLanguage.pm
 lib/Net/DRI/Protocol/EPP/Extensions/VeriSign/JobsContact.pm
@@ -390,6 +406,8 @@ lib/Net/DRI/Util.pm
 LICENSE
 Makefile.PL
 MANIFEST			This list of files
+MYMETA.json
+MYMETA.yml
 README
 SUPPORT
 t/001load_mandatory.t
@@ -462,6 +480,12 @@ t/647cocca_epp_ipvalidation.t
 t/648coza_epp.t
 t/649vnds_epp_coa.t
 t/650vnds_epp_twofactorauth.t
+t/651icmregistry_epp.t
+t/652telnic_epp.t
+t/653keyrelay_epp.t
+t/654vnds_epp_balance.t
+t/655idn_epp.t
+t/656icann_smd.t
 t/701ovh_ws_live.t
 t/702bookmyname_ws_live.t
 t/703gandi_ws_live.t
@@ -472,4 +496,5 @@ xt/002pod.t
 xt/003critic.t
 xt/004kwalitee.t
 xt/005perl_minimum_version.t
-META.yml                                 Module meta-data (added by MakeMaker)
+META.yml                                 Module YAML meta-data (added by MakeMaker)
+META.json                                Module JSON meta-data (added by MakeMaker)

@@ -1,7 +1,7 @@
 ## Domain Registry Interface, .CZ EPP NSSET extension commands
 ##
 ## Copyright (c) 2008,2009 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
-##           (c) 2010 Patrick Mevzek <netdri@dotandco.com>
+##           (c) 2010,2013 Patrick Mevzek <netdri@dotandco.com>
 ##                    All rights reserved.
 ##
 ## This file is part of Net::DRI
@@ -53,8 +53,8 @@ Tonnerre Lombard, E<lt>tonnerre.lombard@sygroup.chE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008-2009 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
-          (c) 2010 Patrick Mevzek <netdri@dotandco.com>
+Copyright (c) 2008,2009 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+          (c) 2010,2013 Patrick Mevzek <netdri@dotandco.com>
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -191,12 +191,12 @@ sub build_reportlevel
 
 sub check
 {
-	my $epp = shift;
-	my @hosts = @_;
+	my ($epp, @hosts)=@_;
 	my $mes = $epp->message();
 	my @d = build_command($epp, $mes, 'check', \@hosts);
 
 	$mes->command_body(\@d);
+	return;
 }
 
 sub check_parse
@@ -229,6 +229,7 @@ sub check_parse
 			}
 		} continue { $c = $c->getNextSibling(); }
 	}
+	return;
 }
 
 sub info
@@ -238,6 +239,7 @@ sub info
 	my @d = build_command($epp, $mes, 'info', $hosts);
 
 	$mes->command_body(\@d);
+	return;
 }
 
 sub info_parse
@@ -329,6 +331,7 @@ sub info_parse
 	$rinfo->{nsset}->{$oname}->{self} = $ns;
 	$rinfo->{nsset}->{$oname}->{contact} = $cs;
 	$rinfo->{nsset}->{$oname}->{status} = $po->create_local_object('status')->add(@s);
+	return;
 }
 
 sub transfer_query
@@ -339,6 +342,7 @@ sub transfer_query
 		$name);
 	push(@d, build_authinfo($rd->{auth})) if Net::DRI::Util::has_auth($rd);
 	$mes->command_body(\@d);
+	return;
 }
 
 ############ Transform commands
@@ -356,15 +360,17 @@ sub create
 	push(@d, build_authinfo($rd->{auth}));
 	push(@d, build_reportlevel($rd->{reportlevel}));
 	$mes->command_body(\@d);
+	return;
 }
 
-sub delete
+sub delete ## no critic (Subroutines::ProhibitBuiltinHomonyms)
 {
 	my ($epp, $hosts) = @_;
 	my $mes = $epp->message();
 	my @d = build_command($epp, $mes, 'delete', $hosts);
 
 	$mes->command_body(\@d);
+	return;
 }
 
 sub transfer_request
@@ -376,6 +382,7 @@ sub transfer_request
 
 	push(@d, build_authinfo($rd->{auth})) if Net::DRI::Util::has_auth($rd);
 	$mes->command_body(\@d);
+	return;
 }
 
 sub transfer_answer
@@ -388,6 +395,7 @@ sub transfer_answer
 
 	push(@d, build_authinfo($rd->{auth})) if Net::DRI::Util::has_auth($rd);
 	$mes->command_body(\@d);
+	return;
 }
 
 sub transfer_cancel
@@ -399,6 +407,7 @@ sub transfer_cancel
 
 	push(@d, build_authinfo($rd->{auth})) if Net::DRI::Util::has_auth($rd);
 	$mes->command_body(\@d);
+	return;
 }
 
 sub update
@@ -443,6 +452,7 @@ sub update
 	push(@d, ['nsset:chg', @set]) if (@set);
 
 	$mes->command_body(\@d);
+	return;
 }
 
 ####################################################################################################

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, VeriSign EPP Suggestion Extension
 ##
-## Copyright (c) 2010,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2010,2012,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -34,6 +34,7 @@ sub setup
 {
  my ($class,$po,$version)=@_;
  $po->ns({ 'suggestion' => [ 'http://www.verisign-grs.com/epp/suggestion-1.1','suggestion-1.1.xsd' ] });
+ return;
 }
 
 ####################################################################################################
@@ -87,8 +88,9 @@ sub suggestion
 
   if (Net::DRI::Util::has_key($rd,'action') && ref $rd->{action} eq 'HASH')
   {
-   while(my ($action,$weight)=each %{$rd->{action}})
+   foreach my $action (sort { $a cmp $b } keys %{$rd->{action}})
    {
+    my $weight=$rd->{action}->{$action};
     Net::DRI::Exception::usererr_invalid_parameters(sprintf('weight for action "%s" myst be either off, low, medium or high',$action)) unless defined $weight && $weight=~/^(?:off|low|medium|high)$/;
     push @f,['suggestion:action',{name => $action, weight => $weight }];
    }
@@ -110,6 +112,7 @@ sub suggestion
  my $mes=$epp->message();
  $mes->command(['info','suggestion:info',sprintf('xmlns:suggestion="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('suggestion'))]);
  $mes->command_body(\@d);
+ return;
 }
 
 sub parse
@@ -153,6 +156,7 @@ sub parse
    }
   }
  }
+ return;
 }
 
 sub parse_table
@@ -245,7 +249,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2010,2012 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2010,2012,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

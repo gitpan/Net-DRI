@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .NO Host extensions
 ##
-## Copyright (c) 2008,2010 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
+## Copyright (c) 2008,2010,2013 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
 ##                    Trond Haugen E<lt>info@norid.noE<gt>
 ##                    All rights reserved.
 ##
@@ -49,7 +49,7 @@ Trond Haugen, E<lt>info@norid.noE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008,2010 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
+Copyright (c) 2008,2010,2013 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
 Trond Haugen E<lt>info@norid.noE<gt>
 All rights reserved.
 
@@ -106,11 +106,12 @@ sub build_facets {
     my $mes = $epp->message();
     if (exists($rd->{facets}) && defined($rd->{facets})) {
        $eid = _build_facet_extension( $mes, $epp, 'no-ext-epp:extended' );
-       foreach my $fkey (keys(%{$rd->{facets}})) {
+       foreach my $fkey (sort { $a cmp $b } keys(%{$rd->{facets}})) {
            push @e, [ 'no-ext-epp:facet', { name => $fkey }, $rd->{facets}->{$fkey} ];
        }
     }
     return $mes->command_extension( $eid, \@e ) if (@e);
+    return;
 }
 
 

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, OpenSRS XCP Account commands
 ##
-## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -15,6 +15,7 @@
 package Net::DRI::Protocol::OpenSRS::XCP::Account;
 
 use strict;
+use warnings;
 
 use Net::DRI::Exception;
 use DateTime;
@@ -47,7 +48,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -77,6 +78,7 @@ sub list_domains
  my $msg=$xcp->message();
  $msg->command({action=>'get_domains_by_expiredate',object=>'domain'});
  $msg->command_attributes({exp_from=>DateTime->from_epoch(epoch => time()-60*60*24)->strftime('%F'),exp_to=>'2030-01-01',limit=>1000000}); ## We have to provide a limit !
+ return;
 }
 
 sub list_domains_parse
@@ -91,6 +93,7 @@ sub list_domains_parse
  my @r=map { $_->{name} } @$rd;
  $rinfo->{account}->{domains}->{action}='list';
  $rinfo->{account}->{domains}->{list}=\@r;
+ return;
 }
 
 ####################################################################################################

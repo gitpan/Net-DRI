@@ -1,6 +1,6 @@
 ## Domain Registry Interface, virtual superclass for all DRD modules
 ##
-## Copyright (c) 2005-2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -75,7 +75,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005-2012 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -313,6 +313,7 @@ sub enforce_domain_name_constraints
  my ($self,$ndr,$domain,$op)=@_;
  my $err=$self->verify_name_domain($ndr,$domain,$op);
  Net::DRI::Exception->die(0,'DRD',1,'Invalid domain name (error '.$err.'): '.((defined($domain) && $domain)? $domain : '?')) if length $err;
+ return;
 }
 
 sub enforce_host_name_constraints
@@ -320,12 +321,14 @@ sub enforce_host_name_constraints
  my ($self,$ndr,$dh,$checktld)=@_;
  my $err=$self->verify_name_host($ndr,$dh,$checktld);
  Net::DRI::Exception->die(0,'DRD',2,'Invalid host name (error '.$err.'): '.((Net::DRI::Util::is_class($dh,'Net::DRI::Data::Hosts'))? $dh->get_names(1) : (defined $dh? $dh : '?'))) if length $err;
+ return;
 }
 
 sub err_invalid_contact
 {
  my ($self,$c)=@_;
  Net::DRI::Exception->die(0,'DRD',6,'Invalid contact (should be a Contact object with a srid value): '.((defined $c && $c && eval { $c->can('srid'); } )? $c->srid() : '?'));
+ return;
 }
 
 ####################################################################################################
@@ -941,7 +944,7 @@ sub host_update_status
   $c->add('status',$sadd) unless ($sadd->is_empty());
   $c->del('status',$sdel) unless ($sdel->is_empty());
   return $self->host_update($ndr,$dh,$c,$rh);
- } ## just set
+ } else ## just set
  {
   return $self->host_update($ndr,$dh,$ndr->local_object('changes')->set('status',$sadd),$rh);
  }

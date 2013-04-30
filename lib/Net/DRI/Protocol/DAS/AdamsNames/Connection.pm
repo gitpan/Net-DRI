@@ -1,6 +1,6 @@
 ## Domain Registry Interface, DAS Connection handling for AdamsNames
 ##
-## Copyright (c) 2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2009,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -49,7 +49,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2009,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -67,17 +67,16 @@ sub read_data
 {
   my ($class,$to,$sock)=@_;
 
- my @a;
+ my @r;
  while(my $l=$sock->getline())
  {
-  chomp($l);
-  push @a,$l;
+  chomp $l;
+  push @r,Net::DRI::Util::decode_ascii($l);
   last if $l=~m/registered/;
  }
 
- @a=map { Net::DRI::Util::decode_ascii($_); } @a;
- die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED_CLOSING','Unable to read answer (connection closed by registry ?)','en')) unless (@a && $a[-1]=~m/registered/);
- return Net::DRI::Data::Raw->new_from_array(\@a);
+ die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED_CLOSING','Unable to read answer (connection closed by registry ?)','en')) unless (@r && $r[-1]=~m/registered/);
+ return Net::DRI::Data::Raw->new_from_array(\@r);
 }
 
 sub write_message

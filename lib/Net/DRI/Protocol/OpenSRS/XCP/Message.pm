@@ -1,6 +1,6 @@
 ## Domain Registry Interface, OpenSRS XCP Message
 ##
-## Copyright (c) 2008-2010,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008-2010,2012-2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -54,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008-2010,2012 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008-2010,2012-2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -195,7 +195,7 @@ sub _obj2dt
  return @r;
 }
 
-sub _dt2obj
+sub _dt2obj ## no critic (Subroutines::RequireFinalReturn)
 {
  my ($doc)=@_;
  my $c=$doc->getFirstChild();
@@ -267,6 +267,7 @@ sub parse
    next;
   }
  }
+ return;
 }
 
 ####################################################################################################

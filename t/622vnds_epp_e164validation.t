@@ -20,7 +20,7 @@ our ($R1,$R2);
 sub mysend { my ($transport,$count,$msg)=@_; $R1=$msg->as_string(); return 1; }
 sub myrecv { return Net::DRI::Data::Raw->new_from_string($R2? $R2 : $E1.'<response>'.r().$TRID.'</response>'.$E2); }
 
-my $dri=Net::DRI->new(10);
+my $dri=Net::DRI->new({cache_ttl => 10});
 $dri->{trid_factory}=sub { return 'ABC-12345'; };
 
 use Net::DRI::DRD::VNDS;

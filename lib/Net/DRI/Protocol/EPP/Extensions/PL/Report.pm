@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .PL EPP Report extension commands
 ##
-## Copyright (c) 2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2012,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -32,6 +32,7 @@ sub setup
 {
  my ($class,$po,$version)=@_;
  $po->ns({ 'extreport' => [ 'urn:ietf:params:xml:ns:extreport-1.0','extreport-1.0.xsd' ] });
+ return;
 }
 
 ####################################################################################################
@@ -71,6 +72,7 @@ sub create
 
  my $eid=$mes->command_extension_register('extreport','report');
  $mes->command_extension($eid,\@n);
+ return;
 }
 
 sub _create_domain
@@ -203,6 +205,7 @@ sub create_parse
    $rinfo->{report}->{$oname}->{$name}=$node->textContent();
   }
  }
+ return;
 }
 
 sub _parse_domain
@@ -232,6 +235,7 @@ sub _parse_domain
  }
 
  $rinfo->{report}->{$oname}->{results}=\@r;
+ return;
 }
 
 sub _parse_contact
@@ -257,6 +261,7 @@ sub _parse_contact
  }
 
  $rinfo->{report}->{$oname}->{results}=\@r;
+ return;
 }
 
 sub _parse_host
@@ -282,6 +287,7 @@ sub _parse_host
  }
 
  $rinfo->{report}->{$oname}->{results}=$h;
+ return;
 }
 
 sub _parse_future
@@ -307,6 +313,7 @@ sub _parse_future
  }
 
  $rinfo->{report}->{$oname}->{results}=\@r;
+ return;
 }
 
 sub _parse_payment
@@ -335,6 +342,7 @@ sub _parse_payment
  }
 
  $rinfo->{report}->{$oname}->{results}=\@r;
+ return;
 }
 
 sub _parse_funds
@@ -353,6 +361,7 @@ sub _parse_funds
  }
 
  $rinfo->{report}->{$oname}->{results}=\%r;
+ return;
 }
 
 ####################################################################################################
@@ -388,7 +397,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+Copyright (c) 2012,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

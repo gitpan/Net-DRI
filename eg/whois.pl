@@ -8,7 +8,7 @@ use warnings;
 
 use Net::DRI;
 
-my $dri=Net::DRI->new(10);
+my $dri=Net::DRI->new({cache_ttl => 10});
 my $rc;
 
 my $ok=eval {

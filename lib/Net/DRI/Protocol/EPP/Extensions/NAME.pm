@@ -1,7 +1,7 @@
 ## Domain Registry Interface, .NAME EPP extensions
 ##
 ## Copyright (c) 2007-2009 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
-##           (c) 2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+##           (c) 2010,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -52,7 +52,7 @@ Tonnerre Lombard, E<lt>tonnerre.lombard@sygroup.chE<gt>
 =head1 COPYRIGHT
 
 Copyright (c) 2007-2009 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
-          (c) 2010 Patrick Mevzek <netdri@dotandco.com>
+          (c) 2010,2012 Patrick Mevzek <netdri@dotandco.com>
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -74,7 +74,7 @@ sub setup
  return;
 }
 
-sub default_extensions { return qw/NAME::EmailFwd VeriSign::IDNLanguage/; }
+sub default_extensions { return qw/NAME::EmailFwd VeriSign::IDNLanguage GracePeriod SecDNS/; }
 
 ####################################################################################################
 1;

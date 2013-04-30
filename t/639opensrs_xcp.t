@@ -19,7 +19,7 @@ sub munge { my $in=shift; $in=~s/>\s*</></sg; chomp($in); return $in; }
 
 my $RESELLERID=''; #'LOGIN';
 
-my $dri=Net::DRI::TrapExceptions->new(10);
+my $dri=Net::DRI::TrapExceptions->new({cache_ttl => 10});
 $dri->add_registry('OpenSRS');
 $dri->target('OpenSRS')->add_current_profile('p1','xcp',{f_send=>\&mysend,f_recv=>\&myrecv,client_login=>'LOGIN',client_password=>'PASSWORD',remote_url=>'http://localhost/'});
 

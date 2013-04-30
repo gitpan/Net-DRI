@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Encapsulating result status, standardized on EPP codes
 ##
-## Copyright (c) 2005,2006,2008-2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2008-2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -194,7 +194,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2008-2012 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2008-2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -409,12 +409,12 @@ sub _merge
  return \%r;
 }
 
-sub last { my $self=shift; while ( defined $self->next() ) { $self=$self->next(); } return $self; }
+sub last { my $self=shift; while ( defined $self->next() ) { $self=$self->next(); } return $self; } ## no critic (Subroutines::ProhibitBuiltinHomonyms)
 
 ## These methods are not public !
-sub _set_trid { my ($self,$v)=@_; $self->{'trid'}=$v; }
-sub _set_last { my ($self,$v)=@_; while ( defined $self->next() ) { $self->{'count'}++; $self=$self->next(); } $self->{'count'}++; $self->{'next'}=$v; }
-sub _set_data { my ($self,$v)=@_; $self->{'data'}=$v; }
+sub _set_trid { my ($self,$v)=@_; $self->{'trid'}=$v; return; }
+sub _set_last { my ($self,$v)=@_; while ( defined $self->next() ) { $self->{'count'}++; $self=$self->next(); } $self->{'count'}++; $self->{'next'}=$v; return; }
+sub _set_data { my ($self,$v)=@_; $self->{'data'}=$v; return; }
 sub _eppcode
 {
  my ($type,$code,$eppcode,$is_success)=@_;
@@ -452,7 +452,7 @@ sub as_string
  return wantarray ? @r : (@r==1 ? $r[0] : join("\n",map { sprintf('{%d} %s',1+$_,$r[$_]) } (0..$#r)));
 }
 
-sub print      { my ($self,$e)=@_; print $self->as_string(defined $e && $e ? 1 : 0); }
+sub print      { my ($self,$e)=@_; print $self->as_string(defined $e && $e ? 1 : 0); return; } ## no critic (Subroutines::ProhibitBuiltinHomonyms)
 
 ## Should these be global too ? if so, enhance is() with third parameter to know if walking is necessary or not
 sub is_pending { my ($self)=@_; return $self->is('COMMAND_SUCCESSFUL_PENDING'); }

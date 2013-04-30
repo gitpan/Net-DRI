@@ -1,6 +1,6 @@
 ## Domain Registry Interface, DAS Domain commands
 ##
-## Copyright (c) 2007,2009,2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2007,2009,2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -48,7 +48,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007,2009,2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2007,2009,2010,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -82,6 +82,7 @@ sub check
  $domain=~s/\.${tld}$// if defined $tld;
  $mes->command('get');
  $mes->command_param(lc($domain));
+ return;
 }
 
 sub check_parse
@@ -100,6 +101,7 @@ sub check_parse
  {
   $rinfo->{domain}->{$domain}->{ace}=(defined $po->tld())? lc($rr->{'IDNA Domain'}.'.'.$po->tld()) : lc($rr->{'IDNA Domain'});
  }
+ return;
 }
 
 ####################################################################################################

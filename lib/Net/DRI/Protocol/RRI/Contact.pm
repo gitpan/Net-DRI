@@ -1,7 +1,7 @@
 ## Domain Registry Interface, RRI Contact commands (DENIC-11)
 ##
 ## Copyright (c) 2007,2008,2009 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
-##           (c) 2012 Michael Holloway <michael@thedarkwinter.com>. All rights reserved.
+##           (c) 2012,2013 Michael Holloway <michael@thedarkwinter.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -16,6 +16,7 @@
 package Net::DRI::Protocol::RRI::Contact;
 
 use strict;
+use warnings;
 
 use Net::DRI::Util;
 use Net::DRI::Exception;
@@ -51,7 +52,7 @@ Tonnerre Lombard, E<lt>tonnerre.lombard@sygroup.chE<gt>
 =head1 COPYRIGHT
 
 Copyright (c) 2007,2008,2009 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
-          (c) 2012 Michael Holloway <michael@thedarkwinter.com>. All rights reserved.
+          (c) 2012,2013 Michael Holloway <michael@thedarkwinter.com>. All rights reserved.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -112,6 +113,7 @@ sub check
  my @d=build_command($mes,'check',$c);
  $mes->command_body(\@d);
  $mes->cltrid(undef);
+ return;
 }
 
 sub check_parse
@@ -128,6 +130,7 @@ sub check_parse
  my $contact = $c[0]->getFirstChild()->getData();
  $rinfo->{contact}->{$contact}->{action} = 'check';
  $rinfo->{contact}->{$contact}->{exist} = ($s[0]->getFirstChild()->getData() eq 'free')? 0 : 1;
+ return;
 }
 
 sub info
@@ -137,6 +140,7 @@ sub info
  my @d=build_command($mes,'info',$c);
  $mes->command_body(\@d);
  $mes->cltrid(undef);
+ return;
 }
 
 sub info_parse
@@ -225,6 +229,7 @@ sub info_parse
  $contact->cc(@{$cd{cc}});
 
  $rinfo->{contact}->{$oname}->{self}=$contact;
+ return;
 }
 
 sub parse_tel
@@ -269,6 +274,7 @@ sub parse_postalinfo
  } continue { $n=$n->getNextSibling(); }
 
  $rcd->{street}->[0]=\@street;
+ return;
 }
 
 sub parse_disclose
@@ -385,6 +391,7 @@ sub _do_locint
     push @$r,['contact:'.$tagname,$tmp[1]];
   }
  }
+ return;
 }
 
 sub create
@@ -397,6 +404,7 @@ sub create
  $contact->validate(); ## will trigger an Exception if needed
  push @d,build_cdata($contact);
  $mes->command_body(\@d);
+ return;
 }
 
 sub create_parse
@@ -426,6 +434,7 @@ sub create_parse
    $rinfo->{contact}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->getFirstChild()->getData());
   }
  } continue { $c=$c->getNextSibling(); }
+ return;
 }
 
 sub update
@@ -452,6 +461,7 @@ sub update
   push @d,build_cdata($newc);
  }
  $mes->command_body(\@d);
+ return;
 }
 
 ####################################################################################################

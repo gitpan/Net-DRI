@@ -1,9 +1,8 @@
 #!/usr/bin/perl
 
-use encoding "iso-8859-15";
-
 use strict;
 use warnings;
+use utf8;
 
 use Net::DRI;
 
@@ -54,7 +53,7 @@ my $rc;
 
 ## FULL PM
 $co->name('MyORG');
-$co->street(['Whatever street 35','éçp àô']);
+$co->street(['Whatever street 35','Ã©Ã§p Ã Ã´']);
 $co->city('Alphaville');
 $co->pc('99999');
 $co->cc('FR');
@@ -83,7 +82,7 @@ Content-Type: text/plain; charset="iso-8859-15"
 Content-Disposition: inline
 Content-Transfer-Encoding: 8bit
 MIME-Version: 1.0
-X-Mailer: Net::DRI/0.96_04 via MIME-tools 5.428 (Entity 5.428)
+X-Mailer: Net::DRI/0.96_05 via MIME-tools 5.428 (Entity 5.428)
 From: test@localhost
 To: domain@nic.fr
 Subject: CLIENTID domain_create [TRID-12345]
@@ -97,7 +96,7 @@ Subject: CLIENTID domain_create [TRID-12345]
 2z..: nowmandatory!
 3a..: MyORG
 3b..: Whatever street 35
-3c..: éçp àô
+3c..: Ã©Ã§p Ã Ã´
 3e..: Alphaville
 3f..: 99999
 3g..: FR
@@ -135,7 +134,7 @@ Content-Type: text/plain; charset="iso-8859-15"
 Content-Disposition: inline
 Content-Transfer-Encoding: 8bit
 MIME-Version: 1.0
-X-Mailer: Net::DRI/0.96_04 via MIME-tools 5.428 (Entity 5.428)
+X-Mailer: Net::DRI/0.96_05 via MIME-tools 5.428 (Entity 5.428)
 From: test@localhost
 To: domain@nic.fr
 Subject: CLIENTID domain_create [TRID-12345]

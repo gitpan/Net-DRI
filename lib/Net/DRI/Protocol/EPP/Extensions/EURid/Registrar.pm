@@ -1,7 +1,7 @@
 ## Domain Registry Interface, EURid Registrar EPP extension commands
 ## (introduced in release 5.6 october 2008)
 ##
-## Copyright (c) 2009,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2009,2012,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -48,7 +48,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2009,2012 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2009,2012,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -76,6 +76,7 @@ sub setup
 {
  my ($class,$po,$version)=@_;
  $po->ns({ 'registrar' => [ 'http://www.eurid.eu/xml/epp/registrar-1.0','registrar-1.0.xsd' ] });
+ return;
 }
 
 ####################################################################################################
@@ -85,6 +86,7 @@ sub info
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
  $mes->command('info','registrar:info',sprintf('xmlns:registrar="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('registrar')));
+ return;
 }
 
 sub info_parse
@@ -124,6 +126,7 @@ sub info_parse
    $rinfo->{registrar}->{info}->{credits}->{$c->getAttribute('type')}=($c->textContent() eq '')? undef : 0+$c->textContent();
   }
  }
+ return;
 }
 
 ####################################################################################################

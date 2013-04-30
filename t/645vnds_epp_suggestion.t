@@ -20,14 +20,14 @@ sub myrecv { return Net::DRI::Data::Raw->new_from_string($R2? $R2 : $E1.'<respon
 sub r { my ($c,$m)=@_;  return '<result code="'.($c || 1000).'"><msg>'.($m || 'Command completed successfully').'</msg></result>'; }
 
 
-my $dri=Net::DRI::TrapExceptions->new(-1);
+my $dri=Net::DRI::TrapExceptions->new({cache_ttl => -1});
 $dri->{trid_factory}=sub { return 'ABC-12345'; };
 $dri->add_registry('VNDS');
 $dri->target('VNDS')->add_current_profile('p1','epp',{f_send=>\&mysend,f_recv=>\&myrecv},{extensions=>['VeriSign::Suggestion']});
 
 $R2='';
 my $rc=$dri->domain_suggest('mimisflowershop.com',{language=>'ENG',contentfilter=>'false',customfilter=>'false',forsale=>'off',maxlength=>30,maxresults=>20,usehyphens=>1,usenumbers=>1,view=>'grid',action=>{basic=>'medium',related=>'high',similar=>'off',topical=>'high'},tld=>['COM','Net']});
-is_string($R1,$E1.'<command><info><suggestion:info xmlns:suggestion="http://www.verisign-grs.com/epp/suggestion-1.1" xsi:schemaLocation="http://www.verisign-grs.com/epp/suggestion-1.1 suggestion-1.1.xsd"><suggestion:key>mimisflowershop.com</suggestion:key><suggestion:language>ENG</suggestion:language><suggestion:filter contentfilter="false" customfilter="false" forsale="off" maxlength="30" maxresults="20" usehyphens="1" usenumbers="1" view="grid"><suggestion:action name="related" weight="high"/><suggestion:action name="basic" weight="medium"/><suggestion:action name="similar" weight="off"/><suggestion:action name="topical" weight="high"/><suggestion:tld>COM</suggestion:tld><suggestion:tld>Net</suggestion:tld></suggestion:filter></suggestion:info></info><clTRID>ABC-12345</clTRID></command>'.$E2,'domain_suggest build');
+is_string($R1,$E1.'<command><info><suggestion:info xmlns:suggestion="http://www.verisign-grs.com/epp/suggestion-1.1" xsi:schemaLocation="http://www.verisign-grs.com/epp/suggestion-1.1 suggestion-1.1.xsd"><suggestion:key>mimisflowershop.com</suggestion:key><suggestion:language>ENG</suggestion:language><suggestion:filter contentfilter="false" customfilter="false" forsale="off" maxlength="30" maxresults="20" usehyphens="1" usenumbers="1" view="grid"><suggestion:action name="basic" weight="medium"/><suggestion:action name="related" weight="high"/><suggestion:action name="similar" weight="off"/><suggestion:action name="topical" weight="high"/><suggestion:tld>COM</suggestion:tld><suggestion:tld>Net</suggestion:tld></suggestion:filter></suggestion:info></info><clTRID>ABC-12345</clTRID></command>'.$E2,'domain_suggest build');
 
 
 

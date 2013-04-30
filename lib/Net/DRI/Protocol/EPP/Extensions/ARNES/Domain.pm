@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .SI Domain EPP extension commands
 ##
-## Copyright (c) 2008,2009,2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008-2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -49,7 +49,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008,2009,2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008-2010,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -90,6 +90,7 @@ sub transfer_registrant
  push @d,Net::DRI::Protocol::EPP::Util::domain_build_authinfo($epp,$rd->{auth}) if Net::DRI::Util::has_auth($rd);
 
  $mes->command_body(\@d);
+ return;
 }
 
 sub build_command_extension
@@ -115,6 +116,7 @@ sub transfer_request
 
  my $eid=build_command_extension($mes,$epp,'dnssi:ext');
  $mes->command_extension($eid,['dnssi:transfer',['dnssi:domain',\@d]]);
+ return;
 }
 
 ####################################################################################################

@@ -1,5 +1,65 @@
 Net::DRI changelog from newest to oldest changes
 
+0.96_05 2013-05-01 DEVELOPMENT RELEASE
+
+See warning in 0.96_01: this version enables only EPP over TCP/TLS and IRIS DCHK over UDP,
+other protocols (Whois,DAS,RRI,RRP) or transports (EPP over HTTPS) will not work in this version.
+
++ Net::DRI (all modules in distribution) pass Perl Best Practices level 4; xt/003critic.t now uses level 4 by default
++ .TEL EPP support, from patch by Michael Holloway
++ .XXX EPP support, from patch by Michael Holloway
++ Protocol/EPP/Extensions/ICANN/MarkSignedMark : new EPP extension implementing of draft-lozano-tmch-smd-02
++ Protocol/EPP/Extensions/KeyRelay : new EPP extension implementing draft-gieben-epp-keyrelay-02
++ Protocol/EPP/Extensions/AusRegistry/Variant : new EPP extension (used in some new gTLDs applications)
++ Protocol/EPP/Extensions/AusRegistry/IDN : new EPP extension (used in some new gTLDs applications)
++ Protocol/EPP/Extensions/AusRegistry/KeyValye : new EPP extension (used in some new gTLDs applications)
++ Protocol/EPP/Extensions/IDN : implementation of draft-obispo-epp-idn-02 (used in some new gTLDs applications)
++ Protocol/EPP/Extensions/VeriSign/Balance : new EPP extension (https://www.verisigninc.com/assets/epp-balance-mapping.pdf)
++ DRD/UPU : .POST registry
+= Better support for Perl 5.17+ : removal of deprecated 'use encoding' feature, force various hashes keys ordering
+= Replace UNIVERSAL::require with Module::Load and a nice wrapper in Net::DRI::Util::load_module()
+= DRD/ICANN : allow .ORG 1 & 2 characters domain names
+= DRD/CentralNic : updated TLDs list
+= DRD/SE : add .NU as handled TLD, from instructions by Ulrich Wisser
+= .NAME : add SecDNS EPP extension
+= .AT : add SecDNS EPP extension, from patch by Michael Braunoeder
+= .EU : various updates/bugfixes by Michael Kefeder
+= .NO : various updates by Jørgen Thomsen
+= .ASIA .XXX .ME .MOBI (Afilias IPR/Association) updates by Michael Holloway : adds support for oxrs-1.1, updates for ipr-1.1, .XXX support with Association extension
+= Protocol/EPP/Extensions/EURid/Domain : change of API for domain_delete, deleteDate => undef is replaced by cancel => 1, from suggestion by Michael Kefeder
+= Protocol/EPP/Extensions/NO/Domain : use only the 1.1 EPP schema version for all domain extension commands
+= Protocol/EPP/Extensions/NO/Domain : support parsing of applicantDataset from Domain info
+= Protocol/EPP/Extensions/NO : support 1.1 version of domain extension schema, and support 'set' of applicantdataset
+= Protocol/EPP/Extensions/NO/Domain : added support for new domain-1.1 extension for applicantDataset
+= eg/epp_client_no.pl : support 'applicantdataset' and 'applicantdatasetfile' arguments
+= eg/epp_client_no.pl : dump more information about each transaction; '-F' option added to control dump format
+= Data/Contact/NO : added support for the anonymousPersonIdentifier
+= Data/Contact/NO : fixed a bug introduced in 0.96
+= .NO Result.pm : use a new API method available in 0.96: Also return conditions by the new add_to_extra_info method
+= .NO Host.pm : modified to support multiple host contacts, as the host schema says (Any restrictions in number is from now on up to registry policy. Note that the host_info() now returns an array for the host c
+ontact(s), so clients may need to be adapted.)
+= t/633norid_epp.t : adjusted to the host change
+= eg/epp_client_no.pl : adjusted to the host change
+= Logging::Syslog : removed concatenation of facility to priority as it does not seem to work
+= Util::xml_child_content() : can only be used in scalar context, hence simplify API
+= Net::DRI : remove never used option global_timeout
+= Net::DRI & Net::DRI::Exceptions->new() : always pass a refhash, nothing else
+= Protocol::build_strptime_parser() : use dedicated ASCII char (1E = Record Separator) for scalar key generation from list of args
+= Shell : docfix for output
+= Shell : handle XML::LibXML::Error case
+= Protocol/EPP/Extensions/SecDNS : use new API for command_extension_register, and rename local alias to secDNS
+= Protocol/EPP/Connection : take into account fragmented length also, patch by Cedric Dubois
+= Protocol/RRI : various updates from Michael Holloway
+= Protocol/EPP/Extensions/DNSBE : various updates (adding Notifications) from Michael Holloway
+= .BIZ EPP updates : explicit use of Neulevel::IDNLanguage, patch by Michael Holloway
+= Transport : for SSL handling, take into account SSL_hostname for SNI, patch by Michael Holloway
+= Protocol/EPP/Extensions/VeriSign : add documentation to explain NameStore is not loaded by default, while it should, from suggestion by Michael Holloway
+- DRD/NO : return 'no' and not 'NO' in tlds()
+- Protocol/EPP/Core/Domain : clone DateTime object passed before chaning its timezone
+- DRD::host_update_status() : missing else clause
+- Protocol::build_strptime_parser() bugfix dealing with input params
+- Protocol/EPP/Extensions/SecDNS : 2 BUGFIXES in join use
+
 0.96_04 2012-11-20 DEVELOPMENT RELEASE
 
 See warning in 0.96_01: this version enables only EPP over TCP/TLS and IRIS DCHK over UDP,

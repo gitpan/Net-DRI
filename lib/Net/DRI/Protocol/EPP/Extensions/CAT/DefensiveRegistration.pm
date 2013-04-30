@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .CAT Defensive Registration EPP extension commands
 ##
-## Copyright (c) 2006-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006-2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -49,7 +49,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006-2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006-2010,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -191,10 +191,10 @@ sub build_period
 
 sub check
 {
- my $epp=shift;
- my @id=@_;
+ my ($epp,@id)=@_;
  my @d=build_command($epp,'check',\@id);
  $epp->message->command_body(\@d);
+ return;
 }
 
 sub check_parse
@@ -224,6 +224,7 @@ sub check_parse
    }
   }
  }
+ return;
 }
 
 sub info
@@ -232,6 +233,7 @@ sub info
  my @d=build_command($epp,'info',$id);
  push @d,build_authinfo($rd->{auth}) if Net::DRI::Util::has_auth($rd);
  $epp->message->command_body(\@d);
+ return;
 }
 
 sub info_parse
@@ -308,6 +310,7 @@ sub info_parse
  $rinfo->{defreg}->{$oname}->{contact}=$cs;
  $rinfo->{defreg}->{$oname}->{status}=$po->create_local_object('status')->add(@s);
  $rinfo->{defreg}->{$oname}->{trademark}=\%t;
+ return;
 }
 
 ####################################################################################################
@@ -341,13 +344,15 @@ sub create
  Net::DRI::Exception::usererr_insufficient_parameters('trademark must be a ref hash with 4 keys: name, issue_date, country, number') unless (@$tmp==5);
  push @d,$tmp;
  $epp->message->command_body(\@d);
+ return;
 }
 
-sub delete
+sub delete ## no critic (Subroutines::ProhibitBuiltinHomonyms)
 {
  my ($epp,$id)=@_;
  my @d=build_command($epp,'delete',$id);
  $epp->message->command_body(\@d);
+ return;
 }
 
 sub renew
@@ -368,6 +373,7 @@ sub renew
  }
 
  $epp->message->command_body(\@d);
+ return;
 }
 
 sub update
@@ -417,6 +423,7 @@ sub update
 
  push @d,['defreg:chg',@chg] if @chg;
  $mes->command_body(\@d);
+ return;
 }
 
 ####################################################################################################

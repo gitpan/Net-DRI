@@ -33,7 +33,7 @@ sub myrecv
 
 my $dri;
 my $ok=eval {
-	$dri = Net::DRI->new(10);
+	$dri = Net::DRI->new({cache_ttl => 10});
 	1;
 };
 print $@->as_string() if ! $ok;

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .CZ Contact EPP extension commands
 ##
-## Copyright (c) 2008,2010 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+## Copyright (c) 2008,2010,2013 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 ##                    All rights reserved.
 ##
 ## This file is part of Net::DRI
@@ -16,6 +16,7 @@
 package Net::DRI::Protocol::EPP::Extensions::CZ::Contact;
 
 use strict;
+use warnings;
 
 use Net::DRI::Exception;
 use Net::DRI::Util;
@@ -50,7 +51,7 @@ Tonnerre Lombard, E<lt>tonnerre.lombard@sygroup.chE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008,2010 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+Copyright (c) 2008,2010,2013 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -135,6 +136,7 @@ sub info_parse
 			if (defined($ai) && defined($ai->getFirstChild()) &&
 				$ai->getFirstChild()->nodeType() == 3);
 	}
+        return;
 }
 
 ############ Transform commands
@@ -221,6 +223,7 @@ sub create
 	$contact->validate(); ## will trigger an Exception if needed
 	push(@d, build_cdata($contact, $epp->{contacti18n}));
 	$mes->command_body(\@d);
+        return;
 }
 
 sub update 
@@ -260,6 +263,7 @@ sub update
 	}
 
 	$mes->command_body(\@d);
+        return;
 }
 
 ####################################################################################################

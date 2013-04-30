@@ -1,7 +1,7 @@
 ## Domain Registry Interface, ASIA CED extension
 ##
 ## Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
-##           (c) 2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+##           (c) 2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -48,7 +48,7 @@ Tonnerre Lombard E<lt>tonnerre.lombard@sygroup.chE<gt>
 =head1 COPYRIGHT
 
 Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>
-          (c) 2010 Patrick Mevzek <netdri@dotandco.com>
+          (c) 2010,2013 Patrick Mevzek <netdri@dotandco.com>
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -76,6 +76,26 @@ sub register_commands
 
 ####################################################################################################
 
+# automatically put type/form in other fields if not in the list of allowed
+sub auto_cedother
+{
+  my $contact = shift;
+  return $contact unless $contact->cedinum();
+  my $etype = lc($contact->cedetype());
+  unless ($etype =~ m/^(naturalperson|corporation|cooperative|partnership|government|politicalparty|society|institution|other)$/)
+  {
+     $contact->cedothertype($contact->cedetype());
+     $contact->cedetype('other');
+  }
+  my $iform = $contact->cediform();
+  unless ($iform =~ m/^(passport|certificate|legislation|societyregistry|politicalpartyregistry|other)$/)
+  {
+     $contact->cedoiform($contact->cediform());
+     $contact->cediform('other');
+  }
+  return $contact;
+}
+
 sub user_create
 {
  my ($epp,$contact,$rd)=@_;
@@ -84,6 +104,7 @@ sub user_create
 
  return unless Net::DRI::Util::isa_contact($contact, 'Net::DRI::Data::Contact::ASIA');
 
+ $contact = auto_cedother($contact);
  push(@ceddata, ['asia:ccLocality', $contact->cedcc()])         if defined $contact->cedcc()        && length $contact->cedcc();
  push(@ceddata, ['asia:localitySp', $contact->cedsp()])         if defined $contact->cedsp()        && length $contact->cedsp();
  push(@ceddata, ['asia:localityCity', $contact->cedcity()])     if defined $contact->cedcity()      && length $contact->cedcity();
@@ -97,6 +118,7 @@ sub user_create
 
  my $eid=$mes->command_extension_register('asia:create',sprintf('xmlns:asia="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('asia')));
  $mes->command_extension($eid,['asia:cedData', @ceddata]);
+ return;
 }
 
 sub user_update
@@ -106,6 +128,7 @@ sub user_update
  my $newc=$todo->set('info');
  my @ceddata;
 
+ $contact = auto_cedother($contact);
  push(@ceddata, ['asia:ccLocality', $contact->cedcc()])         if defined $contact->cedcc();
  push(@ceddata, ['asia:localitySp', $contact->cedsp()])         if defined $contact->cedsp();
  push(@ceddata, ['asia:localityCity', $contact->cedcity()])     if defined $contact->cedcity();
@@ -119,6 +142,7 @@ sub user_update
 
  my $eid=$mes->command_extension_register('asia:update',sprintf('xmlns:asia="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('asia')));
  $mes->command_extension($eid,['asia:chg', ['asia:cedData', @ceddata]]);
+ return;
 }
 
 sub user_info
@@ -157,6 +181,8 @@ sub user_info
 
  $c = $ceddata->getElementsByTagNameNS($ns,'otherIdentForm');
  $contact->cedoiform($c->shift()->getFirstChild()->getData()) if ($c);
+
+ return;
 }
 
 ####################################################################################################

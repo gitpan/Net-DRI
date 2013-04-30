@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Encapsulatng errors (fatal or not) as exceptions in an OO way
 ##
-## Copyright (c) 2005,2007-2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2007-2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -61,7 +61,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2007-2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+Copyright (c) 2005,2007-2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -89,7 +89,7 @@ sub new
  return $self;
 }
 
-sub die { die(new(@_)); }
+sub die { die(new(@_)); } ## no critic (Subroutines::ProhibitBuiltinHomonyms Subroutines::RequireArgUnpacking)
 
 sub is_error { return shift->{is_error}; }
 sub area     { return shift->{area};     }
@@ -120,20 +120,20 @@ sub backtrace
 
 ## Do not parse result of this call. If needed, use accessors above (is_error(), area(), code(), msg())
 sub as_string { return join("\n",shift->backtrace())."\n"; }
-sub print     { print shift->as_string(); }
+sub print     { print shift->as_string(); } ## no critic (Subroutines::ProhibitBuiltinHomonyms Subroutines::RequireFinalReturn)
 
 ####################################################################################################
 
-sub err_failed_load_module { my ($w,$m,$e)=@_; Net::DRI::Exception->die(1,$w,8,'Failed to load Perl module '.$m.' : '.(ref($e)? $e->as_string() : $e)); }
-sub err_insufficient_parameters { Net::DRI::Exception->die(1,'internal',2,'Insufficient parameters'.($_[0]? ': '.$_[0] : '')); }
-sub err_invalid_parameters      { Net::DRI::Exception->die(1,'internal',3,'Invalid parameters'.($_[0]? ': '.$_[0] : '')); }
+sub err_failed_load_module { my ($w,$m,$e)=@_; Net::DRI::Exception->die(1,$w,8,'Failed to load Perl module '.$m.' : '.(ref($e)? $e->as_string() : $e)); } ## no critic (Subroutines::RequireArgUnpacking Subroutines::RequireFinalReturn)
+sub err_insufficient_parameters { Net::DRI::Exception->die(1,'internal',2,'Insufficient parameters'.($_[0]? ': '.$_[0] : '')); } ## no critic (Subroutines::RequireArgUnpacking Subroutines::RequireFinalReturn)
+sub err_invalid_parameters      { Net::DRI::Exception->die(1,'internal',3,'Invalid parameters'.($_[0]? ': '.$_[0] : '')); } ## no critic (Subroutines::RequireArgUnpacking Subroutines::RequireFinalReturn)
 
-sub usererr_insufficient_parameters { Net::DRI::Exception->die(0,'internal',2,'Insufficient parameters'.($_[0]? ': '.$_[0] : '')); }
-sub usererr_invalid_parameters      { Net::DRI::Exception->die(0,'internal',3,'Invalid parameters'.($_[0]? ': '.$_[0] : '')); }
+sub usererr_insufficient_parameters { Net::DRI::Exception->die(0,'internal',2,'Insufficient parameters'.($_[0]? ': '.$_[0] : '')); } ## no critic (Subroutines::RequireArgUnpacking Subroutines::RequireFinalReturn)
+sub usererr_invalid_parameters      { Net::DRI::Exception->die(0,'internal',3,'Invalid parameters'.($_[0]? ': '.$_[0] : '')); } ## no critic (Subroutines::RequireArgUnpacking Subroutines::RequireFinalReturn)
 
-sub err_assert { Net::DRI::Exception->die(1,'internal',4,'Assert failed'.($_[0]? ': '.$_[0] : '')); }
+sub err_assert { Net::DRI::Exception->die(1,'internal',4,'Assert failed'.($_[0]? ': '.$_[0] : '')); } ## no critic (Subroutines::RequireArgUnpacking Subroutines::RequireFinalReturn)
 
-sub method_not_implemented
+sub method_not_implemented ## no critic (Subroutines::RequireFinalReturn)
 {
  my ($m,$w)=@_;
  ($w)=split(/=/,$w);

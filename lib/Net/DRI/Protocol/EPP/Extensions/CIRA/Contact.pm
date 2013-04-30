@@ -1,6 +1,6 @@
 ## Domain Registry Interface, CIRA EPP Contact commands
 ##
-## Copyright (c) 2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -52,7 +52,7 @@ sub info_parse
  my $infdata=$mes->get_extension('cira','ciraInfo');
  return unless defined $infdata;
 
- my %a;
+ my %ag;
  my $contact=$rinfo->{contact}->{$oname}->{self};
  foreach my $el (Net::DRI::Util::xml_list_children($infdata))
  {
@@ -68,12 +68,12 @@ sub info_parse
    $contact->is_individual($c->textContent() eq 'Y' ? 1 : 0);
   } elsif ($name eq 'ciraAgreementVersion')
   {
-   $a{version}=$c->textContent();
-   $a{signed}=1;
+   $ag{version}=$c->textContent();
+   $ag{signed}=1;
   } elsif ($name eq 'agreementTimestamp')
   {
-   $a{timestamp}=$po->parse_iso8601($c->textContent());
-   $a{signed}=1;
+   $ag{timestamp}=$po->parse_iso8601($c->textContent());
+   $ag{signed}=1;
   } elsif ($name eq 'originatingIpAddress')
   {
    $contact->ip_address($c->textContent());
@@ -82,7 +82,8 @@ sub info_parse
    $contact->whois_display($c->textContent());
   }
  }
- $contact->agreement(\%a) if keys %a;
+ $contact->agreement(\%ag) if keys %ag;
+ return;
 }
 
 ####################################################################################################
@@ -109,6 +110,7 @@ sub create
 
  my $eid=build_command_extension($mes,$epp,'cira:ciraCreate');
  $mes->command_extension($eid,[@n]);
+ return;
 }
 
 sub update
@@ -131,6 +133,7 @@ sub update
 
  my $eid=build_command_extension($mes,$epp,'cira:ciraUpdate');
  $mes->command_extension($eid,['cira:ciraChg',@n]);
+ return;
 }
 
 ####################################################################################################
@@ -166,7 +169,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2010,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Whois commands for .AT (RFC3912)
 ##
-## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -48,7 +48,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -73,7 +73,8 @@ sub info
  my ($po,$domain,$rd)=@_;
  my $mes=$po->message();
  Net::DRI::Exception->die(1,'protocol/whois',10,'Invalid domain name: '.$domain) unless Net::DRI::Util::is_hostname($domain);
- $mes->command(lc($domain));
+ $mes->command(lc $domain);
+ return;
 }
 
 sub info_parse
@@ -94,6 +95,7 @@ sub info_parse
  parse_ns($po,$domain,$rr,$rinfo);
  parse_dates($po,$domain,$rr,$rinfo);
  parse_contacts($po,$domain,$rr,$rd,$rinfo);
+ return;
 }
 
 sub parse_domain
@@ -125,6 +127,7 @@ sub parse_ns
   $h->add(shift(@n),[shift(@i)]);
  }
  $rinfo->{domain}->{$domain}->{ns}=$h unless $h->is_empty();
+ return;
 }
 
 sub parse_dates
@@ -132,6 +135,7 @@ sub parse_dates
  my ($po,$domain,$rr,$rinfo)=@_;
  my $strp=$po->build_strptime_parser(pattern => '%Y%m%d %T', time_zone => 'Europe/Vienna');
  $rinfo->{domain}->{$domain}->{upDate}=$strp->parse_datetime($rr->{'changed'}->[0]);
+ return;
 }
 
 sub parse_contacts
@@ -191,6 +195,7 @@ sub parse_contacts
   }
  }
  $rinfo->{domain}->{$domain}->{contact}=$cs;
+ return;
 }
 
 ####################################################################################################

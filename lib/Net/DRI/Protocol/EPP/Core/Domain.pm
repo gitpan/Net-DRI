@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Domain commands (RFC5731)
 ##
-## Copyright (c) 2005-2010,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2010,2012-2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -50,7 +50,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005-2010,2012 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2010,2012-2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -94,6 +94,7 @@ sub check
  my $mes=$epp->message();
  my @d=Net::DRI::Protocol::EPP::Util::domain_build_command($mes,'check',$domain);
  $mes->command_body(\@d);
+ return;
 }
 
 sub check_parse
@@ -122,6 +123,7 @@ sub check_parse
    }
   }
  }
+ return;
 }
 
 sub info
@@ -132,6 +134,7 @@ sub info
  my @d=Net::DRI::Protocol::EPP::Util::domain_build_command($mes,'info',$domain,{'hosts'=> $hosts});
  push @d,Net::DRI::Protocol::EPP::Util::domain_build_authinfo($epp,$rd->{auth}) if Net::DRI::Util::has_auth($rd);
  $mes->command_body(\@d);
+ return;
 }
 
 sub info_parse
@@ -178,13 +181,14 @@ sub info_parse
    $rinfo->{domain}->{$oname}->{$1}=$po->parse_iso8601($c->textContent());
   } elsif ($name eq 'authInfo') ## we only try to parse the authInfo version defined in the RFC, other cases are to be handled by extensions
   {
-   $rinfo->{domain}->{$oname}->{auth}={pw => scalar Net::DRI::Util::xml_child_content($c,$mes->ns('domain'),'pw')};
+   $rinfo->{domain}->{$oname}->{auth}={pw => Net::DRI::Util::xml_child_content($c,$mes->ns('domain'),'pw')};
   }
  }
 
  $rinfo->{domain}->{$oname}->{contact}=$cs;
  $rinfo->{domain}->{$oname}->{status}=$po->create_local_object('status')->add(@s);
  $rinfo->{domain}->{$oname}->{subordinate_hosts}=$po->create_local_object('hosts')->set(@host) if @host;
+ return;
 }
 
 sub transfer_query
@@ -194,6 +198,7 @@ sub transfer_query
  my @d=Net::DRI::Protocol::EPP::Util::domain_build_command($mes,['transfer',{'op'=>'query'}],$domain);
  push @d,Net::DRI::Protocol::EPP::Util::domain_build_authinfo($epp,$rd->{auth}) if Net::DRI::Util::has_auth($rd);
  $mes->command_body(\@d);
+ return;
 }
 
 sub transfer_parse
@@ -221,6 +226,7 @@ sub transfer_parse
    $rinfo->{domain}->{$oname}->{$1}=$po->parse_iso8601($c->textContent());
   }
  }
+ return;
 }
 
 ############ Transform commands
@@ -261,6 +267,7 @@ sub create
  Net::DRI::Exception::usererr_insufficient_parameters('authInfo is mandatory') unless Net::DRI::Util::has_auth($rd);
  push @d,Net::DRI::Protocol::EPP::Util::domain_build_authinfo($epp,$rd->{auth});
  $mes->command_body(\@d);
+ return;
 }
 
 sub create_parse
@@ -285,14 +292,16 @@ sub create_parse
    $rinfo->{domain}->{$oname}->{$1}=$po->parse_iso8601($c->textContent());
   }
  }
+ return;
 }
 
-sub delete
+sub delete ## no critic (Subroutines::ProhibitBuiltinHomonyms)
 {
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
  my @d=Net::DRI::Protocol::EPP::Util::domain_build_command($mes,'delete',$domain);
  $mes->command_body(\@d);
+ return;
 }
 
 sub renew
@@ -300,7 +309,7 @@ sub renew
  my ($epp,$domain,$rd)=@_;
  my $curexp=Net::DRI::Util::has_key($rd,'current_expiration')? $rd->{current_expiration} : undef;
  Net::DRI::Exception::usererr_insufficient_parameters('current expiration date') unless defined($curexp);
- $curexp=$curexp->set_time_zone('UTC')->strftime('%Y-%m-%d') if (ref($curexp) && Net::DRI::Util::check_isa($curexp,'DateTime'));
+ $curexp=$curexp->clone()->set_time_zone('UTC')->strftime('%Y-%m-%d') if (ref($curexp) && Net::DRI::Util::check_isa($curexp,'DateTime'));
  Net::DRI::Exception::usererr_invalid_parameters('current expiration date must be YYYY-MM-DD') unless $curexp=~m/^\d{4}-\d{2}-\d{2}$/;
 
  my $mes=$epp->message();
@@ -309,6 +318,7 @@ sub renew
  push @d,Net::DRI::Protocol::EPP::Util::build_period($rd->{duration}) if Net::DRI::Util::has_duration($rd);
 
  $mes->command_body(\@d);
+ return;
 }
 
 sub renew_parse
@@ -333,6 +343,7 @@ sub renew_parse
    $rinfo->{domain}->{$oname}->{$1}=$po->parse_iso8601($c->textContent());
   }
  }
+ return;
 }
 
 sub transfer_request
@@ -343,6 +354,7 @@ sub transfer_request
  push @d,Net::DRI::Protocol::EPP::Util::build_period($rd->{duration}) if Net::DRI::Util::has_duration($rd);
  push @d,Net::DRI::Protocol::EPP::Util::domain_build_authinfo($epp,$rd->{auth}) if Net::DRI::Util::has_auth($rd);
  $mes->command_body(\@d);
+ return;
 }
 
 sub transfer_answer
@@ -352,6 +364,7 @@ sub transfer_answer
  my @d=Net::DRI::Protocol::EPP::Util::domain_build_command($mes,['transfer',{'op'=>(Net::DRI::Util::has_key($rd,'approve') && $rd->{approve})? 'approve' : 'reject'}],$domain);
  push @d,Net::DRI::Protocol::EPP::Util::domain_build_authinfo($epp,$rd->{auth}) if Net::DRI::Util::has_auth($rd);
  $mes->command_body(\@d);
+ return;
 }
 
 sub transfer_cancel
@@ -361,6 +374,7 @@ sub transfer_cancel
  my @d=Net::DRI::Protocol::EPP::Util::domain_build_command($mes,['transfer',{'op'=>'cancel'}],$domain);
  push @d,Net::DRI::Protocol::EPP::Util::domain_build_authinfo($epp,$rd->{auth}) if Net::DRI::Util::has_auth($rd);
  $mes->command_body(\@d);
+ return;
 }
 
 sub update
@@ -396,6 +410,7 @@ sub update
  push @chg,Net::DRI::Protocol::EPP::Util::domain_build_authinfo($epp,$chg,1) if ($chg && (ref $chg eq 'HASH') && exists $chg->{pw});
  push @d,['domain:chg',@chg] if @chg;
  $mes->command_body(\@d);
+ return;
 }
 
 ####################################################################################################
@@ -429,6 +444,7 @@ sub pandata_parse
    $rinfo->{domain}->{$oname}->{date}=$po->parse_iso8601($c->textContent());
   }
  }
+ return;
 }
 
 ####################################################################################################

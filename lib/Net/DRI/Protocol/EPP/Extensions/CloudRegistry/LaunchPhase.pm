@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Cloud Registry LaunchPhase EPP Extension for managing Sunrise and Landrush
 ##
-## Copyright (c) 2009-2011 Cloud Registry Pty Ltd <http://www.cloudregistry.net>. All rights reserved.
+## Copyright (c) 2009-2011,2013 Cloud Registry Pty Ltd <http://www.cloudregistry.net>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -48,7 +48,7 @@ Wil Tan E<lt>wil@cloudregistry.netE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2009-2011 Cloud Registry Pty Ltd <http://www.cloudregistry.net>.
+Copyright (c) 2009-2011,2013 Cloud Registry Pty Ltd <http://www.cloudregistry.net>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -92,6 +92,7 @@ sub create
 
  my $eid=$mes->command_extension_register('lp:create',sprintf('xmlns:lp="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('lp')));
  $mes->command_extension($eid,[@lpdata]);
+ return;
 }
 
 sub create_parse
@@ -104,6 +105,7 @@ sub create_parse
 
  my $c = $creData->getElementsByTagNameNS($mes->ns('lp'), 'application_id');
  $rinfo->{$otype}->{$oname}->{lp} = {application_id=>$c->get_node(1)->textContent()} if defined $c && $c->size();
+ return;
 }
 
 sub info
@@ -119,6 +121,7 @@ sub info
 
  my $eid=$mes->command_extension_register('lp:info',sprintf('xmlns:lp="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('lp')));
  $mes->command_extension($eid,[@lpdata]);
+ return;
 }
 
 sub info_parse
@@ -137,6 +140,7 @@ sub info_parse
   $lpdata{$el}=$v if defined $v;
  }
  $rinfo->{$otype}->{$oname}->{lp} = \%lpdata;
+ return;
 }
 
 ####################################################################################################

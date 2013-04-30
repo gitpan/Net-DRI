@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .LU Contact EPP extension commands
 ##
-## Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2007,2008,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -15,6 +15,7 @@
 package Net::DRI::Protocol::EPP::Extensions::LU::Contact;
 
 use strict;
+use warnings;
 
 use Net::DRI::Util;
 
@@ -46,7 +47,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2007,2008,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -115,6 +116,7 @@ sub info_parse
    $co->disclose()->{$name.'_loc'}=$c->getAttribute('flag');
   } continue { $c=$c->getNextSibling(); }
  }
+ return;
 }
 
 sub build_disclose
@@ -147,6 +149,7 @@ sub create
 
  my $eid=build_command_extension($mes,$epp,'dnslu:ext');
  $mes->command_extension($eid,['dnslu:create',['dnslu:contact',@n]]);
+ return;
 }
 
 sub update
@@ -161,6 +164,7 @@ sub update
 
  my $eid=build_command_extension($mes,$epp,'dnslu:ext');
  $mes->command_extension($eid,['dnslu:update',['dnslu:contact',@n]]);
+ return;
 }
 
 ####################################################################################################

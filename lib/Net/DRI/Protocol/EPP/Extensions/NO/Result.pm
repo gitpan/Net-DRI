@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .NO Result extension
 ##
-## Copyright (c) 2008,2010 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
+## Copyright (c) 2008,2010,2013 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
 ##                    Trond Haugen E<lt>info@norid.noE<gt>
 ##                    All rights reserved.
 ##
@@ -17,6 +17,7 @@
 package Net::DRI::Protocol::EPP::Extensions::NO::Result;
 
 use strict;
+use warnings;
 
 =pod
 
@@ -46,7 +47,7 @@ Trond Haugen, E<lt>info@norid.noE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008,2010 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
+Copyright (c) 2008,2010,2013 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
 Trond Haugen, E<lt>info@norid.noE<gt>
 All rights reserved.
 

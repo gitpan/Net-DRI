@@ -1,6 +1,6 @@
 ## Domain Registry Interface, IRIS Message
 ##
-## Copyright (c) 2008-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008-2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -55,7 +55,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008-2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008-2010,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -144,6 +144,7 @@ sub parse
  ## We currently do not parse the <reaction> node (in reply to a <control> which we do never send for now, see §4.3.8) and <bags> (see §4.4)
  ## We take care only of the <resultSet> nodes
  $self->results(scalar($root->getChildrenByTagNameNS($self->ns('iris1'),'resultSet')));
+ return;
 }
 
 ####################################################################################################

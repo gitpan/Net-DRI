@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EURid/DNSBE Keygroup EPP Extension
 ##
-## Copyright (c) 2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -42,6 +42,7 @@ sub setup
 {
  my ($class,$po,$version)=@_;
  $po->ns({ 'keygroup' => [ 'http://www.eurid.eu/xml/epp/keygroup-1.0','keygroup-1.0.xsd' ] });
+ return;
 }
 
 sub build_command
@@ -93,6 +94,7 @@ sub check
  my $mes=$epp->message();
  my @d=build_command($epp,$mes,'check',$names);
  $mes->command_body(\@d);
+ return;
 }
 
 sub check_parse
@@ -118,6 +120,7 @@ sub check_parse
    }
   }
  }
+ return;
 }
 
 sub info
@@ -126,6 +129,7 @@ sub info
  my $mes=$epp->message();
  my @d=build_command($epp,$mes,'info',$name);
  $mes->command_body(\@d);
+ return;
 }
 
 sub info_parse
@@ -159,6 +163,7 @@ sub info_parse
  }
 
  $rinfo->{keygroup}->{$oname}->{keys}=\@k;
+ return;
 }
 
 ############ Transform commands
@@ -177,14 +182,16 @@ sub create
   }
  }
  $mes->command_body(\@d);
+ return;
 }
 
-sub delete
+sub delete ## no critic (Subroutines::ProhibitBuiltinHomonyms)
 {
  my ($epp,$name)=@_;
  my $mes=$epp->message();
  my @d=build_command($epp,$mes,'delete',$name);
  $mes->command_body(\@d);
+ return;
 }
 
 sub update
@@ -204,6 +211,7 @@ sub update
   push @d,['keygroup:key',format_key($k)];
  }
  $mes->command_body(\@d);
+ return;
 }
 
 ####################################################################################################
@@ -239,7 +247,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2010,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

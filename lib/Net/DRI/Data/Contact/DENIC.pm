@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Handling of contact data for .DE
 ##
-## Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
+## Copyright (c) 2007,2008,2013 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -15,6 +15,8 @@
 package Net::DRI::Data::Contact::DENIC;
 
 use strict;
+use warnings;
+
 use base qw/Net::DRI::Data::Contact/;
 use Net::DRI::Exception;
 use Net::DRI::Util;
@@ -67,7 +69,7 @@ Tonnerre Lombard E<lt>tonnerre.lombard@sygroup.chE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+Copyright (c) 2007,2008,2013 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

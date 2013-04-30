@@ -50,6 +50,7 @@ sub registry_check
  Net::DRI::Exception::usererr_insufficient_parameters('Missing or bad registry') unless ($registry && $registry =~ /^\./);
  my $attr = {fqdn => $hostname, tld => $registry};
  $msg->command_attributes($attr);
+ return;
 }
 
 sub registry_check_parse
@@ -62,6 +63,7 @@ sub registry_check_parse
  my $ra=$mes->response_attributes();
 
  $rinfo->{nameserver}->{$oname}->{exists} = $ra->{is_success} ? 1 : 0;
+ return;
 }
 
 ############ Transform commands
@@ -76,6 +78,7 @@ sub registry_add
  Net::DRI::Exception::usererr_insufficient_parameters('Missing or bad registry') unless ($rd->{tld} && $rd->{tld} =~ /^\./);
  my $attr = {fqdn => $hostname, tld => $rd->{tld}, all => $rd->{all} || 0};
  $msg->command_attributes($attr);
+ return;
 }
 
 1;

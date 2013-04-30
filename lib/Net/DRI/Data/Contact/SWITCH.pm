@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Handling of contact data for .CH/.LI
 ##
-## Copyright (c) 2008,2009 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+## Copyright (c) 2008,2009,2013 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 ##                    All rights reserved.
 ##
 ## This file is part of Net::DRI
@@ -53,7 +53,7 @@ Tonnerre Lombard, E<lt>tonnerre.lombard@sygroup.chE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+Copyright (c) 2008,2009,2013 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -118,6 +118,7 @@ sub init
   $self->auth({pw=>''}) unless ($a && (ref($a) eq 'HASH') && exists($a->{pw})); ## Mandatory in EPP, not used by .CH/.LI
   $self->srid('auto') unless defined($self->srid()); ## we can not choose the ID
  }
+ return;
 }
 
 ####################################################################################################

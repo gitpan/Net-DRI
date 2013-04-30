@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .JOBS contact extension
 ##
-## Copyright (c) 2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+## Copyright (c) 2008,2013 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 ##                    All rights reserved.
 ##
 ## This file is part of Net::DRI
@@ -16,6 +16,8 @@
 package Net::DRI::Protocol::EPP::Extensions::VeriSign::JobsContact;
 
 use strict;
+use warnings;
+
 use Net::DRI::Util;
 
 =pod
@@ -47,7 +49,7 @@ Tonnerre Lombard E<lt>tonnerre.lombard@sygroup.chE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+Copyright (c) 2008,2013 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -106,16 +108,19 @@ sub add_job
 
 	my $eid = $mes->command_extension_register('jobsContact:' . $cmd,sprintf('xmlns:jobsContact="%s" xsi:schemaLocation="%s"',@NS));
 	$mes->command_extension($eid, \@jobdata);
+	return;
 }
 
 sub create
 {
-	return add_job('create', @_);
+	my (@args)=@_;
+	return add_job('create', @args);
 }
 
 sub update
 {
-	return add_job('update', @_);
+	my (@args)=@_;
+	return add_job('update', @args);
 }
 
 sub info_parse
@@ -145,6 +150,7 @@ sub info_parse
 
         my $contact = $rinfo->{$otype}->{$oname}->{self};
 	$contact->jobinfo($jobinfo);
+	return;
 }
 
 ####################################################################################################

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Protocol messages (pure virtual superclass)
 ##
-## Copyright (c) 2005,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2008,2009,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -15,6 +15,7 @@
 package Net::DRI::Protocol::Message;
 
 use strict;
+use warnings;
 
 use base qw/Net::DRI::BaseClass/;
 
@@ -48,7 +49,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2008,2009,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

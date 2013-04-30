@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP IDN Language (EPP-IDN-Lang-Mapping.pdf)
 ##
-## Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
+## Copyright (c) 2007,2008,2013 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -15,6 +15,7 @@
 package Net::DRI::Protocol::EPP::Extensions::Afilias::IDNLanguage;
 
 use strict;
+use warnings;
 
 use Net::DRI::Util;
 use Net::DRI::Exception;
@@ -48,7 +49,7 @@ Tonnerre Lombard E<lt>tonnerre.lombard@sygroup.chE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+Copyright (c) 2007,2008,2013 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -86,16 +87,19 @@ sub add_language
   my $eid=$mes->command_extension_register($tag,'xmlns:idn="urn:iana:xml:ns:idn" xsi:schemaLocation="urn:iana:xml:ns:idn idn.xsd"');
   $mes->command_extension($eid,['idn:script', $rd->{language}]);
  }
+ return;
 }
 
 sub create
 {
- return add_language('idn:create',@_);
+ my (@args)=@_;
+ return add_language('idn:create',@args);
 }
 
 sub check
 {
- return add_language('idn:check',@_);
+ my (@args)=@_;
+ return add_language('idn:check',@args);
 }
 
 ####################################################################################################

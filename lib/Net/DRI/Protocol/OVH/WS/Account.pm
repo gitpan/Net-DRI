@@ -1,6 +1,6 @@
 ## Domain Registry Interface, OVH Web Services Account commands
 ##
-## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -47,7 +47,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -76,6 +76,7 @@ sub list_domains
  my ($po)=@_;
  my $msg=$po->message();
  $msg->method('domainList');
+ return;
 }
 
 sub list_domains_parse
@@ -89,6 +90,7 @@ sub list_domains_parse
  my @r=@$r;
  $rinfo->{account}->{domains}->{action}='list';
  $rinfo->{account}->{domains}->{list}=\@r;
+ return;
 }
 
 ####################################################################################################

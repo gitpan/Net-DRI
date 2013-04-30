@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .NO message extensions
 ##
-## Copyright (c) 2008-2010 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
+## Copyright (c) 2008-2010,2013 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
 ##                    Trond Haugen E<lt>info@norid.noE<gt>
 ##                    All rights reserved.
 ##
@@ -55,7 +55,7 @@ Trond Haugen, E<lt>info@norid.noE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008-2010 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
+Copyright (c) 2008-2010,2013 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
 Trond Haugen E<lt>info@norid.noE<gt>
 All rights reserved.
 
@@ -165,6 +165,7 @@ sub contact_resp_parse {
    $rinfo->{message}->{$msgid}->{contact}->{$oname}->{$1}=$po->parse_iso8601($c->textContent());
   }
  }
+ return;
 }
 
 ## We take into account all parse functions, to be able to parse any result

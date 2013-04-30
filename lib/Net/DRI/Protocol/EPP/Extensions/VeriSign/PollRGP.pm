@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP RGP Poll (EPP-RGP-Poll-Mapping.pdf)
 ##
-## Copyright (c) 2006-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006-2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -48,7 +48,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006-2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006-2010,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -100,6 +100,7 @@ sub parse
  }
 
  $rinfo->{domain}->{$oname}=\%w;
+ return;
 }
 
 ####################################################################################################

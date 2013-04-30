@@ -1,7 +1,7 @@
 ## Domain Registry Interface, CentralNic Release EPP extension
 ## (http://labs.centralnic.com/epp/ext/release.php)
 ##
-## Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2007,2008,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -16,6 +16,7 @@
 package Net::DRI::Protocol::EPP::Extensions::CentralNic::Release;
 
 use strict;
+use warnings;
 
 use Net::DRI::Util;
 use Net::DRI::Exception;
@@ -49,7 +50,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2007,2008,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -85,11 +86,13 @@ sub release
  $mes->command([['transfer',{'op'=>'release'}],'domain:transfer',sprintf('xmlns:domain="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('domain'))]);
  my @d=(['domain:name',$domain],['domain:clID',$rd->{clID}]);
  $mes->command_body(\@d);
+ return;
 }
 
 sub release_parse
 {
- return Net::DRI::Protocol::EPP::Core::Domain::transfer_parse(@_);
+ my (@args)=@_;
+ return Net::DRI::Protocol::EPP::Core::Domain::transfer_parse(@args);
 }
 
 ####################################################################################################

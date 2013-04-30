@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .PT Domain EPP extension commands
 ##
-## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -15,6 +15,7 @@
 package Net::DRI::Protocol::EPP::Extensions::FCCN::Domain;
 
 use strict;
+use warnings;
 
 use Net::DRI::Exception;
 use Net::DRI::Util;
@@ -48,7 +49,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -112,6 +113,7 @@ sub create
  push @n,['ptdomain:autoRenew',$rd->{auto_renew}];
  my $eid=build_command_extension($mes,$epp,'ptdomain:create');
  $mes->command_extension($eid,\@n);
+ return;
 }
 
 sub create_parse
@@ -133,6 +135,7 @@ sub create_parse
    $rinfo->{domain}->{$oname}->{roid}=$c->getFirstChild()->getData();
   }
  } continue { $c=$c->getNextSibling(); }
+ return;
 }
 
 sub add_roid
@@ -151,6 +154,7 @@ sub info
  my $eid=build_command_extension($mes,$epp,'ptdomain:info');
  my @n=add_roid($rd->{roid});
  $mes->command_extension($eid,\@n);
+ return;
 }
 
 sub info_parse
@@ -180,6 +184,7 @@ sub info_parse
    $rinfo->{domain}->{$oname}->{renew_period}=DateTime::Duration->new(years => $c->getAttribute('period'));
   }
  } continue { $c=$c->getNextSibling(); }
+ return;
 }
 
 sub update
@@ -192,6 +197,7 @@ sub update
  my $eid=build_command_extension($mes,$epp,'ptdomain:update');
  my @n=add_roid($rd->{roid});
  $mes->command_extension($eid,\@n);
+ return;
 }
 
 sub renew
@@ -215,6 +221,7 @@ sub renew
  push @n,['ptdomain:autoRenew',$rd->{auto_renew}] if Net::DRI::Util::has_key($rd,'auto_renew');
  push @n,['ptdomain:notRenew',$rd->{not_renew}] if Net::DRI::Util::has_key($rd,'not_renew');
  $mes->command_extension($eid,\@n);
+ return;
 }
 
 sub renounce
@@ -229,9 +236,10 @@ sub renounce
  push @n,add_roid($rd->{roid});
  push @n,['ptdomain:clTRID',$mes->cltrid()];
  $mes->command_extension($eid,\@n);
+ return;
 }
 
-sub delete
+sub delete ## no critic (Subroutines::ProhibitBuiltinHomonyms)
 {
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
@@ -241,6 +249,7 @@ sub delete
  my $eid=build_command_extension($mes,$epp,'ptdomain:delete');
  my @n=add_roid($rd->{roid});
  $mes->command_extension($eid,\@n);
+ return;
 }
 
 ####################################################################################################

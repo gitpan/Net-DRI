@@ -1,7 +1,7 @@
 ## Domain Registry Interface, .US policies
 ##
 ## Copyright (c) 2007,2008,2009 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
-##           (c) 2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+##           (c) 2011,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -52,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 =head1 COPYRIGHT
 
 Copyright (c) 2007,2008,2009 Tonnerre Lombard E<lt>tonnerre.lombard@sygroup.chE<gt>.
-          (c) 2011 Patrick Mevzek <netdri@dotandco.com>.
+          (c) 2011,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -94,6 +94,7 @@ sub set_factories
 {
  my ($self,$po)=@_;
  $po->factories('contact',sub { return Net::DRI::Data::Contact::US->new(@_); });
+ return;
 }
 
 ####################################################################################################

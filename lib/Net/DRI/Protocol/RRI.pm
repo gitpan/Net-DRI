@@ -1,7 +1,7 @@
 ## Domain Registry Interface, RRI Protocol (DENIC-11)
 ##
 ## Copyright (c) 2007,2008,2009 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
-##           (c) 2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+##           (c) 2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -54,7 +54,7 @@ Tonnerre Lombard, E<lt>tonnerre.lombard@sygroup.chE<gt>
 =head1 COPYRIGHT
 
 Copyright (c) 2007,2008,2009 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
-          (c) 2010 Patrick Mevzek <netdri@dotandco.com>.
+          (c) 2010,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -105,7 +105,7 @@ sub _load
  my @core=('Session','RegistryMessage','Domain','Contact');
  my @class=map { 'Net::DRI::Protocol::RRI::'.$_ } @core;
 
- $self->SUPER::_load(@class);
+ return $self->SUPER::_load(@class);
 }
 
 sub transport_default

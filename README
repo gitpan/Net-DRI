@@ -1,4 +1,4 @@
-Net::DRI is Copyright (C) 2005-2012, Patrick Mevzek <netdri@dotandco.com>
+Net::DRI is Copyright (C) 2005-2013, Patrick Mevzek <netdri@dotandco.com>
 Official website for Net::DRI information and download:
 http://www.dotandco.com/services/software/Net-DRI/index.en
 
@@ -30,7 +30,7 @@ Net::DRI standardizes as much as possible on EPP which is the current
 standard for domain name activities, for example for status codes.
 
 Net::DRI has been used to help conduct IETF interoperability tests, and is used
-in production by various organizations with success.
+in production by various organizations with success. It follows Perl Best Practices level 4 policies.
 
 Currently Net::DRI ships with:
 
@@ -43,15 +43,19 @@ Currently Net::DRI ships with:
   * SecDNS for DNSSEC in EPP, both version 1.0 (RFC 4310) and version 1.1 (RFC 5910)
   * Infrastructure ENUM in Austria
   * NSgroup and Keygroup (used by .BE and .EU)
-  * VeriSign extensions: Sync, WhoisInfo, WhoWas, PremiumDomain, Suggestion, ClientAttributes
+  * VeriSign extensions: Sync, WhoisInfo, WhoWas, PremiumDomain, Suggestion, ClientAttributes, Balance
+  * IDN extension (draft-obispo-epp-idn-02)
+  * KeyRelay extension (draft-gieben-epp-keyrelay-02)
+  * AusRegistry extensions: KeyValue, IDN, Variant
   * CentralNic extensions: Release, TTL, WebForwarding, Pricing
   * CloudRegistry extension: LaunchPhase
   * CoCCA extension: IPVerification
+  * ICANN extension: MarkSignedMark (SMD for TMCH in new gTLDs)
   * Domain/Contact/Host and other extensions needed for extra services in various TLD:
     .EU .COM .NET .MOBI .AERO .CAT .US .PL .SE .BE .AT .COOP .LU .ASIA .AU .NAME .ORG .UK
     .DE .CH .LI .HN .SC .VC .AG .BZ .LC .MN .ME .CZ .TRAVEL .NO .BR .JOBS .PRO .FR .PT
     .CX .GS .TL .KI .MS .MU .NF .HT .IM .SI .NG .NA .IT .NL .CA .CO.ZA
-    .RU .SU .РФ
+    .RU .SU .РФ .XXX .TEL .NU
 - a full DAS (Domain Availability Service) implementation for .BE .EU .NL .AU
 - a full Whois implementation (RFC 3912) for thin and thick registries :
      support included for domain names in .COM .NET .ORG .BIZ .INFO .AERO
@@ -59,7 +63,7 @@ Currently Net::DRI ships with:
 - an IRIS (RFC3981) implementation with LWZ transport (RFC4993) for DCHK (RFC5144):
   currently only .DE and .FR provide this service.
   (XCP transport (RFC4992) is also available)
-- an UDP/TCP/TLS socket transport
+- an UDP/TCP/TLS socket transport, handling SNI
 - an HTTP/HTTPS transport
 - various SOAP transports over HTTP/HTTPS
 - an SMTP transport
@@ -75,9 +79,9 @@ Currently Net::DRI ships with:
   DE EU GL HN FR PM RE YT TF WF
   ID IENUMAT IM INFO IT
   LC LU ME MN MOBI NAME NO NU NL
-  ORG PL PRO PT SC SE CH LI
+  ORG PL POST PRO PT SC SE CH LI
   RU SU РФ
-  SI SO TRAVEL UK US VC WS
+  SI SO TEL TRAVEL UK US VC WS XXX
 - Net::DRI::DRD::* modules to use registrars API for Gandi, OVH, BookMyName, OpenSRS
 - Net::DRI::DRD::ISPAPI : the ISPAPI Registry driver for Net::DRI enables you to connect HEXONET's
   EPP server and gives you the possibility to manage a wide range of gTLDs
@@ -87,7 +91,7 @@ Currently Net::DRI ships with:
   registries.
   The driver also supports all other HEXONET commands like queries for
   domain and contact lists. It is also possible to access additional HEXONET
-  products like virtual servers and ssl certificates."
+  products like virtual servers and ssl certificates.
 
 If you are a registry/registrar/reseller, we would welcome
 the opportunity to be able to test Net::DRI against your system. Please
@@ -121,7 +125,7 @@ Email::Valid
 IO::Socket::INET (*)
 IO::Socket::SSL (>=0.90)
 XML::LibXML (>=1.61)
-UNIVERSAL::require
+Module::Load
 SOAP::Lite (needed only for BookMyName, OVH, Gandi webservices)
 SOAP::WSDL (needed only for OVH webservices)
 MIME::Entity (needed only for AFNIC emails)

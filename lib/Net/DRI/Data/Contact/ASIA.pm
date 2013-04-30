@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Handling of contact data for .ASIA
 ##
-## Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
+## Copyright (c) 2007,2008,2013 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -15,6 +15,8 @@
 package Net::DRI::Data::Contact::ASIA;
 
 use strict;
+use warnings;
+
 use base qw/Net::DRI::Data::Contact/;
 
 __PACKAGE__->register_attributes(qw(cedcc cedsp cedcity cedetype cediform cedinum cedothertype cedoiform));
@@ -84,7 +86,7 @@ Tonnerre Lombard E<lt>tonnerre.lombard@sygroup.chE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2007,2008,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

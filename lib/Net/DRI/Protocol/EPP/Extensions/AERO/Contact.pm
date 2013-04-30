@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .AERO Contact EPP extension commands
 ##
-## Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006-2008,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -15,6 +15,7 @@
 package Net::DRI::Protocol::EPP::Extensions::AERO::Contact;
 
 use strict;
+use warnings;
 
 use Net::DRI::Util;
 use DateTime::Format::ISO8601;
@@ -47,7 +48,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006-2008,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -103,6 +104,7 @@ sub info_parse
  $ens{last_checked_date}=DateTime::Format::ISO8601->new()->parse_datetime($ens{last_checked_date}) if exists($ens{last_checked_date});
 
  $rinfo->{contact}->{$oname}->{self}->ens(\%ens);
+ return;
 }
 
 ####################################################################################################

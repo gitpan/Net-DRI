@@ -1,7 +1,7 @@
 ## Domain Registry Interface, .COOP Contact EPP extension commands
 ## (based on document: EPP Extensions for the .coop TLD Registrant Verification version 1.6)
 ##
-## Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2008,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -16,6 +16,7 @@
 package Net::DRI::Protocol::EPP::Extensions::COOP::Contact;
 
 use strict;
+use warnings;
 
 use Net::DRI::Exception;
 use Net::DRI::Util;
@@ -48,7 +49,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2008,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -115,6 +116,7 @@ sub create
 
  my $eid=build_command_extension($mes,$epp,'coop:create');
  $mes->command_extension($eid,\@n);
+ return;
 }
 
 sub update
@@ -131,6 +133,7 @@ sub update
 
  my $eid=build_command_extension($mes,$epp,'coop:update');
  $mes->command_extension($eid,\@n);
+ return;
 }
 
 sub info_parse
@@ -155,6 +158,7 @@ sub info_parse
  $s->lang($el->get_node(1)->getFirstChild()->getData()) if defined($el->get_node(1));
  $el=$infdata->getChildrenByTagNameNS($ns,'mailingListPref');
  $s->mailing_list($el->get_node(1)->getFirstChild()->getData()) if defined($el->get_node(1));
+ return;
 }
 
 ####################################################################################################
@@ -165,6 +169,7 @@ sub domain_create
 
  Net::DRI::Exception::usererr_insufficient_parameters('registrant is mandatory') unless (Net::DRI::Util::has_contact($rd) && $rd->{contact}->get('registrant'));
  Net::DRI::Exception::usererr_insufficient_parameters('registrant org is mandatory') unless $rd->{contact}->get('registrant')->org();
+ return;
 }
 
 sub domain_parse
@@ -185,6 +190,7 @@ sub domain_parse
   $rinfo->{domain}->{$oname}->{registrant_id}=$id;
   $rinfo->{domain}->{$oname}->{registrant_state}=$rinfo->{contact}->{$id}->{state};
  }
+ return;
 }
 
 ####################################################################################################

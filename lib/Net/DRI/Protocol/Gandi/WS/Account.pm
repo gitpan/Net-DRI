@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Gandi Web Services Account commands
 ##
-## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -15,6 +15,7 @@
 package Net::DRI::Protocol::Gandi::WS::Account;
 
 use strict;
+use warnings;
 
 use Net::DRI::Exception;
 
@@ -46,7 +47,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -75,11 +76,12 @@ sub list_domains
  my ($po)=@_;
  my $msg=$po->message();
  $msg->method('domain_list');
+ return;
 }
 
 sub list_domains_parse
 {
-  my ($po,$otype,$oaction,$oname,$rinfo)=@_;
+ my ($po,$otype,$oaction,$oname,$rinfo)=@_;
  my $mes=$po->message();
  return unless $mes->is_success();
 
@@ -88,6 +90,7 @@ sub list_domains_parse
  my @r=@$r;
  $rinfo->{account}->{domains}->{action}='list';
  $rinfo->{account}->{domains}->{list}=\@r;
+ return;
 }
 
 ####################################################################################################

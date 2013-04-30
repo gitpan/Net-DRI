@@ -1,7 +1,7 @@
 ## Domain Registry Interface, .SE EPP Domain/Contact Extensions for Net::DRI
 ## Contributed by Elias Sidenbladh and Ulrich Wisser from NIC SE
 ##
-## Copyright (c) 2006,2008-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2008-2011,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -17,6 +17,7 @@ package Net::DRI::Protocol::EPP::Extensions::SE::Extensions;
 
 use strict;
 use warnings;
+
 use Net::DRI::Util;
 use Net::DRI::Exception;
 use Net::DRI::Protocol::EPP::Util;
@@ -486,6 +487,7 @@ sub parse_greeting
  return unless defined $mes->node_greeting(); ## only work here for true greeting reply handling, not for all polling responses !
 
  $po->switch_to_highest_namespace_version('iis');
+ return;
 }
 
 ####################################################################################################

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .MOBI Domain EPP extension commands
 ##
-## Copyright (c) 2006,2007,2008,2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006-2008,2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -48,7 +48,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2007,2008,2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006-2008,2010,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -81,6 +81,7 @@ sub add_maintainer_url
  my ($mes,$tag,$d)=@_;
  my $eid=$mes->command_extension_register($tag,sprintf('xmlns:mobi="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('mobi')));
  $mes->command_extension($eid,$d);
+ return;
 }
 
 sub create
@@ -91,6 +92,7 @@ sub create
  my $d=Net::DRI::Protocol::EPP::Extensions::Afilias::MaintainerUrl::create('mobi',$rd);
  return unless defined $d;
  add_maintainer_url($mes,'mobi:create',$d);
+ return;
 }
 
 sub update
@@ -101,6 +103,7 @@ sub update
  my $d=Net::DRI::Protocol::EPP::Extensions::Afilias::MaintainerUrl::update('mobi',$todo);
  return unless defined $d;
  add_maintainer_url($mes,'mobi:update',$d);
+ return;
 }
 
 sub info_parse
@@ -114,6 +117,7 @@ sub info_parse
 
  my $c=Net::DRI::Protocol::EPP::Extensions::Afilias::MaintainerUrl::info_parse($mes->ns('mobi'),$infdata);
  $rinfo->{$otype}->{$oname}->{maintainer_url}=$c if defined $c;
+ return;
 }
 
 ####################################################################################################

@@ -1,7 +1,8 @@
 ## Domain Registry Interface, DNSBE Domain EPP extension commands
 ## (based on Registration_guidelines_v4_7_2-Part_4-epp.pdf)
 ##
-## Copyright (c) 2006-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006-2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+##           (c) 2013 Michael Holloway <michael@thedarkwinter.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -53,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006-2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006-2010,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -80,6 +81,7 @@ sub register_commands
           transferq_request => [ \&transferq_request, undef ],
           trade             => [ \&trade, undef ],
           reactivate        => [ \&reactivate, undef ],
+          request_authcode  => [ \&request_authcode, undef ],
          );
 
  return { 'domain' => \%tmp };
@@ -107,6 +109,7 @@ sub create
 
  my $eid=build_command_extension($mes,$epp,'dnsbe:ext');
  $mes->command_extension($eid,['dnsbe:create',['dnsbe:domain',@n]]);
+ return;
 }
 
 sub update
@@ -129,6 +132,7 @@ sub update
 
  my $eid=build_command_extension($mes,$epp,'dnsbe:ext');
  $mes->command_extension($eid,['dnsbe:update',['dnsbe:domain',@n]]);
+ return;
 }
 
 ## This is not written in the PDF document, but it should probably be there, like for .EU
@@ -148,9 +152,10 @@ sub info_parse
  }
 
  $rinfo->{domain}->{$oname}->{nsgroup}=\@c;
+ return;
 }
 
-sub delete
+sub delete ## no critic (Subroutines::ProhibitBuiltinHomonyms)
 {
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
@@ -162,6 +167,7 @@ sub delete
  my $eid=build_command_extension($mes,$epp,'dnsbe:ext');
  my @n=('dnsbe:delete',['dnsbe:domain',['dnsbe:deleteDate',$rd->{deleteDate}->set_time_zone('UTC')->strftime("%Y-%m-%dT%T.%NZ")]]);
  $mes->command_extension($eid,\@n);
+ return;
 }
 
 sub transfer_request
@@ -172,6 +178,7 @@ sub transfer_request
  my @n=add_transfer($epp,$mes,$domain,$rd);
  my $eid=build_command_extension($mes,$epp,'dnsbe:ext');
  $mes->command_extension($eid,['dnsbe:transfer',['dnsbe:domain',@n]]);
+ return;
 }
 
 sub add_transfer
@@ -235,6 +242,7 @@ sub undelete
  my $mes=$epp->message();
  my @d=Net::DRI::Protocol::EPP::Util::domain_build_command($mes,'undelete',$domain);
  $mes->command_body(\@d);
+ return;
 }
 
 sub transferq_request
@@ -250,6 +258,7 @@ sub transferq_request
  my @n=add_transfer($epp,$mes,$domain,$rd);
  my $eid=build_command_extension($mes,$epp,'dnsbe:ext');
  $mes->command_extension($eid,['dnsbe:transferq',['dnsbe:domain',@n]]);
+ return;
 }
 
 sub trade
@@ -262,6 +271,7 @@ sub trade
  my @n=add_transfer($epp,$mes,$domain,$rd);
  my $eid=build_command_extension($mes,$epp,'dnsbe:ext');
  $mes->command_extension($eid,['dnsbe:trade',['dnsbe:domain',@n]]);
+ return;
 }
 
 sub reactivate
@@ -270,6 +280,21 @@ sub reactivate
  my $mes=$epp->message();
  my @d=Net::DRI::Protocol::EPP::Util::domain_build_command($mes,'reactivate',$domain);
  $mes->command_body(\@d);
+ return;
+}
+
+sub request_authcode
+{
+ my ($epp,$domain,$rd)=@_;
+ my $mes=$epp->message();
+ my $trid = $mes->cltrid();
+ my $eid=build_command_extension($mes,$epp,'dnsbe:ext');
+ my @d;
+ push @d,['dnsbe:domainName',$domain];
+ push @d,['dnsbe:url',$rd->{'url'}] if $rd->{'url'};
+ $mes->command_extension($eid,['dnsbe:command',['dnsbe:requestAuthCode',@d],['dnsbe:clTRID',$trid]]);
+ # missing TRID
+ return;
 }
 
 ####################################################################################################

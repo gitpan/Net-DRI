@@ -1,7 +1,7 @@
 ## Domain Registry Interface, nic.at domain transactions extension
 ## Contributed by Michael Braunoeder from NIC.AT <mib@nic.at>
 ##
-## Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006-2008,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -16,6 +16,7 @@
 package Net::DRI::Protocol::EPP::Extensions::AT::ATResult;
 
 use strict;
+use warnings;
 
 our $NS='http://www.nic.at/xsd/at-ext-result-1.0';
 
@@ -47,7 +48,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006-2008,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -124,6 +125,7 @@ sub condition_parse
 
  $rinfo->{domain}->{$oname}->{conditions}=\@conditions;
  $rinfo->{contact}->{$oname}->{conditions}=\@conditions;
+ return;
 }
 
 ####################################################################################################

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .NL DAS Domain commands
 ##
-## Copyright (c) 2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2009,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -48,7 +48,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2009,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -78,7 +78,8 @@ sub check
  my $mes=$po->message();
  Net::DRI::Exception->die(1,'protocol/DAS',2,'Domain name needed') unless $domain;
  Net::DRI::Exception->die(1,'protocol/DAS',10,'Invalid domain name: '.$domain) unless Net::DRI::Util::is_hostname($domain) && $domain=~m/\.nl$/i;
- $mes->command_param(lc($domain));
+ $mes->command_param(lc $domain);
+ return;
 }
 
 sub check_parse
@@ -93,6 +94,7 @@ sub check_parse
  $rinfo->{domain}->{$dom}->{action}='check';
  $rinfo->{domain}->{$dom}->{exist}=($e eq 'active')? 1 : 0;
  $rinfo->{domain}->{$dom}->{exist_reason}=$rr;
+ return;
 }
 
 ####################################################################################################

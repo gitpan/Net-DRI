@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .UK EPP Domain commands
 ##
-## Copyright (c) 2008,2009,2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008-2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -52,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008,2009,2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008-2010,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -94,6 +94,7 @@ sub info
  my $mes=$epp->message();
  my @d=Net::DRI::Protocol::EPP::Util::domain_build_command($mes,'info',$domain);
  $mes->command_body(\@d);
+ return;
 }
 
 sub info_parse
@@ -140,6 +141,7 @@ sub info_parse
 
  $rinfo->{domain}->{$oname}->{ns}=$ns;
  $rinfo->{domain}->{$oname}->{notes}=\@n;
+ return;
 }
 
 ############ Transform commands ####################################################################
@@ -151,6 +153,7 @@ sub renew
  my @d=Net::DRI::Protocol::EPP::Util::domain_build_command($mes,'renew',$domain);
  push @d,Net::DRI::Protocol::EPP::Util::build_period($rd->{duration}) if Net::DRI::Util::has_duration($rd);
  $mes->command_body(\@d);
+ return;
 }
 
 sub transfer_request
@@ -170,6 +173,7 @@ sub transfer_request
   push @d,['domain:account',['domain:account-id',$id]];
  }
  $mes->command_body(\@d);
+ return;
 }
 
 sub transfer_answer
@@ -184,6 +188,7 @@ sub transfer_answer
  my @ns=@{$mes->ns()->{notifications}};
  my @d=['n:rcCase',{ 'xmlns:n' => $ns[0], 'xsi:schemaLocation' => $ns[0].' '.$ns[1]},['n:case-id',$rd->{case_id}]];
  $mes->command_body(\@d);
+ return;
 }
 
 sub build_ns
@@ -232,9 +237,10 @@ sub create
  push @d,['domain:recur-bill',$rd->{'recur-bill'}] if (Net::DRI::Util::has_key($rd,'recur-bill') && $rd->{'recur-bill'}=~m/^(?:th|bc)$/);
  push @d,['domain:auto-bill',$rd->{'auto-bill'}] if (Net::DRI::Util::has_key($rd,'auto-bill') && $rd->{'auto-bill'}=~m/^\d+$/ && $rd->{'auto-bill'}>=1 && $rd->{'auto-bill'}<=182);
  push @d,['domain:next-bill',$rd->{'next-bill'}] if (Net::DRI::Util::has_key($rd,'next-bill') && $rd->{'next-bill'}=~m/^\d+$/ && $rd->{'next-bill'}>=1 && $rd->{'next-bill'}<=182);
-  push @d,['domain:notes',$rd->{notes}] if Net::DRI::Util::has_key($rd,'notes');
+ push @d,['domain:notes',$rd->{notes}] if Net::DRI::Util::has_key($rd,'notes');
 
  $mes->command_body(\@d);
+ return;
 }
 
 sub create_parse
@@ -265,6 +271,7 @@ sub create_parse
    $rinfo->{domain}->{$oname}->{$1}=$po->parse_iso8601($c->textContent());
   }
  }
+ return;
 }
 
 sub update
@@ -309,6 +316,7 @@ sub update
  push @d,['domain:notes',$tmp] if defined($tmp);
 
  $mes->command_body(\@d);
+ return;
 }
 
 ## Warning: this can also be used for multiple domain names at once,
@@ -326,6 +334,7 @@ sub unrenew
  $mes->command(['update','domain:unrenew',sprintf('xmlns:domain="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('domain'))]);
  my @d=(['domain:name',$domain]);
  $mes->command_body(\@d);
+ return;
 }
 
 ####################################################################################################

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, RegistryObject
 ##
-## Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -15,6 +15,8 @@
 package Net::DRI::Data::RegistryObject;
 
 use strict;
+use warnings;
+
 use Net::DRI::Exception;
 
 our $AUTOLOAD;
@@ -71,7 +73,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -88,10 +90,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $proto=shift;
- my $class=ref($proto) || $proto;
-
- my ($p,$type,$name)=@_; ## $name (object name) not necessarily defined
+ my ($class,$p,$type,$name)=@_; ## $name (object name) not necessarily defined
 
  Net::DRI::Exception::err_invalid_parameters() unless (defined($p) && ((ref($p) eq 'Net::DRI') || (ref($p) eq 'Net::DRI::Registry')));
  Net::DRI::Exception::err_insufficient_parameters() unless (defined($type) && $type);
@@ -108,36 +107,36 @@ sub new
 
 sub target
 {
- my $self=shift;
- $self->{p}->target(@_);
+ my ($self,@args)=@_;
+ $self->{p}->target(@args);
  return $self;
 }
 
-sub AUTOLOAD
+sub AUTOLOAD ## no critic (Subroutines::RequireFinalReturn)
 {
- my $self=shift;
+ my ($self,@args)=@_;
  my $attr=$AUTOLOAD; ## this is the action wanted on the object
  $attr=~s/.*:://;
  return unless $attr=~m/[^A-Z]/; ## skip DESTROY and all-cap methods
 
  my $name=$self->{name};
  my ($rp,$rt);
- if (@_==2 && (ref($_[0]) eq 'ARRAY') && (ref($_[1]) eq 'ARRAY'))
+ if (@args==2 && (ref $args[0] eq 'ARRAY') && (ref $args[1] eq 'ARRAY'))
  {
-  $rp=$_[0];
-  $rp=[ $self->{name}, @$rp ] if (defined($name) && $name);
-  $rt=$_[1];
+  $rp=$args[0];
+  $rp=[ $self->{name}, @$rp ] if (defined $name && $name);
+  $rt=$args[1];
  } else
  {
-  $rp=(defined($name) && $name)? [ $name, @_ ] : [ @_ ];
+  $rp=(defined $name && $name)? [ $name, @args ] : [ @args ];
   $rt=[];
  }
 
  my $p=$self->{p};
- if (ref($p) eq 'Net::DRI::Registry')
+ if (ref $p eq 'Net::DRI::Registry')
  {
   return $p->process($self->{type},$attr,$rp,$rt);
- } elsif (ref($p) eq 'Net::DRI')
+ } elsif (ref $p eq 'Net::DRI')
  {
   my $c=$self->{type}.'_'.$attr;
   return $p->$c->(@$rp);

@@ -32,7 +32,7 @@ sub myrecv
 		$E1 . '<response>' . r() . $TRID . '</response>' . $E2);
 }
 
-my $dri = Net::DRI::TrapExceptions->new(10);
+my $dri = Net::DRI::TrapExceptions->new({cache_ttl => 10});
 $dri->{trid_factory} = sub { return 'ABC-12345'; };
 $dri->add_registry('SWITCH');
 $dri->target('SWITCH')->add_current_profile('p1', 'epp', {f_send => \&mysend, f_recv => \&myrecv});

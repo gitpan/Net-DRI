@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Misc. useful functions
 ##
-## Copyright (c) 2005-2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -20,6 +20,7 @@ use warnings;
 
 use Time::HiRes ();
 use Encode ();
+use Module::Load;
 use Net::DRI::Exception;
 
 =pod
@@ -50,7 +51,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005-2012 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -66,12 +67,13 @@ See the LICENSE file that comes with this distribution for more details.
 ####################################################################################################
 
 ## See http://www.iso.org/iso/country_codes/updates_on_iso_3166.htm for updates
-## Done up to & including VI-12 (2012-02-15)
+## Done up to & including VI-13 (2012-08-02)
 our %CCA2=map { $_ => 1 } qw/AF AX AL DZ AS AD AO AI AQ AG AR AM AW AU AT AZ BS BH BD BB BY BE BZ BJ BL BM BT BO BQ BA BW BV BR IO BN BG BF BI KH CM CA CV CW KY CF TD CL CN CX CC CO KM CG CD CK CR CI HR CU CY CZ DK DJ DM DO EC EG SV SX GQ ER EE ET FK FO FJ FI FR GF PF TF GA GM GE DE GH GI GR GL GD GP GU GT GG GN GW GY HT HM HN HK HU IS IN ID IR IQ IE IM IL IT JM JP JE JO KZ KE KI KP KR KW KG LA LV LB LS LR LY LI LT LU MO MK MG MW MY MV ML MT MH MQ MR MU YT MX FM MD ME MF MC MN MS MA MZ MM NA NR NP NL NC NZ NI NE NG NU NF MP NO OM PK PW PS PA PG PY PE PH PN PL PT PR QA RE RO RS RU RW SH KN LC PM VC WS SM ST SA SN CS SC SL SG SK SI SB SO ZA GS SS ES LK SD SR SJ SZ SE CH SY TW TJ TZ TH TL TG TK TO TT TN TR TM TC TV UG UA AE GB US UM UY UZ VU VA VE VN VG VI WF EH YE ZM ZW/;
 
 sub all_valid
 {
- foreach (@_)
+ my (@args)=@_;
+ foreach (@args)
  {
   return 0 unless (defined($_) && (ref($_) || length($_)));
  }
@@ -91,9 +93,10 @@ sub hash_merge
    push @{$rmaster->{$k}->{$kk}},\@t;
   }
  }
+ return;
 }
 
-sub deepcopy
+sub deepcopy ## no critic (Subroutines::RequireFinalReturn)
 {
  my $in=shift;
  return $in unless defined $in;
@@ -566,7 +569,7 @@ sub xml_child_content
 {
  my ($node,$ns,$what)=@_;
  my $list=$node->getChildrenByTagNameNS($ns,$what);
- return unless $list->size()==1;
+ return undef unless $list->size()==1; ## no critic (Subroutines::ProhibitExplicitReturnUndef)
  my $n=$list->get_node(1);
  return defined $n ? $n->textContent() : undef;
 }
@@ -582,12 +585,12 @@ sub remcam
 }
 
 sub encode       { my ($cs,$data)=@_; return Encode::encode($cs,ref $data? $data->as_string() : $data,1); } ## Will croak on malformed data (a case that should not happen)
-sub encode_utf8  { return encode('UTF-8',$_[0]); }
-sub encode_ascii { return encode('ascii',$_[0]); }
+sub encode_utf8  { return encode('UTF-8',$_[0]); } ## no critic (Subroutines::RequireArgUnpacking)
+sub encode_ascii { return encode('ascii',$_[0]); } ## no critic (Subroutines::RequireArgUnpacking)
 sub decode       { my ($cs,$data)=@_; return Encode::decode($cs,$data,1); } ## Will croak on malformed data (a case that should not happen)
-sub decode_utf8  { return decode('UTF-8',$_[0]); }
-sub decode_ascii { return decode('ascii',$_[0]); }
-sub decode_latin1{ return decode('iso-8859-1',$_[0]); }
+sub decode_utf8  { return decode('UTF-8',$_[0]); } ## no critic (Subroutines::RequireArgUnpacking)
+sub decode_ascii { return decode('ascii',$_[0]); } ## no critic (Subroutines::RequireArgUnpacking)
+sub decode_latin1{ return decode('iso-8859-1',$_[0]); } ## no critic (Subroutines::RequireArgUnpacking)
 
 sub normalize_name
 {
@@ -615,8 +618,9 @@ sub dto2zstring
 ##  as it just does a comparison on priority then weight)
 sub dns_srv_order
 {
+ my (@args)=@_;
  my (@r,%r);
- foreach my $ans (@_)
+ foreach my $ans (@args)
  {
   push @{$r{$ans->priority()}},$ans;
  }
@@ -649,6 +653,15 @@ sub dns_srv_order
  return map { [$_->target(),$_->port()] } @r;
 }
 
+####################################################################################################
+
+sub load_module
+{
+ my ($class,$etype)=@_;
+ eval { Module::Load::load($class); };
+ Net::DRI::Exception::err_failed_load_module($etype,$class,$@) if $@;
+ return;
+}
 
 ####################################################################################################
 1;

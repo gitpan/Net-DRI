@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Handling of statuses list (order is irrelevant) (base class)
 ##
-## Copyright (c) 2005-2008,2010,2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2008,2010,2011,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -120,7 +120,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005-2008,2010,2011 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2008,2010,2011,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -136,9 +136,9 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $class=shift;
- my $pname=shift || '?';
- my $pversion=shift || '?';
+ my ($class,$pname,$pversion,@args)=@_;
+ $pname='?' unless defined $pname;
+ $pversion='?' unless defined $pversion;
 
  my $self={ proto_name    => $pname,
             proto_version => $pversion,
@@ -146,7 +146,7 @@ sub new
           };
 
  bless($self,$class);
- $self->add(@_) if (@_);
+ $self->add(@args) if @args;
  return $self;
 }
 
@@ -154,14 +154,15 @@ sub _register_pno
 {
  my ($self,$rs)=@_;
  $self->{possible_no}=$rs;
+ return;
 }
 
 sub add
 {
- my $self=shift;
+ my ($self,@args)=@_;
  my $rs=$self->{sl};
 
- foreach my $el (@_)
+ foreach my $el (@args)
  {
   if (ref($el))
   {
@@ -218,10 +219,10 @@ sub is_empty
 
 sub has_any
 {
- my $self=shift;
+ my ($self,@args)=@_;
  my %tmp=map { uc($_) => 1 } $self->list_status();
 
- foreach my $el (@_)
+ foreach my $el (@args)
  {
   return 1 if exists($tmp{uc($el)});
  }
@@ -230,10 +231,10 @@ sub has_any
 
 sub has_not
 {
- my $self=shift;
+ my ($self,@args)=@_;
  my %tmp=map { uc($_) => 1 } $self->list_status();
 
- foreach my $el (@_)
+ foreach my $el (@args)
  {
   return 0 if exists($tmp{uc($el)});
  }
@@ -247,7 +248,7 @@ sub possible_no
  return @r;
 }
 
-sub no
+sub no ## no critic (Subroutines::ProhibitBuiltinHomonyms)
 {
  my ($self,$what,$msg,$lang)=@_;
  my $rs=$self->{possible_no};
@@ -265,15 +266,15 @@ sub no
 ####################################################################################################
 ## Methods that must be defined in subclasses
 
-sub is_active    { Net::DRI::Exception::method_not_implemented('is_active',ref $_[0]); }
-sub is_published { Net::DRI::Exception::method_not_implemented('is_published',ref $_[0]); } 
-sub is_pending   { Net::DRI::Exception::method_not_implemented('is_pending',ref $_[0]); }
-sub is_linked    { Net::DRI::Exception::method_not_implemented('is_linked',ref $_[0]); }
-sub is_grace     { Net::DRI::Exception::method_not_implemented('is_grace',ref $_[0]); }
-sub can_update   { Net::DRI::Exception::method_not_implemented('can_update',ref $_[0]); }
-sub can_transfer { Net::DRI::Exception::method_not_implemented('can_transfer',ref $_[0]); }
-sub can_delete   { Net::DRI::Exception::method_not_implemented('can_delete',ref $_[0]); }
-sub can_renew    { Net::DRI::Exception::method_not_implemented('can_renew',ref $_[0]); }
+sub is_active    { Net::DRI::Exception::method_not_implemented('is_active',ref $_[0]); } ## no critic (Subroutines::RequireArgUnpacking Subroutines::RequireFinalReturn)
+sub is_published { Net::DRI::Exception::method_not_implemented('is_published',ref $_[0]); } ## no critic (Subroutines::RequireArgUnpacking Subroutines::RequireFinalReturn)
+sub is_pending   { Net::DRI::Exception::method_not_implemented('is_pending',ref $_[0]); } ## no critic (Subroutines::RequireArgUnpacking Subroutines::RequireFinalReturn)
+sub is_linked    { Net::DRI::Exception::method_not_implemented('is_linked',ref $_[0]); } ## no critic (Subroutines::RequireArgUnpacking Subroutines::RequireFinalReturn)
+sub is_grace     { Net::DRI::Exception::method_not_implemented('is_grace',ref $_[0]); } ## no critic (Subroutines::RequireArgUnpacking Subroutines::RequireFinalReturn)
+sub can_update   { Net::DRI::Exception::method_not_implemented('can_update',ref $_[0]); } ## no critic (Subroutines::RequireArgUnpacking Subroutines::RequireFinalReturn)
+sub can_transfer { Net::DRI::Exception::method_not_implemented('can_transfer',ref $_[0]); } ## no critic (Subroutines::RequireArgUnpacking Subroutines::RequireFinalReturn)
+sub can_delete   { Net::DRI::Exception::method_not_implemented('can_delete',ref $_[0]); } ## no critic (Subroutines::RequireArgUnpacking Subroutines::RequireFinalReturn)
+sub can_renew    { Net::DRI::Exception::method_not_implemented('can_renew',ref $_[0]); } ## no critic (Subroutines::RequireArgUnpacking Subroutines::RequireFinalReturn)
 
 ####################################################################################################
 1;

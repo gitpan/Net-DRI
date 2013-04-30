@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .COOP EPP extensions
 ##
-## Copyright (c) 2006,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2008,2009,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -15,6 +15,7 @@
 package Net::DRI::Protocol::EPP::Extensions::COOP;
 
 use strict;
+use warnings;
 
 use base qw/Net::DRI::Protocol::EPP/;
 use Net::DRI::Data::Contact::COOP;
@@ -47,7 +48,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2008,2009,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

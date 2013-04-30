@@ -7,7 +7,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 10;
+use Test::More tests => 11;
 
 SKIP: {
 	eval { require Net::SMTP; };
@@ -77,5 +77,12 @@ SKIP: {
 	require_ok('Net::DRI::Logging::Syslog');
 }
 
+SKIP: {
+	eval { require Net::SAML2; };
+	skip('Module Net::SAML2 is not installed, you need it to verify signatures of marks (ICANN TMCH)',1) if $@;
+	eval { require MIME::Base64; };
+	skip('Module MIME::Base64 is not installed, you need it to manipulate encoded signed marks (ICANN TMCH)',1) if $@;
+	require_ok('Net::DRI::Protocol::EPP::Extensions::ICANN::MarkSignedMark');
+}
 
 exit 0;

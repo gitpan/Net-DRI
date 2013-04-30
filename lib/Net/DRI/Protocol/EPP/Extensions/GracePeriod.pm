@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Grace Period commands (RFC3915)
 ##
-## Copyright (c) 2005,2006,2008-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2008-2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -48,7 +48,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2008-2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2008-2010,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -79,6 +79,7 @@ sub setup
 {
  my ($class,$po,$version)=@_;
  $po->ns({ 'rgp' => [ 'urn:ietf:params:xml:ns:rgp-1.0','rgp-1.0.xsd' ] });
+ return;
 }
 
 ####################################################################################################
@@ -100,6 +101,7 @@ sub info_parse
  {
   $cs->add($el->getAttribute('s'));
  }
+ return;
 }
 
 ############ Transform commands
@@ -139,6 +141,7 @@ sub update
   push @d,['rgp:other',$r{other}] if exists $r{other};
   $mes->command_extension($eid,['rgp:restore',['rgp:report',@d],{ op => $op }]);
  }
+ return;
 }
 
 sub update_parse
@@ -152,6 +155,7 @@ sub update_parse
 
  ## We do nothing, since the rgpStatus alone is useless
  ## (we do not have the other status)
+ return;
 }
 
 ####################################################################################################

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Whois commands for .WS (RFC3912)
 ##
-## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -48,7 +48,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -74,6 +74,7 @@ sub info
  my $mes=$po->message();
  Net::DRI::Exception->die(1,'protocol/whois',10,'Invalid domain name: '.$domain) unless Net::DRI::Util::is_hostname($domain);
  $mes->command('domain '.lc($domain));
+ return;
 }
 
 sub info_parse
@@ -95,6 +96,7 @@ sub info_parse
  parse_contacts($po,$domain,$rr,$rinfo);
  parse_dates($po,$domain,$rd,$rinfo);
  parse_ns($po,$domain,$rd,$rinfo);
+ return;
 }
 
 sub parse_domain
@@ -120,6 +122,7 @@ sub parse_registrar
  $rinfo->{domain}->{$domain}->{clEmail}=$rr->{'Registrar Email'}->[0] if (exists($rr->{'Registrar Email'}) && $rr->{'Registrar Email'}->[0]);
  $rinfo->{domain}->{$domain}->{clVoice}=$rr->{'Registrar Telephone'}->[0] if (exists($rr->{'Registrar Telephone'}) && $rr->{'Registrar Telephone'}->[0]);
  $rinfo->{domain}->{$domain}->{clWhois}=$rr->{'Registrar Whois'}->[0] if (exists($rr->{'Registrar Whois'}) &&$rr->{'Registrar Whois'}->[0]) ;
+ return;
 }
 
 ## Does not seem to be always there (see previous example, opposite case)
@@ -143,6 +146,7 @@ sub parse_contacts
   $cs->add($c,'admin');
  }
  $rinfo->{domain}->{$domain}->{contact}=$cs;
+ return;
 }
 
 sub parse_dates
@@ -154,6 +158,7 @@ sub parse_dates
  $rinfo->{domain}->{$domain}->{crDate}=$strp->parse_datetime(($tmp[0]=~m/^\s+Domain created on (\S+ \S+)\s*$/)[0]) if @tmp;
  @tmp=grep { m/Domain last updated on/ } @$rd;
  $rinfo->{domain}->{$domain}->{upDate}=$strp->parse_datetime(($tmp[0]=~m/^\s+Domain last updated on (\S+ \S+)\s*$/)[0]) if @tmp;
+ return;
 }
 
 sub parse_ns
@@ -166,6 +171,7 @@ sub parse_ns
   push @ns,$1 if ($l=~m/^\s*(\S+[^\.])\.?\s*$/);
  }
  $rinfo->{domain}->{$domain}->{ns}=$po->create_local_object('hosts')->set(@ns) if @ns;
+ return;
 }
 
 ####################################################################################################

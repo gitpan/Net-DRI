@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Handling of contact data for .US
 ##
-## Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006-2008,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -15,6 +15,8 @@
 package Net::DRI::Data::Contact::US;
 
 use strict;
+use warnings;
+
 use base qw/Net::DRI::Data::Contact/;
 use Net::DRI::Util;
 use Net::DRI::Exception;
@@ -63,7 +65,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2007,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006-2008,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

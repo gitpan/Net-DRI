@@ -1,7 +1,7 @@
 ## Domain Registry Interface, ENUM.AT Options extension
 ## Contributed by Michael Braunoeder from ENUM.AT <michael.braunoeder@enum.at>
 ##
-## Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2008,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -16,6 +16,7 @@
 package Net::DRI::Protocol::EPP::Extensions::AT::IOptions;
 
 use strict;
+use warnings;
 
 use Net::DRI::Util;
 use Net::DRI::Exception;
@@ -50,7 +51,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2008,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -100,6 +101,7 @@ sub parse_options
  }
 
  $rinfo->{domain}->{$oname}->{options}=\@options;
+ return;
 }
 
 sub set_options
@@ -122,6 +124,7 @@ sub set_options
 
  my $eid=$mes->command_extension_register('ienum43:update','xmlns:ienum43="'.$NS.'" xsi:schemaLocation="'.$NS.' ienum43-options-1.0.xsd"');
  $mes->command_extension($eid,[['ienum43:options',['ienum43:naptr-application',\%options]]]);
+ return;
 }
 
 ####################################################################################################

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, CZ domain transactions extension
 ##
-## Copyright (c) 2008,2009,2010 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+## Copyright (c) 2008-2010,2013 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 ##                    All rights reserved.
 ##
 ## This file is part of Net::DRI
@@ -16,6 +16,7 @@
 package Net::DRI::Protocol::EPP::Extensions::CZ::Domain;
 
 use strict;
+use warnings;
 
 use Net::DRI::Util;
 use Net::DRI::Exception;
@@ -53,7 +54,7 @@ Tonnerre Lombard, E<lt>tonnerre.lombard@sygroup.chE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008,2009,2010 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+Copyright (c) 2008-2010,2013 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -120,6 +121,7 @@ sub info
 	my @d = build_command($mes, 'info', $domain);
 	push(@d, build_authinfo($rd->{auth})) if Net::DRI::Util::has_auth($rd);
 	$mes->command_body(\@d);
+        return;
 }
 
 sub info_parse
@@ -199,6 +201,7 @@ sub info_parse
 	$rinfo->{domain}->{$oname}->{host} = Net::DRI::Data::Hosts->
 		new_set(@host) if (@host);
 	$rinfo->{domain}->{$oname}->{ns} = $ns if ($ns);
+        return;
 }
 
 ############ Transform commands
@@ -237,6 +240,7 @@ sub create
 		unless (Net::DRI::Util::has_auth($rd));
 	push(@d, build_authinfo($rd->{auth}));
 	$mes->command_body(\@d);
+        return;
 }
 
 sub build_contacts
@@ -305,6 +309,7 @@ sub update
 	push(@d, ['domain:chg', @chg]) if (@chg);
 
 	$mes->command_body(\@d);
+        return;
 }
 
 ####################################################################################################

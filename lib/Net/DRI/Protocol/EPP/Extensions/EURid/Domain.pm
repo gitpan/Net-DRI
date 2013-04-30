@@ -1,7 +1,7 @@
 ## Domain Registry Interface, EURid Domain EPP extension commands
 ## (based on EURid registration_guidelines_v1_0E-epp.pdf)
 ##
-## Copyright (c) 2005-2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -50,7 +50,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005-2012 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -123,6 +123,7 @@ sub create
 
  my $eid=$mes->command_extension_register('domain-ext','create');
  $mes->command_extension($eid,\@n);
+ return;
 }
 
 sub update
@@ -146,14 +147,14 @@ sub update
  {
   my @todo;
   push @todo,add_nsgroup($nsgadd) if $nsgadd;
-  push @todo,map { ['domain-ext:contact',$_->srid(),{'type'=>'onsite'}] } $cadd->get('onsite');
+  push @todo,map { ['domain-ext:contact',$_->srid(),{'type'=>'onsite'}] } $cadd->get('onsite') if $cadd;
   push @n,['domain-ext:add',@todo] if @todo;
  }
  if ($nsgdel || $cdel)
  {
   my @todo;
   push @todo,add_nsgroup($nsgdel) if $nsgdel;
-  push @todo,map { ['domain-ext:contact',$_->srid(),{'type'=>'onsite'}] } $cdel->get('onsite');
+  push @todo,map { ['domain-ext:contact',$_->srid(),{'type'=>'onsite'}] } $cdel->get('onsite') if $cdel;
   push @n,['domain-ext:rem',@todo] if @todo;
  }
 ## TODO : handle domain-ext:keygroup
@@ -162,6 +163,7 @@ sub update
 
  my $eid=$mes->command_extension_register('domain-ext','update');
  $mes->command_extension($eid,\@n);
+ return;
 }
 
 sub info
@@ -173,6 +175,7 @@ sub info
 
  my $eid=$mes->command_extension_register('authInfo','info');
  $mes->command_extension($eid,['authInfo:request']);
+ return;
 }
 
 sub info_parse
@@ -230,6 +233,7 @@ sub info_parse
   }
  }
  $rinfo->{domain}->{$oname}->{nsgroup}=\@nsg if @nsg;
+ return;
 }
 
 sub check_parse
@@ -239,6 +243,8 @@ sub check_parse
  return unless $mes->is_success();
 
  my $chkdata=$mes->get_extension('domain-ext','chkData');
+ return unless defined $chkdata;
+
  my $ns=$mes->ns('domain-ext');
  foreach my $cd ($chkdata->getChildrenByTagNameNS($ns,'domain'))
  {
@@ -259,28 +265,35 @@ sub check_parse
    }
   }
  }
+ return;
 }
 
-sub delete
+sub delete ## no critic (Subroutines::ProhibitBuiltinHomonyms)
 {
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
 
- return unless exists $rd->{deleteDate};
+ my $hasdelete=Net::DRI::Util::has_key($rd,'deleteDate') ? 1 : 0;
+ my $hascancel=(Net::DRI::Util::has_key($rd,'cancel') && $rd->{cancel}) ? 1 : 0;
+
+ return unless $hasdelete || $hascancel;
+ Net::DRI::Exception::usererr_invalid_parameters('For domain_delete, parameters deleteDate & cancel can not be set at the same time') if $hasdelete && $hascancel;
 
  my $eid=$mes->command_extension_register('domain-ext','delete');
  my @n;
 
- if (defined $rd->{deleteDate})
+ if ($hasdelete)
  {
   Net::DRI::Util::check_isa($rd->{deleteDate},'DateTime');
   @n=(['domain-ext:schedule',['domain-ext:delDate',$rd->{deleteDate}->set_time_zone('UTC')->strftime('%Y-%m-%dT%T.%NZ')]]);
- } else
+ }
+ if ($hascancel)
  {
   @n=(['domain-ext:cancel']);
  }
 
  $mes->command_extension($eid,\@n);
+ return;
 }
 
 sub transfer_request
@@ -291,18 +304,16 @@ sub transfer_request
  my $eid=$mes->command_extension_register('domain-ext','transfer');
  my @d;
 
- Net::DRI::Exception::usererr_insufficient_parameters('contacts are mandatory for transfer') unless Net::DRI::Util::has_contact($rd);
- my $cs=$rd->{contact};
- Net::DRI::Exception::usererr_insufficient_parameters('billing contact is mandatory') unless $cs->has_type('billing');
-
- my $creg=$cs->get('registrant');
- Net::DRI::Exception::usererr_invalid_parameters('registrant must be a contact object or the string #AUTO#') unless (Net::DRI::Util::isa_contact($creg,'Net::DRI::Data::Contact::EURid') || (!ref($creg) && (uc $creg eq '#AUTO#')));
- push @d,['domain-ext:registrant',ref $creg ? $creg->srid() : '#AUTO#' ];
- my $cbill=$cs->get('billing');
- Net::DRI::Exception::usererr_invalid_parameters('billing must be a contact object') unless Net::DRI::Util::isa_contact($cbill,'Net::DRI::Data::Contact::EURid');
- push @d,['domain-ext:contact',$cbill->srid(),{type => 'billing'}];
- push @d,add_contact('tech',$cs,9) if $cs->has_type('tech');
- push @d,add_contact('onsite',$cs,5) if $cs->has_type('onsite');
+ if (Net::DRI::Util::has_contact($rd))
+ {
+  my $cs=$rd->{contact};
+  my $creg=$cs->get('registrant');
+  push @d,['domain-ext:registrant',$creg->srid()] if Net::DRI::Util::isa_contact($creg,'Net::DRI::Data::Contact::EURid');
+  my $cbill=$cs->get('billing');
+  push @d,['domain-ext:contact',$cbill->srid(),{type => 'billing'}] if Net::DRI::Util::isa_contact($cbill,'Net::DRI::Data::Contact::EURid');
+  push @d,add_contact('tech',$cs,9) if $cs->has_type('tech');
+  push @d,add_contact('onsite',$cs,5) if $cs->has_type('onsite');
+ }
 
  push @d,Net::DRI::Protocol::EPP::Util::build_ns($epp,$rd->{ns},$domain,'domain-ext') if Net::DRI::Util::has_ns($rd);
  push @d,add_nsgroup($rd->{nsgroup}) if Net::DRI::Util::has_key($rd,'nsgroup');
@@ -316,6 +327,7 @@ sub transfer_request
   my $ref=$epp->find_action_in_class('Net::DRI::Protocol::EPP::Extensions::SecDNS','domain','create');
   $ref->($epp,$domain,$rd) if defined $ref && ref $ref;
  }
+ return;
 }
 
 # sub transfer_cancel
@@ -521,6 +533,7 @@ sub renew_parse
    $rinfo->{domain}->{$oname}->{$1}=Net::DRI::Util::xml_parse_boolean($c->textContent());
   }
  }
+ return;
 }
 
 ####################################################################################################

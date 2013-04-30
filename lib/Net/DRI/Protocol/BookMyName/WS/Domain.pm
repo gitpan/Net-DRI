@@ -1,6 +1,6 @@
 ## Domain Registry Interface, BookMyName Web Services Domain commands
 ##
-## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -48,7 +48,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -103,6 +103,7 @@ sub build_msg
  Net::DRI::Exception->die(1,'protocol/bookmyname/ws',10,'Invalid domain name') unless Net::DRI::Util::is_hostname($domain);
 
  $msg->method($command) if defined($command);
+ return;
 }
 
 sub info
@@ -111,6 +112,7 @@ sub info
  my $msg=$po->message();
  build_msg($msg,'domain_info',$domain);
  $msg->params([ $domain ]);
+ return;
 }
 
 sub info_parse
@@ -157,6 +159,7 @@ sub info_parse
  my $ns=$po->create_local_object('hosts');
  foreach my $nsk (sort { ($a=~m/^ns(\d+)/)[0] <=> ($b=~m/^ns(\d+)/)[0] }  grep { /^ns\d+$/ } keys(%r)) { $ns->add($r{$nsk}); }
  $rinfo->{domain}->{$oname}->{ns}=$ns;
+ return;
 }
 
 sub check
@@ -165,6 +168,7 @@ sub check
  my $msg=$po->message();
  build_msg($msg,'domain_check',$domain);
  $msg->params([ $domain ]);
+ return;
 }
 
 sub check_parse
@@ -180,6 +184,7 @@ sub check_parse
 
  $rinfo->{domain}->{$oname}->{action}='check';
  $rinfo->{domain}->{$oname}->{exist}=($mes->retcode()==1 && $mes->retval()==1)? 1 : 0;
+ return;
 }
 
 ####################################################################################################

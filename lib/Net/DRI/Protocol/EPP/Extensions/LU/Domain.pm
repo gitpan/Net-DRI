@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .LU Domain EPP extension commands
 ##
-## Copyright (c) 2007,2008,2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2007,2008,2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -15,6 +15,7 @@
 package Net::DRI::Protocol::EPP::Extensions::LU::Domain;
 
 use strict;
+use warnings;
 
 use Net::DRI::Exception;
 use Net::DRI::Util;
@@ -49,7 +50,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007,2008,2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2007,2008,2010,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -135,6 +136,7 @@ sub info_parse
   }
 
  } continue { $c=$c->getNextSibling(); }
+ return;
 }
 
 sub verify_contacts
@@ -148,6 +150,7 @@ sub verify_contacts
   my @t=$rd->{contact}->get($t);
   Net::DRI::Exception::usererr_invalid_parameters('.LU needs only one contact of type '.$t) unless @t==1;
  }
+ return;
 }
 
 sub create
@@ -164,6 +167,7 @@ sub create
 
  my $eid=build_command_extension($mes,$epp,'dnslu:ext');
  $mes->command_extension($eid,['dnslu:create',['dnslu:domain',@n]]);
+ return;
 }
 
 sub update
@@ -183,9 +187,10 @@ sub update
 
  my $eid=build_command_extension($mes,$epp,'dnslu:ext');
  $mes->command_extension($eid,['dnslu:update',['dnslu:domain',@n]]);
+ return;
 }
 
-sub delete
+sub delete ## no critic (Subroutines::ProhibitBuiltinHomonyms)
 {
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
@@ -204,6 +209,7 @@ sub delete
 
  my $eid=build_command_extension($mes,$epp,'dnslu:ext');
  $mes->command_extension($eid,['dnslu:delete',['dnslu:domain',@n]]);
+ return;
 }
 
 sub build_command
@@ -224,6 +230,7 @@ sub restore
 
  my $eid=build_command_extension($mes,$epp,'dnslu:ext');
  $mes->command_extension($eid,['dnslu:command',['dnslu:restore',['dnslu:domain',build_command($domain)]]]);
+ return;
 }
 
 sub build_transfer_trade_restore
@@ -251,6 +258,7 @@ sub transfer_request
 
  my $eid=build_command_extension($mes,$epp,'dnslu:ext');
  $mes->command_extension($eid,['dnslu:transfer',['dnslu:domain',build_transfer_trade_restore($rd)]]);
+ return;
 }
 
 sub transfer_parse ## for request & query
@@ -260,6 +268,7 @@ sub transfer_parse ## for request & query
  return unless $mes->is_success();
 
  parse_transfer_trade_restore($po,$otype,$oaction,$oname,$rinfo,'trnData');
+ return;
 }
 
 sub parse_transfer_trade_restore
@@ -296,6 +305,7 @@ sub parse_transfer_trade_restore
    $rinfo->{domain}->{$oname}->{$name}=$pd->parse_datetime($c->getFirstChild()->getData());
   }
  } continue { $c=$c->getNextSibling(); }
+ return;
 }
 
 sub trade_request
@@ -305,6 +315,7 @@ sub trade_request
 
  my $eid=build_command_extension($mes,$epp,'dnslu:ext');
  $mes->command_extension($eid,['dnslu:command',['dnslu:trade',{op=>'request'},['dnslu:domain',build_command($domain),build_transfer_trade_restore($rd)]]]);
+ return;
 }
 
 sub trade_parse
@@ -314,6 +325,7 @@ sub trade_parse
  return unless $mes->is_success();
 
  parse_transfer_trade_restore($po,$otype,$oaction,$oname,$rinfo,'traData');
+ return;
 }
 
 sub trade_query
@@ -323,6 +335,7 @@ sub trade_query
 
  my $eid=build_command_extension($mes,$epp,'dnslu:ext');
  $mes->command_extension($eid,['dnslu:command',['dnslu:trade',{op=>'query'},['dnslu:domain',build_command($domain)]]]);
+ return;
 }
 
 sub trade_cancel
@@ -332,6 +345,7 @@ sub trade_cancel
 
  my $eid=build_command_extension($mes,$epp,'dnslu:ext');
  $mes->command_extension($eid,['dnslu:command',['dnslu:trade',{op=>'cancel'},['dnslu:domain',build_command($domain)]]]);
+ return;
 }
 
 sub transfer_trade_request
@@ -341,6 +355,7 @@ sub transfer_trade_request
 
  my $eid=build_command_extension($mes,$epp,'dnslu:ext');
  $mes->command_extension($eid,['dnslu:command',['dnslu:transferTrade',{op=>'request'},['dnslu:domain',build_command($domain),build_transfer_trade_restore($rd)]]]);
+ return;
 }
 
 sub transfer_trade_parse
@@ -350,6 +365,7 @@ sub transfer_trade_parse
  return unless $mes->is_success();
 
  parse_transfer_trade_restore($po,$otype,$oaction,$oname,$rinfo,'trnTraData');
+ return;
 }
 
 sub transfer_trade_query
@@ -359,6 +375,7 @@ sub transfer_trade_query
 
  my $eid=build_command_extension($mes,$epp,'dnslu:ext');
  $mes->command_extension($eid,['dnslu:command',['dnslu:transferTrade',{op=>'query'},['dnslu:domain',build_command($domain)]]]);
+ return;
 }
 
 sub transfer_trade_cancel
@@ -368,6 +385,7 @@ sub transfer_trade_cancel
 
  my $eid=build_command_extension($mes,$epp,'dnslu:ext');
  $mes->command_extension($eid,['dnslu:command',['dnslu:transferTrade',{op=>'cancel'},['dnslu:domain',build_command($domain)]]]);
+ return;
 }
 
 sub transfer_restore_request
@@ -377,6 +395,7 @@ sub transfer_restore_request
 
  my $eid=build_command_extension($mes,$epp,'dnslu:ext');
  $mes->command_extension($eid,['dnslu:command',['dnslu:transferRestore',{op=>'request'},['dnslu:domain',build_command($domain),build_transfer_trade_restore($rd)]]]);
+ return;
 }
 
 sub transfer_restore_parse
@@ -386,6 +405,7 @@ sub transfer_restore_parse
  return unless $mes->is_success();
 
  parse_transfer_trade_restore($po,$otype,$oaction,$oname,$rinfo,'trnResData');
+ return;
 }
 
 sub transfer_restore_query
@@ -395,6 +415,7 @@ sub transfer_restore_query
 
  my $eid=build_command_extension($mes,$epp,'dnslu:ext');
  $mes->command_extension($eid,['dnslu:command',['dnslu:transferRestore',{op=>'query'},['dnslu:domain',build_command($domain)]]]);
+ return;
 }
 
 sub transfer_restore_cancel
@@ -404,6 +425,7 @@ sub transfer_restore_cancel
 
  my $eid=build_command_extension($mes,$epp,'dnslu:ext');
  $mes->command_extension($eid,['dnslu:command',['dnslu:transferRestore',{op=>'cancel'},['dnslu:domain',build_command($domain)]]]);
+ return;
 }
 
 ####################################################################################################

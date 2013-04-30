@@ -11,7 +11,7 @@ unless ($ENV{TEST_OPENSRS_XCP_LIVE_CLIENTID} && $ENV{TEST_OPENSRS_XCP_LIVE_CLIEN
  plan tests => 3;
 }
 
-my $dri=Net::DRI::TrapExceptions->new(10);
+my $dri=Net::DRI::TrapExceptions->new({cache_ttl => 10});
 $dri->add_registry('OpenSRS');
 $dri->target('OpenSRS')->add_current_profile('p1','xcp',{client_login=>$ENV{TEST_OPENSRS_XCP_LIVE_CLIENTID},client_password=>$ENV{TEST_OPENSRS_XCP_LIVE_CLIENTPASS},remote_url=>'https://rr-n1-tor.opensrs.net:55443/resellers/',verify_response => \&verify_response});
 

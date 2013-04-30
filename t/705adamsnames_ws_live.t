@@ -13,7 +13,7 @@ unless ($ENV{TEST_ADAMSNAMES_WS_LIVE})
 
 my $ok=eval
 {
- my $dri=Net::DRI->new(10);
+ my $dri=Net::DRI->new({cache_ttl => 10});
  $dri->add_registry('AdamsNames');
  $dri->target('AdamsNames')->add_current_profile('p1','ws');
  my $rc=$dri->domain_info('adamsnames.tc');

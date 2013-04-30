@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Main entry point
 ##
-## Copyright (c) 2005-2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -17,8 +17,6 @@ package Net::DRI;
 use strict;
 use warnings;
 
-require UNIVERSAL::require;
-
 use Net::DRI::Cache;
 use Net::DRI::Registry;
 use Net::DRI::Util;
@@ -28,7 +26,7 @@ use base qw(Class::Accessor::Chained::Fast Net::DRI::BaseClass);
 __PACKAGE__->mk_ro_accessors(qw/trid_factory logging cache/);
 
 our $AUTOLOAD;
-our $VERSION='0.96_04';
+our $VERSION='0.96_05';
 our $RUNNING_POE=(exists($INC{'POE.pm'}))? $POE::Kernel::poe_kernel : undef;
 
 =pod
@@ -39,7 +37,7 @@ Net::DRI - Interface to Domain Name Registries/Registrars/Resellers
 
 =head1 VERSION
 
-This documentation refers to Net::DRI version 0.96_04
+This documentation refers to Net::DRI version 0.96_05
 
 =head1 SYNOPSIS
 
@@ -141,7 +139,7 @@ and various contributors (see Changes file and web page above)
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005-2012 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 =head1 LICENSE
@@ -159,21 +157,18 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $class=shift;
- my ($cachettl,$globaltimeout)=@_; ## old API and $globaltimeout never used
- my $rh=(defined $cachettl && ( ref $cachettl eq 'HASH'))? $cachettl : { cache_ttl => $cachettl };
+ my ($class,$rh)=@_;
 
- my $self={ cache            => Net::DRI::Cache->new((exists $rh->{cache_ttl} && defined $rh->{cache_ttl})? $rh->{cache_ttl} : 0),
-            global_timeout   => $globaltimeout,
+ my $self={ cache            => Net::DRI::Cache->new(Net::DRI::Util::has_key($rh,'cache_ttl') ? $rh->{cache_ttl} : 0),
             current_registry => undef, ## registry name (key of following hash)
             registries       => {}, ## registry name => Net::DRI::Registry object
             tlds             => {}, ## tld => [ registries name ]
             time_created     => time(),
-            trid_factory     => (exists $rh->{trid_factory} && (ref $rh->{trid_factory} eq 'CODE'))? $rh->{trid_factory} : \&Net::DRI::Util::create_trid_1,
+            trid_factory     => (Net::DRI::Util::has_key($rh,'trid_factory') && ref $rh->{trid_factory} eq 'CODE')? $rh->{trid_factory} : \&Net::DRI::Util::create_trid_1,
           };
 
  my ($logname,@logdata);
- if (exists $rh->{logging})
+ if (Net::DRI::Util::has_key($rh,'logging'))
  {
   ($logname,@logdata)=ref $rh->{logging} eq 'ARRAY' ? @{$rh->{logging}} : ($rh->{logging});
  } else
@@ -181,7 +176,7 @@ sub new
   $logname='null';
  }
  if ($logname !~ s/^\+//) { $logname='Net::DRI::Logging::'.ucfirst($logname); }
- $logname->require() or Net::DRI::Exception::err_failed_load_module('DRI',$logname,$@);
+ Net::DRI::Util::load_module($logname,'DRI');
  $self->{logging}=$logname->new(@logdata);
 
  bless($self,$class);
@@ -203,7 +198,7 @@ sub add_registry
  my ($self,$reg,@data)=@_;
  Net::DRI::Exception::usererr_insufficient_parameters('add_registry needs a registry name') unless Net::DRI::Util::all_valid($reg);
  $reg='Net::DRI::DRD::'.$reg unless $reg=~m/^\+/;
- $reg->require() or Net::DRI::Exception::err_failed_load_module('DRI',$reg,$@);
+ Net::DRI::Util::load_module($reg,'DRI');
 
  my $drd=$reg->new(@data);
  Net::DRI::Exception->die(1,'DRI',9,'Failed to initialize registry '.$reg) unless ($drd && ref $drd);
@@ -248,8 +243,8 @@ sub del_registry
 
 ####################################################################################################
 
-sub err_no_current_registry          { Net::DRI::Exception->die(0,'DRI',1,'No current registry available'); }
-sub err_registry_name_does_not_exist { Net::DRI::Exception->die(0,'DRI',2,'Registry name '.$_[0].' does not exist'); }
+sub err_no_current_registry          { Net::DRI::Exception->die(0,'DRI',1,'No current registry available'); } ## no critic (Subroutines::RequireArgUnpacking Subroutines::RequireFinalReturn)
+sub err_registry_name_does_not_exist { Net::DRI::Exception->die(0,'DRI',2,'Registry name '.$_[0].' does not exist'); } ## no critic (Subroutines::RequireArgUnpacking Subroutines::RequireFinalReturn)
 
 ####################################################################################################
 ## Accessor functions
@@ -290,7 +285,7 @@ sub tld2reg
 
 sub installed_registries
 {
- return qw/AdamsNames AERO AFNIC AG ARNES ASIA AT AU BE BIZ BookMyName BR BZ CAT CentralNic CIRA CoCCA COOP COZA CZ DENIC EURid Gandi GL HN ID IENUMAT IM INFO IRegistry ISPAPI IT LC LU ME MN MOBI NAME Nominet NO NU OpenSRS ORG OVH PL PRO PT SC SE SIDN SO SWITCH TCI TRAVEL US VC VNDS WS/;
+ return qw/AdamsNames AERO AFNIC AG ARNES ASIA AT AU BE BIZ BookMyName BR BZ CAT CentralNic CIRA CoCCA COOP COZA CZ DENIC EURid Gandi GL HN ICMRegistry ID IENUMAT IM INFO IRegistry ISPAPI IT LC LU ME MN MOBI NAME Nominet NO NU OpenSRS ORG OVH PL PRO PT SC SE SIDN SO SWITCH TCI Telnic TRAVEL UPU US VC VNDS WS/;
 }
 
 ####################################################################################################
@@ -324,7 +319,7 @@ sub target
 ## See Cookbook, page 468
 sub AUTOLOAD
 {
- my $self=shift;
+ my ($self,@args)=@_;
  my $attr=$AUTOLOAD;
  $attr=~s/.*:://;
  return unless $attr=~m/[^A-Z]/; ## skip DESTROY and all-cap methods
@@ -332,7 +327,7 @@ sub AUTOLOAD
  my ($name,$ndr)=$self->registry();
  Net::DRI::Exception::method_not_implemented($attr,$ndr) unless ref $ndr && $ndr->can($attr);
  $self->log_output('debug','core','Calling '.$attr.' from Net::DRI');
- return $ndr->$attr(@_); ## is goto beter here ?
+ return $ndr->$attr(@args); ## is goto beter here ?
 }
 
 sub end
@@ -356,11 +351,11 @@ sub end
  return 1; ## this makes it easy to test if everything before was ok or not, if we are inside an eval {} and $dri->end() is the last operation inside the eval block
 }
 
-sub DESTROY { my $self=shift; $self->end(); }
+sub DESTROY { my $self=shift; return $self->end(); }
 
 ####################################################################################################
 
-package Net::DRI::TrapExceptions;
+package Net::DRI::TrapExceptions; ## no critic (Modules::ProhibitMultiplePackages)
 
 use base qw/Net::DRI/;
 

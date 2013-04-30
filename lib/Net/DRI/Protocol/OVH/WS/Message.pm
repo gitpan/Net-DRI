@@ -1,6 +1,6 @@
 ## Domain Registry Interface, OVH Web Services Message
 ##
-## Copyright (c) 2008-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008-2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -52,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008-2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008-2010,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -68,10 +68,9 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $class=shift;
+ my ($class,$trid,$otype,$oaction)=@_;
  my $self={errcode => undef, errmsg => undef};
  bless($self,$class);
- my ($trid,$otype,$oaction)=@_;
 
  $self->params([]); ## default
  return $self;
@@ -94,6 +93,7 @@ sub add_session
  my ($self,$sd)=@_;
  my $rp=$self->params();
  unshift @$rp,$sd->{id};
+ return;
 }
 
 sub parse
@@ -111,6 +111,7 @@ sub parse
   $self->errcode(100); ## probably success
   $self->errmsg('No status/msg given');
  }
+ return;
 }
 
 ## See http://guides.ovh.com/ManagerV3Status and http://wikikillers.eu/index.php?title=Codes_d%27erreurs

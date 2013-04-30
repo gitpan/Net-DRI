@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .PL Contact EPP extension commands
 ##
-## Copyright (c) 2006,2008,2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2008,2011,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -15,6 +15,7 @@
 package Net::DRI::Protocol::EPP::Extensions::PL::Contact;
 
 use strict;
+use warnings;
 
 use Net::DRI::Util;
 
@@ -46,7 +47,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2008,2011 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2008,2011,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -96,6 +97,7 @@ sub add_individual_and_consent
  push @e,['extcon:consentForPublishing',$cfp] if defined($cfp);
 
  $mes->command_extension($eid,\@e);
+ return;
 }
 
 sub create
@@ -126,6 +128,7 @@ sub info
  } else {
   $mes->command_extension($eid,[['extcon:authInfo',['extcon:pw',$ep->{auth}->{pw}]]]);
  }
+ return;
 }
 
 sub info_parse
@@ -150,6 +153,7 @@ sub info_parse
    $contact->consent_for_publishing(Net::DRI::Util::xml_parse_boolean($c->textContent()));
   }
  }
+ return;
 }
 
 ####################################################################################################

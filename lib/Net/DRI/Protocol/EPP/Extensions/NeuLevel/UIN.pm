@@ -1,7 +1,7 @@
 ## Domain Registry Interface, EPP Extension for .travel UIN
 ## (ICANN Sponsored TLD Registry Agreement, Part IV)
 ##
-## Copyright (c) 2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+## Copyright (c) 2008,2013 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 ##                    All rights reserved.
 ##
 ## This file is part of Net::DRI
@@ -17,6 +17,7 @@
 package Net::DRI::Protocol::EPP::Extensions::NeuLevel::UIN;
 
 use strict;
+use warnings;
 
 use Net::DRI::Util;
 
@@ -48,7 +49,7 @@ Tonnerre Lombard, E<lt>tonnerre.lombard@sygroup.chE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+Copyright (c) 2008,2013 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -89,6 +90,7 @@ sub add_uin
  my $eid = $mes->command_extension_register('neulevel:extension',
 	'xmlns:neulevel="urn:ietf:params:xml:ns:neulevel-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:neulevel-1.0 neulevel-1.0.xsd"');
  $mes->command_extension($eid, ['neulevel:unspec', 'UIN=' . $rd->{uin}]);
+ return;
 }
 
 sub renew
@@ -117,6 +119,7 @@ sub renew
  my $eid = $mes->command_extension_register('neulevel:extension',
 	'xmlns:neulevel="urn:ietf:params:xml:ns:neulevel-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:neulevel-1.0 neulevel-1.0.xsd"');
  $mes->command_extension($eid, ['neulevel:unspec', join(' ', map { $_ . '=' . $info{$_} } grep { defined($info{$_}) } @vals)]);
+ return;
 }
 
 ####################################################################################################

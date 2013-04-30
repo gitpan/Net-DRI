@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .PL Domain EPP extension commands
 ##
-## Copyright (c) 2006,2008-2011 Patrick Mevzek <netdri@dotandco.com> and Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. 
+## Copyright (c) 2006,2008-2011,2013 Patrick Mevzek <netdri@dotandco.com> and Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. 
 ## All rights reserved.
 ##
 ## This file is part of Net::DRI
@@ -52,7 +52,7 @@ Tonnerre Lombard <tonnerre.lombard@sygroup.ch>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2008-2011 Patrick Mevzek <netdri@dotandco.com> and Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+Copyright (c) 2006,2008-2011,2013 Patrick Mevzek <netdri@dotandco.com> and Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -140,6 +140,7 @@ sub create
  push @e,['extdom:book']                 if (exists($rd->{book}) && $rd->{book});
 
  $mes->command_extension($eid,\@e);
+ return;
 }
 
 sub update
@@ -176,6 +177,7 @@ sub update
  push @chg,Net::DRI::Protocol::EPP::Util::domain_build_authinfo($epp,$chg,1) if ($chg && (ref $chg eq 'HASH') && exists $chg->{pw});
  push @d,['domain:chg',@chg] if @chg;
  $mes->command_body(\@d);
+ return;
 }
 
 sub info_parse
@@ -205,6 +207,7 @@ sub info_parse
  } continue { $c = $c->getNextSibling(); }
 
  $rinfo->{domain}->{$oname}->{ns} = $ns;
+ return;
 }
 
 ####################################################################################################

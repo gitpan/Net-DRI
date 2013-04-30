@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Handling of contact data for Nominet (.UK)
 ##
-## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -15,6 +15,8 @@
 package Net::DRI::Data::Contact::Nominet;
 
 use strict;
+use warnings;
+
 use base qw(Net::DRI::Data::Contact);
 use Email::Valid;
 use Net::DRI::Exception;
@@ -66,7 +68,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -80,7 +82,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 ####################################################################################################
 
-sub roid { return shift->srid(@_); }
+sub roid { my ($self,@args)=@_; return $self->srid(@args); }
 
 sub validate
 {

@@ -11,7 +11,7 @@ unless ($ENV{TEST_OVH_WS_LIVE_CLIENTID} && $ENV{TEST_OVH_WS_LIVE_CLIENTPASS})
  plan tests => 4;
 }
 
-my $dri=Net::DRI->new(10);
+my $dri=Net::DRI->new({cache_ttl => 10});
 $dri->add_registry('OVH');
 $dri->target('OVH')->add_current_profile('p1','ws',{client_login=>$ENV{TEST_OVH_WS_LIVE_CLIENTID},client_password=>$ENV{TEST_OVH_WS_LIVE_CLIENTPASS}});
 

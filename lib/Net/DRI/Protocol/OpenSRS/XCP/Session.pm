@@ -1,6 +1,6 @@
 ## Domain Registry Interface, OpenSRS XCP Session commands
 ##
-## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -15,6 +15,7 @@
 package Net::DRI::Protocol::OpenSRS::XCP::Session;
 
 use strict;
+use warnings;
 
 use Net::DRI::Exception;
 use Net::DRI::Util;
@@ -47,7 +48,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -80,6 +81,7 @@ sub set_cookie
  $r{registrant_ip}=$ep->{registrant_ip} if Net::DRI::Util::has_key($ep,'registrant_ip');
  $msg->command(\%r);
  $msg->command_attributes({domain => $ep->{domain}, reg_username=> $ep->{username}, reg_password => $ep->{password}});
+ return;
 }
 
 sub set_cookie_parse
@@ -93,6 +95,7 @@ sub set_cookie_parse
  my $rd=$ra->{'cookie'};
  $rinfo->{session}->{cookie}->{action}='set';
  $rinfo->{session}->{cookie}->{value}=$rd;
+ return;
 }
 
 ####################################################################################################

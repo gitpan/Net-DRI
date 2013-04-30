@@ -1,6 +1,6 @@
 ## Domain Registry Interface, BookMyName Web Services Message
 ##
-## Copyright (c) 2008-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008-2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -50,7 +50,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008-2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008-2010,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -66,10 +66,9 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $class=shift;
+ my ($class,$trid,$otype,$oaction)=@_;
  my $self={errcode => undef, errmsg => undef};
  bless($self,$class);
- my ($trid,$otype,$oaction)=@_;
 
  $self->params([]); ## default
  return $self;
@@ -92,6 +91,7 @@ sub add_session
  my ($self,$sd)=@_;
  my $rp=$self->params();
  unshift(@$rp,$sd->{id},$sd->{pass});
+ return;
 }
 
 sub parse
@@ -102,6 +102,7 @@ sub parse
  $self->result($res->{retfields}) if exists($res->{retfields});
  $self->retcode($res->{retcode}); ## integer
  $self->retval($res->{retval}); ## integer
+ return;
 }
 
 ## See http://api.doc.free.org/revendeur-de-nom-de-domaine

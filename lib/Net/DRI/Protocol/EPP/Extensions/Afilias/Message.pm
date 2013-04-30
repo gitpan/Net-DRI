@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Message for Afilias
 ##
-## Copyright (c) 2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -37,12 +37,13 @@ sub parse
  {
   foreach my $rinfo (@$r)
   {
-   next unless $rinfo->{from} eq 'eppcom:value' && $rinfo->{type} eq 'rawxml' && $rinfo->{message}=~m!^<value xmlns:oxrs="urn:afilias:params:xml:ns:oxrs-1.0"><oxrs:xcp>(.+?)</oxrs:xcp></value>$!;
+   next unless $rinfo->{from} eq 'eppcom:value' && $rinfo->{type} eq 'rawxml' && $rinfo->{message}=~m!^<value xmlns:oxrs="urn:afilias:params:xml:ns:oxrs-1.[01]"><oxrs:xcp>(.+?)</oxrs:xcp></value>$!;
    $rinfo->{message}=$1;
    $rinfo->{from}='oxrs';
    $rinfo->{type}='text';
   }
  }
+ return;
 }
 
 ####################################################################################################
@@ -78,7 +79,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2010,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

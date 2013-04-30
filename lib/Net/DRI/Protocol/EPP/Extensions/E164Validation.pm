@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP E.164 Validation (RFC5076)
 ##
-## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -52,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -90,10 +90,11 @@ sub load_validation_modules ## §4.4 §4.5
  foreach my $mod (@VALIDATION_MODULES)
  {
   my $class=($mod=~m/::/)? $mod : 'Net::DRI::Protocol::EPP::Extensions::E164Validation::'.$mod;
-  $class->require or Net::DRI::Exception::err_failed_load_module('protocol/epp_e164validation',$class,$@);
+  Net::DRI::Util::load_module($class,'protocol/epp_e164validation');
   my ($uri)=$class->load();
   $VAL{$uri}=$class;
  }
+ return;
 }
 
 ####################################################################################################
@@ -119,6 +120,7 @@ sub add_validation_information
  my $eid=$mes->command_extension_register('e164val:'.$action,'xmlns:e164val="'.$NS.'"');
  my @n=map { format_validation($_,$action,$top) } as_array($rd->{e164_validation_information});
  $mes->command_extension($eid,\@n);
+ return;
 }
 
 sub as_array
@@ -158,6 +160,7 @@ sub info_parse ## §5.1.2
  }
 
  $rinfo->{domain}->{$oname}->{e164_validation_information}=\@val;
+ return;
 }
 
 ####################################################################################################
@@ -167,18 +170,21 @@ sub create ## §5.2.1
 {
  my ($epp,$domain,$rd)=@_;
  add_validation_information($epp,$domain,$rd,'create','e164val:add');
+ return;
 }
 
 sub renew ## §5.2.3
 {
  my ($epp,$domain,$rd)=@_;
  add_validation_information($epp,$domain,$rd,'renew','e164val:add');
+ return;
 }
 
 sub transfer_request ## §5.2.4
 {
  my ($epp,$domain,$rd)=@_;
  add_validation_information($epp,$domain,$rd,'transfer','e164val:add');
+ return;
 }
 
 sub update ## §5.2.5
@@ -199,6 +205,7 @@ sub update ## §5.2.5
 
  my $eid=$mes->command_extension_register('e164val:update','xmlns:e164val="'.$NS.'"');
  $mes->command_extension($eid,\@n);
+ return;
 }
 
 ####################################################################################################

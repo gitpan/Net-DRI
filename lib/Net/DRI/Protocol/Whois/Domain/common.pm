@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Whois common parse subroutines
 ##
-## Copyright (c) 2007-2009,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2007-2009,2012-2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -47,7 +47,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2007-2009,2012-2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -84,6 +84,7 @@ sub epp_parse_registrars
    $rinfo->{domain}->{$domain}->{$epp.'ID'}=$s;
   }
  }
+ return;
 }
 
 sub epp_parse_dates
@@ -104,6 +105,7 @@ sub epp_parse_dates
   $rinfo->{domain}->{$domain}->{exDate}=$strp->parse_datetime($rr->{$k}->[0]);
   last;
  }
+ return;
 }
 
 sub epp_parse_status
@@ -118,6 +120,7 @@ sub epp_parse_status
   @s=map { my $t=lc($_); $t=~s/ (.)/uc($1)/eg; $t; } @{$rr->{'Status'}};
  }
  $rinfo->{domain}->{$domain}->{status}=Net::DRI::Protocol::EPP::Core::Status->new(\@s) if @s;
+ return;
 }
 
 sub epp_parse_contacts
@@ -162,6 +165,7 @@ sub epp_parse_contacts
   $cs->add($c,$type) if grep { length } ($c->srid(),$c->name(),$c->city(),$c->cc(),$c->email());
  }
  $rinfo->{domain}->{$domain}->{contact}=$cs;
+ return;
 }
 
 sub epp_parse_tel
@@ -179,6 +183,7 @@ sub epp_parse_ns
  return unless (exists($rr->{'Name Server'}));
  my @ns=grep { defined($_) && $_ } @{$rr->{'Name Server'}};
  $rinfo->{domain}->{$domain}->{ns}=$po->create_local_object('hosts')->set(@ns) if @ns;
+ return;
 }
 
 ####################################################################################################

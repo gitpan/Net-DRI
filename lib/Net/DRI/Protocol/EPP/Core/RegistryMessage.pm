@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Registry messages commands (RFC5730)
 ##
-## Copyright (c) 2006-2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006-2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -48,7 +48,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006-2012 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006-2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -79,6 +79,7 @@ sub pollack
  my $mes=$epp->message();
  Net::DRI::Exception::usererr_invalid_parameters('In EPP, you must specify the message id (XML token) you want to delete') unless Net::DRI::Util::xml_is_token($msgid);
  $mes->command([['poll',{op=>'ack',msgID=>$msgid}]]);
+ return;
 }
 
 sub pollreq
@@ -87,6 +88,7 @@ sub pollreq
  Net::DRI::Exception::usererr_invalid_parameters('In EPP, you can not specify the message id you want to retrieve') if defined($msgid);
  my $mes=$epp->message();
  $mes->command([['poll',{op=>'req'}]]);
+ return;
 }
 
 ## We take into account all parse functions, to be able to parse any result
@@ -111,10 +113,13 @@ sub parse_poll
 
  while (my ($htype,$hv)=each(%$h))
  {
-  while (my ($haction,$hv2)=each(%$hv))
+  ## Because of new Perl hash keys randomization, we must make sure review_complete action is done first
+  ## as it will setup $toname & such
+  my @k=keys(%$hv);
+  foreach my $haction ((grep { $_ eq 'review_complete' } @k),(sort { $a cmp $b } grep { $_ ne 'review_complete' } @k))
   {
    next if $htype eq 'message' && $haction eq 'result';
-   foreach my $t (@$hv2)
+   foreach my $t (@{$hv->{$haction}})
    {
     my $pf=$t->[1];
     next unless (defined($pf) && (ref($pf) eq 'CODE'));
@@ -150,6 +155,7 @@ sub parse_poll
  {
   $rinfo->{$totype}->{$toname}->{$k}=$v;
  }
+ return;
 }
 
 ####################################################################################################

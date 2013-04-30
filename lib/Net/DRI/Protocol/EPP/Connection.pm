@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Connection handling
 ##
-## Copyright (c) 2005-2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -52,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005-2012 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -70,10 +70,15 @@ sub read_data
 {
  my ($class,$to,$sock)=@_;
 
- my $c;
- my $rl=$sock->sysread($c,4); ## first 4 bytes are the packed length
- die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED_CLOSING','Unable to read EPP 4 bytes length (connection closed by registry '.$to->transport_data('remote_uri').' ?): '.($! || 'no error given'),'en')) unless (defined $rl && $rl==4);
- my $length=unpack('N',$c)-4;
+ my $length=4; ## first 4 bytes are the packed length
+ my $c='';
+ while($length > 0)
+ {
+   my $new;
+   $length-=$sock->sysread($new,$length);
+   $c.=$new;
+ }
+ $length=unpack('N',$c)-4;
  my $m='';
  while ($length > 0)
  {

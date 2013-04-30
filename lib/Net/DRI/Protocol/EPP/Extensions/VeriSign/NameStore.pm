@@ -1,7 +1,7 @@
 ## Domain Registry Interface, EPP NameStore Extension for Verisign
 ##
 ## Copyright (c) 2006,2008,2009 Rony Meyer <perl@spot-light.ch>. All rights reserved.
-##                         2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+##                    2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -53,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 =head1 COPYRIGHT
 
 Copyright (c) 2006,2008,2009 Rony Meyer <perl@spot-light.ch>.
-          (c) 2010 Patrick Mevzek <netdri@dotandco.com>.
+          (c) 2010,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -118,9 +118,8 @@ sub register_commands
 
 sub add_namestore_ext
 {
- my $epp=shift(@_);
- my $domain=shift(@_);
- my $rd=pop(@_);
+ my ($epp,$domain,@p)=@_;
+ my $rd=pop @p;
  my $mes=$epp->message();
  my $defprod=$epp->default_parameters()->{subproductid};
 
@@ -148,6 +147,7 @@ sub add_namestore_ext
  $ext='dotJOBS' if ($domain=~m/\.jobs$/i);
 
  $mes->command_extension($eid,['namestoreExt:subProduct',$ext]);
+ return;
 }
 
 sub parse
@@ -162,6 +162,7 @@ sub parse
  return unless $c;
 
  $rinfo->{$otype}->{$oname}->{subproductid}=$c->get_node(1)->textContent();
+ return;
 }
 
 sub parse_error
@@ -180,6 +181,7 @@ sub parse_error
 
  ## We add it to the latest status extra_info seen.
  $mes->add_to_extra_info({from => 'verisign:namestoreExt', type => 'text', message => $data->textContent(), code => $data->getAttribute('code')});
+ return;
 }
 
 #########################################################################################################

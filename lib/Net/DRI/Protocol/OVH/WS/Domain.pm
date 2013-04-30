@@ -1,6 +1,6 @@
 ## Domain Registry Interface, OVH Web Services Domain commands
 ##
-## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -48,7 +48,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -95,6 +95,7 @@ sub build_msg
  Net::DRI::Exception->die(1,'protocol/ovh/ws',10,'Invalid domain name') unless Net::DRI::Util::is_hostname($domain);
 
  $msg->method($command) if defined($command);
+ return;
 }
 
 sub info
@@ -103,6 +104,7 @@ sub info
  my $msg=$po->message();
  build_msg($msg,'domainInfo',$domain);
  $msg->params([$domain]);
+ return;
 }
 
 sub info_parse
@@ -144,6 +146,7 @@ sub info_parse
   $rinfo->{domain}->{$oname}->{status}=$po->create_local_object('status')->add('clientLock'); ## ? ##
  }
  $rinfo->{domain}->{$oname}->{ns}=parse_ArrayOfNsStruct($po,$r{dns}) if exists($r{dns});
+ return;
 }
 
 sub check
@@ -152,6 +155,7 @@ sub check
  my $msg=$po->message();
  build_msg($msg,'domainCheck',$domain);
  $msg->params([$domain]);
+ return;
 }
 
 sub check_parse
@@ -167,6 +171,7 @@ sub check_parse
  $rinfo->{domain}->{$oname}->{action}='check';
  $rinfo->{domain}->{$oname}->{exist}=(@r==1 && $r[0]->{value}==1)? 0 : 1;
  $rinfo->{domain}->{$oname}->{exist_reason}=$r[0]->{reason} if @r==1;
+ return;
 }
 
 ####################################################################################################

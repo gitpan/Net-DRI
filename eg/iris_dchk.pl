@@ -11,7 +11,7 @@ use Net::DRI;
 my ($dri,$rc);
 
 my $ok=eval {
-$dri=Net::DRI->new(10);
+$dri=Net::DRI->new({cache_ttl => 10});
 $dri->add_registry('DENIC',{});
 $rc=$dri->target('DENIC')->add_current_profile('profile1','dchk');
 die($rc) unless $rc->is_success();

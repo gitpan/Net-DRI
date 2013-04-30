@@ -1,7 +1,7 @@
 ## Domain Registry Interface, .RU/.SU/.XN--P1AI EPP REgistrar Extension for Net::DRI
 ##
 ## Copyright (c) 2010-2011 Dmitry Belyavsky <beldmit@gmail.com>
-##               2011-2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+##               2011-2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -122,6 +122,7 @@ sub update
 	push @d,['registrar:chg',@chg] if @chg;
 
 	$mes->command_body(\@d);
+	return;
 }
 
 sub info
@@ -133,7 +134,8 @@ sub info
  $mes->command(
  	['info','registrar:info',sprintf('xmlns:registrar="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('registrar')),]
 	);
- $mes->command_body(['registrar:id', $registrar])
+ $mes->command_body(['registrar:id', $registrar]);
+ return;
 }
 
 sub info_parse
@@ -215,6 +217,7 @@ sub info_parse
 		$rinfo->{registrar}->{info}->{upDate} = DateTime::Format::ISO8601->new()->parse_datetime($c->textContent());
 	}
  }
+ return;
 }
 
 ####################################################################################################
@@ -250,7 +253,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 =head1 COPYRIGHT
 
 Copyright (c) 2010-2011 Dmitry Belyavsky <beldmit@gmail.com>
-Copyright (c) 2011-2012 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2011-2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

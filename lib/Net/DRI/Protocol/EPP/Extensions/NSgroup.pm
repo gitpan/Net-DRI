@@ -1,7 +1,7 @@
 ## Domain Registry Interface, EPP NSgroup extension commands
 ## (based on .BE Registration_guidelines_v4_7_1)
 ##
-## Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -49,7 +49,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2010,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -108,25 +108,25 @@ sub add_nsname
 {
  my ($ns)=@_;
  return () unless defined $ns;
- my @a;
+ my @names;
  if (! ref $ns)
  {
-  @a=($ns);
+  @names=($ns);
  } elsif (ref $ns eq 'ARRAY')
  {
-  @a=@$ns;
+  @names=@$ns;
  } elsif (Net::DRI::Util::isa_nsgroup($ns))
  {
-  @a=$ns->get_names();
+  @names=$ns->get_names();
  }
 
- foreach my $n (@a)
+ foreach my $n (@names)
  {
   next if Net::DRI::Util::is_hostname($n);
   Net::DRI::Exception->die(1,'protocol/EPP',10,'Invalid host name: '.$n);
  }
 
- return map { ['nsgroup:ns',$_] } @a;
+ return map { ['nsgroup:ns',$_] } @names;
 }
 
 ####################################################################################################
@@ -138,6 +138,7 @@ sub check
  my $mes=$epp->message();
  my @d=build_command($epp,$mes,'check',\@hosts);
  $mes->command_body(\@d);
+ return;
 }
 
 sub check_parse
@@ -164,6 +165,7 @@ sub check_parse
    }
   }
  }
+ return;
 }
 
 sub info
@@ -172,6 +174,7 @@ sub info
  my $mes=$epp->message();
  my @d=build_command($epp,$mes,'info',$hosts);
  $mes->command_body(\@d);
+ return;
 }
 
 sub info_parse
@@ -200,6 +203,7 @@ sub info_parse
  }
 
  $rinfo->{nsgroup}->{$oname}->{self}=$ns;
+ return;
 }
 
 ############ Transform commands
@@ -211,14 +215,16 @@ sub create
  my @d=build_command($epp,$mes,'create',$hosts);
  push @d,add_nsname($hosts);
  $mes->command_body(\@d);
+ return;
 }
 
-sub delete
+sub delete ## no critic (Subroutines::ProhibitBuiltinHomonyms)
 {
  my ($epp,$hosts)=@_;
  my $mes=$epp->message();
  my @d=build_command($epp,$mes,'delete',$hosts);
  $mes->command_body(\@d);
+ return;
 }
 
 sub update
@@ -237,6 +243,7 @@ sub update
  my @d=build_command($epp,$mes,'update',$hosts);
  push @d,add_nsname($ns);
  $mes->command_body(\@d);
+ return;
 }
 
 ####################################################################################################

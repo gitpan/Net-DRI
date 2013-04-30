@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Handling of contact data for .AERO
 ##
-## Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2008,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -15,6 +15,8 @@
 package Net::DRI::Data::Contact::AERO;
 
 use strict;
+use warnings;
+
 use base qw/Net::DRI::Data::Contact/;
 
 __PACKAGE__->register_attributes(qw(ens));
@@ -56,7 +58,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2008,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

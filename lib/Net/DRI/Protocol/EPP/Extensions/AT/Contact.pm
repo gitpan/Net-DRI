@@ -1,7 +1,7 @@
 ## Domain Registry Interface, NIC.AT Contact extension
 ## Contributed by Michael Braunoeder from NIC.AT <mib@nic.at>
 ##
-## Copyright (c) 2006-2008,2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006-2008,2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -48,7 +48,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006-2008,2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006-2008,2010,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -95,6 +95,7 @@ sub parse_info
 
  $c->type($type) if (defined($type) && $type);
 # $rinfo->{contact}->{$oname}->{type}=$type if $type;
+ return;
 }
 
 sub create
@@ -107,6 +108,7 @@ sub create
 
  my $eid=$mes->command_extension_register('at-ext-contact:create','xmlns:at-ext-contact="'.$NS.'" xsi:schemaLocation="'.$NS.' at-ext-contact-1.0.xsd"');
  $mes->command_extension($eid,['at-ext-contact:type',$type]);
+ return;
 }
 
 sub update
@@ -121,6 +123,7 @@ sub update
 
  my $eid=$mes->command_extension_register('at-ext-contact:update','xmlns:at-ext-contact="'.$NS.'" xsi:schemaLocation="'.$NS.' at-ext-contact-1.0.xsd"');
  $mes->command_extension($eid,['at-ext-contact:chg',['at-ext-contact:type',$type]]);
+ return;
 }
 
 ####################################################################################################

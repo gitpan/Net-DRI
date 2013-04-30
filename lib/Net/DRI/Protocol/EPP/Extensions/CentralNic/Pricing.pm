@@ -1,7 +1,7 @@
 ## Domain Registry Interface, CentralNic EPP Pricing extension
 ## From https://www.centralnic.com/company/labs/epp/ext/pricing
 ##
-## Copyright (c) 2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2011,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -52,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2011 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2011,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -79,6 +79,7 @@ sub setup
 {
  my ($class,$po,$version)=@_;
  $po->ns({ 'pricing' => [ 'urn:centralnic:params:xml:ns:pricing-1.0','pricing-1.0.xsd' ] });
+ return;
 }
 
 ####################################################################################################
@@ -105,6 +106,7 @@ sub check
 
  my $eid=$mes->command_extension_register('pricing','check');
  $mes->command_extension($eid,\@n);
+ return;
 }
 
 sub check_parse
@@ -134,6 +136,7 @@ sub check_parse
  }
 
  $rinfo->{domain}->{$oname}->{pricing}=\%p;
+ return;
 }
 
 ####################################################################################################

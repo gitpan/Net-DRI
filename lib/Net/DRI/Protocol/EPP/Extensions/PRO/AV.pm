@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .PRO A/V extensions
 ##
-## Copyright (c) 2008,2009 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+## Copyright (c) 2008,2009,2013 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 ##                    All rights reserved.
 ##
 ## This file is part of Net::DRI
@@ -16,6 +16,7 @@
 package Net::DRI::Protocol::EPP::Extensions::PRO::AV;
 
 use strict;
+use warnings;
 
 use Net::DRI::Util;
 use Net::DRI::Exception;
@@ -52,7 +53,7 @@ E<lt>http://www.hexonet.net/E<gt>.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008,2009 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+Copyright (c) 2008,2009,2013 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -109,6 +110,7 @@ sub check
 	my $mes = $epp->message();
 	my @d = build_command($mes, 'check', $av);
 	$mes->command_body(\@d);
+	return;
 }
 
 sub check_parse
@@ -153,6 +155,7 @@ sub check_parse
 			}
 		} continue { $c = $c->getNextSibling(); }
 	} continue { $cd = $cd->getNextSibling(); }
+	return;
 }
 
 sub info
@@ -161,6 +164,7 @@ sub info
 	my $mes = $epp->message();
 	my @d = build_command($mes, 'info', $av);
 	$mes->command_body(\@d);
+	return;
 }
 
 sub info_parse
@@ -269,7 +273,7 @@ sub info_parse
 			$rinfo->{av}->{$avid}->{avresult} = $res;
 		}
 	} continue { $cd = $cd->getNextSibling(); }
-
+	return;
 }
 
 ####################################################################################################
@@ -286,6 +290,7 @@ sub create
 	push(@d, ['av:contact', ['av:contactId', $rd->{contact}->srid()]]) if (Net::DRI::Util::has_key($rd,'contact') && Net::DRI::Util::isa_contact($rd->{contact}));
 
 	$mes->command_body(\@d);
+	return;
 }
 
 sub create_parse
@@ -324,6 +329,7 @@ sub create_parse
 				$cd->getFirstChild()->getData());
 		}
 	} continue { $cd = $cd->getNextSibling(); }
+	return;
 }
 
 ####################################################################################################

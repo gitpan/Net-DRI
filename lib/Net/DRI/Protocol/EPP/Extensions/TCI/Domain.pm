@@ -1,7 +1,7 @@
 ## Domain Registry Interface, .RU/.SU/.XN--P1AI EPP Domain Extension for Net::DRI
 ##
 ## Copyright (c) 2010-2011 Dmitry Belyavsky <beldmit@gmail.com>
-##               2011-2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+##               2011-2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -46,6 +46,7 @@ sub transfer_request
  my @d=Net::DRI::Protocol::EPP::Util::domain_build_command($mes,['transfer',{'op'=>'request'}],$domain);
  push @d,["domain:acID", $rd->{acID}];
  $mes->command_body(\@d);
+ return;
 }
 
 sub create
@@ -93,6 +94,7 @@ sub create
  }
 
  $mes->command_body(\@d);
+ return;
 }
 
 sub update
@@ -135,6 +137,7 @@ sub update
 
  push @d,['domain:chg',@chg] if @chg;
  $mes->command_body(\@d);
+ return;
 }
 
 sub info_parse
@@ -155,6 +158,7 @@ sub info_parse
   }
  }
  $rinfo->{domain}->{$oname}->{description}=\@description;
+ return;
 }
 ####################################################################################################
 1;
@@ -189,7 +193,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 =head1 COPYRIGHT
 
 Copyright (c) 2010-2011 Dmitry Belyavsky <beldmit@gmail.com>
-Copyright (c) 2011-2012 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2011-2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

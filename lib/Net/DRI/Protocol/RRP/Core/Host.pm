@@ -1,6 +1,6 @@
 ## Domain Registry Interface, RRP Host commands
 ##
-## Copyright (c) 2005,2006,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2008,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -15,6 +15,8 @@
 package Net::DRI::Protocol::RRP::Core::Host;
 
 use strict;
+use warnings;
+
 use Net::DRI::Protocol::RRP;
 use Net::DRI::Data::Hosts;
 use Net::DRI::Util;
@@ -47,7 +49,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2008,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -82,7 +84,8 @@ sub build_msg
  Net::DRI::Exception->die(1,'protocol/RRP',10,"Invalid host name") unless ($hostname=~m/^([a-z0-9]([a-z0-9\-]{0,61}[a-z0-9])?\.)*[a-z0-9]([a-z0-9\-]{0,61}[a-z0-9])?\.[a-z0-9]([a-z0-9\-]{0,61}[a-z0-9])?$/i); ## from RRP grammar
  $msg->command($command) if defined($command);
  $msg->entities('EntityName','NameServer');
- $msg->entities('NameServer',uc($hostname));
+ $msg->entities('NameServer',uc $hostname);
+ return;
 }
 
 sub add
@@ -91,6 +94,7 @@ sub add
  my $mes=$rrp->message();
  build_msg($mes,'add',$ns);
  add_ip($mes,$ns,$rrp->version());
+ return;
 }
 
 sub _basic_command
@@ -98,11 +102,12 @@ sub _basic_command
  my ($command,$rrp,$ns)=@_;
  my $mes=$rrp->message();
  build_msg($mes,$command,$ns);
+ return;
 }
 
-sub check  { return _basic_command('check',@_);   }
-sub status { return _basic_command('status',@_);  }
-sub del    { return _basic_command('del',@_);     }
+sub check  { my (@args)=@_; return _basic_command('check',@args);  }
+sub status { my (@args)=@_; return _basic_command('status',@args); }
+sub del    { my (@args)=@_; return _basic_command('del',@args);    }
 
 sub check_parse
 {
@@ -120,6 +125,7 @@ sub check_parse
  {
   $rinfo->{host}->{$oname}->{exist}=0;
  }
+ return;
 }
 
 sub status_parse
@@ -146,6 +152,7 @@ sub status_parse
 
  my @ip=$mes->entities('ipaddress');
  $rinfo->{host}->{$oname}->{self}=Net::DRI::Data::Hosts->new($oname,\@ip);
+ return;
 }
 
 sub mod
@@ -177,6 +184,7 @@ sub mod
  add_ip($mes,$nsadd,$version);
  add_ip($mes,$nsdel,$version,'=');
  $mes->entities('NewNameServer',ref($newname)? $newname->get_names(1) : $newname) if (defined($newname) && $newname);
+ return;
 }
 
 sub add_ip
@@ -189,6 +197,7 @@ sub add_ip
  foreach my $ip (@$r4) { last if $c++>13; $mes->entities('IPAddress',$_.$extra); };
  $c=1;
  if ($version eq '2.0') { foreach my $ip (@$r6) { last if $c++>13; $mes->entities('IPAddress',$_.$extra); } }
+ return;
 }
 
 #########################################################################################

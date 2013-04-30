@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP E.164 Validation Information Example from RFC5076
 ##
-## Copyright (c) 2008-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008-2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -50,7 +50,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008-2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008-2010,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -137,9 +137,9 @@ sub create
  return ['valex:simpleVal',{'xmlns:valex' => $NS},@c];
 }
 
-sub renew { return create(@_); }
-sub transfer { return create(@_); }
-sub update { return create(@_); }
+sub renew    { my (@args)=@_; return create(@args); }
+sub transfer { my (@args)=@_; return create(@args); }
+sub update   { my (@args)=@_; return create(@args); }
 
 ####################################################################################################
 1;

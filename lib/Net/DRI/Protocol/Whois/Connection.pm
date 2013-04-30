@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Whois Connection handling
 ##
-## Copyright (c) 2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2007-2009,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -49,7 +49,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2007-2009,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -67,16 +67,15 @@ sub read_data
 {
  my ($class,$to,$sock)=@_;
 
- my @a;
+ my @r;
  while(my $l=$sock->getline())
  {
-  chomp($l);
-  push @a,$l;
+  chomp $l;
+  push @r,Net::DRI::Util::decode_latin1($l);
  }
 
- @a=map { Net::DRI::Util::decode_latin1($_); } @a;
- die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED_CLOSING','Unable to read answer (connection closed by registry ?)','en')) unless (@a > 5);
- return Net::DRI::Data::Raw->new_from_array(\@a);
+ die(Net::DRI::Protocol::ResultStatus->new_error('COMMAND_FAILED_CLOSING','Unable to read answer (connection closed by registry ?)','en')) unless (@r > 5);
+ return Net::DRI::Data::Raw->new_from_array(\@r);
 }
 
 sub write_message

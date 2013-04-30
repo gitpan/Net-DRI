@@ -1,7 +1,7 @@
 ## Domain Registry Interface, .NO policies for Net::DRI
 ##
 ## Copyright (c) 2008-2010 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>, Trond Haugen E<lt>info@norid.noE<gt>. All rights reserved.
-##           (c) 2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+##           (c) 2011,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -56,7 +56,7 @@ Trond Haugen E<lt>info@norid.noE<gt>
 =head1 COPYRIGHT
 
 Copyright (c) 2008-2010 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>, Trond Haugen E<lt>info@norid.noE<gt>
-          (c) 2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+          (c) 2011,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -82,7 +82,7 @@ sub periods {
     return map { DateTime::Duration->new( years => $_ ) } (1);
 }
 sub name         { return 'NORID'; }
-sub tlds         { return ('NO'); }
+sub tlds         { return ('no'); }
 sub object_types { return ( 'domain', 'contact', 'ns' ); }
 sub profile_types { return qw/epp/; }
 
@@ -118,9 +118,9 @@ to use CC-codes in lables, like 'se.vgs.no'
 sub verify_name_domain
 {
  my ($self,$ndr,$domain,$op)=@_;
- $self->_verify_name_rules($domain,$op,{check_name_no_dots => 1,
-                                        my_tld_not_strict => 0,
-                                       });
+ return $self->_verify_name_rules($domain,$op,{check_name_no_dots => 1,
+                                               my_tld_not_strict => 0,
+                                              });
 }
 
 sub verify_duration_renew {

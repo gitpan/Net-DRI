@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Superclass of various classes for Net::DRI
 ##
-## Copyright (c) 2009-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2009-2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -59,8 +59,8 @@ sub generate_trid
  return $self->trid_factory()->($name);
 }
 
-sub log_setup_channel { my ($self,@r)=@_; $self->logging()->setup_channel(@r); }
-sub log_output        { my ($self,@r)=@_; $self->logging()->output(@r) if $self->logging(); }
+sub log_setup_channel { my ($self,@r)=@_; $self->logging()->setup_channel(@r); return; }
+sub log_output        { my ($self,@r)=@_; $self->logging()->output(@r) if $self->logging(); return; }
 
 ####################################################################################################
 1;
@@ -139,7 +139,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright (c) 2009-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+Copyright (c) 2009-2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

@@ -1,7 +1,7 @@
 ## Domain Registry Interface, .RU/.SU/.XN--P1AI EPP Contact Extension for Net::DRI
 ##
 ## Copyright (c) 2010-2011 Dmitry Belyavsky <beldmit@gmail.com>
-##               2011-2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+##               2011-2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -82,6 +82,7 @@ sub info
  my $mes=$epp->message();
  my @d=build_command($mes,'info',$c);
  $mes->command_body(\@d);
+ return;
 }
 
 sub info_parse
@@ -140,6 +141,7 @@ sub info_parse
 
 	$rinfo->{contact}->{$oname}->{status}=$po->create_local_object('status')->add(@s);
 	$rinfo->{contact}->{$oname}->{self}=$contact;
+	return;
 }
 
 sub parse_contact_data
@@ -354,11 +356,13 @@ sub create
 	$contact->validate(); ## will trigger an Exception if needed
 	push(@d, build_cdata($contact, $epp->{contacti18n}));
 	$mes->command_body(\@d);
+	return;
 }
 
 sub create_parse
 {
-	return Net::DRI::Protocol::EPP::Core::Contact::create_parse(@_);
+	my (@args)=@_;
+	return Net::DRI::Protocol::EPP::Core::Contact::create_parse(@args);
 }
 
 sub update 
@@ -398,6 +402,7 @@ sub update
 	}
 
 	$mes->command_body(\@d);
+	return;
 }
 
 ####################################################################################################
@@ -433,7 +438,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 =head1 COPYRIGHT
 
 Copyright (c) 2010-2011 Dmitry Belyavsky <beldmit@gmail.com>
-Copyright (c) 2011-2012 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2011-2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

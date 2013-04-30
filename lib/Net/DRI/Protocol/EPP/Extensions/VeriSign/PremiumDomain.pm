@@ -1,6 +1,6 @@
 ## Domain Registry Interface, VeriSign EPP Premium Domain Extension
 ##
-## Copyright (c) 2010,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2010,2012,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -37,6 +37,7 @@ sub setup
 {
  my ($class,$po,$version)=@_;
  $po->ns({ 'premiumdomain' => [ 'http://www.verisign.com/epp/premiumdomain-1.0','premiumdomain-1.0.xsd' ] });
+ return;
 }
 
 ####################################################################################################
@@ -65,6 +66,7 @@ sub check
 
  my $eid=$mes->command_extension_register('premiumdomain:check',sprintf('xmlns:premiumdomain="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('premiumdomain')));
  $mes->command_extension($eid,['premiumdomain:flag',$pd]);
+ return;
 }
 
 sub check_parse
@@ -95,6 +97,7 @@ sub check_parse
    }
   }
  }
+ return;
 }
 
 sub update
@@ -107,6 +110,7 @@ sub update
  my $mes=$po->message();
  my $eid=$mes->command_extension_register('premiumdomain:reassign',sprintf('xmlns:premiumdomain="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('premiumdomain')));
  $mes->command_extension($eid,['premiumdomain:shortName',$chg]);
+ return;
 }
 
 #########################################################################################################
@@ -158,7 +162,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2010,2012 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2010,2012,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

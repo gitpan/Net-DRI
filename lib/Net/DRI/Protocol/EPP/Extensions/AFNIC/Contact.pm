@@ -1,6 +1,6 @@
 ## Domain Registry Interface, AFNIC (.FR/.RE/.TF/.WF/.PM/.YT) Contact EPP extension commands
 ##
-## Copyright (c) 2008,2009,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009,2012,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -48,7 +48,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008,2009,2012 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009,2012,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -153,6 +153,7 @@ sub create
 
  my $eid=build_command_extension($mes,$epp,'frnic:ext');
  $mes->command_extension($eid,['frnic:create',['frnic:contact',@n]]);
+ return;
 }
 
 sub create_parse
@@ -180,6 +181,7 @@ sub create_parse
    $rinfo->{contact}->{$oname}->{qualification}={ identification => parse_q_idtstatus($po,$c) };
   }
  }
+ return;
 }
 
 sub build_q_idtstatus
@@ -236,6 +238,7 @@ sub update
 
  my $eid=build_command_extension($mes,$epp,'frnic:ext');
  $mes->command_extension($eid,['frnic:update',['frnic:contact',@n]]);
+ return;
 }
 
 sub parse_q_idtstatus
@@ -309,7 +312,7 @@ sub parse_individualinfos
 {
  my ($po,$otype,$oaction,$oname,$rinfo,$c,$co,$mes,$rq)=@_;
 
- my %b;
+ my %birth;
  foreach my $sel (Net::DRI::Util::xml_list_children($c))
  {
   my ($nn,$cc)=@$sel;
@@ -318,20 +321,20 @@ sub parse_individualinfos
    $rq->{identification}=parse_q_idtstatus($po,$c);
   } elsif ($nn eq 'birthDate')
   {
-   $b{date}=$cc->textContent();
+   $birth{date}=$cc->textContent();
   } elsif ($nn eq 'birthCity')
   {
-   $b{place}=$cc->textContent();
+   $birth{place}=$cc->textContent();
   } elsif ($nn eq 'birthPc')
   {
-   $b{place}=sprintf('%s, %s',$cc->textContent(),$b{place});
+   $birth{place}=sprintf('%s, %s',$cc->textContent(),$birth{place});
   } elsif ($nn eq 'birthCc')
   {
    my $v=$cc->textContent();
-   $b{place}=$v unless ($v eq 'FR');
+   $birth{place}=$v unless ($v eq 'FR');
   }
  }
- $co->birth(\%b);
+ $co->birth(\%birth);
 
  return;
 }

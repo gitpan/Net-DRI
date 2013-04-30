@@ -1,7 +1,7 @@
 ## Domain Registry Interface, .BR Contact EPP extension commands
 ## draft-neves-epp-brorg-03.txt
 ##
-## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -16,6 +16,7 @@
 package Net::DRI::Protocol::EPP::Extensions::BR::Contact;
 
 use strict;
+use warnings;
 
 use Net::DRI::Exception;
 use Net::DRI::Util;
@@ -50,7 +51,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -108,6 +109,7 @@ sub check
   }
  }
  $mes->command_extension($eid,\@n);
+ return;
 }
 
 sub check_parse
@@ -144,6 +146,7 @@ sub check_parse
   $rinfo->{domain}->{$domain}->{ticket}=$ticket;
   $rinfo->{domain}->{$domain}->{orgid}=$orgid;
  }
+ return;
 }
 
 sub info
@@ -159,6 +162,7 @@ sub info
  my $eid=build_command_extension($mes,$epp,'brorg:info');
  my @n=(['brorg:organization',$orgid]);
  $mes->command_extension($eid,\@n);
+ return;
 }
 
 sub info_parse
@@ -205,6 +209,7 @@ sub info_parse
  } continue { $c=$c->getNextSibling(); }
  $co->associated_contacts($cs) unless $cs->is_empty();
  $co->associated_domains(\@d) if @d;
+ return;
 }
 
 sub build_contacts
@@ -236,6 +241,7 @@ sub create
  push @n,build_contacts($cs);
  push @n,['brorg:responsible',$contact->responsible()] if $contact->responsible();
  $mes->command_extension($eid,\@n);
+ return;
 }
 
 sub update
@@ -263,6 +269,7 @@ sub update
  push @n,['brorg:chg',['brorg:responsible',Net::DRI::Util::isa_contact($resp,'Net::DRI::Data::Contact::BR')? $resp->responsible() : $resp]] if defined($resp);
  my $eid=build_command_extension($mes,$epp,'brorg:update');
  $mes->command_extension($eid,\@n);
+ return;
 }
 
 sub pandata_parse
@@ -289,6 +296,7 @@ sub pandata_parse
    $rinfo->{$otype}->{$oname}->{reason_lang}=$c->getAttribute('lang') || 'en';
   }
  } continue { $c=$c->getNextSibling(); }
+ return;
 }
 
 ####################################################################################################

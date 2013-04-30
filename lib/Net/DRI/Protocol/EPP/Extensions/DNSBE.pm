@@ -1,6 +1,6 @@
 ## Domain Registry Interface, DNSBE EPP extensions
 ##
-## Copyright (c) 2006-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006-2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -49,7 +49,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006-2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006-2010,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -81,7 +81,7 @@ sub setup
 }
 
 sub core_contact_types { return ('admin','tech','billing','onsite'); }
-sub default_extensions { return qw/DNSBE::Message DNSBE::Domain DNSBE::Contact NSgroup Keygroup SecDNS/; }
+sub default_extensions { return qw/DNSBE::Message DNSBE::Domain DNSBE::Contact DNSBE::Notifications NSgroup Keygroup SecDNS/; }
 
 ####################################################################################################
 1;

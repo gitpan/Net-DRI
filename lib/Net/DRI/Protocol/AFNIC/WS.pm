@@ -1,6 +1,6 @@
 ## Domain Registry Interface, AFNIC Web Services Protocol
 ##
-## Copyright (c) 2005,2008-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2008-2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -52,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2008-2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2008-2010,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -81,7 +81,7 @@ sub _load
 {
  my ($self,$rp)=@_;
  my @class=map { 'Net::DRI::Protocol::AFNIC::WS::'.$_ } ('Domain');
- $self->SUPER::_load(@class);
+ return $self->SUPER::_load(@class);
 }
 
 ####################################################################################################

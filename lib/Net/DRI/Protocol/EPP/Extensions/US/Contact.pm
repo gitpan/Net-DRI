@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP .US Contact NEXUS Extensions
 ##
-## Copyright (c) 2005,2006,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2008,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -15,6 +15,7 @@
 package Net::DRI::Protocol::EPP::Extensions::US::Contact;
 
 use strict;
+use warnings;
 
 use Net::DRI::Util;
 use Net::DRI::Exception;
@@ -47,7 +48,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2008,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -91,6 +92,7 @@ sub info_parse
 
  $contact->application_purpose($tmp{AppPurpose}) if exists($tmp{AppPurpose});
  $contact->nexus_category($tmp{NexusCategory})   if exists($tmp{NexusCategory});
+ return;
 }
 
 ############ Transform commands
@@ -105,6 +107,7 @@ sub create
  my $str=sprintf('AppPurpose=%s NexusCategory=%s',$contact->application_purpose(),$contact->nexus_category());
  my $eid=$mes->command_extension_register('neulevel:extension','xmlns:neulevel="urn:ietf:params:xml:ns:neulevel-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:neulevel-1.0 neulevel-1.0.xsd"');
  $mes->command_extension($eid,['neulevel:unspec',$str]);
+ return;
 }
 
 sub update
@@ -123,6 +126,7 @@ sub update
  
  my $eid=$mes->command_extension_register('neulevel:extension','xmlns:neulevel="urn:ietf:params:xml:ns:neulevel-1.0" xsi:schemaLocation="urn:ietf:params:xml:ns:neulevel-1.0 neulevel-1.0.xsd"');
  $mes->command_extension($eid,['neulevel:unspec',join(' ',@tmp)]);
+ return;
 }
 
 ####################################################################################################

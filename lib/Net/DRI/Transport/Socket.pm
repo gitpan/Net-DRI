@@ -1,6 +1,6 @@
 ## Domain Registry Interface, TCP/SSL Socket Transport
 ##
-## Copyright (c) 2005-2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -47,7 +47,7 @@ At creation (see Net::DRI C<new_profile>) you pass a reference to an hash, with 
 
 ssl, tcp or udp
 
-=head2 ssl_key_file ssl_cert_file ssl_ca_file ssl_ca_path ssl_cipher_list ssl_version ssl_passwd_cb
+=head2 ssl_key_file ssl_cert_file ssl_ca_file ssl_ca_path ssl_cipher_list ssl_version ssl_passwd_cb ssl_hostname
 
 if C<socktype> is 'ssl', all key materials, see IO::Socket::SSL documentation for corresponding options
 
@@ -109,7 +109,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005-2012 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -132,7 +132,7 @@ sub new
  my %t=(message_factory => $po->factories()->{message});
  Net::DRI::Exception::usererr_insufficient_parameters('protocol_connection') unless (exists($opts{protocol_connection}) && $opts{protocol_connection});
  $t{pc}=$opts{protocol_connection};
- $t{pc}->require or Net::DRI::Exception::err_failed_load_module('transport/socket',$t{pc},$@);
+ Net::DRI::Util::load_module($t{pc},'transport/socket');
  if ($t{pc}->can('transport_default'))
  {
   %opts=($t{pc}->transport_default('socket_inet'),%opts);
@@ -370,6 +370,7 @@ sub close_socket
  $self->sock()->close();
  $self->log_output('notice','transport',{},{phase=>'closing',message=>'Successfully closed socket for '.$t->{remote_uri}});
  $self->sock(undef);
+ return;
 }
 
 sub close_connection
@@ -378,6 +379,7 @@ sub close_connection
  $self->send_logout($ctx);
  $self->close_socket();
  $self->current_state(0);
+ return;
 }
 
 sub end
@@ -393,16 +395,17 @@ sub end
   };
   alarm 0; ## since close_connection may die, this must be outside of eval to be executed in all cases
  }
+ return;
 }
 
 ####################################################################################################
 
-sub send
+sub send ## no critic (Subroutines::ProhibitBuiltinHomonyms)
 {
  my ($self,$ctx,$tosend,$count)=@_;
  ## We do a very crude error handling : if first send fails, we reset connection.
  ## Thus if you put retry=>2 when creating this object, the connection will be re-established and the message resent
- $self->SUPER::send($ctx,$tosend,\&_print,sub { shift->current_state(0) },$count);
+ return $self->SUPER::send($ctx,$tosend,\&_print,sub { shift->current_state(0) },$count);
 }
 
 sub _print ## here we are sure open_connection() was called before

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Registry object
 ##
-## Copyright (c) 2005-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2011,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -57,7 +57,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005-2011 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2011,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -116,13 +116,13 @@ sub exist_profile
  return (defined($name) && exists($self->{profiles}->{$name}));
 }
 
-sub err_no_current_profile           { Net::DRI::Exception->die(0,'DRI',3,'No current profile available'); }
-sub err_profile_name_does_not_exist  { Net::DRI::Exception->die(0,'DRI',4,'Profile name '.$_[0].' does not exist'); }
+sub err_no_current_profile           { Net::DRI::Exception->die(0,'DRI',3,'No current profile available'); } ## no critic (Subroutines::RequireArgUnpacking Subroutines::RequireFinalReturn)
+sub err_profile_name_does_not_exist  { Net::DRI::Exception->die(0,'DRI',4,'Profile name '.$_[0].' does not exist'); } ## no critic (Subroutines::RequireArgUnpacking Subroutines::RequireFinalReturn)
 
 sub remote_object
 {
- my $self=shift;
- return Net::DRI::Data::RegistryObject->new($self,@_);
+ my ($self,@args)=@_;
+ return Net::DRI::Data::RegistryObject->new($self,@args);
 }
 
 sub _current
@@ -142,15 +142,14 @@ sub _current
 
 sub transport { return shift->_current('transport'); }
 sub protocol  { return shift->_current('protocol');  }
-sub status    { return shift->_current('status',@_); }
+sub status    { return shift->_current('status',@_); } ## no critic (Subroutines::RequireArgUnpacking)
 sub protocol_transport { my $self=shift; return ($self->protocol(),$self->transport()); }
 
 sub local_object
 {
- my $self=shift;
- my $f=shift;
+ my ($self,$f,@args)=@_;
  return unless $self && $f;
- return $self->_current('protocol')->create_local_object($f,@_);
+ return $self->_current('protocol')->create_local_object($f,@args);
 }
 
 sub _result
@@ -231,7 +230,7 @@ sub try_restore_from_cache
  return $self->{last_data}->{result_status};
 }
 
-sub clear_info { shift->{last_data}={}; }
+sub clear_info { shift->{last_data}={}; } ## no critic (Subroutines::RequireFinalReturn)
 
 sub get_info
 {
@@ -289,6 +288,7 @@ sub target
  my ($self,$profile)=@_;
  err_profile_name_does_not_exist($profile) unless ($profile && exists($self->{profiles}->{$profile}));
  $self->{profile}=$profile;
+ return;
 }
 
 sub profile_auto_switch
@@ -310,6 +310,7 @@ sub set_auto_target
  $oaction||='_default';
  $rh->{$otype}={} unless (exists($rh->{$otype}));
  $rh->{$otype}->{$oaction}=$profile;
+ return;
 }
 
 sub get_auto_target
@@ -367,8 +368,8 @@ sub add_profile
 
  $drd->transport_protocol_init($type,$tc,$tp,$pc,$pp,$test) if $drd->can('transport_protocol_init');
 
- $tc->require() or Net::DRI::Exception::err_failed_load_module('DRI',$tc,$@);
- $pc->require() or Net::DRI::Exception::err_failed_load_module('DRI',$pc,$@);
+ Net::DRI::Util::load_module($tc,'DRI');
+ Net::DRI::Util::load_module($pc,'DRI');
  $self->log_output('debug','core',sprintf('For profile "%s" attempting to initialize transport "%s" and protocol "%s"',$name,$tc,$pc));
 
  ## Protocol must come first, as it may be needed during transport setup; it should not die
@@ -431,6 +432,7 @@ sub end
  }
 
  $self->{driver}->end() if $self->{driver}->can('end');
+ return;
 }
 
 sub can
@@ -451,9 +453,9 @@ sub has_action
 
 sub process
 {
- my ($self,$otype,$oaction)=@_[0,1,2];
- my $pa=$_[3] || []; ## store them ?
- my $ta=$_[4] || [];
+ my ($self,$otype,$oaction,$pa,$ta)=@_;
+ $pa=[] unless defined $pa; ## store them ?
+ $ta=[] unless defined $ta;
  $self->{last_process}=[$otype,$oaction,$pa,$ta]; ## should be handled more generally by LocalStorage/Exchange
 
  ## Automated switch, if enabled
@@ -652,7 +654,7 @@ sub log_output
 
 sub AUTOLOAD
 {
- my $self=shift;
+ my ($self,@args)=@_;
  my $attr=$AUTOLOAD;
  $attr=~s/.*:://;
  return unless $attr=~m/[^A-Z]/; ## skip DESTROY and all-cap methods
@@ -660,7 +662,7 @@ sub AUTOLOAD
  my $drd=$self->driver(); ## This is a DRD object
  Net::DRI::Exception::method_not_implemented($attr,$drd) unless ref $drd && $drd->can($attr);
  $self->log_output('debug','core',sprintf('Calling %s from Net::DRI::Registry',$attr));
- return $drd->$attr($self,@_);
+ return $drd->$attr($self,@args);
 }
 
 ####################################################################################################

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Encapsulating raw data
 ##
-## Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -51,7 +51,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2010,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -67,8 +67,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $class=shift;
- my ($type,$data,$hint)=@_;
+ my ($class,$type,$data,$hint)=@_;
 
 ## type=1, data=ref to array
 ## type=2, data=string
@@ -89,14 +88,14 @@ sub new
 
 sub new_from_array
 {
- my $class=shift;
- my @a=map { my $f=$_; $f=~s/[\r\n\s]+$//; $f; } (ref($_[0]))? @{$_[0]} : @_;
+ my ($class,@args)=@_;
+ my @a=map { my $f=$_; $f=~s/[\r\n\s]+$//; $f; } (ref $args[0] ? @{$args[0]} : @args);
  return $class->new(1,\@a);
 }
 
-sub new_from_string    { return shift->new(2,@_); }
-sub new_from_xmlstring { return shift->new(2,$_[0],'xml'); }
-sub new_from_object    { return shift->new(5,@_); }
+sub new_from_string    { return shift->new(2,@_); } ## no critic (Subroutines::RequireArgUnpacking)
+sub new_from_xmlstring { return shift->new(2,$_[0],'xml'); } ## no critic (Subroutines::RequireArgUnpacking)
+sub new_from_object    { return shift->new(5,@_); } ## no critic (Subroutines::RequireArgUnpacking)
 
 ####################################################################################################
 
@@ -132,7 +131,7 @@ sub last_line
  if ($self->type()==1)
  {
   my $data=$self->data();
-  return $data->[$#$data]; ## see above
+  return $data->[-1]; ## see above
  }
  if ($self->type()==2)
  {

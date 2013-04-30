@@ -1,7 +1,7 @@
 ## Domain Registry Interface, .SE policy on reserved names
 ## Contributed by Elias Sidenbladh and Ulrich Wisser from NIC SE
 ##
-## Copyright (c) 2006-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006-2011,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -55,7 +55,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006-2011 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006-2011,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -77,8 +77,8 @@ sub new
  return $self;
 }
 
-sub name     { return 'se'; }
-sub tlds     { return ('SE'); }
+sub name     { return 'IIS'; }
+sub tlds     { return ('se','nu'); }
 sub periods  { return map { DateTime::Duration->new(months => $_) } (12..120); }
 sub object_types { return ('domain','contact','ns'); }
 sub profile_types { return qw/epp whois/; }
@@ -96,6 +96,7 @@ sub set_factories
 {
  my ($self,$po)=@_;
  $po->factories('contact',sub { return Net::DRI::Data::Contact::SE->new(@_); });
+ return;
 }
 
 ####################################################################################################

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, VeriSign EPP WhoWas Extension
 ##
-## Copyright (c) 2010,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2010,2012,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -33,6 +33,7 @@ sub setup
 {
  my ($class,$po,$version)=@_;
  $po->ns({ 'whowas' => [ 'http://www.verisign.com/epp/whowas-1.0','whowas-1.0.xsd' ] });
+ return;
 }
 
 ####################################################################################################
@@ -54,6 +55,7 @@ sub whowas_info
  my $mes=$epp->message();
  $mes->command(['info','whowas:info',sprintf('xmlns:whowas="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('whowas'))]);
  $mes->command_body([['whowas:type','domain'],[$isroid ? 'whowas:roid' : 'whowas:name',$domain]]);
+ return;
 }
 
 sub whowas_parse
@@ -100,6 +102,7 @@ sub whowas_parse
  my $name=$r{name};
  delete $r{name};
  $rinfo->{$otype}->{$name}=\%r;
+ return;
 }
 
 #########################################################################################################
@@ -146,7 +149,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2010,2012 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2010,2012,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

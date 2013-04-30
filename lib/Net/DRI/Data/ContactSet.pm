@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Stores ordered list of contacts + type (registrant, admin, tech, bill, etc...)
 ##
-## Copyright (c) 2005-2009,2011-2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2009,2011-2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -96,7 +96,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005-2009,2011-2012 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2009,2011-2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -206,7 +206,7 @@ sub del
  return $self;
 }
 
-sub rem { return shift->del(@_); }
+sub rem { my ($self,@args)=@_; return $self->del(@args); }
 
 sub clear
 {

@@ -1,7 +1,7 @@
 ## Domain Registry Interface, .ASIA EPP extensions
 ##
 ## Copyright (c) 2007-2009 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
-##           (c) 2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+##           (c) 2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -51,7 +51,7 @@ Tonnerre Lombard E<lt>tonnerre.lombard@sygroup.chE<gt>
 =head1 COPYRIGHT
 
 Copyright (c) 2007-2009 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
-          (c) 2010 Patrick Mevzek <netdri@dotandco.com>
+          (c) 2010,2013 Patrick Mevzek <netdri@dotandco.com>
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -69,11 +69,13 @@ sub setup
 {
  my ($self,$rp)=@_;
  $self->ns({ asia => ['urn:afilias:params:xml:ns:asia-1.0','asia-1.0.xsd'],
-             ipr  => ['urn:afilias:params:xml:ns:ipr-1.0','ipr-1.0.xsd'],
+             ipr  => ['urn:afilias:params:xml:ns:ipr-1.1','ipr-1.1.xsd'],
+             oxrs => ['urn:afilias:params:xml:ns:oxrs-1.1','oxrs-1.1.xsd'],
            });
  $self->factories('contact',sub { return Net::DRI::Data::Contact::ASIA->new(@_); });
  $self->capabilities('domain_update','maintainer_url',['set']);
  $self->capabilities('domain_update','contact',['add','set','del']);
+ $self->capabilities('domain_update','ipr',['set','del']);
  return;
 }
 

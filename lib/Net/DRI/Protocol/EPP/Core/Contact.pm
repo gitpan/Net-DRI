@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Contact commands (RFC5733)
 ##
-## Copyright (c) 2005-2010,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2010,2012-2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -50,7 +50,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005-2010,2012 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2010,2012-2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -119,6 +119,7 @@ sub check
  my $mes=$epp->message();
  my @d=build_command($mes,'check',$c);
  $mes->command_body(\@d);
+ return;
 }
 
 sub check_parse
@@ -147,6 +148,7 @@ sub check_parse
    }
   }
  }
+ return;
 }
 
 sub info
@@ -155,6 +157,7 @@ sub info
  my $mes=$epp->message();
  my @d=build_command($mes,'info',$c);
  $mes->command_body(\@d);
+ return;
 }
 
 sub info_parse
@@ -208,7 +211,7 @@ sub info_parse
    parse_postalinfo($po,$c,\%cd);
   } elsif ($name eq 'authInfo') ## we only try to parse the authInfo version defined in the RFC, other cases are to be handled by extensions
   {
-   $contact->auth({pw => scalar Net::DRI::Util::xml_child_content($c,$mes->ns('contact'),'pw')});
+   $contact->auth({pw => Net::DRI::Util::xml_child_content($c,$mes->ns('contact'),'pw')});
   } elsif ($name eq 'disclose')
   {
    $contact->disclose(parse_disclose($c));
@@ -225,6 +228,7 @@ sub info_parse
 
  $rinfo->{contact}->{$oname}->{status}=$po->create_local_object('status')->add(@s);
  $rinfo->{contact}->{$oname}->{self}=$contact;
+ return;
 }
 
 sub parse_postalinfo
@@ -269,6 +273,7 @@ sub parse_postalinfo
    $rcd->{street}->[$ti]=\@street;
   }
  }
+ return;
 }
 
 sub parse_disclose ## RFC 4933 §2.9
@@ -297,6 +302,7 @@ sub transfer_query
  my $mes=$epp->message();
  my @d=build_command($mes,['transfer',{'op'=>'query'}],$c);
  $mes->command_body(\@d);
+ return;
 }
 
 sub transfer_parse
@@ -325,6 +331,7 @@ sub transfer_parse
    $rinfo->{contact}->{$oname}->{$1}=$po->parse_iso8601($c->textContent());
   }
  }
+ return;
 }
 
 ############ Transform commands
@@ -413,6 +420,7 @@ sub _do_locint
   if (defined($tmp[0])) { push @$rl,['contact:'.$what,$tmp[0]]; }
   if (defined($tmp[1])) { push @$ri,['contact:'.$what,$tmp[1]]; }
  }
+ return;
 }
 
 sub create
@@ -425,6 +433,7 @@ sub create
  $contact->validate(); ## will trigger an Exception if needed
  push @d,build_cdata($contact,$epp->{contacti18n});
  $mes->command_body(\@d);
+ return;
 }
 
 sub create_parse
@@ -452,14 +461,16 @@ sub create_parse
    $rinfo->{contact}->{$oname}->{$1}=$po->parse_iso8601($c->textContent());
   }
  }
+ return;
 }
 
-sub delete
+sub delete ## no critic (Subroutines::ProhibitBuiltinHomonyms)
 {
  my ($epp,$contact)=@_;
  my $mes=$epp->message();
  my @d=build_command($mes,'delete',$contact);
  $mes->command_body(\@d);
+ return;
 }
 
 sub transfer_request
@@ -468,6 +479,7 @@ sub transfer_request
  my $mes=$epp->message();
  my @d=build_command($mes,['transfer',{'op'=>'request'}],$c);
  $mes->command_body(\@d);
+ return;
 }
 
 sub transfer_cancel
@@ -476,6 +488,7 @@ sub transfer_cancel
  my $mes=$epp->message();
  my @d=build_command($mes,['transfer',{'op'=>'cancel'}],$c);
  $mes->command_body(\@d);
+ return;
 }
 
 sub transfer_answer
@@ -484,6 +497,7 @@ sub transfer_answer
  my $mes=$epp->message();
  my @d=build_command($mes,['transfer',{'op'=>((Net::DRI::Util::has_key($ep,'approve') && $ep->{approve})? 'approve' : 'reject' )}],$c);
  $mes->command_body(\@d);
+ return;
 }
 
 sub update
@@ -509,6 +523,7 @@ sub update
   push @d,['contact:chg',@c] if @c;
  }
  $mes->command_body(\@d);
+ return;
 }
 
 ####################################################################################################
@@ -542,6 +557,7 @@ sub pandata_parse
    $rinfo->{contact}->{$oname}->{date}=$po->parse_iso8601($c->textContent());
   }
  }
+ return;
 }
 
 ####################################################################################################

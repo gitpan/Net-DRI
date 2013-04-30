@@ -2,7 +2,7 @@
 ## Contributed by Michael Braunoeder from NIC.AT <mib@nic.at>
 ## Extended by Tonnerre Lombard
 ##
-## Copyright (c) 2006-2008,2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006-2008,2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -51,7 +51,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006-2008,2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006-2008,2010,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -82,6 +82,7 @@ sub pollack
  my ($epp,$msgid)=@_;
  my $mes=$epp->message();
  $mes->command([['poll',{op=>'ack',msgID=>$msgid}]]);
+ return;
 }
 
 sub pollreq
@@ -90,6 +91,7 @@ sub pollreq
  Net::DRI::Exception::usererr_invalid_parameters('In EPP, you can not specify the message id you want to retrieve') if defined($msgid);
  my $mes=$epp->message();
  $mes->command([['poll',{op=>'req'}]]);
+ return;
 }
 
 
@@ -205,6 +207,7 @@ sub parse_poll
  }
 
  $rinfo->{message}->{$msgid}->{conditions} = \@conds;
+ return;
 }
 
 ####################################################################################################

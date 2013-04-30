@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Implements a list of host (names+ip) with order preserved
 ##
-## Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2009,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -131,7 +131,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2007,2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2009,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -147,17 +147,18 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $class=shift;
+ my ($class,@args)=@_;
  my $self={ list => [] }; ## list=>[['',[ipv4],[ipv6],{}]+],options=>{}
  bless $self,$class;
- $self->add(@_) if (@_);
+ $self->add(@args) if @args;
  return $self;
 }
 
 sub new_set
 {
- my $s=shift->new();
- foreach (@_) { $s->add($_); }
+ my ($class,@args)=@_;
+ my $s=$class->new();
+ foreach (@args) { $s->add($_); }
  return $s;
 }
 
@@ -165,13 +166,14 @@ sub clear
 {
  my $s=shift;
  $s->{list}=[];
+ return;
 }
 
 sub set
 {
- my $s=shift;
+ my ($s,@args)=@_;
  $s->{list}=[];
- foreach (@_) { $s->add($_); }
+ foreach (@args) { $s->add($_); }
  return $s;
 }
 
@@ -204,10 +206,11 @@ sub add
 
 sub _separate_ips
 {
+ my (@args)=@_;
  my (@ip4,@ip6);
- my $ipall=pop(@_);
- $ipall=0 unless defined($ipall);
- foreach my $ip (map {ref($_)? @{$_} : $_} @_)
+ my $ipall=pop @args;
+ $ipall=0 unless defined $ipall;
+ foreach my $ip (map {ref($_)? @{$_} : $_} @args)
  {
   ## We keep only the public ips
   push @ip4,$ip if Net::DRI::Util::is_ipv4($ip,1-$ipall);
@@ -247,15 +250,16 @@ sub _push
  {
   push @{$self->{list}},[$name,_remove_dups_ip(\@ipv4),_remove_dups_ip(\@ipv6),$rextra];
  }
+ return;
 }
 
 sub _remove_dups_ip
 {
  my $ip=shift;
- my @a;
+ my @r;
  my %tmp;
- @a=ref($ip)? grep { ! $tmp{$_}++ } @$ip : ($ip) if defined $ip;
- return \@a;
+ @r=ref($ip)? grep { ! $tmp{$_}++ } @$ip : ($ip) if defined $ip;
+ return \@r;
 }
 
 ## Give back an array of all hostnames, or up to a limit if provided

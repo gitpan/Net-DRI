@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Whois commands for .SE (RFC3912)
 ##
-## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -50,7 +50,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -75,7 +75,8 @@ sub info
  my ($po,$domain,$rd)=@_;
  my $mes=$po->message();
  Net::DRI::Exception->die(1,'protocol/whois',10,'Invalid domain name: '.$domain) unless Net::DRI::Util::is_hostname($domain);
- $mes->command(lc($domain));
+ $mes->command(lc $domain);
+ return;
 }
 
 sub info_parse
@@ -98,6 +99,7 @@ sub info_parse
  parse_ns($po,$domain,$rr,$rinfo);
  parse_status($po,$domain,$rr,$rinfo);
  parse_registrars($po,$domain,$rr,$rinfo);
+ return;
 }
 
 sub parse_domain
@@ -130,6 +132,7 @@ sub parse_contacts
   $cs->add($c,$type);
  }
  $rinfo->{domain}->{$domain}->{contact}=$cs;
+ return;
 }
 
 sub parse_dates
@@ -142,6 +145,7 @@ sub parse_dates
   next unless (exists($rr->{$s}) && $rr->{$s}->[0] && ($rr->{$s}->[0] ne '-'));
   $rinfo->{domain}->{$domain}->{$type}=$strp->parse_datetime($rr->{$s}->[0]);
  }
+ return;
 }
 
 sub parse_ns
@@ -162,6 +166,7 @@ sub parse_ns
   }
  }
  $rinfo->{domain}->{$domain}->{ns}=$h unless $h->is_empty();
+ return;
 }
 
 sub parse_status
@@ -172,6 +177,7 @@ sub parse_status
  carp('For '.$domain.' new status found, please report: '.join(' ',@s)) if (grep { $_ ne 'ok' } @s);
  $rinfo->{domain}->{$domain}->{status}=Net::DRI::Protocol::EPP::Core::Status->new(\@s) if @s;
  $rinfo->{domain}->{$domain}->{dnssec}=$rr->{'dnssec'}->[0];
+ return;
 }
 
 sub parse_registrars
@@ -179,6 +185,7 @@ sub parse_registrars
  my ($po,$domain,$rr,$rinfo)=@_;
  return unless (exists($rr->{'registrar'}));
  $rinfo->{domain}->{$domain}->{clName}=$rr->{registrar}->[0];
+ return;
 }
 
 ####################################################################################################

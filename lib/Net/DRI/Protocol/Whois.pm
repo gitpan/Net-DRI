@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Whois Protocol (RFC3912)
 ##
-## Copyright (c) 2007-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2007-2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -51,7 +51,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007-2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2007-2010,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -85,7 +85,7 @@ sub new
 sub _load
 {
  my ($self,$tld)=@_;
- $self->SUPER::_load('Net::DRI::Protocol::Whois::Domain::'.$tld);
+ return $self->SUPER::_load('Net::DRI::Protocol::Whois::Domain::'.$tld);
 }
 
 sub transport_default

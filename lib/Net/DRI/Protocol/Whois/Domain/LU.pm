@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Whois commands for .LU (RFC3912)
 ##
-## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -50,7 +50,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -75,7 +75,8 @@ sub info
  my ($po,$domain,$rd)=@_;
  my $mes=$po->message();
  Net::DRI::Exception->die(1,'protocol/whois',10,'Invalid domain name: '.$domain) unless Net::DRI::Util::is_hostname($domain);
- $mes->command(lc($domain));
+ $mes->command(lc $domain);
+ return;
 }
 
 sub info_parse
@@ -98,6 +99,7 @@ sub info_parse
  parse_dates($po,$domain,$rr,$rinfo);
  parse_contacts($po,$domain,$rr,$rinfo);
  parse_registrars($po,$domain,$rr,$rinfo);
+ return;
 }
 
 sub parse_domain
@@ -122,6 +124,7 @@ sub parse_status
  my @s=map { my $s=$_; $s=~s/ACTIVE/ok/; $s; } @{$rr->{'domaintype'}};
  carp('For '.$domain.' new status found, please report: '.join(' ',@s)) if (grep { $_ ne 'ok' } @s);
  $rinfo->{domain}->{$domain}->{status}=Net::DRI::Protocol::EPP::Core::Status->new(\@s) if @s;
+ return;
 }
 
 sub parse_ns
@@ -140,6 +143,7 @@ sub parse_ns
   }
  }
  $rinfo->{domain}->{$domain}->{ns}=$h unless $h->is_empty();
+ return;
 }
 
 sub parse_dates
@@ -147,6 +151,7 @@ sub parse_dates
  my ($po,$domain,$rr,$rinfo)=@_;
  my $strp=$po->build_strptime_parser(pattern => '%d/%m/%Y', time_zone => 'Europe/Luxembourg');
  $rinfo->{domain}->{$domain}->{crDate}=$strp->parse_datetime($rr->{'registered'}->[0]);
+ return;
 }
 
 sub parse_contacts
@@ -173,6 +178,7 @@ sub parse_contacts
  $cs->get('registrant')->type($ot{$type});
 
  $rinfo->{domain}->{$domain}->{contact}=$cs;
+ return;
 }
 
 sub parse_registrars
@@ -182,6 +188,7 @@ sub parse_registrars
  $rinfo->{domain}->{$domain}->{clEmail}=$rr->{'registrar-email'}->[0];
  $rinfo->{domain}->{$domain}->{clWebsite}=$rr->{'registrar-url'}->[0];
  $rinfo->{domain}->{$domain}->{clCountry}=$rr->{'registrar-country'}->[0];
+ return;
 }
 
 ####################################################################################################

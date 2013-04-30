@@ -2,7 +2,7 @@
 ##
 ## Copyright (c) 2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 ## Copyright (c) 2008 Thorsten Glaser for Sygroup GmbH
-##           (c) 2010 Patrick Mevzek <netdri@dotandco.com>
+## Copyright (c) 2010,2013 Patrick Mevzek <netdri@dotandco.com>
 ##                    All rights reserved.
 ##
 ## This file is part of Net::DRI
@@ -53,7 +53,7 @@ Thorsten Glaser
 
 Copyright (c) 2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 Copyright (c) 2008 Thorsten Glaser for Sygroup GmbH
-Copyright (c) 2010 Patrick Mevzek <netdri@dotandco.com>
+Copyright (c) 2010,2013 Patrick Mevzek <netdri@dotandco.com>
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -85,6 +85,7 @@ sub poll
  Net::DRI::Exception::usererr_invalid_parameters('In EPP, you can not specify the message id you want to retrieve') if defined($msgid);
  my $mes=$epp->message();
  $mes->command([['poll',{op=>'req'}]]);
+ return;
 }
 
 sub parse_poll
@@ -183,6 +184,7 @@ sub parse_poll
  }
  $rinfo->{message}->{$msgid}->{object_type} = $otype;
  $rinfo->{$otype}->{$oname}->{message}=$mesdata;
+ return;
 }
 
 ####################################################################################################

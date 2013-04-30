@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Handling of contact data
 ##
-## Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -162,7 +162,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005-2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2010,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -176,16 +176,15 @@ See the LICENSE file that comes with this distribution for more details.
 
 ####################################################################################################
 ## Needed for ContactSet
-sub id { return shift->srid(@_); }
+sub id { my ($self,@args)=@_; return $self->srid(@args); }
 
 sub register_attributes
 {
- my $class=shift;
- my @a=@_;
+ my ($class,@a)=@_;
  __PACKAGE__->mk_accessors(@a);
  no strict 'refs'; ## no critic (ProhibitNoStrict)
  ${$class.'::ATTRS'}=($class eq 'Net::DRI::Data::Contact')? \@a : [ @ATTRS,@a ];
- ${$class.'::ATTRS'};
+ return ${$class.'::ATTRS'};
 }
 
 sub attributes

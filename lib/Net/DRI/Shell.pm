@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Shell interface
 ##
-## Copyright (c) 2008-2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008-2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -18,7 +18,7 @@ use strict;
 use warnings;
 
 use Exporter qw(import);
-our @EXPORT=qw(run);
+our @EXPORT_OK=qw(run);
 
 use Net::DRI;
 use Net::DRI::Util;
@@ -27,7 +27,7 @@ use Term::ReadLine; ## see also Term::Shell
 use Time::HiRes ();
 use IO::Handle ();
 
-our $HISTORY=$ENV{HOME}.'/.drish_history';
+our $HISTORY=(exists $ENV{HOME} && defined $ENV{HOME} && length $ENV{HOME})? $ENV{HOME}.'/.drish_history' : undef;
 
 exit __PACKAGE__->run(@ARGV) if (!caller() || caller() eq 'PAR'); ## This is a modulino :-)
 
@@ -44,11 +44,11 @@ Net::DRI::Shell - Command Line Shell for Net::DRI, with batch features and autoc
  perl -MNet::DRI::Shell -e run
  or
  perl -MNet::DRI::Shell -e 'Net::DRI::Shell->run()'
- or in your programs
+ or in your programs:
  use Net::DRI::Shell;
  Net::DRI::Shell->run();
 
- Welcome to Net::DRI shell, version 1.07
+ Welcome to Net::DRI $version shell, pid $pid
  Net::DRI object created with a cache TTL of 10 seconds and logging into files in current directory
 
  NetDRI> add_registry registry=EURid client_id=YOURID
@@ -464,7 +464,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008-2012 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008-2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -502,7 +502,7 @@ sub run
  $ctx->{dri}=Net::DRI->new({cache_ttl => 10,logging=>['files',{level => 'info',sanitize_data => {session_password => 0}}]});
  output($ctx,"Net::DRI object created with a cache TTL of 10 seconds and logging into files in current directory\n\n");
 
- if (exists $ctx->{term_features}->{readHistory})
+ if (exists $ctx->{term_features}->{readHistory} && defined $HISTORY)
  {
   $term->ReadHistory($HISTORY);
  }
@@ -520,7 +520,7 @@ sub run
   }
  }
 
- if (exists $ctx->{term_features}->{writeHistory})
+ if (exists $ctx->{term_features}->{writeHistory} && defined $HISTORY)
  {
   $term->WriteHistory($HISTORY);
  }
@@ -531,19 +531,22 @@ sub run
 
 sub output
 {
+ my (@args)=@_;
  my $ctx=shift;
- print { $ctx->{output} } @_;
- output_record($ctx,@_);
+ print { $ctx->{output} } @args;
+ output_record($ctx,@args);
+ return;
 }
 
 sub output_record
 {
- my $ctx=shift;
+ my ($ctx,@args)=@_;
  return unless defined($ctx->{record_filehandle});
- return if (@_==1 && ($_[0] eq '.' || $_[0] eq "\n"));
+ return if (@args==1 && ($args[0] eq '.' || $args[0] eq "\n"));
  my $l=$ctx->{last_line};
- print { $ctx->{record_filehandle} } scalar(localtime(time)),"\n\n",(defined($l)? ($l,"\n\n") : ('')),@_,"\n\n";
+ print { $ctx->{record_filehandle} } scalar(localtime(time)),"\n\n",(defined($l)? ($l,"\n\n") : ('')),@args,"\n\n";
  $ctx->{last_line}=undef;
+ return;
 }
 
 sub handle_file
@@ -551,7 +554,7 @@ sub handle_file
  my ($ctx,$file)=@_;
  output($ctx,'Executing commands from file '.$file." :\n");
  $ctx->{completion}->{files}->{$file}=time();
- open(my $ch,'<',$file) or die "Unable to open $file : $!";
+ open(my $ch,'<',$file) or die "Unable to open $file : $!"; ## no critic (InputOutput::RequireBriefOpen)
  while(defined(my $l=<$ch>))
  {
   chomp($l);
@@ -591,6 +594,7 @@ sub handle_line
  if (! $ok)
  {
   my $err=$@;
+  $err='XML error: '.$err->as_string() if ref $err eq 'XML::LibXML::Error';
   output($ctx,"An error happened:\n",ref $err ? $err->msg() : $err,"\n");
  } else
  {
@@ -1045,7 +1049,7 @@ sub record
  if (defined($n) && $n)
  {
   $ctx->{completion}->{files}->{$n}=time();
-  open(my $fh,'>',$n) or return (undef,$m.'Unable to write local file '.$n.' : '.$!);
+  open(my $fh,'>',$n) or return (undef,$m.'Unable to write local file '.$n.' : '.$!); ## no critic (InputOutput::RequireBriefOpen)
   $fh->autoflush(1); ## this is thanks to IO::Handle
   $ctx->{record_filehandle}=$fh;
   $ctx->{record_filename}=$n;
@@ -1116,7 +1120,7 @@ sub do_add_current_profile
  return ($rc,undef);
 }
 
-sub do_add_profile { return do_add_current_profile(@_); }
+sub do_add_profile { return do_add_current_profile(@_); } ## no critic (Subroutines::RequireArgUnpacking)
 
 sub do_show
 {
@@ -1405,9 +1409,7 @@ sub do_contact
 
 sub wrap_command_domain
 {
- my $ctx=shift;
- my $cmd=shift;
- my $dom=shift;
+ my ($ctx,$cmd,$dom,@args)=@_;
  return (undef,'Undefined domain name') unless defined $dom && length $dom;
 
  my ($fin,$fout,$res);
@@ -1415,21 +1417,21 @@ sub wrap_command_domain
  {
   $dom=~s/`(.+)`/$1/;
   $res=$cmd.'.'.$$.'.'.time().'.results'; ## TODO choose a predictable filename ? if so, use an option
-  open($fin,'-|',$dom) or return (undef,'Unable to execute local command '.$dom.' : '.$!);
-  open($fout,'>',$res) or return (undef,'Unable to write (for results) local file '.$res.' : '.$!);
+  open($fin,'-|',$dom) or return (undef,'Unable to execute local command '.$dom.' : '.$!); ## no critic (InputOutput::RequireBriefOpen)
+  open($fout,'>',$res) or return (undef,'Unable to write (for results) local file '.$res.' : '.$!); ## no critic (InputOutput::RequireBriefOpen)
  } elsif ($dom=~m!/!) ## Local file
  {
   return (undef,'Local file '.$dom.' does not exist or unreadable') unless (-e $dom && -r _);
   $res=$dom.'.'.$$.'.'.time().'.results'; ## see above
-  open($fin,'<',$dom)  or return (undef,'Unable to read local file '.$dom.' : '.$!);
-  open($fout,'>',$res) or return (undef,'Unable to write (for results) local file '.$res.' : '.$!);
+  open($fin,'<',$dom)  or return (undef,'Unable to read local file '.$dom.' : '.$!); ## no critic (InputOutput::RequireBriefOpen)
+  open($fout,'>',$res) or return (undef,'Unable to write (for results) local file '.$res.' : '.$!); ## no critic (InputOutput::RequireBriefOpen)
  }
 
  unless (defined $fin && defined $fout) ## Pure unique domain name
  {
   $ctx->{completion}->{domains}->{$dom}=time();
   return (undef,'Invalid domain name: '.$dom) unless Net::DRI::Util::is_hostname($dom);
-  return ($ctx->{dri}->$cmd(lc($dom),@_),undef);
+  return ($ctx->{dri}->$cmd(lc($dom),@args),undef);
  }
 
  my $withinfo=($cmd eq 'domain_check' || $cmd eq 'domain_info')? 1 : 0;
@@ -1442,7 +1444,7 @@ sub wrap_command_domain
   $ctx->{completion}->{domains}->{$l}=time();
   if (Net::DRI::Util::is_hostname($l))
   {
-   my $rc=$ctx->{dri}->$cmd(lc($l),@_);
+   my $rc=$ctx->{dri}->$cmd(lc($l),@args);
    push @r,$rc->as_string(1);
    push @r,$ctx->{dri}->get_info_all() if $withinfo;
   } else
@@ -1507,7 +1509,6 @@ sub build_contactset
 sub build_contact
 {
  my ($ctx,$c,$rh)=@_;
- no strict 'refs'; ## no critic (ProhibitNoStrict)
  while(my ($m,$v)=each(%$rh))
  {
   $c->$m($v);
@@ -1551,6 +1552,7 @@ sub build_auth
  my $rd=shift;
  return unless (exists($rd->{auth}) && ! ref($rd->{auth}));
  $rd->{auth}={ pw => $rd->{auth} };
+ return;
 }
 
 sub build_duration
@@ -1560,12 +1562,13 @@ sub build_duration
  my ($v,$u)=($rd->{duration}=~m/^(\d+)(\S+)$/);
  $rd->{duration}=$ctx->{dri}->local_object('duration','years'  => $v) if ($u=~m/^y(?:ears?)?$/i);
  $rd->{duration}=$ctx->{dri}->local_object('duration','months' => $v) if ($u=~m/^m(?:onths?)?$/i);
+ return;
 }
 
 sub build_update
 {
  my ($ctx,$rd)=@_;
- my (%a,%r);
+ my (%add,%rem);
 
  ## Some normalizations
  foreach my $k (grep { /^[+-]?status$/ } keys(%$rd)) { $rd->{$k}=build_status($ctx,ref $rd->{$k} ? $rd->{$k} : [ $rd->{$k} ]); }
@@ -1591,16 +1594,16 @@ sub build_update
  ## Now split in two hashes
  foreach my $k (grep { /^\+/ } keys(%$rd))
  {
-  $a{substr($k,1)}=$rd->{$k};
+  $add{substr($k,1)}=$rd->{$k};
   delete($rd->{$k});
  }
  foreach my $k (grep { /^-/ } keys(%$rd))
  {
-  $r{substr($k,1)}=$rd->{$k};
+  $rem{substr($k,1)}=$rd->{$k};
   delete($rd->{$k});
  }
 
- return (\%a,\%r,$rd);
+ return (\%add,\%rem,$rd);
 }
 
 sub pretty_string

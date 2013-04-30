@@ -1,6 +1,6 @@
 ## Domain Registry Interface, CentralNic Registry Driver
 ##
-## Copyright (c) 2008-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008-2011,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -52,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008-2011 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008-2011,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -77,7 +77,12 @@ sub new
 
 sub periods      { return map { DateTime::Duration->new(years => $_) } (2..10); }
 sub name         { return 'CentralNic'; }
-sub tlds         { return (qw/la uk.net se.net gb.net/,map { $_.'.com' } qw/eu uk us cn de jpn kr no za br ar ru sa se hu gb qc uy ae gr/); } ## see https://www.centralnic.com/names/domains
+sub tlds         { return (qw/la pw com.de/,
+                           (map { $_.'.org' } qw/us ae/),
+                           (map { $_.'.net' } qw/uk se gb jp hu/),
+                           (map { $_.'.com' } qw/eu uk us cn de jpn kr no za br ar ru sa se hu gb qc uy gr/)
+                          ); } ## see https://www.centralnic.com/portfolio/domains/registration
+
 sub object_types { return ('domain','ns','contact'); }
 sub profile_types { return qw/epp/; }
 

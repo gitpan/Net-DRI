@@ -1,6 +1,6 @@
 ## Domain Registry Interface, OVH Web Services Connection handling
 ##
-## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -15,6 +15,7 @@
 package Net::DRI::Protocol::OVH::WS::Connection;
 
 use strict;
+use warnings;
 
 =pod
 

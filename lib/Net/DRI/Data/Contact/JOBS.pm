@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Handling of contact data for .JOBS
 ##
-## Copyright (c) 2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+## Copyright (c) 2008,2013 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 ##                    All rights reserved.
 ##
 ## This file is part of Net::DRI
@@ -16,6 +16,8 @@
 package Net::DRI::Data::Contact::JOBS;
 
 use strict;
+use warnings;
+
 use base qw/Net::DRI::Data::Contact/;
 
 __PACKAGE__->register_attributes(qw(jobinfo));
@@ -75,7 +77,7 @@ Tonnerre Lombard E<lt>tonnerre.lombard@sygroup.chE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+Copyright (c) 2008,2013 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

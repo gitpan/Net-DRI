@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP DNS Security Extensions (RFC4310 & RFC5910)
 ##
-## Copyright (c) 2005-2010,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2010,2012-2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -48,7 +48,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005-2010,2012 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2010,2012-2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -83,7 +83,8 @@ sub capabilities_add { return (['domain_update','secdns',['add','del','set']],['
 sub setup
 {
  my ($class,$po,$version)=@_;
- $po->ns({ 'secdns' => [ 'urn:ietf:params:xml:ns:secDNS-1.0','secDNS-1.0.xsd' ] }); ## this will get bumped to secDNS-1.1 after login if server supports it, until all registry servers have been upgraded to 1.1
+ $po->ns({ 'secDNS' => [ 'urn:ietf:params:xml:ns:secDNS-1.0','secDNS-1.0.xsd' ] }); ## this will get bumped to secDNS-1.1 after login if server supports it, until all registry servers have been upgraded to 1.1
+ return;
 }
 
 ####################################################################################################
@@ -93,7 +94,7 @@ sub format_dsdata
  my ($e,$nomsl)=@_;
 
  my @mk=grep { ! Net::DRI::Util::has_key($e,$_) } qw/keyTag alg digestType digest/;
- Net::DRI::Exception::usererr_insufficient_parameters('Attributes missing: '.join(@mk)) if @mk;
+ Net::DRI::Exception::usererr_insufficient_parameters('Attributes missing: '.join(' ',@mk)) if @mk;
  Net::DRI::Exception::usererr_invalid_parameters('keyTag must be 16-bit unsigned integer: '.$e->{keyTag}) unless Net::DRI::Util::verify_ushort($e->{keyTag});
  Net::DRI::Exception::usererr_invalid_parameters('alg must be an unsigned byte: '.$e->{alg}) unless Net::DRI::Util::verify_ubyte($e->{alg});
  Net::DRI::Exception::usererr_invalid_parameters('digestType must be an unsigned byte: '.$e->{digestType}) unless Net::DRI::Util::verify_ubyte($e->{digestType});
@@ -125,7 +126,7 @@ sub format_keydata
  my ($e)=@_;
 
  my @mk=grep { ! Net::DRI::Util::has_key($e,$_) } qw/key_flags key_protocol key_alg key_pubKey/;
- Net::DRI::Exception::usererr_insufficient_parameters('Attributes missing: '.join(@mk)) if @mk;
+ Net::DRI::Exception::usererr_insufficient_parameters('Attributes missing: '.join(' ',@mk)) if @mk;
 
  Net::DRI::Exception::usererr_invalid_parameters('key_flags mut be a 16-bit unsigned integer: '.$e->{key_flags}) unless Net::DRI::Util::verify_ushort($e->{key_flags});
  Net::DRI::Exception::usererr_invalid_parameters('key_protocol must be an unsigned byte: '.$e->{key_protocol}) unless Net::DRI::Util::verify_ubyte($e->{key_protocol});
@@ -151,12 +152,13 @@ sub parse_greeting
  ## If server supports secDNS-1.1 we switch to it completely
  if (grep { m/1\.1/ } @v)
  {
-  $po->ns({ 'secdns' => [ 'urn:ietf:params:xml:ns:secDNS-1.1','secDNS-1.1.xsd' ] });
+  $po->ns({ 'secDNS' => [ 'urn:ietf:params:xml:ns:secDNS-1.1','secDNS-1.1.xsd' ] });
   $rs->{extensions_selected}=[ grep { ! m/^urn:ietf:params:xml:ns:secDNS-1.0$/ } @{$rs->{extensions_selected}} ] if grep { m/1\.0/ } @v;
  } else
  {
-  $po->ns({ 'secdns' => [ 'urn:ietf:params:xml:ns:secDNS-1.0','secDNS-1.0.xsd' ] });
+  $po->ns({ 'secDNS' => [ 'urn:ietf:params:xml:ns:secDNS-1.0','secDNS-1.0.xsd' ] });
  }
+ return;
 }
 
 ####################################################################################################
@@ -193,6 +195,7 @@ sub parse_keydata
    $rn->{'key_'.$1}=$c->textContent();
   }
  }
+ return;
 }
 
 sub info_parse
@@ -201,15 +204,15 @@ sub info_parse
  my $mes=$po->message();
  return unless $mes->is_success();
 
- my $infdata=$mes->get_extension($mes->ns('secdns'),'infData');
+ my $infdata=$mes->get_extension($mes->ns('secDNS'),'infData');
  return unless defined $infdata;
 
  my @d;
- my $ns=$mes->ns('secdns');
+ my $ns=$mes->ns('secDNS');
 
  if ($ns=~m/1\.0/)
  {
-  @d=map { parse_dsdata($_) } ($infdata->getChildrenByTagNameNS($mes->ns('secdns'),'dsData'));
+  @d=map { parse_dsdata($_) } ($infdata->getChildrenByTagNameNS($mes->ns('secDNS'),'dsData'));
  } else ## secDNS-1.1
  {
   my $msl;
@@ -235,6 +238,7 @@ sub info_parse
  }
 
  $rinfo->{domain}->{$oname}->{secdns}=\@d;
+ return;
 }
 
 ############ Transform commands
@@ -248,9 +252,9 @@ sub create
  Net::DRI::Exception::usererr_invalid_parameters('secdns value must be an array reference with key data') unless ref $rd->{secdns} eq 'ARRAY';
  return unless @{$rd->{secdns}};
 
- my $eid=$mes->command_extension_register('secDNS:create',sprintf('xmlns:secDNS="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('secdns')));
+ my $eid=$mes->command_extension_register('secDNS','create');
  my @n;
- if ($mes->ns('secdns')=~m/1\.0/)
+ if ($mes->ns('secDNS')=~m/1\.0/)
  {
   @n=map { ['secDNS:dsData',format_dsdata($_,0)] } (@{$rd->{secdns}});
  } else ## secDNS-1.1
@@ -259,6 +263,7 @@ sub create
   push @n,add_interfaces($rd->{secdns});
  }
  $mes->command_extension($eid,\@n);
+ return;
 }
 
 sub add_maxsiglife
@@ -298,11 +303,11 @@ sub update
  my @def=grep { defined } ($toadd,$todel,$toset);
  return unless @def; ## no updates asked
 
- my $ver=(grep { /-1\.1$/ } $mes->ns('secdns'))? '1.1' : '1.0';
+ my $ver=(grep { /-1\.1$/ } $mes->ns('secDNS'))? '1.1' : '1.0';
  Net::DRI::Exception::usererr_invalid_parameters('In SecDNS-1.0, only add or del or chg is possible, not more than one of them') if ($ver eq '1.0' && @def>1);
 
  my $urg=(defined $urgent && $urgent)? 'urgent="1" ' : '';
- my $eid=$mes->command_extension_register('secDNS:update',$urg.sprintf('xmlns:secDNS="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('secdns')));
+ my $eid=$mes->command_extension_register('secDNS','update',defined $urgent && $urgent ? { urgent => 1 } : {});
 
  my @n;
 
@@ -339,6 +344,7 @@ sub update
  }
 
  $mes->command_extension($eid,\@n);
+ return;
 }
 
 ####################################################################################################

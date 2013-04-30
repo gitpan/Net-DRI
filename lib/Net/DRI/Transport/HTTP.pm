@@ -1,6 +1,6 @@
 ## Domain Registry Interface, HTTP/HTTPS Transport
 ##
-## Copyright (c) 2008-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008-2011,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -107,7 +107,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008-2011 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008-2011,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -132,7 +132,7 @@ sub new
  my %t=(message_factory => $po->factories()->{message});
  Net::DRI::Exception::usererr_insufficient_parameters('protocol_connection') unless (exists($opts{protocol_connection}) && $opts{protocol_connection});
  $t{pc}=$opts{protocol_connection};
- $t{pc}->require() or Net::DRI::Exception::err_failed_load_module('transport/http',$t{pc},$@);
+ Net::DRI::Util::load_module($t{pc},'transport/http');
  if ($t{pc}->can('transport_default'))
  {
   %opts=($t{pc}->transport_default('http'),%opts);
@@ -212,6 +212,7 @@ sub send_login
  $self->log_output('notice','transport',$ctx,{trid=>$cltrid,phase=>'opening',direction=>'in',message=>$dr});
  my $rc2=$pc->parse_login($dr); ## gives back a Net::DRI::Protocol::ResultStatus
  die($rc2) unless $rc2->is_success();
+ return;
 }
 
 sub open_connection
@@ -231,6 +232,7 @@ sub open_connection
  $self->time_open(time());
  $self->time_used(time());
  $self->transport_data()->{exchanges_done}=0;
+ return;
 }
 
 sub send_logout
@@ -249,6 +251,7 @@ sub send_logout
  $self->log_output('notice','transport',{otype=>'session',oaction=>'logout'},{trid=>$cltrid,phase=>'closing',direction=>'in',message=>$dr});
  my $rc1=$pc->parse_logout($dr);
  die($rc1) unless $rc1->is_success();
+ return;
 }
 
 sub close_connection
@@ -257,6 +260,7 @@ sub close_connection
  $self->send_logout() if ($self->has_state() && $self->current_state());
  $self->transport_data()->{ua}->cookie_jar({});
  $self->current_state(0);
+ return;
 }
 
 sub end
@@ -272,12 +276,13 @@ sub end
   };
   alarm(0); ## since close_connection may die, this must be outside of eval to be executed in all cases
  }
+ return;
 }
 
-sub send
+sub send ## no critic (Subroutines::ProhibitBuiltinHomonyms)
 {
  my ($self,$ctx,$tosend)=@_;
- $self->SUPER::send($ctx,$tosend,\&_http_send,sub {});
+ return $self->SUPER::send($ctx,$tosend,\&_http_send,sub {});
 }
 
 sub _http_send

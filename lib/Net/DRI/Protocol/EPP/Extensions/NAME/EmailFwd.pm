@@ -1,7 +1,7 @@
 ## Domain Registry Interface, EPP Email forwarding extension commands
 ## (based on .NAME Technical Accreditation Guide v3.03)
 ##
-## Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
+## Copyright (c) 2007,2008,2013 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -16,6 +16,7 @@
 package Net::DRI::Protocol::EPP::Extensions::NAME::EmailFwd;
 
 use strict;
+use warnings;
 
 use Net::DRI::Util;
 use Net::DRI::Exception;
@@ -52,7 +53,7 @@ Tonnerre Lombard, E<lt>tonnerre.lombard@sygroup.chE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+Copyright (c) 2007,2008,2013 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -138,6 +139,7 @@ sub check
  my $mes=$epp->message();
  my @d=build_command($epp,$mes,'check', { name => $info });
  $mes->command_body(\@d);
+ return;
 }
 
 sub check_parse
@@ -167,6 +169,7 @@ sub check_parse
    }
   } continue { $c = $c->getNextSibling(); }
  }
+ return;
 }
 
 sub info
@@ -175,6 +178,7 @@ sub info
  my $mes = $epp->message();
  my @d = build_command($epp,$mes,'info',{ name => $mail });
  $mes->command_body(\@d);
+ return;
 }
 
 sub info_parse
@@ -187,7 +191,7 @@ sub info_parse
  return unless $infdata;
 
  my $nm;
- my $cs = new Net::DRI::Data::ContactSet;
+ my $cs = Net::DRI::Data::ContactSet->new();
  my $info = {};
  my $ginfo = {};
 
@@ -212,13 +216,13 @@ sub info_parse
   }
   elsif (grep { $_ eq $name } qw/crDate upDate trDate exDate/)
   {
-   $ginfo->{$name} = (new DateTime::Format::ISO8601())->
+   $ginfo->{$name} = DateTime::Format::ISO8601()->new()->
    	parse_datetime($c->getFirstChild()->getData());
   }
   elsif (grep { $_ eq $name } qw/registrant contact/)
   {
    my $type = $c->getAttribute('type') || 'registrant';
-   $cs->add((new Net::DRI::Data::Contact())->
+   $cs->add(Net::DRI::Data::Contact()->new()->
    	srid($c->getFirstChild()->getData()), $type);
   }
   elsif ($name eq 'authInfo')
@@ -235,6 +239,7 @@ sub info_parse
  $ginfo->{action} = 'info';
  $ginfo->{self} = $info;
  $rinfo->{emailFwd}->{$nm} = $ginfo;
+ return;
 }
 
 ############ Transform commands
@@ -247,14 +252,16 @@ sub create
  $info->{name} = $mail;
  @d = build_command($epp,$mes,'create',$info);
  $mes->command_body(\@d);
+ return;
 }
 
-sub delete
+sub delete ## no critic (Subroutines::ProhibitBuiltinHomonyms)
 {
  my ($epp,$mail)=@_;
  my $mes=$epp->message();
  my @d=build_command($epp,$mes,'delete',{ name => $mail });
  $mes->command_body(\@d);
+ return;
 }
 
 sub update
@@ -273,6 +280,7 @@ sub update
  my @d=build_command($epp,$mes,'update',$hosts);
  push @d,add_nsname($ns);
  $mes->command_body(\@d);
+ return;
 }
 
 sub renew
@@ -291,6 +299,7 @@ sub renew
 
  my @d = build_command($epp,$mes,'renew',$info);
  $mes->command_body(\@d);
+ return;
 }
 
 ####################################################################################################

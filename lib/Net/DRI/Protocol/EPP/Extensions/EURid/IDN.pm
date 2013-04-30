@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EURid IDN EPP extension commands
 ##
-## Copyright (c) 2010,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2010,2012,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -40,6 +40,7 @@ sub setup
 {
  my ($class,$po,$version)=@_;
  $po->ns({ 'idn' => [ 'http://www.eurid.eu/xml/epp/idn-1.0','idn-1.0.xsd' ] });
+ return;
 }
 
 ####################################################################################################
@@ -67,6 +68,7 @@ sub _parse
  return unless defined $data;
 
  ($rinfo->{domain}->{$oname}->{ace},$rinfo->{domain}->{$oname}->{unicode})=@{(get_names($mes,$data))[0]};
+ return;
 }
 
 sub check_parse
@@ -85,6 +87,7 @@ sub check_parse
   $rinfo->{domain}->{$dom}->{ace}=$a;
   $rinfo->{domain}->{$dom}->{unicode}=$u;
  }
+ return;
 }
 
 ####################################################################################################
@@ -121,7 +124,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2010,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+Copyright (c) 2010,2012,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

@@ -2,8 +2,7 @@
 
 use strict;
 use warnings;
-
-use encoding "iso-8859-15";
+use utf8;
 
 use Net::DRI::Data::Contact;
 
@@ -45,9 +44,9 @@ is($s->has_int(),1,'street() has_int (double set)');
 
 
 $s=Net::DRI::Data::Contact->new();
-$s->org('Something é');
+$s->org('Something Ã©');
 $s->loc2int();
-is_deeply([$s->org()],['Something é','Something ?'],'loc2int()');
+is_deeply([$s->org()],['Something Ã©','Something ?'],'loc2int()');
 $s->int2loc();
 is_deeply([$s->org()],['Something ?','Something ?'],'int2loc()');
 

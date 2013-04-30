@@ -1,6 +1,6 @@
 ## Domain Registry Interface, ARNES (.SI) Contact EPP extension commands
 ##
-## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -15,6 +15,7 @@
 package Net::DRI::Protocol::EPP::Extensions::ARNES::Contact;
 
 use strict;
+use warnings;
 
 =pod
 
@@ -91,6 +92,7 @@ sub create
  push @n,['dnssi:EMSO',$contact->emso()] if $contact->emso();
  my $eid=build_command_extension($mes,$epp,'dnssi:ext');
  $mes->command_extension($eid,[['dnssi:create'],\@n]);
+ return;
 }
 
 sub info_parse
@@ -123,6 +125,7 @@ sub info_parse
    $co->emso($c->textContent());
   }
  } continue { $c=$c->getNextSibling(); }
+ return;
 }
 
 ####################################################################################################

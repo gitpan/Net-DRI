@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Logging into files
 ##
-## Copyright (c) 2009,2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2009,2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -44,7 +44,7 @@ sub setup_channel
  my $name=$self->generate_filename($type,$data);
  if (exists $self->{fh}->{$name}) { return; }
  my $fh;
- open $fh,'>>',$name or Net::DRI::Exception->die(0,'logging',3,'File '.$name.' can not be open for writing: '.$!);
+ open $fh,'>>',$name or Net::DRI::Exception->die(0,'logging',3,'File '.$name.' can not be open for writing: '.$!); ## no critic (InputOutput::RequireBriefOpen)
  $fh->autoflush(1); ## this is possible thanks to IO::Handle
  $self->{fh}->{$name}=$fh;
  return;
@@ -166,7 +166,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright (c) 2009,2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+Copyright (c) 2009,2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

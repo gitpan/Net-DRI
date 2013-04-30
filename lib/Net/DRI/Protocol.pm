@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Protocol superclass
 ##
-## Copyright (c) 2005-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2011,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -61,7 +61,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005-2011 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2011,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -105,7 +105,7 @@ sub log_output
 {
  my ($self,$level,$type,$data1)=@_;
  $self->{logging_ctx}->{protocol}=$self->name().'/'.$self->version() if (! exists $self->{logging_ctx}->{protocol} && defined $self->name());
- return $self->logging()->output($level,$type,ref $data1 ? { %{$self->{logging_ctx}}, %$data1 } : $data1);
+ return $self->logging()->output($level,$type,ref $data1 ? +{ %{$self->{logging_ctx}}, %$data1 } : $data1);
 }
 
 
@@ -118,34 +118,33 @@ sub parse_iso8601
 
 sub build_strptime_parser
 {
- my $self=shift;
- my $key=join('|',@_);
- $self->{strptime_parser}->{$key}=DateTime::Format::Strptime->new(@_) unless exists $self->{strptime_parser}->{$key};
+ my ($self,@args)=@_;
+ my $key=join("\x{001E}",@args);
+ $self->{strptime_parser}->{$key}=DateTime::Format::Strptime->new(@args) unless exists $self->{strptime_parser}->{$key};
  return $self->{strptime_parser}->{$key};
 }
 
 sub create_local_object
 {
- my $self=shift;
- my $what=shift;
+ my ($self,$what,@args)=@_;
  return unless defined $self && defined $what;
  my $fn=$self->factories();
  return unless (defined($fn) && ref($fn) && exists($fn->{$what}) && (ref($fn->{$what}) eq 'CODE'));
- return $fn->{$what}->(@_);
+ return $fn->{$what}->(@args);
 }
 
 ## This should not be called multiple times for a given Protocol class (as it will erase the loaded_modules slot)
 sub _load
 {
- my $self=shift;
+ my ($self,@classes)=@_;
  my $etype='protocol/'.$self->name();
  my $version=$self->version();
 
  my (%c,%done,@done);
- foreach my $class (@_)
+ foreach my $class (@classes)
  {
   next if exists($done{$class});
-  $class->require or Net::DRI::Exception::err_failed_load_module($etype,$class,$@);
+  Net::DRI::Util::load_module($class,$etype);
   Net::DRI::Exception::method_not_implemented('register_commands',$class) unless $class->can('register_commands');
   my $rh=$class->register_commands($version);
   $self->{commands_by_class}->{$class}=$rh;

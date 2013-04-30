@@ -1,7 +1,7 @@
 ## Domain Registry Interface, CentralNic DNS TTL EPP extension
 ## (http://labs.centralnic.com/epp/ext/ttl.php)
 ##
-## Copyright (c) 2007,2008,2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2007,2008,2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -50,7 +50,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007,2008,2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2007,2008,2010,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -90,6 +90,7 @@ sub info_parse
  return unless @secs;
 
  $rinfo->{domain}->{$oname}->{ttl}=DateTime::Duration->new(seconds => $secs[0]->textContent());
+ return;
 }
 
 ############ Transform commands
@@ -104,6 +105,7 @@ sub create
  my $eid=$mes->command_extension_register('ttl:create',sprintf('xmlns:ttl="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('ttl')));
  my @n=(['ttl:secs',ref($rd->{ttl})? $rd->{ttl}->in_units('seconds') : $rd->{ttl}]);
  $mes->command_extension($eid,\@n);
+ return;
 }
 
 sub update
@@ -117,6 +119,7 @@ sub update
  my $eid=$mes->command_extension_register('ttl:update',sprintf('xmlns:ttl="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('ttl')));
  my @n=(['ttl:secs',ref($toset)? $toset->in_units('seconds') : $toset]);
  $mes->command_extension($eid,\@n);
+ return;
 }
 
 ####################################################################################################

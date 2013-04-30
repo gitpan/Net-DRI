@@ -1,7 +1,7 @@
 ## Domain Registry Interface, .AT policy
 ## Contributed by Michael Braunoeder from NIC.AT <mib@nic.at>
 ##
-## Copyright (c) 2006-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006-2011,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -54,7 +54,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006-2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006-2011,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -96,6 +96,7 @@ sub set_factories
 {
  my ($self,$po)=@_;
  $po->factories('contact',sub { return Net::DRI::Data::Contact::AT->new(@_); });
+ return;
 }
 
 ####################################################################################################

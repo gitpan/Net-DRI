@@ -1,7 +1,7 @@
 ## Domain Registry Interface, OpenSRS XCP Domain commands
 ##
 ## Copyright (c) 2008-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
-##           (c) 2012 Dmitry Belyavsky <beldmit@gmail.com>. All rights reserved.
+##           (c) 2012-2013 Dmitry Belyavsky <beldmit@gmail.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -50,7 +50,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 =head1 COPYRIGHT
 
 Copyright (c) 2008-2011 Patrick Mevzek <netdri@dotandco.com>.
-          (c) 2012 Dmitry Belyavsky <beldmit@gmail.com>.
+          (c) 2012-2013 Dmitry Belyavsky <beldmit@gmail.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -90,6 +90,7 @@ sub build_msg_cookie
  my %r=(action=>$action,object=>'domain',cookie=>$cookie);
  $r{registrant_ip}=$regip if defined($regip);
  $msg->command(\%r);
+ return;
 }
 
 sub info
@@ -100,6 +101,7 @@ sub info
  build_msg_cookie($msg,'get',$rd->{cookie},$rd->{registrant_ip});
  my $info_type=exists $rd->{type} ? $rd->{type} : 'all_info';
  $msg->command_attributes({type => $info_type});
+ return;
 }
 
 sub info_parse
@@ -155,6 +157,7 @@ sub info_parse
   next unless exists $ra->{$opensrs_status};
   $rinfo->{domain}->{$oname}->{$opensrs_status}=$ra->{$opensrs_status};
  }
+ return;
 }
 
 sub parse_contact
@@ -185,6 +188,7 @@ sub check
  $r{registrant_ip}=$rd->{registrant_ip} if exists $rd->{registrant_ip};
  $msg->command(\%r);
  $msg->command_attributes({domain => $domain});
+ return;
 }
 
 sub check_parse
@@ -197,6 +201,7 @@ sub check_parse
  my $ra=$mes->response_attributes();
  $rinfo->{domain}->{$oname}->{exist}=(exists $ra->{status} && defined($ra->{status}) && $ra->{status} eq 'available' && $mes->response_code()==210)? 0 : 1;
  $rinfo->{domain}->{$oname}->{exist_reason}=$mes->response_text();
+ return;
 }
 
 sub create
@@ -204,6 +209,7 @@ sub create
  my ($xcp,$domain,$rd)=@_;
 
  sw_register($xcp, $domain, $rd, 'new'); # TBD: premium, sunrise, whois_privacy
+ return;
 }
 
 sub create_parse
@@ -217,6 +223,7 @@ sub create_parse
  foreach (qw/admin_email cancelled_orders error id queue_request_id forced_pending whois_privacy/) {
   $rinfo->{domain}->{$oname}->{$_} = $ra->{$_} if exists $ra->{$_};
  }
+ return;
 }
 
 sub sw_register
@@ -277,6 +284,7 @@ sub sw_register
  $msg->command_attributes($attr);
 
  add_all_ns($domain,$msg,$rd->{ns});
+ return;
 }
 
 sub update
@@ -324,6 +332,7 @@ sub update
   $attr->{contact_set} = \%contact_set;
   $attr->{types} = $types;
  }
+ return;
 }
 
 sub add_contact_info
@@ -361,6 +370,7 @@ sub add_owner_contact
  my ($msg,$cs)=@_;
  my $co=$cs->get('registrant');
  return add_contact_info($msg,$co) if Net::DRI::Util::isa_contact($co);
+ return;
 }
 
 sub add_admin_contact
@@ -368,6 +378,7 @@ sub add_admin_contact
  my ($msg,$cs)=@_;
  my $co=$cs->get('admin');
  return add_contact_info($msg,$co) if Net::DRI::Util::isa_contact($co);
+ return;
 }
 
 sub add_billing_contact
@@ -375,6 +386,7 @@ sub add_billing_contact
  my ($msg,$cs)=@_;
  my $co=$cs->get('billing');
  return add_contact_info($msg,$co) if Net::DRI::Util::isa_contact($co);
+ return;
 }
 
 sub add_tech_contact
@@ -382,6 +394,7 @@ sub add_tech_contact
  my ($msg,$cs)=@_;
  my $co=$cs->get('tech');
  return add_contact_info($msg,$co) if Net::DRI::Util::isa_contact($co);
+ return;
 }
 
 sub add_all_ns
@@ -403,9 +416,10 @@ sub add_all_ns
   $attr->{nameserver_list} =  \@nslist;
  }
  $msg->command_attributes($attr);
+ return;
 }
 
-sub delete
+sub delete ## no critic (Subroutines::ProhibitBuiltinHomonyms)
 {
  my ($xcp,$domain,$rd)=@_;
  my $msg=$xcp->message();
@@ -419,6 +433,7 @@ sub delete
  my $attr = {domain => $domain, reseller => $rd->{reseller_id}};
  $attr->{notes} = $rd->{notes} if Net::DRI::Util::has_key($rd, 'notes');
  $msg->command_attributes({domain => $domain, reseller => $rd->{reseller_id}});
+ return;
 }
 
 sub delete_parse
@@ -432,6 +447,7 @@ sub delete_parse
  foreach (qw/charge price/) {
   $rinfo->{domain}->{$oname}->{$_} = $ra->{$_} if exists $ra->{$_};
  }
+ return;
 }
 
 sub renew
@@ -463,6 +479,7 @@ sub renew
 
  $msg->command(\%r);
  $msg->command_attributes($attr);
+ return;
 }
 
 sub renew_parse
@@ -479,6 +496,7 @@ sub renew_parse
  my ($k,$v)=('registration expiration date', 'exDate');
  $ra->{$k}=~s/\s+/T/; ## with a little effort we become ISO8601
  $rinfo->{domain}->{$oname}->{$v}=$xcp->parse_iso8601($ra->{$k});
+ return;
 }
 
 sub transfer_request
@@ -486,6 +504,7 @@ sub transfer_request
  my ($xcp,$domain,$rd)=@_;
 
  sw_register($xcp, $domain, $rd, 'transfer');
+ return;
 }
 
 sub transfer_request_parse
@@ -499,6 +518,7 @@ sub transfer_request_parse
  foreach (qw/admin_email cancelled_orders error id queue_request_id forced_pending whois_privacy/) {
   $rinfo->{domain}->{$oname}->{$_} = $ra->{$_} if exists $ra->{$_};
  }
+ return;
 }
 
 sub transfer_query
@@ -511,6 +531,7 @@ sub transfer_query
 
  $msg->command(\%r);
  $msg->command_attributes({domain => $domain, check_status => 1, get_request_address => 1}); # TBD: usable for checking transferability
+ return;
 }
 
 sub transfer_query_parse
@@ -524,6 +545,7 @@ sub transfer_query_parse
  foreach (qw/transferrable status request_address timestamp unixtime reason type noservice/) {
   $rinfo->{domain}->{$oname}->{$_} = $ra->{$_} if exists $ra->{$_};
  }
+ return;
 }
 
 sub transfer_cancel
@@ -538,6 +560,7 @@ sub transfer_cancel
 
  $msg->command(\%r);
  $msg->command_attributes({domain => $domain, reseller => $rd->{reseller_id}}); # TBD: optional order ID
+ return;
 }
 
 sub transfer_cancel_parse
@@ -548,6 +571,7 @@ sub transfer_cancel_parse
 
  $rinfo->{domain}->{$oname}->{action}='cancel_transfer';
  # This response has no attributes to capture
+ return;
 }
 
 sub is_mine
@@ -559,6 +583,7 @@ sub is_mine
 
  $msg->command ({ action => 'belongs_to_rsp' });
  $msg->command_attributes ({ domain => $domain });
+ return;
 }
 
 sub is_mine_parse
@@ -580,6 +605,7 @@ sub is_mine_parse
   $d=~s/\s+/T/; ## with a little effort we become ISO8601
   $rinfo->{domain}->{$oname}->{exDate}=$xcp->parse_iso8601($d);
  }
+ return;
 }
 
 sub send_authcode
@@ -589,6 +615,7 @@ sub send_authcode
  my %r=(action=>'send_authcode',object=>'domain');
  $msg->command(\%r);
  $msg->command_attributes({domain_name => $domain});
+ return;
 }
 
 ####################################################################################################

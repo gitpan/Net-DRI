@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Superclass of all Transport/* modules (hence virtual class, never used directly)
 ##
-## Copyright (c) 2005-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2011,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -74,7 +74,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005-2011 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2011,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -144,6 +144,7 @@ sub parse_ssl_options
  }
 
  $s{SSL_cipher_list}=exists $ropts->{ssl_cipher_list} ? $ropts->{ssl_cipher_list} : 'SSLv3:TLSv1:!aNULL:!eNULL';
+ $s{SSL_hostname}=$ropts->{ssl_hostname} if exists $ropts->{ssl_hostname}; # defaults to servers hostname, set blank to disable SNI
 
  return \%s;
 }
@@ -171,7 +172,7 @@ sub protocol_parse
  return $rc;
 }
 
-sub send
+sub send ## no critic (Subroutines::ProhibitBuiltinHomonyms)
 {
  my ($self,$ctx,$tosend,$cb1,$cb2,$count)=@_; ## $cb1=how to send, $cb2=how to test if fatal (to break loop) or not (retry once more)
  Net::DRI::Exception::err_insufficient_parameters() unless ($cb1 && (ref($cb1) eq 'CODE'));
@@ -185,6 +186,7 @@ sub send
  $self->time_used(time());
 
  Net::DRI::Exception->die(0,'transport',4,'Unable to send message to registry') unless $ok;
+ return;
 }
 
 sub receive
@@ -207,14 +209,14 @@ sub try_again ## TO BE SUBCLASSED
  return ($istimeout && ($count <= $self->{retry}))? 1 : 0;
 }
 
-sub open_connection
+sub open_connection ## no critic (Subroutines::RequireFinalReturn)
 {
  my ($self,$ctx)=@_;
  return unless $self->has_state();
  Net::DRI::Exception::method_not_implemented('open_connection',$self);
 }
 
-sub end
+sub end ## no critic (Subroutines::RequireFinalReturn)
 {
  my ($self,$ctx)=@_;
  return unless $self->has_state();
@@ -223,7 +225,7 @@ sub end
 
 ####################################################################################################
 ## Pass a true value if you want the connection to be automatically redone if the ping failed
-sub ping
+sub ping ## no critic (Subroutines::RequireFinalReturn)
 {
  my ($self,$autorecon)=@_;
  return unless $self->has_state();

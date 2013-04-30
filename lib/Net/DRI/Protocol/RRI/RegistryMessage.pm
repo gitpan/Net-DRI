@@ -1,7 +1,7 @@
 ## Domain Registry Interface, RRI Registry messages commands (DENIC-11)
 ##
-## Copyright (c) 2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
-##                    All rights reserved.
+## Copyright (c) 2008,2012 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
+##           (c) 2013 Michael Holloway <michael@thedarkwinter.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -16,6 +16,7 @@
 package Net::DRI::Protocol::RRI::RegistryMessage;
 
 use strict;
+use warnings;
 
 use DateTime::Format::ISO8601 ();
 
@@ -49,7 +50,7 @@ Tonnerre Lombard, E<lt>tonnerre.lombard@sygroup.chE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
+Copyright (c) 2008,2013 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -79,6 +80,7 @@ sub pollack
  my ($rri, $msgid) = @_;
  my $mes = $rri->message();
  $mes->command(['msg', 'delete', $mes->ns->{msg}->[0], {msgid => $msgid}]);
+ return;
 }
 
 sub pollreq
@@ -88,6 +90,7 @@ sub pollreq
  my $mes = $rri->message();
  $mes->command(['msg', 'queue-read', $mes->ns->{msg}->[0]]);
  $mes->cltrid(undef);
+ return;
 }
 
 ## We take into account all parse functions, to be able to parse any result
@@ -100,73 +103,59 @@ sub parse_poll
  return unless ($msgdata);
 
  my $msgid = $msgdata->getAttribute('msgid');
+ return unless (defined($msgid) && $msgid);
+ $rinfo->{message}->{session}->{last_id}=$msgid; ## needed here and not lower below, in case of pure text registry message
+ 
  my $rd = {};
- if (defined($msgid) && $msgid)
- {
-  $rinfo->{message}->{session}->{last_id} = $msgid;
-  $rd = $rinfo->{message}->{$msgid}; ## already partially filled by Message::parse()
- }
-
  $rd->{id} = $msgid;
+
  $rd->{lang} = 'en';
- $rd->{qdate} = DateTime::Format::ISO8601->new()->
-	parse_datetime($msgdata->getAttribute('msgtime'));
+ $rd->{qdate} = DateTime::Format::ISO8601->new()->parse_datetime($msgdata->getAttribute('msgtime'));
  $rd->{objtype} = 'domain';
 
- my $el = $msgdata->getFirstChild();
- while ($el)
- {
+ my $el = $msgdata;#->getFirstChild();
+ my $action = undef;
+ my @actions = ( 'authInfo2Notify', 'authInfo2Delete', 'authInfoExpire', 'chprovAuthInfo', 'expire', 'expireWarning', 'domainDelete' );
+ foreach (@actions) {
+  next unless ($el->getElementsByTagNameNS($mes->ns('msg'), $_));
+  $action = $rd->{action} = $_;
+ }
+
+ # domain and clID
   my @doms = $el->getElementsByTagNameNS($mes->ns('msg'), 'domain');
   my @news = $el->getElementsByTagNameNS($mes->ns('msg'), 'new');
   my @olds = $el->getElementsByTagNameNS($mes->ns('msg'), 'old');
   my $dom = $doms[0];
-  my $exp;
-  my $new = '';
-  my $old = '';
-  my $action = $rd->{action} = $el->localname() || $el->nodeName();
-
-  $rd->{action} =~ s/[A-Z]\w*$//g;
-
+ my $new;
+ $new = $news[0]->getFirstChild()->getData() if (@news);
+ $rd->{clID} = $new if (length($new));
+ my $old;
+ $old = $olds[0]->getFirstChild()->getData() if (@olds);
+ $rd->{oldID} = $old if (length($old)); # should this be acID ? its already left the account
+ my $dn;
   if ($dom)
   {
    my @hndls = $dom->getElementsByTagNameNS($mes->ns('msg'), 'handle');
    my @exps = $dom->getElementsByTagNameNS($mes->ns('msg'), 'expire');
    my $hndl = $hndls[0];
 
-   $rd->{objid} = $hndl->getFirstChild()->getData() if (@hndls);
-   $rd->{exDate} = DateTime::Format::ISO8601->new()->
-	parse_datetime($hndl->getFirstChild()->getData()) if (@exps);
+   $dn = $rd->{object_id} = $hndl->getFirstChild()->getData() if (@hndls);
+   $rd->{exDate} = DateTime::Format::ISO8601->new()->parse_datetime($exps[0]->getFirstChild()->getData()) if (@exps);
+
+   my @authexps = $el->getElementsByTagNameNS($mes->ns('msg'), 'authinfoexpire');
+   $rd->{authInfoExpire} = DateTime::Format::ISO8601->new()->parse_datetime($authexps[0]->getFirstChild()->getData()) if (@authexps);
   }
 
-  $new = $news[0]->getFirstChild()->getData() if (@news);
-  $old = $olds[0]->getFirstChild()->getData() if (@olds);
-  $rd->{clID} = $new if (length($new));
-
-  if ($rd->{action} eq 'chprov')
-  {
-   my $act = lc($rd->{action});
-   $act =~ s/^chprov//g;
-
-   $rd->{content} = 'Received ' . $act . ' for ' . $rd->{objid} .
-	' from ' . ($act eq 'start' || $act eq 'reminder' || $act eq 'end' ?
-		$new : $old);
-  }
-  elsif ($action eq 'expireWarning')
-  {
-   $rd->{content} = $rd->{objid} . ' will expire on ' .
-	$rd->{exDate}->ymd . ' at ' . $rd->{exDate}->hms;
-  }
-  elsif ($action eq 'expire')
-  {
-   $rd->{content} = $rd->{objid} . ' expired on ' .
-	$rd->{exDate}->ymd . ' at ' . $rd->{exDate}->hms;
-  }
-
-  $el = $el->nextSibling();
- }
-
+ $rd->{content} = $dn . ' change of provider to ' . $new if ($action eq 'chprovAuthInfo');
+ $rd->{content} = $dn . ' will expire on ' .  $rd->{exDate}->ymd . ' at ' . $rd->{exDate}->hms if ($action eq 'expireWarning');
+ $rd->{content} = $dn . ' expired on ' .  $rd->{exDate}->ymd . ' at ' . $rd->{exDate}->hms if ($action eq 'expire');
+ $rd->{content} = $dn . ' deleted by DENIC legal department on ' .  $rd->{exDate}->ymd . ' at ' . $rd->{exDate}->hms if ($action eq 'domainDelete');
+ $rd->{content} = $dn . ' authinfo expired on '.  $rd->{authInfoExpire}->ymd if ($action eq 'authInfoExpire');
+ $rd->{content} = $dn . ' authinfo2 created' if ($action eq 'authInfo2Notify');
+ $rd->{content} = $dn . ' authinfo2 deleted' if ($action eq 'authInfo2Delete');
+ $rd->{content} = $dn . ' ' . $action unless (defined $rd->{content});
+ 
  $rinfo->{message}->{$msgid} = $rd;
-
  return;
 }
 

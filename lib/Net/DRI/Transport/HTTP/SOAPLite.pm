@@ -1,6 +1,6 @@
 ## Domain Registry Interface, SOAP Transport
 ##
-## Copyright (c) 2008-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008-2011,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -52,7 +52,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008-2011 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008-2011,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -76,7 +76,7 @@ sub new
  if (exists($opts{protocol_connection}) && $opts{protocol_connection})
  {
   $t{protocol_connection}=$opts{protocol_connection};
-  $t{protocol_connection}->require or Net::DRI::Exception::err_failed_load_module('transport/socket',$t{protocol_connection},$@);
+  Net::DRI::Util::load_module($t{protocol_connection},'transport/soaplite');
   if ($t{protocol_connection}->can('transport_default'))
   {
    %opts=($t{protocol_connection}->transport_default('soaplite'),%opts);
@@ -147,8 +147,8 @@ sub new
  return $self;
 }
 
-sub soap { my ($self,$v)=@_; $self->{transport}->{soap}=$v if @_==2; return $self->{transport}->{soap}; }
-sub session_data { my ($self,$v)=@_; $self->{transport}->{session_data}=$v if @_==2; return $self->{transport}->{session_data}; }
+sub soap { my ($self,$v)=@_; $self->{transport}->{soap}=$v if defined $v; return $self->{transport}->{soap}; }
+sub session_data { my ($self,$v)=@_; $self->{transport}->{session_data}=$v if defined $v; return $self->{transport}->{session_data}; }
 
 sub init
 {
@@ -157,6 +157,7 @@ sub init
  my $soap=SOAP::Lite->new()->uri($self->{transport}->{uri})->proxy($self->{transport}->{proxy_uri});
  $soap->transport()->agent(sprintf('Net::DRI/%s ',$Net::DRI::VERSION).$soap->transport()->agent());
  $self->soap($soap);
+ return;
 }
 
 sub send_login
@@ -179,6 +180,7 @@ sub send_login
  die($rc) unless $rc->is_success();
 
  $self->session_data($pc->extract_session($msg));
+ return;
 }
 
 sub send_logout
@@ -197,9 +199,10 @@ sub send_logout
  die($rc) unless $rc->is_success();
 
  $self->session_data({});
+ return;
 }
 
-sub _send_receive
+sub _send_receive ## no critic (Subroutines::RequireFinalReturn)
 {
  my ($self,$ctx,$msg)=@_;
  my $soap=$self->soap();
@@ -228,6 +231,7 @@ sub open_connection
  $self->current_state(1);
  $self->time_open(time());
  $self->time_used(time());
+ return;
 }
 
 sub close_connection
@@ -236,6 +240,7 @@ sub close_connection
  $self->send_logout();
  $self->soap(undef);
  $self->current_state(0);
+ return;
 }
 
 sub end
@@ -251,14 +256,15 @@ sub end
   };
   alarm(0); ## since close_connection may die, this must be outside of eval to be executed in all cases
  }
+ return;
 }
 
 ####################################################################################################
 
-sub send
+sub send ## no critic (Subroutines::ProhibitBuiltinHomonyms)
 {
  my ($self,$ctx,$tosend)=@_;
- $self->SUPER::send($ctx,$tosend,\&_soap_send,sub {});
+ return $self->SUPER::send($ctx,$tosend,\&_soap_send,sub {});
 }
 
 sub _soap_send

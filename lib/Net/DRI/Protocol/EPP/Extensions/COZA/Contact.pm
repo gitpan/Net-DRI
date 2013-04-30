@@ -1,7 +1,7 @@
 ## Domain Registry Interface, .CO.ZA Contact EPP extension commands
 ## From http://registry.coza.net.za/doku.php?id=eppcontactextension
 ##
-## Copyright (c) 2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2011,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -38,6 +38,7 @@ sub setup
 {
  my ($class,$po,$version)=@_;
  $po->ns({ 'cozacontact' => [ 'http://co.za/epp/extensions/cozacontact-1-0','coza-contact-1.0.xsd' ] });
+ return;
 }
 
 ####################################################################################################
@@ -58,6 +59,7 @@ sub info
   my $eid=$mes->command_extension_register('cozacontact','info');
   $mes->command_extension($eid,[['cozacontact:balance','true']]);
  }
+ return;
 }
 
 sub info_parse
@@ -81,6 +83,7 @@ sub info_parse
  my $ns=$mes->ns('cozacontact');
  my $balance=Net::DRI::Util::xml_traverse($infdata,$ns,'balance');
  $rinfo->{registrar}->{$oname}->{balance}=0+$balance->textContent() if defined $balance;
+ return;
 }
 
 sub update
@@ -93,6 +96,7 @@ sub update
 
  Net::DRI::Exception::usererr_invalid_parameters('cancel_action parameter must be PendingUpdate') unless $cancel=~m/^Pending(?:Update)$/;
  my $eid=$mes->command_extension_register('cozacontact','update',{cancelPendingAction=>$cancel});
+ return;
 }
 
 ####################################################################################################
@@ -128,7 +132,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+Copyright (c) 2011,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

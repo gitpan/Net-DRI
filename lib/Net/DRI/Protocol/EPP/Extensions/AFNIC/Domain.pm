@@ -1,6 +1,6 @@
 ## Domain Registry Interface, AFNIC EPP Domain extensions
 ##
-## Copyright (c) 2008-2010,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008-2010,2012,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -48,7 +48,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008-2010,2012 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008-2010,2012,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -95,7 +95,7 @@ sub build_domain
  Net::DRI::Exception->die(1,'protocol/EPP',2,'Domain name needed') unless defined($domain) && $domain;
  Net::DRI::Exception->die(1,'protocol/EPP',10,'Invalid domain name: '.$domain) unless Net::DRI::Util::is_hostname($domain);
  return ['frnic:name',$domain];
- }
+}
 
 sub build_registrant
 {
@@ -122,7 +122,8 @@ sub verify_contacts
  Net::DRI::Exception::usererr_invalid_parameters('AFNIC needs one contact of type admin, and only one') unless (@t==1 && Net::DRI::Util::isa_contact($t[0],'Net::DRI::Data::Contact::AFNIC'));
  @t=grep { Net::DRI::Util::isa_contact($_,'Net::DRI::Data::Contact::AFNIC') } $rd->{contact}->get('tech');
  Net::DRI::Exception::usererr_invalid_parameters('AFNIC needs one to three contacts of type tech') unless (@t >= 1 && @t <= 3);
- }
+ return;
+}
 
 sub build_contacts
 {
@@ -142,6 +143,7 @@ sub create
  ## We just make sure that we have all contact data
  verify_contacts($rd);
  build_registrant($rd);
+ return;
 }
 
 sub update
@@ -154,6 +156,7 @@ sub update
  return unless (defined($rgp) && $rgp && (ref($rgp) eq 'HASH'));
  my $op=$rgp->{op} || '';
  Net::DRI::Exception::usererr_invalid_parameters('RGP op can only be request for AFNIC') unless ($op eq 'request');
+ return;
 }
 
 sub add_keepds
@@ -173,6 +176,7 @@ sub transfer_request
  verify_contacts($rd);
  my $eid=build_command_extension($mes,$epp,'frnic:ext');
  $mes->command_extension($eid,['frnic:transfer',['frnic:domain',add_keepds('transfer',$rd),build_contacts($rd)]]);
+ return;
 }
 
 sub parse_trade_recover
@@ -206,6 +210,7 @@ sub parse_trade_recover
    $rinfo->{domain}->{$oname}->{$name}=$po->parse_iso8601($c->textContent());
   }
  }
+ return;
 }
 
 sub trade_request
@@ -220,6 +225,7 @@ sub trade_request
  push @n,build_registrant($rd);
  push @n,build_contacts($rd);
  $mes->command_extension($eid,['frnic:command',['frnic:trade',{op=>'request'},['frnic:domain',add_keepds('trade',$rd),@n]],build_cltrid($mes)]);
+ return;
 }
 
 sub trade_query
@@ -230,6 +236,7 @@ sub trade_query
  my $eid=build_command_extension($mes,$epp,'frnic:ext');
  my @n=build_domain($domain);
  $mes->command_extension($eid,['frnic:command',['frnic:trade',{op=>'query'},['frnic:domain',@n]],build_cltrid($mes)]);
+ return;
 }
 
 sub trade_cancel
@@ -240,6 +247,7 @@ sub trade_cancel
  my $eid=build_command_extension($mes,$epp,'frnic:ext');
  my @n=build_domain($domain);
  $mes->command_extension($eid,['frnic:command',['frnic:trade',{op=>'cancel'},['frnic:domain',@n]],build_cltrid($mes)]);
+ return;
 }
 
 sub trade_parse
@@ -249,6 +257,7 @@ sub trade_parse
  return unless $mes->is_success();
 
  parse_trade_recover($po,$otype,'trade',$oname,$rinfo,'trdData');
+ return;
 }
 
 sub recover_request
@@ -263,6 +272,7 @@ sub recover_request
  push @n,build_registrant($rd);
  push @n,build_contacts($rd);
  $mes->command_extension($eid,['frnic:command',['frnic:recover',{op=>'request'},['frnic:domain',add_keepds('recover',$rd),@n]],build_cltrid($mes)]);
+ return;
 }
 
 sub recover_parse
@@ -272,6 +282,7 @@ sub recover_parse
  return unless $mes->is_success();
 
  parse_trade_recover($po,$otype,'recover',$oname,$rinfo,'recData');
+ return;
 }
 
 sub check_parse
@@ -312,6 +323,7 @@ sub check_parse
   $rinfo->{domain}->{$domain}->{reserved_reason}=join("\n",@r) if @r;
   $rinfo->{domain}->{$domain}->{forbidden_reason}=join("\n",@f) if @f;
  }
+ return;
 }
 
 sub info_parse
@@ -333,7 +345,7 @@ sub info_parse
   $cs->rem('ok');
   $cs->add($el->getAttribute('s'));
  }
-
+ return;
 }
 
 ####################################################################################################

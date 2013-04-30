@@ -1,7 +1,7 @@
 ## Domain Registry Interface, .PRO domain extensions
 ##
 ## Copyright (c) 2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
-##           (c) 2010 Patrick Mevzek <netdri@dotandco.com>.
+##           (c) 2010,2013 Patrick Mevzek <netdri@dotandco.com>.
 ##                    All rights reserved.
 ##
 ## This file is part of Net::DRI
@@ -53,7 +53,7 @@ E<lt>http://www.hexonet.net/E<gt>.
 =head1 COPYRIGHT
 
 Copyright (c) 2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
-          (c) 2010 Patrick Mevzek <netdri@dotandco.com>.
+          (c) 2010,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -123,6 +123,7 @@ sub add_pro_extinfo
 
  my $eid = $mes->command_extension_register('rpro:proDomain',sprintf('xmlns:rpro="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('rpro')));
  $mes->command_extension($eid, [@prodata]);
+ return;
 }
 
 sub parse
@@ -184,6 +185,7 @@ sub parse
  } continue { $c=$c->getNextSibling(); }
 
  $rinfo->{$otype}->{$oname}->{pro} = $pro;
+ return;
 }
 
 ####################################################################################################

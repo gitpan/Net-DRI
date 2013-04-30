@@ -1,6 +1,6 @@
 ## Domain Registry Interface, SYSLOG Logging operations for Net::DRI
 ##
-## Copyright (c) 2009 Jørgen Thomsen <netdri@jth.net>. All rights reserved
+## Copyright (c) 2009,2013 Jørgen Thomsen <netdri@jth.net>. All rights reserved
 ##
 ## This file is part of Net::DRI
 ##
@@ -55,7 +55,7 @@ sub output
  if ($self->should_log($level)) {
 	my @lines = split( /\n/, $self->tostring($level,$type,$data) ); # log each indented line when xml_indent => 1
 	foreach (@lines) {
-		syslog($self->{priority}.'|'.$self->{facility}, ($self->{logopened} != 2 ? $self->{ident}.': ':'')."%s", $_);
+               syslog($self->{priority}, ($self->{logopened} != 2 ? $self->{ident}.': ':'')."%s", $_);
 	}
  }
  return;

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, Whois commands for .CAT (RFC3912)
 ##
-## Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2009,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -49,7 +49,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008,2009 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2009,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -75,6 +75,7 @@ sub info
  my $mes=$po->message();
  Net::DRI::Exception->die(1,'protocol/whois',10,'Invalid domain name: '.$domain) unless Net::DRI::Util::is_hostname($domain);
  $mes->command(' -C US-ASCII ace '.lc($domain));
+ return;
 }
 
 sub info_parse
@@ -97,6 +98,7 @@ sub info_parse
  Net::DRI::Protocol::Whois::Domain::common::epp_parse_status($po,$domain,$rr,$rinfo);
  Net::DRI::Protocol::Whois::Domain::common::epp_parse_contacts($po,$domain,$rr,$rinfo,{registrant => 'Registrant',admin => 'Admin', billing => 'Billing', tech => 'Tech'});
  Net::DRI::Protocol::Whois::Domain::common::epp_parse_ns($po,$domain,$rr,$rinfo);
+ return;
 }
 
 sub parse_domain
@@ -122,6 +124,7 @@ sub parse_registrars
  my ($po,$domain,$rr,$rinfo)=@_;
  return unless exists($rr->{'Registrar ID'});
  ($rinfo->{domain}->{$domain}->{clID},$rinfo->{domain}->{$domain}->{clName})=($rr->{'Registrar ID'}->[0]=~m/^(\S+) \((.+)\)\s*$/);
+ return;
 }
 
 sub parse_dates
@@ -131,6 +134,7 @@ sub parse_dates
  $rinfo->{domain}->{$domain}->{crDate}=$strp->parse_datetime($rr->{'Created On'}->[0]);
  $rinfo->{domain}->{$domain}->{upDate}=$strp->parse_datetime($rr->{'Last Updated On'}->[0]);
  $rinfo->{domain}->{$domain}->{exDate}=$strp->parse_datetime($rr->{'Expiration Date'}->[0]);
+ return;
 }
 
 ####################################################################################################

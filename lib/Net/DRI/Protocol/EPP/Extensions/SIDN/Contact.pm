@@ -1,6 +1,6 @@
 ## Domain Registry Interface, SIDN EPP Contact commands
 ##
-## Copyright (c) 2009,2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2009,2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -72,6 +72,7 @@ sub info_parse
    $contact->limited(Net::DRI::Util::xml_parse_boolean($c->textContent()));
   }
  }
+ return;
 }
 
 ########### Transform commands
@@ -88,8 +89,8 @@ sub create
 
  my $eid=build_command_extension($mes,$epp,'sidn:ext');
  $mes->command_extension($eid,['sidn:create',['sidn:contact',@n]]);
+ return;
 }
-
 
 sub update
 {
@@ -110,6 +111,7 @@ sub update
 
  my $eid=build_command_extension($mes,$epp,'sidn:ext');
  $mes->command_extension($eid,['sidn:update',['sidn:contact',@n]]);
+ return;
 }
 
 ####################################################################################################

@@ -1,7 +1,7 @@
 ## Domain Registry Interface, VeriSign EPP Client Object Attribute Extension
 ## From epp-client-object-attribute.pdf
 ##
-## Copyright (c) 2011,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2011-2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -37,6 +37,7 @@ sub setup
 {
  my ($class,$po,$version)=@_;
  $po->ns({ 'coa' => [ 'urn:ietf:params:xml:ns:coa-1.0','coa-1.0.xsd' ] });
+ return;
 }
 
 sub capabilities_add { return ('domain_update','client_attributes',['add','del']); }
@@ -63,6 +64,7 @@ sub info_parse
  }
 
  $rinfo->{domain}->{$oname}->{'client_attributes'}=\%coa;
+ return;
 }
 
 sub add_coa
@@ -97,6 +99,7 @@ sub create
  my $mes=$epp->message();
  my $eid=$mes->command_extension_register('coa:create',sprintf('xmlns:coa="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('coa')));
  $mes->command_extension($eid,add_coa('create',$rcoa));
+ return;
 }
 
 sub update
@@ -124,6 +127,7 @@ sub update
  my $mes=$epp->message();
  my $eid=$mes->command_extension_register('coa:update',sprintf('xmlns:coa="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('coa')));
  $mes->command_extension($eid,@d);
+ return;
 }
 
 #########################################################################################################
@@ -169,7 +173,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2011,2012 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2011-2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

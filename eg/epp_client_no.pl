@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 ##
-## Copyright (c) 2008-2010 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
+## Copyright (c) 2008-2013 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
 ##                    Trond Haugen E<lt>info@norid.noE<gt>
 ##                    All rights reserved.
 ##
@@ -37,6 +37,8 @@ use DateTime::Duration;
 use Pod::Usage;
 use POSIX qw(locale_h);
 use Net::LibIDN ':all';
+use Encode qw / decode is_utf8 /;
+use Archive::Zip qw(:ERROR_CODES);
 
 use Getopt::Std;
 
@@ -47,15 +49,28 @@ use encoding "utf-8";    # assume utf-8 encoded argument input
 
 our $VERSION     = '0.95.no';
 our $SVN_VERSION = do {
-    my @r = ( q$Revision: 1.4 $ =~ /\d+/gxm );
+    my @r = ( q$Revision: 1.5 $ =~ /\d+/gxm );
     sprintf( "%d" . ".%02d" x $#r, @r );
 };
 
 # Format string for output of results
 my $F = " %-15s: %s\n";
 
-# All possible dri object methods
-my @drim = ('id');
+# status methods
+my @sm = (
+          'is_active',
+          'is_published',
+          'is_pending',
+          'is_linked',
+          'can_update',
+          'can_transfer',
+          'can_delete',
+          'can_renew',
+
+          #'possible_no',    # hmmm.. what's this for?
+          #'no'              # hmmm.. what's this for?
+
+          );
 
 # All possible contact object methods
 my @cm = (
@@ -72,7 +87,7 @@ my @cm = (
 
 # args
 use vars qw($opt_c $opt_o $opt_h $opt_p $opt_f $opt_P $opt_S
-    $opt_L $opt_C $opt_W $opt_w);
+    $opt_L $opt_C $opt_W $opt_w $opt_F);
 
 # Operations
 my %op = (
@@ -110,6 +125,27 @@ my %obj = (
     'message'      => 'message',
 );
 
+# Scalar EPP elements
+
+my @epp = (
+          'id',
+          'qdate',
+           'msg',
+          'content',
+          'lang',
+          'object_type',
+          'object_id',
+          'action',
+          'result',
+          'svtrid',
+
+          'date',
+
+           'nocontent',      # .NO specific content desc
+
+          );
+
+
 # The possible facet keys must be registered here, the value part must be TRUE
 # in this hash for the facet to be activated
 my %facets = (
@@ -119,10 +155,30 @@ my %facets = (
        'impersonate-registrar'          => 1
     );
 
+
+##
+# Mapping from the Applicant dataset file from the Norid EE-automaton
+# to internal attribute values used for local checks.
+my %ds_file_map = (
+    'Domain name'        => 'domainname',
+    'Domain name ACE'    => 'domainname_ace',
+    'Applicant name'     => 'applicant_name',
+    'Applicant id'       => 'applicant_identity',
+    );
+
+##
+# Mapping from the Applicant dataset file from the Norid EE-automaton
+# to attribute values in Net::DRI.
+my %ds_dri_map = (
+    'Version number'     => 'versionnumber',
+    'Accept date'        => 'acceptdate',
+    'Accept name'        => 'acceptname',
+    );
+
 # Hash to hold the EPP arguments
 my %p;
 
-&getopts("Lo:c:p:f:S:P:C:W:w:");
+&getopts("vLo:c:p:f:S:P:C:W:w:F:");
 
 #server and port must be specified
 my $socktype = 'tcp';
@@ -137,6 +193,15 @@ $socktype = 'ssl' if ($opt_L);
 
 my $clid = $opt_C;
 my $pass = $opt_W;
+
+my $dump_fmt  = 'string';
+
+if ($opt_F) {
+    unless ($opt_F eq 'hash' || $opt_F eq 'string') {
+       pexit("Illegal format, must be 'hash' or 'string'");
+    }
+    $dump_fmt = $opt_F;
+}
 
 my $newpass;
 $newpass = $opt_w if ($opt_w);
@@ -227,7 +292,7 @@ sub do_epp_operation {
             print "FAILURE: Error descriptions: ", ref($@), "\n";
             $@->print();
             print "\n";
-            dump_conditions($dri);
+            dump_error_conditions_as_fmt($dri);
         } else {
             print "FAILURE: No extra info: ";
             print($@);
@@ -253,277 +318,6 @@ sub pexit {
         }
     );
     return;
-}
-
-sub print_result {
-    my $dri = shift;
-    my $rc  = shift;
-
-    print "\n", " result_code    : ", $dri->result_code(), "\n",
-        " native_code    : ", $dri->result_native_code(), "\n",
-        " result_message : ", $dri->result_message(),     "\n",
-        " language       : ", $dri->result_lang(),        "\n\n";
-
-    if ( $dri->can('result_is_pending') ) {
-        print " pending  : ", $dri->result_is_pending(), "\n";
-    }
-    if ( $dri->can('result_info') ) {
-        print "info : ", $dri->result_info(), "\n";
-    }
-    if ( $dri->can('result_print') ) {
-        print "result_print: ", $dri->result_print(), "\n";
-    }
-    if ( $dri->can('result_print_full') ) {
-        print "result_print_full: ", $dri->result_print_full(), "\n";
-    }
-    if ($rc) {
-        print_rc_result($rc);
-    }
-    foreach my $w (
-        'action', 'exist', 'trStatus', 'reID',
-        'reDate', 'acID',  'acDate',   'exDate'
-        )
-    {
-        if ( my $v = $dri->get_info($w) ) {
-            printf "$F", $w, $v;
-        }
-    }
-    return 1;
-}
-
-sub print_rc_result {
-    my $rc = shift;
-
-    # Print rc-specific info, not found in $dri->result_*()
-
-    if ( $rc->can('is_pending') ) {
-        print "rcpending : ", $rc->is_pending(), "\n"
-            if ( $rc->is_pending() );
-    }
-    if ( $rc->can('info') ) {
-        print "rcinfo : ", $rc->info(), "\n" if ( $rc->info() );
-    }
-
-    my $F2 = " %-15s: %s%s\n";
-    if ( $rc->can('trid') && $rc->trid() ) {
-
-        # trid seems to be returned as an array with two values
-        printf "$F2", 'trid', $rc->trid();
-    }
-    return 1;
-}
-
-sub contact_object_as_string {
-    my ( $dri, $o, @om ) = @_;
-
-    return unless $o;
-
-    # Populate the loc-array values
-    # $ci->int2loc();  # hmm, if int2loc is called, it overwrites the
-    # localized data and destroys some of it
-
-    my $s = "";
-
-    foreach my $m (@om) {
-        my $r;
-
-        if ( $o->can($m) ) {
-            if ( $m eq 'street' ) {
-
-                # Is an array up to 3 elements
-                $r = join ", ", @{ $o->$m };
-
-            } elsif ( $m eq 'identity' ) {
-                $r = "type  : " . $o->$m->{type}
-                    if ( $o->$m && $o->$m->{type} );
-                $r .= ", value: " . $o->$m->{value}
-                    if ( $o->$m && $o->$m->{value} );
-
-            } elsif ( $m eq 'xemail' || $m eq 'rolecontact' ) {
-
-                # Is an array up to n elements
-                $r = join ", ", @{ $o->$m } if ( $o->$m );
-            } else {
-                my @va;
-                @va = $o->$m if ( $o->$m );
-                foreach my $v (@va) {
-                    if ( ref($v) && ( ref($v) ne 'SCALAR' ) ) {
-
-                        # don't bother diving into it ... use a Dumper
-                        $r .= sprintf Dumper $v;
-                    } else {
-                        $r .= $v if ($v);
-                    }
-                }
-            }
-            $s .= sprintf "$F", $m, $r if ($r);
-        } else {
-            $s .= "-- method $m not possible \n";
-        }
-    }
-    foreach my $i ( 'roid', 'crDate', 'upDate', 'clID', 'crID', 'upID' ) {
-        my $v = $dri->get_info($i);
-        $v = '-' unless $v;
-        $s .= sprintf "$F", $i, $v;
-    }
-    return $s;
-}
-
-sub host_object_as_string {
-    my ($dri) = @_;
-
-    my $s  = "";
-    my $hi = $dri->get_info('self');
-
-    foreach my $m ( 'loid', 'count' ) {
-        my $v = '-';
-        $v = $hi->$m if ( $hi->$m );
-        $s .= sprintf "$F", $m, $v;
-    }
-    my @nms = $hi->get_names();
-    $s .= sprintf "$F", 'names', @nms;
-
-    foreach my $n (@nms) {
-        my @d = $hi->get_details($n);
-
-        # ip-addresses are optional
-        my @v;
-        @v = @{ $d[1] } if ( @{ $d[1] } );
-        @v = ("-") unless (@v);
-        $s .= sprintf "$F", 'v4 addresses', join( ", ", @v );
-
-        @v = ();
-        @v = @{ $d[2] } if ( @{ $d[2] } );
-        @v = ("-") unless (@v);
-        $s .= sprintf "$F", 'v6 addresses', join( ", ", @v );
-    }
-
-    # contact is a scalar
-
-    my $ct = "-";
-    if ( $ct = $dri->get_info('contact') ) {
-        $s .= sprintf "$F", 'contact', $ct->[0];
-    }
-    foreach my $i (
-        'roid',   'exDate', 'crDate', 'upDate',
-        'trDate', 'clID',   'crID',   'upID'
-        )
-    {
-        my $v = $dri->get_info($i);
-        $v = '-' unless $v;
-        $s .= sprintf "$F", $i, $v;
-    }
-    return $s;
-}
-
-#You may use get_info with the following keys to get more information:
-# - ns : a Net::DRI::Data::Hosts object representing the nameservers of the
-#        domain
-# - status : a Net::DRI::Data::StatusList object representing the current
-#        status list of the domain queried
-# - exDate, crDate, upDate, trDate : DateTime objects representing the
-#        expiration, creation, last update, and transfer date for the domain
-#        queried
-# - clID, crID, upID : (strings) local registry ID of the current sponsoring
-#        registrar, the registrar having created, and the registrar (or
-#        registry) having last modified the domain queried
-
-sub domain_object_as_string {
-    my ($dri) = @_;
-
-    my $s = "";
-
-    ##
-    # authInfo
-    #
-    $s .= sprintf "--- Auth info ---\n";
-    my $au = $dri->get_info('auth');
-
-    foreach my $i (
-        'name', 'roid', 'exDate', 'crDate', 'upDate', 'trDate',
-        'clID', 'crID', 'upID'
-        )
-    {
-        my $v = $dri->get_info($i);
-        $v = '-' unless $v;
-        $s .= sprintf "$F", $i, $v;
-        if ( $i eq 'name' ) {
-
-            # Also print the UTF-8 of an ACE
-            my $idn
-                = idn_to_unicode( $v, 'utf-8', IDNA_USE_STD3_ASCII_RULES );
-            $s .= sprintf "$F", 'IDN-name', $idn;
-        }
-
-    }
-    ##
-    # name servers
-    #
-    $s .= sprintf "--- Name servers ---\n";
-    my $ns = $dri->get_info('ns');
-
-    my $v = '-';
-    if ( ( $v = $ns->count() ) > 0 ) {
-        $s .= sprintf "$F", 'ns count', $v;
-    }
-    foreach my $n ( $ns->get_names() ) {
-        $s .= sprintf "$F", 'ns name', $n;
-    }
-
-    ####################
-    # Contacts
-    #
-    # contact is an array ref.
-    my $co = $dri->get_info('contact');
-
-    $s .= sprintf "--- Contacts ---\n";
-
-    foreach my $ct ( 'registrant', 'admin', 'tech' ) {
-        my @r = $co->get($ct);
-        $v = "-";
-        foreach my $r (@r) {
-            $v = $r->srid if ( $r->srid );
-            $s .= sprintf "$F", $ct, $v;
-        }
-    }
-
-    ####################
-    # Domain status
-    #
-    $s .= sprintf "--- Status summary ---\n";
-
-    my $st = $dri->get_info('status');
-
-    # domain status methods
-    my @dsm = (
-        'is_active',
-        'is_published',
-        'is_pending',
-        'is_linked',
-        'can_update',
-        'can_transfer',
-        'can_delete',
-        'can_renew',
-
-        #'possible_no',    # hmmm.. what's this for?
-        #'no'              # hmmm.. what's this for?
-
-    );
-    foreach my $ds (@dsm) {
-        $v = "-";
-        $v = $st->$ds if ( $st->$ds );
-        $s .= sprintf "$F", $ds, $v;
-    }
-
-    ####
-    # also dump all the detailed status values
-    my @ls = $st->list_status();
-
-    $s .= sprintf "--- Flag details ---\n";
-    foreach my $l (@ls) {
-        $s .= sprintf "$F", 'flag', $l;
-    }
-    return $s;
 }
 
 sub get_info_object_as_string {
@@ -556,11 +350,15 @@ sub init_reg_no {
     my $dri = Net::DRI->new(
        {
            cache_ttl => 10,
-           logging => ['files',
+           logging => [
+              # Use EPPClient's log module
+              'EppClient::Model::NORID::DRILogging',
+              # original
+              #'files',
                        {output_directory => './',
                         output_filename=>$opt_f,
                         level=>'notice',
-                        xml_indent=>1}]
+                        xml_indent=>0}]
        }
 );
 
@@ -615,7 +413,9 @@ sub do_command {
         if ( $cmd eq 'check' ) {
             print ".check ", $p{name}, "\n";
             $rc = $dri->host_check( $p{name}, { facets => $p{facets}} );
-            print_result( $dri, $rc );
+
+           dump_as_fmt($rc, $dri);
+
             die($rc) unless $rc->is_success();
 
             # For a host check, only an exist check is available in DRI
@@ -631,11 +431,13 @@ sub do_command {
            $a{facets} = $p{facets} if ( $p{facets} );
 
             $rc = $dri->host_info( $p{name}, \%a );
-            print_result( $dri, $rc );
+
+           dump_as_fmt ($rc, $dri, 'host');
+
             die($rc) unless $rc->is_success();
 
-            print host_object_as_string($dri);
         }
+
         if ( $cmd eq 'create' ) {
 
             # DRI 0.85 need to create the hosts objects directly ..
@@ -644,8 +446,10 @@ sub do_command {
             $nso->add( $p{name}, $p{v4}, $p{v6} );
            $rc = $dri->host_create( $nso, { contact => $p{contact}, facets => $p{facets} } );
 
-            print_result($dri);
+           dump_as_fmt ($rc, $dri);
+
             die($rc) unless $rc->is_success();
+
         }
         if ( $cmd eq 'update' ) {
             ###
@@ -690,12 +494,16 @@ sub do_command {
             }
 
             $rc = $dri->host_update( $p{name}, $toc);
-            print_result($dri);
+
+           dump_as_fmt ($rc, $dri);
+
             die($rc) unless $rc->is_success();
         }
         if ( $cmd eq 'delete' ) {
             $rc = $dri->host_delete( $p{name}, { facets => $p{facets} } );
-            print_result($dri);
+
+           dump_as_fmt ($rc, $dri);
+
             die($rc) unless $rc->is_success();
         }
     }
@@ -706,7 +514,8 @@ sub do_command {
             my $co = $dri->local_object('contact')->new()->srid( $p{srid} );
 
             $rc = $dri->contact_check($co, { facets => $p{facets} } );
-            print_result($dri);
+
+           dump_as_fmt ($rc, $dri);
 
             die($rc) unless $rc->is_success();
 
@@ -719,14 +528,11 @@ sub do_command {
 
             $rc = $dri->contact_info($co, { facets => $p{facets} } );
 
-# print "Contact $p{srid} ", $dri->get_info('exist')?" exists":"do not exist";
-            print_result($dri);
+           my $o = $dri->get_info('self');
 
+           dump_as_fmt ($rc, $dri, 'contact');
             die($rc) unless $rc->is_success();
 
-            my $o = $dri->get_info('self');
-
-            print contact_object_as_string( $dri, $o, @cm );
         }
 
         if ( $cmd eq 'create' ) {
@@ -745,13 +551,10 @@ sub do_command {
             }
             $rc = $dri->contact_create($co);
 
-            print_result($dri);
+           dump_as_fmt($rc, $dri, 'contact', 'create');
 
             die($rc) unless ( $rc->is_success() );
 
-            #print contact_object_as_string($dri, $co, @cm);
-
-            print get_info_object_as_string( $dri, @drim );
         }
 
         if ( $cmd eq 'update' ) {
@@ -765,7 +568,8 @@ sub do_command {
             my $co2 = $dri->local_object('contact');
 
             foreach my $m (@cm) {
-                $co2->$m( $p{$m} ) if ( $p{$m} );
+#                $co2->$m( $p{$m} ) if ( $p{$m} );
+                $co2->$m( $p{$m} );
             }
             $toc->set( 'info', $co2 );
 
@@ -823,7 +627,7 @@ sub do_command {
 
             $rc = $dri->contact_update( $co, $toc );
 
-            print_result($dri);
+           dump_as_fmt ($rc, $dri);
             die($rc) unless $rc->is_success();
         }
 
@@ -831,7 +635,8 @@ sub do_command {
             my $co = $dri->local_object('contact')->new()->srid( $p{srid} );
 
             $rc = $dri->contact_delete($co, { facets => $p{facets} } );
-            print_result($dri);
+
+           dump_as_fmt ($rc, $dri);
 
             die($rc) unless $rc->is_success();
 
@@ -842,7 +647,7 @@ sub do_command {
     }
 
     if ( $obj eq 'domain' ) {
-        my ( $ace, $idn );
+        my ( $ace, $idn, $dsace, $dsidn );
 
         # We accept input name as either an ace-name or an utf-8
         if ( $p{name} ) {
@@ -853,12 +658,64 @@ sub do_command {
             die "Cannot convert domain to ace" unless ($ace);
 
             $idn = idn_to_unicode( $ace, 'utf-8', IDNA_USE_STD3_ASCII_RULES );
-            die "Cannot convert domain to ace" unless ($ace);
+            die "Cannot convert domain to ace" unless ($idn);
 
-            undef $idn if ( $ace eq $idn );
         } else {
             die "No domain name specified";
         }
+
+       if ( exists($p{applicantdatafile}) ) {
+
+           # A zip-file containing the applicantdataset is supplied.
+           # This function is designed to handle the zip-file from
+           # the Norid EE-Automaton.
+           # Unzip file and extract the applicantdataset from the file
+           # if both file and dataset are given on argument, the file is used
+
+           my ($ds, $fs) = unpack_dataset_file($p{applicantdatafile});
+
+           delete $p{applicantdataset};
+
+           $p{applicantdataset} = $ds;
+
+           #print "ds: ", Dumper $ds;
+           #print "fs: ", Dumper $fs;
+           #print "p: ", Dumper \%p;
+
+           ###
+           # Verify that:
+           # - the domains in the dataset file are in correct syntax
+           # - the domain name in command is among the domain names in the dataset file
+
+           if ( $fs && exists($fs->{domainname} ) ) {
+
+               my $match;
+
+               foreach my $domainname (@{$fs->{domainname}}) {
+                   #print "dname: '$domainname'\n";
+
+                   $dsidn = lc($domainname);
+                   die "Cannot lower case domain name: $dsidn" unless ($dsidn);
+
+                   $dsace = idn_to_ascii( $dsidn, 'utf-8', IDNA_USE_STD3_ASCII_RULES );
+                   die "Cannot convert domain to ace" unless ($dsace);
+
+                   $dsidn = idn_to_unicode( $dsace, 'utf-8', IDNA_USE_STD3_ASCII_RULES );
+                   die "Cannot convert domain to ace" unless ($dsidn);
+
+                   # The domain name to be created/updated must be found
+                   if ($ace eq $dsace) {
+                       ++$match;
+                   }
+               }
+               unless ($match) {
+                   die ("Domain name '$idn' is not found among the domain names in the applicantdataset in the file: " .
+                        join ", ", @{$fs->{domainname}});
+               }
+           }
+       }
+
+       #print "p: ", Dumper \%p;
 
         #print "input name: $p{name}\n";
         #print "ace       : $ace\n";
@@ -870,8 +727,7 @@ sub do_command {
 
             $rc = $dri->domain_check($ace, { facets => $p{facets} });
 
-            print_rc_result($rc);
-            print_result($dri);
+           dump_as_fmt ($rc, $dri);
 
             die($rc) unless $rc->is_success();
 
@@ -881,10 +737,10 @@ sub do_command {
 
         if ( $cmd eq 'info' ) {
             $rc = $dri->domain_info($ace, { facets => $p{facets} });
-            print_result($dri);
+
+           dump_as_fmt ($rc, $dri, 'domain');
             die($rc) unless $rc->is_success();
 
-            print domain_object_as_string($dri);
         }
 
         if ( $cmd eq 'create' ) {
@@ -910,7 +766,7 @@ sub do_command {
             if ( $c = $p{coset} ) {
 
    # we have a contact set, DRI accepts multiple of each type, so we implement
-## that and let server policy decide if multiple can be accepted
+               # that and let server policy decide if multiple can be accepted
 
                 my @acs;
                 my @ca;
@@ -955,9 +811,12 @@ sub do_command {
                     contact  => $cs,
                     ns       => $nso,
                    facets   => $p{facets},
+                   applicantdataset => $p{applicantdataset}
                 }
             );
-            print_result($dri);
+
+           dump_as_fmt ($rc, $dri);
+
             die($rc) unless ( $rc->is_success() );
         }
 
@@ -983,12 +842,14 @@ sub do_command {
    #          'publish'  => 'clientHold',
    #       );
 
-            if ( $p{pw} ) {
+            if ( defined($p{pw}) ) {
+
                 $toc->set( 'auth', { pw => $p{pw} } );
             }
 
             if ( my $s = $p{status} ) {
                 foreach my $op ( 'add', 'del' ) {
+
                     my $sl = $dri->local_object('status');
 
                     # add and del keys shall describe what to do
@@ -1043,31 +904,34 @@ sub do_command {
                 }
             }
             if ( $p{nsset} ) {
-                foreach my $op ( 'add', 'del' ) {
-
+               foreach my $op ('add', 'del') {
                     # add and del keys shall describe what to do
-                    my $a;
-                    $a = $p{nsset}{$op} if ( $p{nsset}{$op} );
-
-                    # array or not
-                    if ( ref($a) eq 'ARRAY' ) {
+                   my $a = $p{nsset}{$op} if ($p{nsset}{$op});
+                   my $nso = $dri->local_object('hosts');
                         foreach my $m (@$a) {
-                            $toc->$op( 'ns',
-                                $dri->local_object('hosts')->add($m) );
+                       $nso->add($m);
                         }
-                    } else {
-                        $toc->$op( 'ns',
-                            $dri->local_object('hosts')->add($a) );
+                   $toc->$op('ns', $nso);
                     }
                 }
+
+           # applicantDataset
+            if ( defined($p{applicantdataset}) ) {
+
+               #print STDERR "ds p: ", Dumper \%p;
+
+                $toc->set( 'applicantdataset', $p{applicantdataset} );
             }
+
            # Facets
             if ( defined($p{facets}) ) {
                 $toc->set( 'facets', $p{facets} );
             }
 
             $rc = $dri->domain_update( $ace, $toc );
-            print_result($dri);
+
+           dump_as_fmt ($rc, $dri);
+
             die($rc) unless $rc->is_success();
         }
         if ( $cmd eq 'delete' ) {
@@ -1085,7 +949,8 @@ sub do_command {
 
             $rc = $dri->domain_delete( $ace, \%a );
 
-            print_result($dri);
+           dump_as_fmt ($rc, $dri);
+
             die($rc) unless $rc->is_success();
         }
 
@@ -1095,8 +960,9 @@ sub do_command {
            $a{facets} = $p{facets} if ( $p{facets} );
 
             $rc = $dri->domain_transfer_query( $ace, \%a );
-            print_rc_result($rc);
-            print_result($dri);
+
+           dump_as_fmt ($rc, $dri);
+
             die($rc) unless $rc->is_success();
         }
 
@@ -1106,8 +972,9 @@ sub do_command {
            $a{facets} = $p{facets} if ( $p{facets} );
 
             $rc = $dri->domain_transfer_stop( $ace, \%a );
-            print_rc_result($rc);
-            print_result($dri);
+
+           dump_as_fmt ($rc, $dri);
+
             die($rc) unless $rc->is_success();
         }
 
@@ -1128,8 +995,9 @@ sub do_command {
                 $a{email} = $p{notify}{email} if ( $p{notify}{email} );
             }
             $rc = $dri->domain_transfer_start( $ace, \%a );
-            print_rc_result($rc);
-            print_result($dri);
+
+           dump_as_fmt ($rc, $dri);
+
             die($rc) unless $rc->is_success();
         }
         if ( $cmd eq 'transfer_execute' ) {
@@ -1150,8 +1018,9 @@ sub do_command {
                 $a{duration} = $du;
            }
             $rc = $dri->domain_transfer_execute( $ace, \%a );
-            print_rc_result($rc);
-            print_result($dri);
+
+           dump_as_fmt ($rc, $dri);
+
             die($rc) unless $rc->is_success();
         }
 
@@ -1172,46 +1041,22 @@ sub do_command {
                 die "$0: Illegal curexpiry date " unless ($exp);
             }
             $rc = $dri->domain_renew( $ace, { duration => $du, current_expiration => $exp, facets => $p{facets} } );
-            print_rc_result($rc);
-            print_result($dri);
+
+           dump_as_fmt ($rc, $dri);
+
             die($rc) unless $rc->is_success();
         }
 
         if ( $cmd eq 'withdraw' ) {
 
             $rc = $dri->domain_withdraw($ace, { facets => $p{facets} } );
-            print_rc_result($rc);
-            print_result($dri);
+
+           dump_as_fmt ($rc, $dri);
+
             die($rc) unless $rc->is_success();
         }
     }    # End of domain operations
 
-# Standardized EPP elements
-my @epp = (
-	   'id',
-	   'qdate', 
-           'msg', 
-	   'content',
-	   'nocontent',      # .NO specific content desc
-	   'lang',
-	   'object_type',
-	   'object_id',
-	   'action',
-	   'result',
-	   'trid',
-	   'svtrid',
-	   'date',
-	   );
-
-# .NO conditions
-my @noc = (
-	     'msg',
-	     'code',
-	     'severity',
-	     'details'
-	     );
-
-    my %m;
 
     # Message / poll operations
     if ( $obj eq 'message' ) {
@@ -1225,48 +1070,30 @@ my @noc = (
         if ( $cmd eq 'retrieve' ) {
             $rc = $dri->message_retrieve({ facets => $p{facets} });
 
-            print_rc_result($rc);
-            print_result($dri);
+           #print STDERR "rc: ", Dumper $rc;
 
-            die($rc) unless $rc->is_success();
+            if ( $dri->message_count() > 0 ) {
+                # messages exist, the first one is read, fetch the elements of it
+               my $li = $dri->get_info('last_id');
 
-            if ( my $c = ($dri->message_count() > 0) ) {
-		
-                # messages returned
-		for ( my $i = 1; $i <= $c; $i++ ) {
-		    my $li = $dri->get_info('last_id');
+               dump_as_fmt ($rc, $dri, 'message');
 
-		    my ($qda, $lng, $cnt, $oty, $oid,
-                        $act, $res, $ctr, $str, $tr, $dat
-			);
-                    if ( defined($li) && $li) {
-			foreach my $e (@epp) {
-			    my $v;
-			    $v = $dri->get_info( $e, 'message', $li );
-			    
-			    if (defined($v) && $v) {
-				if ($e eq 'qdate') {
-				    # make the DateTime object a scalar time string
-				    $v = sprintf $v;
-				}
-				$m{$e} = $v;
-			    }
-			}
-			# .NO conditions
-			my $c;
-			$c = $dri->get_info( 'conditions', 'message', $li );
-			$m{conditions} = $c if ($c);
+               #my $r =  message_object_as_fmt($dri, 'hash');
+               #print "Message:\n", Dumper $r;
+
+            } else {
+               dump_as_fmt ($rc);
+
 		    }
-                }
-            }
-	    # Just dump the message elements
-	    print "message: ", Dumper \%m;
+           die($rc) unless $rc->is_success();
+
         }
         if ( $cmd eq 'delete' ) {
             if ( my $id = $p{id} ) {
                 $rc = $dri->message_delete($id, { facets => $p{facets} });
-                print_rc_result($rc);
-                print_result($dri);
+
+               dump_as_fmt ($rc, $dri);
+
                 die($rc) unless $rc->is_success();
             } else {
                 print "Poll: No 'id' specified\n";
@@ -1276,14 +1103,16 @@ my @noc = (
     return;
 }
 
-sub dump_conditions {
+sub dump_error_conditions_as_fmt {
     my $dri = shift;
 
   # get the conditions array from $rinfo structure which is built by Result.pm
   #
-    my $cd = $dri->get_info('conditions');
+    if (my $cd = $dri->get_info('conditions')) {
 
-    #print "cd: ", Dumper $cd;
+       if ($dump_fmt eq 'hash') {
+           print "Conditions:\n", Dumper $cd;
+       } else {
     foreach my $c (@$cd) {
         foreach my $i ( 'code', 'severity', 'msg', 'details' ) {
             my $v;
@@ -1291,10 +1120,1267 @@ sub dump_conditions {
             printf "$F", $i, $v;
         }
     }
+       }
+    }
     return;
 }
 
-#__END__
+
+sub dump_as_fmt {
+    my ($rc, $dri, $ob, $op) = @_;
+
+    my $fmt = $dump_fmt;
+
+    my ($rcres, $drires, $obres);
+
+    if ($rc) {
+       $rcres = rc_result_as_fmt( $rc, $fmt );
+       $rcres = Dumper $rcres if ($fmt eq 'hash');
+       print "RC_RESULT:\n$rcres\n";
+    }
+    if ($dri) {
+       $drires = dri_result_as_fmt( $dri, $fmt );
+       $drires = Dumper $drires if ($fmt eq 'hash');
+       print "DRI_RESULT:\n$drires\n",
+    }
+    if ($ob) {
+       if ($ob eq 'contact') {
+           $obres = contact_object_as_fmt( $dri, $fmt, $op);
+       } elsif ($ob eq 'host') {
+           $obres = host_object_as_fmt( $dri, $fmt);
+       } elsif ($ob eq 'domain') {
+           $obres = domain_object_as_fmt( $dri, $fmt);
+       } elsif ($ob eq 'message') {
+           $obres = message_object_as_fmt( $dri, $fmt);
+       }
+       $obres = Dumper $obres if ($fmt eq 'hash');
+       print uc($ob), ":\n$obres\n";
+    }
+}
+
+
+
+=begin head2 rc_result_as_fmt
+
+Helper function to map rc result information from DRI into a hash
+or a string as the user prefers.
+
+TODO: This should be fixed in the DRI:
+Due to a problem in Net::DRI the msg contains part of the
+login response extension, and I cannot get the normal
+conditions_parse in my Result.pm inside Net::DRI to
+work for login responses.
+The as_string returns wrongly formatted message, which includes
+something like this:
+
+ "Command syntax error</msg></result><extension><conditions xmlns=\"http://www.norid.no/xsd/no-ext-result-1.0\" xsi:schemaLocation=\"http://www.norid.no/xsd/no-ext-result-1.0 no-ext-result-1.0.xsd\"><condition code=\"EC000015\" severity=\"error\"><msg>EPP parse error (2001/2001) ERROR"
+
+So, the methods <msg> hack extracts the two msg parts of the result.
+
+Keys returned can be:
+
+   Summary
+   Class
+   EPP_RFC_code
+   EPP_native_code
+   Info
+   Message
+
+   rc_is_pending
+   rc_info
+
+   clTRID
+   svTRID
+
+    * is_success()
+    * code()
+    * native_code()
+    * message()
+    * lang()
+    * info()
+    * as_string(EXTRA)
+    * print()
+    * print_full()
+    * trid() 
+
+=end head2 rc_result_as_fmt
+
+=cut
+sub rc_result_as_fmt {
+    my $rc  = shift;
+    my $fmt = shift;
+
+    return unless (ref($rc) eq "Net::DRI::Protocol::ResultStatus");
+
+    #print STDERR "\ngd raw cmd:\n\n "  , Dumper $rc->get_data('session', 'exchange', 'raw_command'), "\n\n";
+    #print STDERR "\ngd raw rep:\n\n "  , Dumper $rc->get_data('session', 'exchange', 'raw_reply'), "\n\n";
+    #print STDERR "DRI.pm: rc_result_as_fmt PRINT: ", $rc->as_string(1), "\n";
+    # print STDERR "DRI.pm: rc_result_as_fmt - rc in is:", Dumper $rc, "\n";
+
+    my $s;
+    unless ($fmt || $fmt eq 'hash') {
+       $fmt = 'string';
+       $s = "";
+    }
+
+    my ($cl, $cd, $ncd, $inf, $msg);
+    $cl = $cd = $ncd = $inf = $msg = '-';
+
+    $cl  = ref($rc) if (ref($rc));
+    $cd  = $rc->code() if ($rc->code());
+    $ncd = $rc->native_code() if ($rc->can('native_code') && $rc->native_code());
+    $inf = $rc->info() if ($rc->can('info') && $rc->info());
+    $msg = $rc->as_string() if ($rc->can('as_string') && $rc->as_string());
+
+    if ($msg =~ m|(^.+)</msg>.+<msg>(.+$)|mx) {
+       if ($1 && $2) {
+           $msg  = $1 . ' - ' . $2;
+       }
+    }
+    if ($fmt eq 'hash') {
+       $s->{Class}           = $cl;
+       $s->{EPP_RFC_code}    = $cd;
+       $s->{EPP_native_code} = $ncd;
+       $s->{Info}            = $inf;
+       $s->{Message}         = $msg;
+    } else {
+       $s .=  
+           "Class       : $cl\n" . 
+           "EPP_RFC_code: $cd\n" .
+           "EPP_native_code : $ncd\n" .
+           "Info        : $inf\n" .
+           "Message     : $msg\n";
+    }
+       
+    # rc is ok
+    # Print rc-specific info, not found in $dri->result_*()
+         
+    if ($rc->can('is_pending')) {
+       my $v = "";
+       $v = $rc->is_pending() if $rc->is_pending();
+       
+       if ($fmt eq 'hash') {
+           $s->{rc_is_pending} = $v;
+       } else {
+           $s .= "rc_is_pending : $v\n";
+       }
+    }
+    if ($rc->can('info')) {
+       my $v = "";
+       $v = $rc->info() if $rc->info();
+       if ($fmt eq 'hash') {
+           $s->{rc_info} = $v;
+       } else {
+           $s .= "rc_info : $v\n";
+       }
+    }
+    if ($rc->can('trid') && $rc->trid()) {
+       my @v;
+       @v = $rc->trid();
+       
+       # trid seems to be returned as an array with two values
+       if ($fmt eq 'hash') {
+           $s->{clTRID} = $v[0];
+           $s->{svTRID} = $v[1];
+       } else {
+           $s .= sprintf "$F", 'clTRID',  $v[0];
+           $s .= sprintf "$F", 'svTRID',  $v[1];
+       }
+    }
+
+    # print STDERR "rc_result_as_fmt returns s: ", Dumper $s;
+
+    return $s;
+}
+
+
+=begin dri_exception_as_fmt
+
+Helper function to map dri exception information from DRI into a hash
+or a string as the user prefers.
+
+Keys returned can be:
+
+   dx_area
+   dx_code
+   dx_msg
+   dx_as_string
+
+   dx_as_array   (hash fmt only: the string as array elements, one line per entry)
+
+=end dri_exception_as_fmt
+
+=cut
+
+sub dri_exception_as_fmt {
+    my $rx  = shift;
+    my $fmt = shift;
+
+    return unless ($rx);
+
+    # If the $rx is a string, return it
+    return $rx unless (ref($rx) eq "Net::DRI::Exception");
+
+    #print STDERR "dri_exception_as_fmt got rx: ", Dumper $rx;
+
+    my $s;
+    unless ($fmt || $fmt eq 'hash') {
+       $fmt = 'string';
+       $s = "";
+    }
+    # Print exception specific info
+    foreach my $m ('area', 'code', 'msg', 'as_string') {
+       if ($rx->can($m)) {
+           my $v;
+           $v = $rx->$m() if $rx->$m;
+           next unless $v;
+
+           if ($fmt eq 'hash') {
+               $s->{"dx_$m"} = $v;
+
+               if ($m eq 'as_string') {
+                   # also represent the string as an array in hash mode
+                   push @{$s->{dx_as_array}}, split '\n', $v;
+               }
+           } else {
+               $s .= "dx_$m : $v\n";
+           }
+       }
+    }
+    #print STDERR "dri_exception_as_fmt returns s: ", Dumper $s;
+    return $s;
+}
+
+
+=begin dri_result_as_fmt
+
+Helper function to map dri result information from DRI into a hash
+or a string as the user prefers.
+
+Keys returned can be:
+
+    result_code
+    native_code
+    message
+    lang
+
+    is_pending
+
+    info
+
+    print
+    print_full
+
+    action
+    exist
+    exist_reason
+
+    trStatus
+    reID
+    reDate
+    acID
+    acDate
+    exDate
+
+    # msgQ data in message:
+    msgq.
+      count
+      id
+
+    # NO specific extension codes, array, each with:
+    code
+    severity
+    msg
+    details
+
+=end dri_result_as_fmt
+
+=cut
+
+sub dri_result_as_fmt {
+    my ($dri, $fmt) = @_;
+
+    return unless (ref($dri) eq "Net::DRI");
+
+    # print STDERR "DRI_result_as_fmt dri: ", ref($dri), "\n";
+    # print STDERR "DRI_result_as_fmt dri is: ", Dumper $dri, "\n";
+    my $s;
+    unless ($fmt || $fmt eq 'hash') {
+       $fmt = 'string';
+       $s = "";
+    }
+    my ($rcode, $ncode, $message, $lang);
+    $rcode = $ncode = $message = $lang = '-';
+
+    if ($dri->can('result_code') && $dri->result_code()) {
+       $rcode = $dri->result_code();
+    }
+
+    if ($dri->can('result_native_code') && $dri->result_native_code()) {
+       $ncode = $dri->result_native_code();
+    }
+
+    if ($dri->can('result_message') && $dri->result_message()) {
+       $message = $dri->result_message();
+    }
+
+    if ($dri->can('result_lang') &&  $dri->result_lang()) {
+       $lang = $dri->result_lang();
+    }
+
+    if ($fmt eq 'hash') {
+       $s->{result_code} =  $rcode;
+       $s->{native_code} =  $ncode;
+       $s->{message}     =  $message;
+       $s->{lang}        =  $lang;
+    } else {
+       $s = "\n";
+       $s .= " result_code    : $rcode\n";
+       $s .= " native_code    : $ncode\n";
+       $s .= " result_message : $message\n";
+       $s .= " language       : $lang\n";
+    }
+    #print STDERR "set_dri_result_as_fmt\n";
+
+    if ($dri->can('result_is_pending')) {
+       my $v = $dri->result_is_pending();
+       if ($fmt eq 'hash') {
+           $s->{is_pending} = $v;
+       } else {
+           $s .= "is_pending  : $v\n";
+       }
+    }
+    if ($dri->can('result_info')) {
+       my $v = $dri->result_info();
+       if ($fmt eq 'hash') {
+           $s->{info} = $v;
+       } else {
+           $s .= "info : $v\n";
+       }
+    }
+    if ($dri->can('result_print')) {
+       my $v = $dri->result_print();
+       if ($fmt eq 'hash') {
+           $s->{print} = $v;
+       } else {
+           $s .= "print: $v\n";
+       }
+    }
+    if ($dri->can('result_print_full')) {
+       my $v = $dri->result_print_full();
+       if ($fmt eq 'hash') {
+           $s->{print_full} = $v;
+       } else {
+           $s .= "print_full: $v\n";
+       }
+    }
+
+#    print STDERR "dri: ", Dumper $dri;
+
+    foreach my $w ('action', 'exist', 'exist_reason', 'trStatus', 'reID','reDate',
+                  'acID', 'acDate', 'exDate') {
+
+       if (my $v = $dri->get_info($w)) {
+           if ($fmt eq 'hash') {
+               $s->{$w} = "$v";
+           } else {
+               $s .= sprintf "$F", $w,  "$v";
+           }
+       }
+    }
+
+    ####
+    # Find any piggybacked msgQ count and id
+    foreach my $m ('count', 'id') {
+       if (my $v = $dri->get_info($m,'message','info')) {
+           if ($fmt eq 'hash') {
+               $s->{msgq}->{$m} = $v;
+           } else {
+               $s .= sprintf "$F", "msgq_" .$m, $v;
+           }
+       }
+    }
+
+    #
+    # Get the .NO conditions array from $rinfo structure which is built by Result.pm
+    my $cd = $dri->get_info('conditions');
+
+   # print STDERR "dri_result_as_fmt NO_XXXTENSIONS: , cd: ", Dumper $cd;
+
+    foreach my $c (@$cd) {
+       foreach my $i ('code', 'severity', 'msg', 'details') {
+           my $v;
+           $v = '-' unless ($v = $c->{$i});
+
+           if ($fmt eq 'hash') {
+
+# print STDERR "dri_result_as_fmt: $i = $v\n";
+
+               push @{$s->{conditions}->{condition}->{$i}}, $v;
+               #push @{$s->{$i}}, $v;
+
+           } else {
+               $s .= sprintf "$F", "conds-".$i,  $v;
+           }
+       }
+    }
+
+#   print STDERR "\n\n *** dri_result_as_fmt returns s: ", Dumper $s, "\n***\n\n";
+    return $s;
+}      
+
+=begin contact_object_as_fmt
+
+Helper function to map contact object information from DRI into a hash
+or a string as the user prefers.
+
+Keys returned can be:
+
+    loid
+    srid
+    id
+    roid
+    name
+    org
+    street
+    city
+    sp
+    pc
+    cc
+    email
+    voice
+    fax
+    auth
+    disclose->
+       voice
+       fax
+       email
+    xdisclose->
+       mobilePhone
+    identity->type
+    identity->value
+    mobilephone, 
+    organization
+    rolecontact
+    xemail
+
+    roid
+    crDate
+    upDate
+    clID
+    crID
+    upID
+
+=end contact_object_as_fmt
+
+=cut
+
+sub contact_object_as_fmt {
+    my ($dri, $fmt, $op) = @_;
+
+    my $s;
+    unless ($fmt || $fmt eq 'hash') {
+       $fmt = 'string';
+       $s = "";
+    }
+
+    # The handle id of a contact create need to be picked manually
+    if ($op && $op eq 'create') {
+       if ( my $v = $dri->get_info('id') ) {
+           if ( ref($v) && ( ref($v) ne 'SCALAR' ) ) {
+               # don't bother diving into it ... use a Dumper
+               $v = sprintf Dumper $v;
+           }
+           if ($fmt eq 'hash') {
+               $s->{id} = $v; 
+           } else {
+               $s .= sprintf "$F", 'id', $v;
+           }
+       }
+       return $s;
+    } else {
+
+       ####
+       # Now the contact object information for update/info
+       my $o = $dri->get_info('self');
+
+       foreach my $m (@cm) {
+
+           if ($o->can($m)) {
+               my $v = $o->$m;
+               
+               if ($m eq 'identity') {
+                   my $t = $v->{type} if ($v && $v->{type});
+                   my $v = $v->{value}  if ($v && $v->{value});
+                   if ($fmt eq 'hash') {
+                       $s->{identity}->{type}  = $t if ($t);
+                       $s->{identity}->{value} = $v if ($v);
+                   } else {
+                       $s .= sprintf "$F", 'identity type'   , $t if ($t);
+                       $s .= sprintf "$F", ', identity value', $v if ($v);
+                   }
+               } elsif ($m eq 'disclose') {
+                   # discloses:
+                   # The server has a default policy with full disclose
+                   # It only signals 0 when one is set to off
+                   # We have to initialize all discloseure to 1,
+                   # and change to 0 on the ones the server tells us
+                   
+                   # Special disclose mapping
+                   foreach my $d ('voice', 'fax', 'email') {
+                       # set default disclose value
+                       if ($fmt eq 'hash') {
+                           $s->{$m}->{$d} = '1';
+                       } else {
+                           $s .= sprintf "$F", $d."disclose", "1";
+                       }
+                       
+                       next unless (defined($v) && $v);
+#print STDERR "DRI disclose, v returned and is now:", Dumper $v;
+                       if ($v->{$d} eq "0") {
+                           if ($fmt eq 'hash') {
+                               $s->{$m}->{$d} = '0';
+                           } else {
+                               $s .= sprintf "$F", $d."disclose", "0";
+                           }
+                       }
+                   }
+               } elsif ($m eq 'xdisclose') {
+                   # set default disclose value
+                   if ($fmt eq 'hash') {
+                       $s->{$m}->{mobilePhone} = '1';
+                   } else {
+                       $s .= sprintf "$F", $m. 'mobilePhone', "1";
+                   }
+                   next unless (defined($v) && $v);
+                   if ($v->{mobilePhone} eq "0") {
+                       if ($fmt eq 'hash') {
+                           $s->{$m}->{mobilePhone} = '0';
+                       } else {
+                           $s .= sprintf "$F", $m. 'mobilePhone', "0";
+                       }
+                   }
+               } else {
+                   next unless (defined($v) && $v);
+                   if ($fmt eq 'hash') {
+                       $s->{$m} = $v;
+                   } else {
+                       $s .= sprintf "$F", $m, $v;
+                   }
+               }
+           }
+       }
+       foreach my $i ('roid', 'crDate', 'upDate', 'clID', 'crID', 'upID') {
+           my $v = $dri->get_info($i);
+           $v = '-' unless $v;
+
+           if ($fmt eq 'hash') {
+               $s->{$i} = "$v";
+           } else {
+               $s .= sprintf "$F", $i,  "$v";
+           }
+       }
+
+       ###################
+       # Contact status
+       #
+       $s = statuses_as_fmt ($dri, $s, $fmt);
+    }
+
+
+#print STDERR "DRI contact as fmt, s: ", Dumper $s;
+
+    return $s;
+}
+
+
+=begin host_object_as_fmt
+
+Helper function to map host information from DRI into a hash
+or a string as the user prefers.
+
+Keys returned can be:
+
+    loid
+    count
+    name
+    v4
+    v6
+    status
+
+    contact
+
+    roid
+    exDate
+    crDate
+    upDate
+    trDate
+    clID
+    crID
+    upID
+
+=end host_object_as_fmt
+
+=cut
+
+sub host_object_as_fmt {
+    my ($dri, $fmt) = @_;
+
+    my $s;
+    unless ($fmt || $fmt eq 'hash') {
+       $fmt = 'string';
+       $s = "";
+    }
+
+    my $hi = $dri->get_info('self');
+
+    foreach my $m ('loid', 'count') {
+       #my $v = '-';
+       my $v;
+       $v = $hi->$m if ($hi->$m);
+
+       if ($fmt eq 'hash') {
+           $s->{$m} = $v;
+       } else {
+           $s .= sprintf "$F", $m, $v;
+       }
+    }
+    
+    my @nms = $hi->get_names();
+    if (scalar(@nms) != 1) {
+       Net::DRI::Exception->die(1,'Client::DRI.pm',9000, 'Error: we expect only one host name');
+    }
+    if ($fmt eq 'hash') {
+       $s->{name} = join ", ", @nms;
+    } else {
+       $s .= sprintf "$F", 'name', @nms;
+    }
+    foreach my $n (@nms) {
+       my @d =  $hi->get_details($n);
+
+       # ip-addresses are optional
+       my @v = @{$d[1]} if (@{$d[1]});
+       if ($fmt eq 'hash') {
+           push @{$s->{v4}}, @v if (@v);
+       } else {
+           $s .= sprintf "$F", 'v4 addresses',  join (", ", @v);
+       }
+       @v = ();
+       @v = @{$d[2]} if (@{$d[2]});
+       if ($fmt eq 'hash') {
+           push @{$s->{v6}}, @v if (@v);
+       } else {
+           $s .= sprintf "$F", 'v6 addresses',  join (", ", @v);
+       }
+    }
+
+    # contact is currently a single value
+    # but Net::DRI returns an array because the schemas
+    # support multiple, as a possible future change
+    my $ct = "-";
+    if ($ct = $dri->get_info('contact')) {
+       if (defined($ct->[0])) {
+           if ($fmt eq 'hash') {
+               $s->{contact} = $ct->[0];
+           } else {
+               $s .= sprintf "$F", 'contact',  $ct->[0];
+           }
+       }
+    }
+    foreach my $i ('roid','exDate', 'crDate', 'upDate', 'trDate', 'clID', 'crID', 'upID') {
+       if (my $v = $dri->get_info($i)) {
+           if ($fmt eq 'hash') {
+               $s->{$i} = "$v";
+           } else {
+               $s .= sprintf "$F", $i,  "$v";
+           }
+       }
+    }
+
+    ####################
+    # Host status
+    #
+    $s = statuses_as_fmt($dri, $s, $fmt);
+
+
+#    print STDERR "host s: ", Dumper $s;
+
+    return $s;
+}
+
+
+#You may use get_info with the following keys to get more information:
+# - ns : a Net::DRI::Data::Hosts object representing the nameservers of the domain
+# - status : a Net::DRI::Data::StatusList object representing the current status list of the domain queried
+# - exDate, crDate, upDate, trDate : DateTime objects representing the expiration, creation, last update, and
+#                          transfer date for the domain queried
+# - clID, crID, upID : (strings) local registry ID of the current sponsoring registrar, the registrar having created,
+#                       and the registrar (or registry) having last modified the domain queried
+
+
+=begin domain_object_as_fmt
+
+Helper function to map domain information from DRI into a hash
+or a string as the user prefers.
+
+Keys returned can be:
+
+    name
+    ace
+
+    pw 
+    pwsetbuthidden
+
+    nscount
+    nsset[]
+
+    registrant
+    coset.
+      admin[]
+      tech[]
+
+    status
+    statuslist
+
+    roid
+
+    exDate
+    crDate
+    upDate
+    trDate
+
+    clID
+    crID
+    upID
+
+  - applicantDataset values:
+    versionNumber
+    acceptName
+    acceptDate
+    updateClientID
+    updateDate
+
+=end domain_object_as_fmt
+
+=cut
+
+sub domain_object_as_fmt {
+    my ($dri, $fmt) = @_;
+
+    my $s;
+    unless ($fmt || $fmt eq 'hash') {
+       $fmt = 'string';
+       $s = "";
+    }
+
+    foreach my $m ('name', 'roid','exDate', 'crDate', 'upDate', 'trDate', 'clID', 'crID', 'upID') {
+       my $v = $dri->get_info($m);
+       if ($v) {
+           #print STDERR "m: $m, v: $v\n";
+
+           if ($m eq 'name') {
+               # Also print the UTF-8 of an ACE
+               my $idn = idn_to_unicode($v, 'UTF-8', IDNA_USE_STD3_ASCII_RULES);
+               unless (is_utf8($idn)) {
+                   $idn = Encode::decode('UTF-8', $idn, 1);
+               }
+               if ($fmt eq 'hash') {
+                   $s->{name} = $idn;
+                   $s->{ace}  = $v;
+               } else {
+                   $s .= sprintf "$F", 'Name',  $idn;
+                   $s .= sprintf "$F", 'ACE-name',  $v;
+               }
+               next;
+           }
+           if ($fmt eq 'hash') {
+               $s->{$m} = "$v";
+           } else {
+               $s .= sprintf "$F", $m,  "$v";
+           }
+       }
+    }
+
+    ####
+    # authInfo
+    #
+    my $au;
+    $au = $dri->get_info('auth') if ($dri->get_info('auth'));
+
+    #print STDERR "au: ", Dumper $au;
+
+    if ($au && defined($au->{pw})) {
+       if ($fmt eq 'hash') {
+           $s->{pw} = $au->{pw};
+           if ($au->{pw} eq '') {
+               # Special server rule. The domain has an authInfo, but it is secret 
+               # for non-sponsors
+               $s->{pwsetbuthidden} = 1;
+           }
+       } else {
+           $s .= sprintf "$F", 'authInfo pw', $au->{pw};
+       }
+    }
+
+
+    ##
+    # name servers
+    #
+    unless ($fmt eq 'hash') {
+       $s .= sprintf "--- Name servers ---\n";
+    }
+
+    if (my $ns = $dri->get_info('ns')) {
+       my $v = '-';
+       if (($v = $ns->count()) > 0) {
+           if ($fmt eq 'hash') {
+               $s->{ns_count} = $v;
+           } else {
+               $s .= sprintf "$F", 'ns count', $v;
+           }
+       }
+       foreach my $n (sort $ns->get_names()) {
+           if ($fmt eq 'hash') {
+               push @{$s->{nsset}}, $n;
+           } else {
+               $s .= sprintf "$F", 'ns name',  $n;
+           }
+       }
+    }
+
+    ####################
+    # Contacts
+    # 
+    # contact is an array ref.
+    my $co = $dri->get_info('contact');
+    
+    unless ($fmt eq 'hash') {
+       $s .= sprintf "--- Contacts ---\n";
+    }
+
+    foreach my $ct ('registrant', 'admin', 'tech') {
+       my @r = $co->get($ct);
+       my $v = "-";
+       foreach my $r (@r) {
+           $v = $r->srid if ($r->srid);
+           if ($fmt eq 'hash') {
+               if ($ct eq 'registrant') {
+                   $s->{registrant} = $v;
+               } else {
+                   push @{$s->{coset}->{$ct}}, $v;
+               }
+           } else {
+               $s .= sprintf "$F", $ct, $v;
+           }
+       }
+    }
+
+    ####################
+    # Domain status
+    #
+    $s = statuses_as_fmt($dri, $s, $fmt);
+
+
+    #####################
+    # Applicant dataset
+    #
+
+    unless ($fmt eq 'hash') {
+       $s .= sprintf "--- Applicant Dataset ---\n";
+    }
+
+    my $aset = $dri->get_info('applicantDataset');
+    for my $m ('versionNumber', 'acceptName', 'acceptDate', 'updateClientID', 'updateDate') {
+       my $v = $aset->{$m};
+       if ($v) {
+           #print STDERR "m: $m, v: ", Dumper $v;
+           if ($fmt eq 'hash') {
+               $s->{$m} = "$v";
+           } else {
+               $s .= sprintf "$F", $m,  "$v";
+           }
+       }
+    }
+
+    return $s;
+}
+
+
+=begin statuses_as_fmt
+
+Routine to set status values from dri into the hash,
+should work for host, contact and domain objects
+
+=end statuses_as_fmt
+
+=cut
+
+sub statuses_as_fmt {
+    my ($dri, $s, $fmt) = @_;
+
+#    my $s = $sref;
+
+    my $st = $dri->get_info('status');
+
+    unless ($fmt eq 'hash') {
+       $s .= sprintf "--- Status summary ---\n";
+    }
+
+    foreach my $hs (@sm) {
+       my $v = undef;
+
+       if ($st->$hs) {
+           $v = $st->$hs;
+           if ($fmt eq 'hash') {
+               $s->{status}->{$hs} = $v;
+           } else {
+               $s .= sprintf "$F", $hs, $v;
+           }
+       }
+    }
+
+    ####
+    # also dump all the detailed status values
+    my @ls = $st->list_status();
+
+    unless ($fmt eq 'hash') {
+       $s .= sprintf "--- Status list ---\n";
+    }
+    foreach my $l (@ls) {
+       if ($fmt eq 'hash') {
+           $s->{statuslist}->{$l} = 1;
+       } else {
+           $s .= sprintf "$F", 'statuslist', $l;
+       }
+    }
+
+   ####
+    # also dump all the status details
+    my $sd = $st->status_details;
+
+    unless ($fmt eq 'hash') {
+       $s .= sprintf "--- Status details ---\n";
+    }
+    foreach my $l (keys %$sd) {
+       if ($fmt eq 'hash') {
+           $s->{statusdetails}->{$l} = $sd->{$l};
+
+#print STDERR "statusdetails: $l = ",  Dumper $sd->{$l}, "\n";
+
+       } else {
+           $s .= sprintf "$F", 'statusdetails', $l . ": " . $sd->{$l};
+       }
+    }
+
+    return $s;
+
+}
+
+=begin message_object_as_fmt
+
+Helper function to map retrieved message information from DRI into a hash
+or a string as the user prefers.
+
+Keys returned can be:
+
+    id
+    qdate
+    msg
+    content
+    lang
+    object_type
+    object_id
+    action
+    result
+    trid
+    svtrid
+    date
+
+    ##
+    # .NO specific
+
+    # the specific content desc
+    nocontent     
+
+    # the conditions array, each element contains msg/code/..
+    conditions[]
+          msg
+          code
+          severity
+          details
+
+    # Inner TRIDs from late-responses etc.
+    trid.
+       cltrid
+       svtrid
+
+    # in case of domain late response, get the transfer status data
+    # each element contains msg/code/..
+    trStatus
+    reID
+    reDate
+    acID
+    acDate
+    exDate
+
+=end message_object_as_fmt
+
+=cut
+
+sub message_object_as_fmt {
+    my ($dri, $fmt) = @_;
+
+    my $s;
+    unless ($fmt || $fmt eq 'hash') {
+       $fmt = 'string';
+       $s = "";
+    }
+
+    my $c = $dri->get_info('count','message','info');
+
+     if (defined($c) && $c > 0) {
+       # messages exist, read data from the last_id one
+       my $li = $dri->get_info('last_id');
+
+       if ( defined($li) && $li) {
+
+           foreach my $e (@epp) {
+               my $v;
+               $v = $dri->get_info( $e, 'message', $li );
+               
+               #print STDERR "DRI dri info message $e, ref: ", ref($e), "Dumper: ", Dumper $v;
+               
+               if (defined($v) && $v) {
+
+                   # stringify dates
+                   $v = "$v" if ($e eq 'qdate' || $e eq 'date');
+
+                   if ($fmt eq 'hash') {
+                       $s->{$e} = $v;
+                   } else {
+                       $s .= sprintf "$F", $e, $v;
+                   }
+               }
+           }
+
+           # from @epp, 'content' an 'nocontent' are often equal, use it once if so
+           if ($fmt eq 'hash') {
+               if ($s->{content} && $s->{nocontent} && $s->{content} eq $s->{nocontent}) {
+                   delete $s->{nocontent};
+               }
+           }
+
+           # .NO conditions
+           if (my $cd = $dri->get_info( 'conditions', 'message', $li )) {
+               foreach my $c (@$cd) {
+                   foreach my $i ('code', 'severity', 'msg', 'details') {
+                       my $v;
+                       $v = '-' unless ($v = $c->{$i});
+                       
+                       if ($fmt eq 'hash') {
+                          push @{$s->{conditions}->{condition}->{$i}}, $v;
+                       } else {
+                           $s .= sprintf "$F", "conds-".$i,  $v;
+                       }
+                   }
+               }
+           }
+       }
+       
+       # domain transfer late response result
+       # really deep digging into the Net::DRI structures
+       if ((my $d = $dri->get_info( 'domain', 'message', $li ))) {
+
+           if (my @dn = keys(%$d)) {
+               my $nmp=0;
+
+               # Set resptype = 'contact'
+               if ($fmt eq 'hash') {
+                   $s->{late}->{respType} = 'domain';
+               } else {
+                   $s .= sprintf "$F", 'respType',  'domain';
+               }
+
+               foreach my $w ('action', 'exist', 'trStatus', 'reID','reDate',
+                              'acID', 'acDate', 'exDate') {
+
+                   # Cannot get get_info to dig as deep as I need, so use
+                   # the $d hash data from above get_info.
+
+                   if (my $v = $d->{$dn[0]}->{$w}) {
+
+                       if ($fmt eq 'hash') {
+                           $s->{late}->{$w} = "$v";
+                           $s->{late}->{name} = $dn[0] unless $nmp;
+                       } else {
+                           $s .= sprintf "$F", $w,  "$v";
+                           $s .= sprintf "$F", "name",  $dn[0] unless $nmp;
+                       }
+                       #print STDERR "message_object domain found $w: $v\n";
+                   }
+                   ++$nmp;
+               }
+           }
+       }
+
+       # contact create late response result
+       # really deep digging into the Net::DRI structures
+       if ((my $d = $dri->get_info( 'contact', 'message', $li ))) {
+           
+           #print STDERR "message_object contact message found: ", ref $d, "\n";;
+           #print STDERR "message_object contact message found: ", Dumper $d;
+           
+           if ( defined($d->{session}->{id}) ) {
+               my $id = $d->{session}->{id};
+               if (my $ip = $d->{$id}) {
+                   # Set resptype = 'contact'
+                   if ($fmt eq 'hash') {
+                       $s->{late}->{respType} = 'contact';
+                   } else {
+                       $s .= sprintf "$F", 'respType',  'contact';
+                   }
+                   # Extract the interesting stuff
+                   foreach my $w ('id', 'action', 'exist', 'crDate') {
+                       if (my $v = $d->{$id}->{$w}) {
+                           if ($fmt eq 'hash') {
+                               $s->{late}->{$w} = "$v";
+                           } else {
+                               $s .= sprintf "$F", $w,  "$v";
+                           }
+                           #print STDERR "message_object contact found $w: $v\n";
+                       }
+                   }
+               }
+           }
+       }
+
+       # any inner TRIDs
+       if ((my $trid = $dri->get_info( 'trid', 'message', $li ))) {
+           
+           if ($fmt eq 'hash') {
+               $s->{clTRID} = $trid->{cltrid} if (defined($trid->{cltrid}));
+               $s->{svTRID} = $trid->{svtrid} if (defined($trid->{svtrid}));
+           } else {
+               $s .= sprintf "$F", "clTRID", $trid->{cltrid} if (defined($trid->{cltrid}));
+               $s .= sprintf "$F", "svTRID", $trid->{svtrid} if (defined($trid->{svtrid}));
+           }
+       }
+    }
+
+    foreach my $i ('roid', 'crDate', 'upDate', 'clID', 'crID', 'upID') {
+       if (my $v = $dri->get_info($i)) {
+           if ($fmt eq 'hash') {
+               $s->{$i} = "$v";
+           } else {
+               $s .= sprintf "$F", $i,  "$v";
+           }
+       }
+    }
+
+
+#    print STDERR "message_object Dumper: ", Dumper $s;
+
+    return $s;
+}
+
+=begin unpack_dataset_file
+
+The applicant data set file shall reside as a txt file inside the
+zip file along with the pdf of the applicant declaration.
+
+ - Unpack the zip
+    - Two files should be contained, one .pdf and one .txt
+    - If this is not the caser, abort.
+
+ - Open the .txt file
+   - parse it, if wrong syntax, abort
+   - extract the applicant data set entries
+
+ - Return the applicant dataset
+
+=end unpack_dataset_file
+
+=cut
+
+sub unpack_dataset_file {
+    my $zf = shift;
+    
+    my $txtfile;
+    my ($ds, $fs);
+
+    unless ( -f $zf ) {
+       die ("No file $zf");
+    }
+
+    my $zip = Archive::Zip->new();
+    my $status = $zip->read( $zf );
+    die "Read of $zf failed\n" if $status != AZ_OK;
+    
+    for my $ft ('pdf', 'txt') {
+       my @filemembers = $zip->membersMatching( ".*\.$ft" );
+       unless (@filemembers) {
+           die "No '*.$ft' file found inside $zf";
+       }
+       if (@filemembers > 1) {
+           die "More than one '*.$ft' file found inside $zf";
+       }
+       $txtfile = $filemembers[0];
+    }
+
+    my $txtfname = $txtfile->fileName;
+    $status = $zip->extractMemberWithoutPaths($txtfile);
+    die "Extracting $txtfile from $zf failed\n" if $status != AZ_OK;
+
+    # Open txtfile and parse it
+    open(IF, "<$txtfname") or die ("Cannot open $txtfname");
+
+    while (<IF>) {
+       chomp;
+       my $l = $_;
+
+       next unless ($l);
+       next if ($l =~ /\#/);
+
+       #print "l in: $l\n";
+
+       # Split on first colon (Limit=2):
+       my ($h, $v) = split ':', $l, 2;
+
+       # collapse all white spaces
+       $h =~ s/\s+/ /g;
+       $h =~ s/^\s+//g;
+       $h =~ s/\s+$//g;
+       $v =~ s/\s+/ /g;
+       $v =~ s/^\s+//g;
+       $v =~ s/\s+$//g;
+
+       die "Invalid file key: '$h'" unless ($ds_dri_map{$h} || $ds_file_map{$h});
+
+       #print "h: $h, v: $v\n";
+
+       if ($ds_dri_map{$h}) {
+           # Map the field names from the file tags to the Net::DRI tags
+           $ds->{$ds_dri_map{$h}} = $v;
+
+       } elsif ($ds_file_map{$h}) {
+
+           if ($h =~ m/Domain name/) {
+               push @{$fs->{$ds_file_map{$h}}}, $v;
+           } elsif ($ds_file_map{$h}) {
+               $fs->{$ds_file_map{$h}} = $v;
+           }
+       }
+    }
+    close(IF);
+
+    #unlink($txtfname);
+
+    return $ds, $fs;
+}
+
+
+__END__
+
 
 =pod
 
@@ -1336,6 +2422,7 @@ B<perl epp_client_no.pl [Connect arguments] [Command arguments]>
  -f: Log file. The Net::DRI raw XML exchange will be dumped to this file
  -L: Use SSL connection
  -w: New account password, will be set in first EPP login
+ -F: Format on output, 'string' (default) or 'hash'
 
 =item Command arguments
 
@@ -1424,19 +2511,19 @@ type extension.
 
 =item 1 Organization contact
 
--o contact -c create -p E<34>%p=(name=>'EXAMPLE FIRM AS', street=>['Example building','Example st. 23', '5 etg'], city=>'Trondheim', pc=>'7465', cc=>'NO', voice=>'+47.12345678', fax=>'+47.12345678x01', email=>'xml@example.no', type=>'organization', identity=>{type=>'organizationNumber', value=>'987654321'})E<34>
+-o contact -c create -p E<34>%p=(name=>'EXAMPLE FIRM AS', street=>['Example building','Example st. 23', '5 etg'], city=>'Trondheim', pc=>'NO-7005', cc=>'NO', voice=>'+47.12345678', fax=>'+47.12345678x01', email=>'xml@example.no', type=>'organization', identity=>{type=>'organizationNumber', value=>'987654321'})E<34>
 
 =item 2 Person contact 1 affiliated with a company
 
--o contact -c create -p E<34>%p=(name=>'Peter Example Olsen', street=>['First example building','Example st. 1'], city=>'Trondheim', pc=>'7465', cc=>'NO', voice=>'+47.22345671',  mobilephone=>'+47.123456781', email=>'peter.xml@example.no', type=>'person', organization=>'EFA12O')E<34>
+-o contact -c create -p E<34>%p=(name=>'Peter Example Olsen', street=>['First example building','Example st. 1'], city=>'Trondheim', pc=>'NO-7005', cc=>'NO', voice=>'+47.22345671',  mobilephone=>'+47.123456781', email=>'peter.xml@example.no', type=>'person', organization=>'EFA12O')E<34>
 
 =item 3 Person contact 2 not affiliated with a company
 
--o contact -c create -p E<34>%p=(name=>'John Example Johnsen', street=>['Second example building','Example st. 2'], city=>'Trondheim', pc=>'7465', cc=>'NO', voice=>'+47.22345672',  mobilephone=>'+47.123456782', email=>'john.xml@example.no', type=>'person')E<34>
+-o contact -c create -p E<34>%p=(name=>'John Example Johnsen', street=>['Second example building','Example st. 2'], city=>'Trondheim', pc=>'NO-7005', cc=>'NO', voice=>'+47.22345672',  mobilephone=>'+47.123456782', email=>'john.xml@example.no', type=>'person')E<34>
 
 =item 4 Role contact with two contact end a secondary extra email address
 
--o contact -c create -p E<34>%p=(name=>'Example hostmaster', street=>['Example building','Example st. 23', '5 floor'], city=>'Trondheim', pc=>'7465', cc=>'NO', voice=>'+47.12345678', fax=>'+47.12345678x01',  mobilephone=>'+47.123456789', email=>'hostmaster@example.no', type=>'role', rolecontact=>['PEO1P', 'JEO2P'],  xemail=>'xml@example.no')E<34>
+-o contact -c create -p E<34>%p=(name=>'Example hostmaster', street=>['Example building','Example st. 23', '5 floor'], city=>'Trondheim', pc=>'NO-7005', cc=>'NO', voice=>'+47.12345678', fax=>'+47.12345678x01',  mobilephone=>'+47.123456789', email=>'hostmaster@example.no', type=>'role', rolecontact=>['PEO1P', 'JEO2P'],  xemail=>'xml@example.no')E<34>
 
 =back
 
@@ -1453,7 +2540,7 @@ remove one of the existing person affiliations.
 Also change some of the address information and the mobile phone number. Keep
 the rest of the info.
 
--o contact -c update -p E<34>%p=(srid=>'TOH12R', name=>'New name on Hostmaster', street=>['Changed example building','Changed Example st. 23', '5 floor'],  city=>'Trondheim', pc=>'7465', cc=>'NO', mobilephone=>'+47.123433389', organization=>{add=>['TOH1O']}, rolecontact=>{add=>['TOH1P'], del=>['TOH1P']})E<34>
+-o contact -c update -p E<34>%p=(srid=>'TOH12R', nname=>'New name on Hostmaster', street=>['Changed example building','Changed Example st. 23', '5 floor'],  city=>'Trondheim', pc=>'NO-7005', cc=>'NO', mobilephone=>'+47.123433389', organization=>{add=>['TOH1O']}, rolecontact=>{add=>['TOH1P'], del=>['TOH1P']})E<34>
 
 =back
 
@@ -1592,7 +2679,7 @@ specify his registrar id by the 'sponsoringClientID'.
 
 =over
 
-=item 1 Check to see whether a domain name is available or registered
+=item * Check to see whether a domain name is available or registered
 
 -o domain -c check -p E<34>%p=(name=>'test.no')E<34>
 
@@ -1602,7 +2689,7 @@ specify his registrar id by the 'sponsoringClientID'.
 
 =over
 
-=item 1 Do an info on an existing domain
+=item * Do an info on an existing domain
 
 -o domain -c info -p E<34>%p=(name=>'test.no')E<34>
 
@@ -1651,14 +2738,41 @@ Duration syntax: 'duration=>{years=>1}' or 'duration=>{months=>12}'
 
 =back
 
-=item 1 Create a normal domain
+
+=item * Create a normal domain
 
 Create a single domain with a a registrant, a contact set with one type each,
-and two existing name servers, which is the minimum for .no:
+two existing name servers, which is the minimum for .no.
 
--o domain -c create -p E<34>%p=(name=>'test.no', pw=>'', registrant=>'THO12O', coset=>{tech=>'THO23P', admin=>'TH2345P'}, nsset=>['ns1.sol.no', 'ns2.sol.no'])E<34>
+B<Using the 1.0 version of the domain schema:>
 
-=item 2 Create an IDN domain
+-o domain -c create -p E<34>"%p=(name=>'test.no', pw=>'', registrant=>'THO12O', coset=>{tech=>'THO23P', admin=>'TH2345P'}, nsset=>['ns1.sol.no', 'ns2.sol.no'])"E<34>
+
+B<Using the 1.1 version of the domain schema:>
+
+The 1.1 version requires the applicantdataset which represents parts of the applicant statement.
+
+a) with applicantdataset specifed directly as arguments, only the three attributes required in EPP are passed:
+
+-o domain -c create -p E<34>%p=(name=>'test.no', pw=>'1234xxx8', registrant=>'BJOH4O', coset=>{tech=>'TH10139P', admin=>'TH10139P'}, nsset=>['ns1.sol.no', 'ns2.sol.no'], applicantdataset=>{ acceptname => 'Peter Absalon', acceptdate => '2011-10-11T08:19:31.00Z', versionnumber => '3.0'})E<34>
+
+b) with applicantdataset specifed in the 'applicantdatafile' zip-file from the Norid EE-Automaton. The .txt file inside need to contain all attributes from the EE-Automaton:
+
+-o domain -c create -p E<34>%p=(name=>'test.no', pw=>'1234xxx8', registrant=>'BJOH4O', coset=>{tech=>'TH10139P', admin=>'TH10139P'}, nsset=>['ns1.sol.no', 'ns2.sol.no'], applicantdatafile=>'/tmp/appl.zip')E<34>
+
+Example of content of the file 'applicant_declaration.txt' found inside the '/tmp/appl.zip':
+
+ Domain name       : sE<248>l.no
+ Domain name ACE   : xn--sl-lka.no
+ Domain name       : test.no
+ Domain name       : olsen.no
+ Applicant name    : UNINETT NORID AS
+ Applicant identity: 985821585
+ Accept name       : Hilde M. Thunem
+ Accept date       : 2011-10-11T08:19:31.00Z
+ Version number    : 3.0
+
+=item Create an IDN domain
 
 Create a single IDN-domain with a duration of 12 months, a registrant, a
 contact set with one type each, and two existing name servers, which is the
@@ -1667,7 +2781,7 @@ minimum for .NO.
 IDN domains are converted to the ACE-form (xn--...) by the client, and the
 ACE-form is passed as the domain name to the registry.
 
--o domain -c create -p E<34>%p=(name=>'test-ÆØÅ.no', pw=>'', duration=>{months=>12}, registrant=>'THO12O', coset=>{tech=>'THO23P', admin=>'TH2345P'}, nsset=>['ns1.sol.no', 'ns2.sol.no'])E<34>
+-o domain -c create -p E<34>%p=(name=>'test-E<198>E<216>E<197>.no', pw=>'', duration=>{months=>12}, registrant=>'THO12O', coset=>{tech=>'THO23P', admin=>'TH2345P'}, nsset=>['ns1.sol.no', 'ns2.sol.no']})E<34>
 
 This should be accepted if the handles and name servers exist and the domain
 don't.
@@ -1685,7 +2799,7 @@ because of local policy.
 
 =item * Create a single domain with a pw and a contact set, no name servers
 
--o domain -c create -p E<34>%p=(name=>'test.no', pw=>'xxx', registrant=>'THO12O', coset=>{tech=>'THO23P', admin=>'TH2345P'})E<34>
+-o domain -c create -p E<34>%p=(name=>'test.no', pw=>'xxx123yZ', registrant=>'THO12O', coset=>{tech=>'THO23P', admin=>'TH2345P'})E<34>
 
 =item * Create a single domain with a duration of 12 months, no contact set, but only a nameserver
 
@@ -1723,7 +2837,17 @@ The domain name cannot be changed, otherwise all parameters may be changed.
  - add and del on all the multiple objects, coset and nsset, which may be
    arrays or scalars
 
+B<Using the 1.0 version of the domain schema:>
+
 -o domain -c update -p E<34>%p=(name=>'test.no', pw=>'abc', duration=>{months=>12}, registrant=>'TOH191O', coset=>{add=>{tech=>['TOH1P'], admin=>['TOH2P']}, del=>{tech=>['TOH1P'], admin=>['TOH2P', 'TOH3P']}}, nsset=>{add=>['ns1.sol.no', 'ns2.sol.no'], del=>'ns4.sol.no'})E<34>
+
+
+B<Using the 1.1 version of the domain schema:>
+
+The parameter 'applicantdataset' must be supplied, either as arguments or as file, as for domain create.
+
+-o domain -c update -p E<34>%p=(name=>'test.no', pw=>'abc', duration=>{months=>12}, registrant=>'TOH191O', coset=>{add=>{tech=>['TOH1P'], admin=>['TOH2P']}, del=>{tech=>['TOH1P'], admin=>['TOH2P', 'TOH3P']}}, nsset=>{add=>['ns1.sol.no', 'ns2.sol.no'], del=>'ns4.sol.no'}, applicantdatafile=>'/tmp/appl.zip')E<34>
+
 
 =item 2 Update of status flags
 
@@ -1740,6 +2864,14 @@ The flag values to use by the DRI user is the following (from Status.pm):
 Example update when a couple of flags are set, and two already set are removed:
 
 -o domain -c update -p E<34>%p=(name=>'test.no', status=>{add=>['delete','publish'], del=>['update', 'transfer']})E<34>
+
+
+=item 2 Update of applicantdataset only
+
+A registrar may have collected an updated applicant statement. This is how to send it it, just ba a simple domain update, with new applicantdataset,
+this implies useing the 1.1 version of the domain schema:
+
+-o domain -c update -p E<34>%p=(name=>'test.no', applicantdatafile=>'/tmp/appl.zip')E<34>
 
 =back
 
@@ -1925,7 +3057,7 @@ in the parameter string:
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008-2010 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
+Copyright (c) 2008-2013 UNINETT Norid AS, E<lt>http://www.norid.noE<gt>,
 Trond Haugen E<lt>info@norid.noE<gt>
 All rights reserved.
 

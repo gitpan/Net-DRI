@@ -1,7 +1,7 @@
 ## Domain Registry Interface, .BR Domain EPP extension commands
 ## draft-neves-epp-brdomain-03.txt
 ##
-## Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2008,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -16,6 +16,7 @@
 package Net::DRI::Protocol::EPP::Extensions::BR::Domain;
 
 use strict;
+use warnings;
 
 use Net::DRI::Exception;
 use Net::DRI::Util;
@@ -48,7 +49,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2008,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -97,6 +98,7 @@ sub check
  my $eid=build_command_extension($mes,$epp,'brdomain:check');
  my @n=('brdomain:organization',$rd->{orgid});
  $mes->command_extension($eid,\@n);
+ return;
 }
 
 sub check_parse
@@ -137,6 +139,7 @@ sub check_parse
   } continue { $c=$c->getNextSibling(); }
   $rinfo->{domain}->{$domain}->{ticket}=\@tn;
  }
+ return;
 }
 
 sub info
@@ -150,6 +153,7 @@ sub info
  my $eid=build_command_extension($mes,$epp,'brdomain:info');
  my @n=('brdomain:ticketNumber',$rd->{ticket});
  $mes->command_extension($eid,\@n);
+ return;
 }
 
 sub info_parse
@@ -161,6 +165,7 @@ sub info_parse
  my $infdata=$mes->get_extension('brdomain','infData');
  return unless $infdata;
  parse_extra_data($po,$oname,$rinfo,$mes,$infdata);
+ return;
 }
 
 sub parse_extra_data
@@ -233,6 +238,7 @@ sub parse_extra_data
  } continue { $c=$c->getNextSibling(); }
 
  $rinfo->{domain}->{$oname}->{ticket_concurrent}=\@tnc;
+ return;
 }
 
 sub parse_publication
@@ -268,6 +274,7 @@ sub create
 
  my $eid=build_command_extension($mes,$epp,'brdomain:create');
  $mes->command_extension($eid,\@n);
+ return;
 }
 
 sub create_parse
@@ -279,6 +286,7 @@ sub create_parse
  my $credata=$mes->get_extension('brdomain','creData');
  return unless $credata;
  parse_extra_data($po,$oname,$rinfo,$mes,$credata);
+ return;
 }
 
 sub renew_parse
@@ -294,6 +302,7 @@ sub renew_parse
  return unless $pub->size();
 
  $rinfo->{domain}->{$oname}->{publication}=parse_publication($ns,$pub->shift());
+ return;
 }
 
 sub update
@@ -317,6 +326,7 @@ sub update
  return unless @n;
  my $eid=build_command_extension($mes,$epp,'brdomain:update');
  $mes->command_extension($eid,\@n);
+ return;
 }
 
 sub update_parse
@@ -328,6 +338,7 @@ sub update_parse
  my $upddata=$mes->get_extension('brdomain','updData');
  return unless $upddata;
  parse_extra_data($po,$oname,$rinfo,$mes,$upddata);
+ return;
 }
 
 sub pandata_parse
@@ -354,6 +365,7 @@ sub pandata_parse
    $rinfo->{$otype}->{$oname}->{reason_lang}=$c->getAttribute('lang') || 'en';
   }
  } continue { $c=$c->getNextSibling(); }
+ return;
 }
 
 ####################################################################################################

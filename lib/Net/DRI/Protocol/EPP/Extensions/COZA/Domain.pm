@@ -1,7 +1,7 @@
 ## Domain Registry Interface, .CO.ZA Domain EPP extension commands
 ## From http://registry.coza.net.za/doku.php?id=eppdomainextension
 ##
-## Copyright (c) 2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2011,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -38,6 +38,7 @@ sub setup
 {
  my ($class,$po,$version)=@_;
  $po->ns({ 'cozadomain' => [ 'http://co.za/epp/extensions/cozadomain-1-0','coza-domain-1.0.xsd' ] });
+ return;
 }
 
 ####################################################################################################
@@ -61,6 +62,7 @@ sub update
   Net::DRI::Exception::usererr_invalid_parameters('cancel_action parameter must be PendingUpdate or PendingSuspension') unless $cancel=~m/^Pending(?:Update|Suspension)$/;
   my $eid=$mes->command_extension_register('cozadomain','update',{cancelPendingAction=>$cancel});
  }
+ return;
 }
 
 sub update_parse
@@ -73,6 +75,7 @@ sub update_parse
  return unless defined $updata;
 
 ## We do not parse the <cozadomain:detail result="success">AutoRenew 'False' successful</cozadomain:detail>
+ return;
 }
 
 sub info
@@ -84,6 +87,7 @@ sub info
 
  my $eid=$mes->command_extension_register('cozadomain','info');
  $mes->command_extension($eid,[['cozadomain:transferQuote','true']]);
+ return;
 }
 
 sub info_parse
@@ -101,6 +105,7 @@ sub info_parse
 
  my $cost=Net::DRI::Util::xml_traverse($infdata,$ns,'transferQuoteRes','cost');
  $rinfo->{domain}->{$oname}->{transfer_cost}=0+$cost->textContent() if defined $cost;
+ return;
 }
 
 ####################################################################################################
@@ -136,7 +141,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+Copyright (c) 2011,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

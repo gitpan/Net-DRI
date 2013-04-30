@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .ME EPP extensions
 ##
-## Copyright (c) 2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -26,12 +26,13 @@ sub setup
  my ($self,$rp)=@_;
  $self->ns({
              ipr  => ['urn:afilias:params:xml:ns:ipr-1.1','ipr-1.1.xsd'],
+             oxrs => ['urn:afilias:params:xml:ns:oxrs-1.1','oxrs-1.1.xsd'],
            });
  ## What else ?
  return;
 }
 
-sub default_extensions { return qw/Afilias::IPR/; } ## What else ?
+sub default_extensions { return qw/Afilias::IPR Afilias::Message/; } ## What else ?
 
 ####################################################################################################
 1;
@@ -70,7 +71,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2010,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

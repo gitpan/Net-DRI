@@ -1,7 +1,7 @@
 ## Domain Registry Interface, EURid Contact EPP extension commands
 ## (based on EURid registration_guidelines_v1_0E-epp.pdf)
 ##
-## Copyright (c) 2005,2008,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2008,2012,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -48,7 +48,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2008,2012 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2008,2012,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -99,6 +99,7 @@ sub create
 
  my $eid=$mes->command_extension_register('contact-ext','create');
  $mes->command_extension($eid,\@n);
+ return;
 }
 
 sub update
@@ -115,6 +116,7 @@ sub update
 
  my $eid=$mes->command_extension_register('contact-ext','update');
  $mes->command_extension($eid,['contact-ext:chg',@n]);
+ return;
 }
 
 sub info_parse
@@ -135,6 +137,7 @@ sub info_parse
    $s->$1($c->textContent());
   }
  }
+ return;
 }
 
 ####################################################################################################

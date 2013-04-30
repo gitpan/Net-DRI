@@ -1,7 +1,7 @@
 ## Domain Registry Interface, RRI Domain commands (DENIC-11)
 ##
 ## Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>. All rights reserved.
-##           (c) 2012 Michael Holloway <michael@thedarkwinter.com>. All rights reserved.
+##           (c) 2012,2013 Michael Holloway <michael@thedarkwinter.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -16,6 +16,7 @@
 package Net::DRI::Protocol::RRI::Domain;
 
 use strict;
+use warnings;
 
 ##use IDNA::Punycode;
 use DateTime::Format::ISO8601 ();
@@ -54,7 +55,7 @@ Tonnerre Lombard, E<lt>tonnerre.lombard@sygroup.chE<gt>
 =head1 COPYRIGHT
 
 Copyright (c) 2007,2008 Tonnerre Lombard <tonnerre.lombard@sygroup.ch>.
-          (c) 2012 Michael Holloway <michael@thedarkwinter.com>.
+          (c) 2012,2013 Michael Holloway <michael@thedarkwinter.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -129,6 +130,7 @@ sub check
  my @d = build_command($mes, 'check', $domain);
  $mes->command_body(\@d);
  $mes->cltrid(undef);
+ return;
 }
 
 
@@ -147,6 +149,7 @@ sub check_parse
  my $dom = $d[0]->getFirstChild()->getData();
  $rinfo->{domain}->{$dom}->{action} = 'check';
  $rinfo->{domain}->{$dom}->{exist} =  ($s[0]->getFirstChild()->getData() eq 'free')? 0 : 1;
+ return;
 }
 
 sub info
@@ -158,6 +161,7 @@ sub info
 	{recursive => 'false', withProvider => $wp});
  $mes->command_body(\@d);
  $mes->cltrid(undef);
+ return;
 }
 
 sub info_parse
@@ -225,6 +229,7 @@ sub info_parse
  $rinfo->{domain}->{$oname}->{contact} = $cs;
  $rinfo->{domain}->{$oname}->{status} = $po->create_local_object('status');
  $rinfo->{domain}->{$oname}->{ns} = $ns;
+ return;
 }
 
 sub parse_ns
@@ -281,6 +286,7 @@ sub transfer_query
  my @d = build_command($mes, 'info', $domain,
 	{recursive => 'true', withProvider => 'false'});
  $mes->command_body(\@d);
+ return;
 }
 
 sub transfer_parse
@@ -329,6 +335,7 @@ sub transfer_parse
 	new()->parse_datetime($c->getFirstChild()->getData());
   }
  } continue { $c = $c->getNextSibling(); }
+ return;
 }
 
 ############ Transform commands
@@ -361,6 +368,7 @@ sub create
  push @d,build_secdns($rd->{secdns},$domain) if $rd->{secdns};
 
  $mes->command_body(\@d);
+ return;
 }
 
 sub build_contact
@@ -401,7 +409,7 @@ sub build_ns
 sub build_secdns
 {
  my ($secdns,$domain)=@_;
- return undef unless $secdns;
+ return unless $secdns;
  my @d;
  foreach my $s (@{$secdns}) {
   next unless $s->{key_flags};
@@ -448,9 +456,10 @@ sub create_parse
 	parse_datetime($c->getFirstChild()->getData());
   }
  } continue { $c = $c->getNextSibling(); }
+ return;
 }
 
-sub delete
+sub delete ## no critic (Subroutines::ProhibitBuiltinHomonyms)
 {
  my ($rri, $domain, $rd) = @_;
  my $mes = $rri->message();
@@ -470,6 +479,7 @@ sub delete
  }
 
  $mes->command_body(\@d);
+ return;
 }
 
 sub transfer_request
@@ -488,6 +498,7 @@ sub transfer_request
  push @d, ['domain:authInfo',$rd->{auth}->{pw}] if $rd->{auth};
 
  $mes->command_body(\@d);
+ return;
 }
 
 sub transfer_answer
@@ -497,6 +508,7 @@ sub transfer_answer
  my @d = build_command($mes, (Net::DRI::Util::has_key($rd,'approve') && $rd->{approve}) ?
 	'chprovAck' : 'chprovNack', $domain);
  $mes->command_body(\@d);
+ return;
 }
 
 sub trade
@@ -525,6 +537,7 @@ sub trade
  push @d, build_ns($rri, $rd->{ns}, $domain) if Net::DRI::Util::has_ns($rd);
 
  $mes->command_body(\@d);
+ return;
 }
 
 sub transit {
@@ -535,6 +548,7 @@ sub transit {
  my @d = build_command($mes, 'transit', $domain, $disconnect, \%ns);
 
  $mes->command_body(\@d);
+ return;
 }
 
 sub migrate_descr {
@@ -547,6 +561,7 @@ sub migrate_descr {
  push @d,build_contact($rd->{contact}) if Net::DRI::Util::has_contact($rd);
 
  $mes->command_body(\@d);
+ return;
 }
 
 sub create_authinfo {
@@ -558,6 +573,7 @@ sub create_authinfo {
  my $cmd = ($hash) ? 'createAuthInfo1' : 'createAuthInfo2';
  my @d = build_command($mes, $cmd, $domain, $hash, \%ns);
  $mes->command_body(\@d);
+ return;
 }
 
 sub delete_authinfo {
@@ -566,6 +582,7 @@ sub delete_authinfo {
  my %ns = map { $_ => $mes->ns->{$_}->[0] } qw(domain dnsentry xsi);
  my @d = build_command($mes, 'deleteAuthInfo1', $domain, undef, \%ns);
  $mes->command_body(\@d);
+ return;
 }
 
 sub update
@@ -631,6 +648,7 @@ sub update
  push @d, build_ns($rri, $ns, $domain);
 
  $mes->command_body(\@d);
+ return;
 }
 
 ####################################################################################################

@@ -1,6 +1,6 @@
 ## Domain Registry Interface, RRP Domain commands
 ##
-## Copyright (c) 2005,2006,2008 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2006,2008,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -15,6 +15,7 @@
 package Net::DRI::Protocol::RRP::Core::Domain;
 
 use strict;
+use warnings;
 
 use Net::DRI::Data::Hosts;
 use Net::DRI::Protocol::RRP::Core::Status;
@@ -49,7 +50,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2006,2008 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2006,2008,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -88,7 +89,8 @@ sub build_msg
  Net::DRI::Exception->die(1,'protocol/RRP',10,"Invalid domain name") unless ($domain=~m/^[a-z0-9]([a-z0-9\-]{0,61}[a-z0-9])?\.[a-z0-9]([a-z0-9\-]{0,61}[a-z0-9])?$/i); ## from RRP grammar
  $msg->command($command) if defined($command);
  $msg->entities('EntityName','Domain');
- $msg->entities('DomainName',uc($domain));
+ $msg->entities('DomainName',uc $domain);
+ return;
 }
 
 sub add
@@ -109,6 +111,7 @@ sub add
  {
   foreach ($rd->{ns}->get_names(13)) { $mes->entities('NameServer',$_); }
  }
+ return;
 }
 
 sub add_parse
@@ -123,6 +126,7 @@ sub add_parse
  $rinfo->{domain}->{$oname}->{status}=Net::DRI::Protocol::RRP::Core::Status->new($mes);
  $rinfo->{domain}->{$oname}->{exist}=1;
  $rinfo->{domain}->{$oname}->{action}='create';
+ return;
 }
 
 sub renew_parse
@@ -130,6 +134,7 @@ sub renew_parse
  my ($po,$otype,$oaction,$oname,$rinfo)=@_;
  add_parse($po,$otype,$oaction,$oname,$rinfo);
  $rinfo->{domain}->{$oname}->{action}='renew' if (exists($rinfo->{domain}->{$oname}->{action}));
+ return;
 }
 
 sub _basic_command
@@ -137,12 +142,13 @@ sub _basic_command
  my ($command,$rrp,$domain)=@_;
  my $mes=$rrp->message();
  build_msg($mes,$command,$domain);
+ return;
 }
 
-sub check            { return _basic_command('check',@_);   }
-sub status           { return _basic_command('status',@_);  }
-sub del              { return _basic_command('del',@_);     }
-sub transfer_request { return _basic_command('transfer',@_);}
+sub check            { my (@args)=@_; return _basic_command('check',@args);    }
+sub status           { my (@args)=@_; return _basic_command('status',@args);   }
+sub del              { my (@args)=@_; return _basic_command('del',@args);      }
+sub transfer_request { my (@args)=@_; return _basic_command('transfer',@args); }
 
 sub check_parse
 {
@@ -158,6 +164,7 @@ sub check_parse
   $rinfo->{domain}->{$oname}->{exist}=0;
  }
  $rinfo->{domain}->{$oname}->{action}='check';
+ return;
 }
 
 sub status_parse
@@ -187,6 +194,7 @@ sub status_parse
 
  my @ns=$mes->entities('nameserver');
  $rinfo->{domain}->{$oname}->{ns}=Net::DRI::Data::Hosts->new_set(@ns);
+ return;
 }
 
 sub transfer_answer
@@ -196,6 +204,7 @@ sub transfer_answer
  build_msg($mes,'transfer',$domain);
 
  $mes->entities('Approve',(defined($rd) && ref($rd) && exists($rd->{approve}) && $rd->{approve})? 'Yes' : 'No');
+ return;
 }
 
 sub mod
@@ -226,6 +235,7 @@ sub mod
  ## $statadd/$statdel are Net::DRI::Protocol::RRP::Core::Status objects
  if (defined($statadd)) { foreach ($statadd->list_status()) { $mes->entities('Status',$_)     } }
  if (defined($statdel)) { foreach ($statdel->list_status()) { $mes->entities('Status',$_.'=') } }
+ return;
 }
 
 sub renew
@@ -250,6 +260,7 @@ sub renew
  my $mes=$rrp->message();
  build_msg($mes,'renew',$domain);
  $mes->options({Period=>$period,CurrentExpirationYear=>$curexp}) if (defined($period) && defined($curexp));
+ return;
 }
 
 ####################################################################################################

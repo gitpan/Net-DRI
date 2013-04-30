@@ -1,6 +1,6 @@
 ## Domain Registry Interface, ICANN policy on reserved names
 ##
-## Copyright (c) 2005-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -20,11 +20,11 @@ use warnings;
 
 use Net::DRI::Util;
 
-## See http://www.icann.org/registries/rsep/submitted_app.html for changes
-our %ALLOW1=map { $_ => 1 } qw/mobi coop biz pro cat info travel tel asia/; ## Pending ICANN review: (none)
-our %ALLOW2=map { $_ => 1 } qw/mobi coop name jobs biz pro cat info travel tel asia/; ## Pending ICANN review: (none)
+## See http://www.icann.org/en/resources/registries/rsep for changes (done until 2012004)
+our %ALLOW1=map { $_ => 1 } qw/mobi coop biz pro cat info travel tel asia org/; ## Pending ICANN review: (none)
+our %ALLOW2=map { $_ => 1 } qw/mobi coop name jobs biz pro cat info travel tel asia org/; ## Pending ICANN review: (none)
 
-## See http://www.icann.org/en/registries/agreements.htm
+## See http://www.icann.org/en/about/agreements/registries
 sub is_reserved_name
 {
  my ($domain,$op)=@_;
@@ -153,7 +153,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright (c) 2005-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+Copyright (c) 2005-2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

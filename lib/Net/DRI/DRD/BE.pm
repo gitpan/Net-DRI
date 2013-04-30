@@ -1,6 +1,7 @@
 ## Domain Registry Interface, .BE (DNSBE) policies for Net::DRI
 ##
 ## Copyright (c) 2006-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+##           (c) 2013 Michael Holloway <michael@thedarkwinter.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -22,7 +23,7 @@ use base qw/Net::DRI::DRD/;
 
 use DateTime::Duration;
 
-__PACKAGE__->make_exception_for_unavailable_operations(qw/domain_transfer_stop domain_transfer_query domain_transfer_accept domain_transfer_refuse domain_renew contact_check contact_transfer message_retrieve message_delete message_waiting message_count/);
+__PACKAGE__->make_exception_for_unavailable_operations(qw/domain_transfer_stop domain_transfer_query domain_transfer_accept domain_transfer_refuse domain_renew contact_check contact_transfer/);
 
 =pod
 
@@ -90,7 +91,7 @@ sub transport_protocol_default
  return;
 }
 
-######################################################################################
+####################################################################################################
 ## From §2 of Enduser_Terms_And_Conditions_fr_v3.1.pdf
 sub verify_name_domain
 {
@@ -102,5 +103,13 @@ sub verify_name_domain
                                               });
 }
 
-#################################################################################################################
+
+sub domain_request_authcode
+{
+ my ($self, $reg, $dom, $rd) = @_;
+ return $reg->process('domain', 'request_authcode', [$dom, $rd]);
+}
+
+
+#####################################################################################################
 1;

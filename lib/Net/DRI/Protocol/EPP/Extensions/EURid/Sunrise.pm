@@ -1,7 +1,7 @@
 ## Domain Registry Interface, EURid Sunrise EPP extension for Net::DRI
 ## (from registration_guidelines_v1_0F-appendix2-sunrise.pdf )
 ##
-## Copyright (c) 2005,2007,2008,2009,2010,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005,2007-2010,2012,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -16,6 +16,7 @@
 package Net::DRI::Protocol::EPP::Extensions::EURid::Sunrise;
 
 use strict;
+use warnings;
 
 use Email::Valid;
 use DateTime::Format::ISO8601;
@@ -54,7 +55,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005,2007,2008,2009,2010,2012 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005,2007-2010,2012,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -83,6 +84,7 @@ sub setup
 {
  my ($class,$po,$version)=@_;
  $po->ns({ 'sunrise' => [ 'http://www.eurid.eu/xml/epp/sunrise-1.0','sunrise-1.0.xsd' ] });
+ return;
 }
 
 ####################################################################################################
@@ -99,6 +101,7 @@ sub info
 
  $mes->command(['apply-info','domain:apply-info',sprintf('xmlns:domain="%s" xsi:schemaLocation="%s %s"',$mes->nsattrs('domain'))]);
  $mes->command_body([['domain:reference',$reference]]);
+ return;
 }
 
 sub info_parse
@@ -144,6 +147,7 @@ sub info_parse
  } continue { $c=$c->getNextSibling(); }
 
  $rinfo->{domain}->{$oname}->{contact}=$cs;
+ return;
 }
 
 ############ Transform commands
@@ -205,6 +209,7 @@ sub apply
   my $eid=Net::DRI::Protocol::EPP::Extensions::EURid::Domain::build_command_extension($mes,$epp,'eurid:ext');
   $mes->command_extension($eid,['eurid:apply',['eurid:domain',@n]]);
  }
+ return;
 }
 
 sub apply_parse
@@ -234,6 +239,7 @@ sub apply_parse
    $rinfo->{domain}->{$oname}->{$1}=DateTime::Format::ISO8601->new()->parse_datetime($c->firstChild->getData());
   }
  } continue { $c=$c->getNextSibling(); }
+ return;
 }
 
 ####################################################################################################

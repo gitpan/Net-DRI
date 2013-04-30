@@ -1,7 +1,7 @@
 ## Domain Registry Interface, DAS Protocol for AdamsNames
 ## as specified on http://www.adamsnames.tc/bulk/querying.html
 ##
-## Copyright (c) 2009-2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2009-2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -51,7 +51,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2009-2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2009-2010,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -80,7 +80,7 @@ sub new
 sub _load
 {
  my ($self,$rp)=@_;
- $self->SUPER::_load('Net::DRI::Protocol::DAS::AdamsNames::Domain');
+ return $self->SUPER::_load('Net::DRI::Protocol::DAS::AdamsNames::Domain');
 }
 
 sub transport_default

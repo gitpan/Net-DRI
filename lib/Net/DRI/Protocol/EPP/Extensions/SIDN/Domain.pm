@@ -1,6 +1,6 @@
 ## Domain Registry Interface, SIDN EPP Domain extensions
 ##
-## Copyright (c) 2009-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2009-2011,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -67,6 +67,7 @@ sub info_parse
    $rinfo->{domain}->{$oname}->{limited}=Net::DRI::Util::xml_parse_boolean($c->textContent());
   }
  }
+ return;
 }
 
 sub create
@@ -80,6 +81,7 @@ sub create
  Net::DRI::Exception::usererr_insufficient_parameters('one admin contact is mandatory in .NL for domain_create') unless (@c==1 && Net::DRI::Util::isa_contact($c[0],'Net::DRI::Data::Contact::SIDN'));
  @c=$cs->get('tech');
  Net::DRI::Exception::usererr_insufficient_parameters('at least one tech contact is mandatory in .NL for domain_create') unless (@c >= 1 && scalar(@c)==scalar(grep { Net::DRI::Util::isa_contact($_,'Net::DRI::Data::Contact::SIDN') } @c));
+ return;
 }
 
 sub delete_cancel
@@ -91,6 +93,7 @@ sub delete_cancel
  Net::DRI::Exception->die(1,'protocol/EPP',10,'Invalid domain name: '.$domain) unless Net::DRI::Util::is_hostname($domain);
  my $eid=build_command_extension($mes,$epp,'sidn:command');
  $mes->command_extension($eid,[['sidn:domainCancelDelete',['sidn:name',$domain]],['sidn:clTRID',$mes->cltrid()]]);
+ return;
 }
 
 sub transfer_parse
@@ -107,8 +110,8 @@ sub transfer_parse
  return unless defined $pw;
 
  $rinfo->{domain}->{$oname}->{transfer_new_token}=$pw->textContent();
+ return;
 }
-
 
 ####################################################################################################
 1;
@@ -143,7 +146,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2009-2011 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2009-2011,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify

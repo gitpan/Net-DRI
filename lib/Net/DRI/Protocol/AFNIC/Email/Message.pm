@@ -1,6 +1,6 @@
 ## Domain Registry Interface, AFNIC Email Message
 ##
-## Copyright (c) 2006,2009,2010 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2009,2010,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -53,7 +53,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2009,2010 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2009,2010,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -69,9 +69,7 @@ See the LICENSE file that comes with this distribution for more details.
 
 sub new
 {
- my $proto=shift;
- my $class=ref($proto) || $proto;
- my ($trid,$otype,$oaction)=@_;
+ my ($class,$trid,$otype,$oaction)=@_;
 
  my $self={ version => '2.0.0', lines => {}, trid => $trid, generated_for => $otype.'_'.$oaction };
 

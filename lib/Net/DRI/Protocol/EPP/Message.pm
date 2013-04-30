@@ -1,6 +1,6 @@
 ## Domain Registry Interface, EPP Message
 ##
-## Copyright (c) 2005-2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2005-2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -59,7 +59,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2005-2012 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2005-2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -98,10 +98,10 @@ sub results_lang       { return map { $_->{lang} } shift->results(); }
 sub results_extra_info { return map { $_->{extra_info} } shift->results(); }
 
 sub result_is         { my ($self,$code)=@_; return Net::DRI::Protocol::ResultStatus::is($self->_get_result('code'),$code); }
-sub result_code       { return shift->_get_result('code',@_); }
-sub result_message    { return shift->_get_result('message',@_); }
-sub result_lang       { return shift->_get_result('lang',@_); }
-sub result_extra_info { return shift->_get_result('extra_info',@_); }
+sub result_code       { my ($self,@args)=@_; return $self->_get_result('code',@args); }
+sub result_message    { my ($self,@args)=@_; return $self->_get_result('message',@args); }
+sub result_lang       { my ($self,@args)=@_; return $self->_get_result('lang',@args); }
+sub result_extra_info { my ($self,@args)=@_; return $self->_get_result('extra_info',@args); }
 
 sub ns
 {
@@ -175,7 +175,7 @@ sub command_extension_register
   $ocmd=(ref $nss eq 'ARRAY' ? $nss->[0] : $nss).':'.$command;
   $ons=$self->nsattrs($nss);
   ## This is used for other *generic* attributes, not for xmlns: ones !
-  $ons.=' '.join(' ',map { sprintf('%s="%s"',$_,$otherattrs->{$_}) } keys %$otherattrs) if defined $otherattrs && ref $otherattrs;
+  $ons.=' '.join(' ',map { sprintf('%s="%s"',$_,$otherattrs->{$_}) } keys %$otherattrs) if defined $otherattrs && ref $otherattrs eq 'HASH' && keys %$otherattrs;
  }
  $self->{extension}->[$eid]=[$ocmd,$ons,[]];
  return $eid;
@@ -188,10 +188,8 @@ sub command_extension
  if (defined $eid && $eid >= 0 && $eid <= $#{$self->{extension}} && defined $rdata && (((ref $rdata eq 'ARRAY') && @$rdata) || ($rdata ne '')))
  {
   $self->{extension}->[$eid]->[2]=(ref($rdata) eq 'ARRAY')? [ @{$self->{extension}->[$eid]->[2]}, @$rdata ] : $rdata;
- } else
- {
-  return $self->{extension};
  }
+ return $self->{extension};
 }
 
 sub as_string
@@ -280,8 +278,8 @@ sub as_string
  return $msg;
 }
 
-sub get_response  { my $self=shift; return $self->_get_content($self->node_resdata(),@_); }
-sub get_extension { my $self=shift; return $self->_get_content($self->node_extension(),@_); }
+sub get_response  { my ($self,@args)=@_; return $self->_get_content($self->node_resdata(),@args); }
+sub get_extension { my ($self,@args)=@_; return $self->_get_content($self->node_extension(),@args); }
 
 sub _get_content
 {
@@ -366,12 +364,14 @@ sub parse
  $self->cltrid($tmp) if defined $tmp;
  $tmp=Net::DRI::Util::xml_child_content($trid,$NS,'svTRID');
  $self->svtrid($tmp) if defined $tmp;
+ return;
 }
 
 sub add_to_extra_info
 {
  my ($self,$data)=@_;
  push @{$self->{results}->[-1]->{extra_info}},$data;
+ return;
 }
 
 ####################################################################################################

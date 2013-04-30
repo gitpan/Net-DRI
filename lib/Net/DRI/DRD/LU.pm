@@ -1,6 +1,6 @@
 ## Domain Registry Interface, .LU policy from DocRegistrar-2.0.6.pdf
 ##
-## Copyright (c) 2007-2011 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2007-2011,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -51,7 +51,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2007-2011 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2007-2011,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -93,6 +93,7 @@ sub set_factories
 {
  my ($self,$po)=@_;
  $po->factories('contact',sub { return Net::DRI::Data::Contact::LU->new(@_); });
+ return;
 }
 
 ####################################################################################################
