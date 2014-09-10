@@ -14,6 +14,7 @@ All
 Net::DRI
         * IDN support (in a cross registry fashion) with Net-IDN-Tools (1)
         * Exception handling using Exception::Class instead of internal implementation ? (1)
+        * Exception handling using Devel::StackTrace
 
 Net::DRI::DRD
         * bulk operations (many domains at once)

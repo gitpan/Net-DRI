@@ -1,6 +1,6 @@
 ## Domain Registry Interface, NASK (.PL) EPP extensions (draft-zygmuntowicz-epp-pltld-03)
 ##
-## Copyright (c) 2006,2008,2009,2012 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
+## Copyright (c) 2006,2008,2009,2012,2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
 ## This file is part of Net::DRI
 ##
@@ -49,7 +49,7 @@ Patrick Mevzek, E<lt>netdri@dotandco.comE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2006,2008,2009,2012 Patrick Mevzek <netdri@dotandco.com>.
+Copyright (c) 2006,2008,2009,2012,2013 Patrick Mevzek <netdri@dotandco.com>.
 All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
@@ -75,7 +75,7 @@ sub setup
  return;
 }
 
-sub default_extensions { return qw/PL::Domain PL::Contact PL::Message PL::Report/; } ## TODO: PL::Future
+sub default_extensions { return qw/SecDNS PL::Domain PL::Contact PL::Message PL::Report/; } ## TODO: PL::Future
 
 ####################################################################################################
 1;

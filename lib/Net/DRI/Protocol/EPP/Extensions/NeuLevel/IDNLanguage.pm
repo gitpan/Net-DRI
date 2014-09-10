@@ -91,7 +91,7 @@ sub add_language
 sub create
 {
  my (@args)=@_;
- return add_language('idn:create',@args);
+ return add_language('neulevel:extension',@args);
 }
 
 ####################################################################################################

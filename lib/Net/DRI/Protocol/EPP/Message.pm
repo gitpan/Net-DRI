@@ -333,7 +333,7 @@ sub parse
    $self->msg_id($id);
 
    my $qdate=Net::DRI::Util::xml_child_content($msgq,$NS,'qDate');
-   $d{qdate}=DateTime::Format::ISO8601->new()->parse_datetime($qdate) if defined $qdate && length $qdate;
+   eval { $d{qdate}=DateTime::Format::ISO8601->new()->parse_datetime($qdate) if defined $qdate && length $qdate; };
 
    my $msg=$msgq->getChildrenByTagNameNS($NS,'msg');
    if ($msg->size())

@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 374;
+use Test::More tests => 371;
 
 BEGIN {
 use_ok('Net::DRI');
@@ -131,7 +131,6 @@ use_ok('Net::DRI::Protocol::RRP');
 use_ok('Net::DRI::Protocol::AFNIC::WS::Domain');
 use_ok('Net::DRI::Protocol::AFNIC::WS::Message');
 use_ok('Net::DRI::Protocol::AFNIC::WS');
-use_ok('Net::DRI::Protocol::AFNIC::Email::Domain');
 use_ok('Net::DRI::Protocol::EPP');
 use_ok('Net::DRI::Protocol::EPP::Message');
 use_ok('Net::DRI::Protocol::EPP::Connection');
@@ -234,8 +233,6 @@ use_ok('Net::DRI::Protocol::EPP::Extensions::NAME::EmailFwd');
 use_ok('Net::DRI::Protocol::EPP::Extensions::Nominet');
 use_ok('Net::DRI::Protocol::EPP::Extensions::Nominet::Domain');
 use_ok('Net::DRI::Protocol::EPP::Extensions::Nominet::Contact');
-use_ok('Net::DRI::Protocol::EPP::Extensions::Nominet::Host');
-use_ok('Net::DRI::Protocol::EPP::Extensions::Nominet::Account');
 use_ok('Net::DRI::Protocol::EPP::Extensions::Nominet::Notifications');
 use_ok('Net::DRI::Protocol::EPP::Extensions::SWITCH');
 use_ok('Net::DRI::Protocol::EPP::Extensions::CZ');

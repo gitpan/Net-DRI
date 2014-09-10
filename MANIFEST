@@ -126,9 +126,6 @@ lib/Net/DRI/Protocol/AdamsNames/WS.pm
 lib/Net/DRI/Protocol/AdamsNames/WS/Connection.pm
 lib/Net/DRI/Protocol/AdamsNames/WS/Domain.pm
 lib/Net/DRI/Protocol/AdamsNames/WS/Message.pm
-lib/Net/DRI/Protocol/AFNIC/Email.pm
-lib/Net/DRI/Protocol/AFNIC/Email/Domain.pm
-lib/Net/DRI/Protocol/AFNIC/Email/Message.pm
 lib/Net/DRI/Protocol/AFNIC/WS.pm
 lib/Net/DRI/Protocol/AFNIC/WS/Domain.pm
 lib/Net/DRI/Protocol/AFNIC/WS/Message.pm
@@ -281,11 +278,11 @@ lib/Net/DRI/Protocol/EPP/Extensions/NO/Host.pm
 lib/Net/DRI/Protocol/EPP/Extensions/NO/Message.pm
 lib/Net/DRI/Protocol/EPP/Extensions/NO/Result.pm
 lib/Net/DRI/Protocol/EPP/Extensions/Nominet.pm
-lib/Net/DRI/Protocol/EPP/Extensions/Nominet/Account.pm
 lib/Net/DRI/Protocol/EPP/Extensions/Nominet/Contact.pm
 lib/Net/DRI/Protocol/EPP/Extensions/Nominet/Domain.pm
-lib/Net/DRI/Protocol/EPP/Extensions/Nominet/Host.pm
+lib/Net/DRI/Protocol/EPP/Extensions/Nominet/Message.pm
 lib/Net/DRI/Protocol/EPP/Extensions/Nominet/Notifications.pm
+lib/Net/DRI/Protocol/EPP/Extensions/Nominet/Session.pm
 lib/Net/DRI/Protocol/EPP/Extensions/NSgroup.pm
 lib/Net/DRI/Protocol/EPP/Extensions/PL.pm
 lib/Net/DRI/Protocol/EPP/Extensions/PL/Contact.pm
@@ -406,8 +403,6 @@ lib/Net/DRI/Util.pm
 LICENSE
 Makefile.PL
 MANIFEST			This list of files
-MYMETA.json
-MYMETA.yml
 README
 SUPPORT
 t/001load_mandatory.t
@@ -440,7 +435,6 @@ t/604vnds_epp_secdns.t
 t/605be_epp_nsgroup.t
 t/606eurid_epp.t
 t/607pl_epp.t
-t/608afnic_email.t
 t/609us_epp.t
 t/610vnds_epp_sync.t
 t/611vnds_epp_idnlang.t
@@ -496,5 +490,4 @@ xt/002pod.t
 xt/003critic.t
 xt/004kwalitee.t
 xt/005perl_minimum_version.t
-META.yml                                 Module YAML meta-data (added by MakeMaker)
-META.json                                Module JSON meta-data (added by MakeMaker)
+META.yml                                 Module meta-data (added by MakeMaker)

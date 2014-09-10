@@ -1,4 +1,4 @@
-Net::DRI is Copyright (C) 2005-2013, Patrick Mevzek <netdri@dotandco.com>
+Net::DRI is Copyright (C) 2005-2014, Patrick Mevzek <netdri@dotandco.com>
 Official website for Net::DRI information and download:
 http://www.dotandco.com/services/software/Net-DRI/index.en
 
@@ -45,7 +45,7 @@ Currently Net::DRI ships with:
   * NSgroup and Keygroup (used by .BE and .EU)
   * VeriSign extensions: Sync, WhoisInfo, WhoWas, PremiumDomain, Suggestion, ClientAttributes, Balance
   * IDN extension (draft-obispo-epp-idn-02)
-  * KeyRelay extension (draft-gieben-epp-keyrelay-02)
+  * KeyRelay extension (draft-gieben-epp-keyrelay-03)
   * AusRegistry extensions: KeyValue, IDN, Variant
   * CentralNic extensions: Release, TTL, WebForwarding, Pricing
   * CloudRegistry extension: LaunchPhase
@@ -61,7 +61,7 @@ Currently Net::DRI ships with:
      support included for domain names in .COM .NET .ORG .BIZ .INFO .AERO
      .EU .MOBI .NAME .LU .WS .SE .CAT .AT .TRAVEL .US .PT
 - an IRIS (RFC3981) implementation with LWZ transport (RFC4993) for DCHK (RFC5144):
-  currently only .DE and .FR provide this service.
+  currently only .FR provides this service.
   (XCP transport (RFC4992) is also available)
 - an UDP/TCP/TLS socket transport, handling SNI
 - an HTTP/HTTPS transport
@@ -128,12 +128,10 @@ XML::LibXML (>=1.61)
 Module::Load
 SOAP::Lite (needed only for BookMyName, OVH, Gandi webservices)
 SOAP::WSDL (needed only for OVH webservices)
-MIME::Entity (needed only for AFNIC emails)
-Net::SMTP (needed only for AFNIC emails)
 LWP::UserAgent (>=6.02) (needed only for OpenSRS, .PL and .IT)
 Digest::MD5 (needed only for OpenSRS)
-Net::DNS (needed only for .DE IRIS DCHK queries)
-IO::Uncompress::RawInflate (needed only for .DE IRIS DCHK queries) (*)
+Net::DNS (needed only for .FR IRIS DCHK queries)
+IO::Uncompress::RawInflate (needed only for .FR IRIS DCHK queries) (*)
 
 Modules marked (*) are core Perl modules.
 

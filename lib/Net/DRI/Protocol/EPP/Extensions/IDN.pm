@@ -1,4 +1,4 @@
-## Domain Registry Interface, EPP IDN (draft-obispo-epp-idn-02)
+## Domain Registry Interface, EPP IDN (draft-obispo-epp-idn-03)
 ##
 ## Copyright (c) 2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
@@ -72,13 +72,19 @@ sub create_build
  my ($epp,$domain,$rd)=@_;
  my $mes=$epp->message();
 
- return unless Net::DRI::Util::has_key($rd,'idn_table') && Net::DRI::Util::has_key($rd,'uname');
-
+ return unless $domain=~m/^xn--/;
+ Net::DRI::Exception::usererr_insufficient_parameters('For IDNs, an idn_table must be provided') unless Net::DRI::Util::has_key($rd,'idn_table');
  Net::DRI::Exception::usererr_invalid_parameters('idn_table must be of type XML schema token with at least 1 character') unless Net::DRI::Util::xml_is_token($rd->{idn_table},1);
- Net::DRI::Exception::usererr_invalid_parameters('uname must be of type XML schema token from 1 to 255 characters') unless Net::DRI::Util::xml_is_token($rd->{uname},1,255);
+ my @d;
+ push @d,['idn:table',$rd->{idn_table}];
+ if (Net::DRI::Util::has_key($rd,'uname'))
+ {
+  Net::DRI::Exception::usererr_invalid_parameters('uname must be of type XML schema token from 1 to 255 characters') unless Net::DRI::Util::xml_is_token($rd->{uname},1,255);
+  push @d,['idn:uname',$rd->{uname}];
+ }
 
  my $eid=$mes->command_extension_register('idn','data');
- $mes->command_extension($eid,[['idn:table',$rd->{idn_table}],['idn:uname',$rd->{uname}]]);
+ $mes->command_extension($eid,\@d);
 
  return;
 }
@@ -92,7 +98,7 @@ __END__
 
 =head1 NAME
 
-Net::DRI::Protocol::EPP::Extensions::IDN - EPP IDN commands (draft-obispo-epp-idn-02) for Net::DRI
+Net::DRI::Protocol::EPP::Extensions::IDN - EPP IDN commands (draft-obispo-epp-idn-03) for Net::DRI
 
 =head1 DESCRIPTION
 

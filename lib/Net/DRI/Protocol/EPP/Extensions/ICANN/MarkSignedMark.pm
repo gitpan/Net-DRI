@@ -1,4 +1,4 @@
-## Domain Registry Interface, Mark & Signed Mark for EPP (draft-lozano-tmch-smd-02)
+## Domain Registry Interface, Mark & Signed Mark for EPP (draft-lozano-tmch-smd-03)
 ##
 ## Copyright (c) 2013 Patrick Mevzek <netdri@dotandco.com>. All rights reserved.
 ##
@@ -495,7 +495,9 @@ sub parse_mark
 sub lined_content
 {
  my ($node,$signs,@keys)=@_;
- my $r=Net::DRI::Util::xml_traverse($node,$signs,@keys)->textContent();
+ my $r=Net::DRI::Util::xml_traverse($node,$signs,@keys);
+ return unless defined $r;
+ $r=$r->textContent();
  $r=~s/\s+//g;
  return $r;
 }
@@ -592,7 +594,7 @@ __END__
 
 =head1 NAME
 
-Net::DRI::Protocol::EPP::Extensions::ICANN::MarkSignedMark - ICANN TMCH Mark/Signed Mark EPP Extension (draft-lozano-tmch-smd-02) for Net::DRI
+Net::DRI::Protocol::EPP::Extensions::ICANN::MarkSignedMark - ICANN TMCH Mark/Signed Mark EPP Extension (draft-lozano-tmch-smd-03) for Net::DRI
 
 =head1 DESCRIPTION
 
